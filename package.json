@@ -1,0 +1,35 @@
+{
+  "name": "@beacon-lang/dendrite",
+  "version": "0.0.0",
+  "description": "A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.",
+  "keywords": [
+    "dataflow",
+    "declarative",
+    "reactive",
+    "typescript",
+    "dsl",
+    "programming-language",
+    "logic",
+    "node-editor"
+  ],
+  "homepage": "https://github.com/IJIJI/Dendrite#readme",
+  "bugs": {
+    "url": "https://github.com/IJIJI/Dendrite/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IJIJI/Dendrite.git"
+  },
+  "license": "MPL-2.0",
+  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "packageManager": "yarn@4.15.0"
+}
