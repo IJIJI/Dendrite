@@ -1,4 +1,4 @@
-import { type ASTNode, type SourceRef } from './nodes'
+import { CNode, type ASTNode, type SourceRef } from './nodes'
 import { type LanguageDescriptor } from './registry'
 
 //? Raw EXT Program - Parser output without validation.
@@ -14,25 +14,13 @@ export interface CoreProgram {
  
   /** Named program outputs: return tally: s1 */
   outputs: Map<string, ASTNode>;
- 
-  /** Bindings reachable from any output - computed at parse time
-   * Used to skip unused bindings during eval.
-   */
-  usedBindings: Set<string>;
- 
+
   /**
    * Topological sort of usedBindings.
    * interp walks this in order - dependencies always before dependents.
    * Computed at analyse time. Cycles produce an AnalysisError.
    */
   evalOrder: string[];
- 
-  /**
-   * Forward dependency map - used for dirty propagation during interp.
-   * name -> bindings that directly depend on it.
-   * Input node names are valid keys.
-   */
-  dependents: Map<string, Set<string>>;
  
   /**
    * Per-output contributing inputs
@@ -43,89 +31,37 @@ export interface CoreProgram {
   outputDependencies: Map<string, Set<string>>;
 }
 
-//? Compute outputDependencies - used during analysis.
-export function computeOutputDependencies(
-  raw: RawProgram,
-): Map<string, Set<string>> {
-  const result = new Map<string, Set<string>>()
-  for (const [outputName, outputNode] of raw.outputs) {
-    const inputs = new Set<string>()
-    collectContributingInputs(outputNode, raw.bindings, inputs, new Set())
-    result.set(outputName, inputs)
-  }
-  return result
-}
+//? EvalState - persistent across input changes, one instance per program
+//
+// inputs:    values set by the host - context inputs and triggers.
+//            Keyed by name (host works with names, not CNode references).
+//
+// nodeCache: values computed by evaluate - named bindings and inline nodes.
+//            Keyed by CNode object reference (WeakMap uses object identity).
+//            WeakMap allows GC when CoreProgram is unregistered.
+//
+// bodyScope: fresh per apply() call inside a HigherOrderNode body.
+//            Inline body nodes are cached here, not in nodeCache, to prevent
+//            stale results across items (item binding is not tracked in dependsOn
+//            since it is not a context input).
+//            Named bindings referenced from the body still use nodeCache.
+//            undefined at the top level (outside any body scope).
 
-function collectContributingInputs(
-  node: ASTNode,
-  bindings: Map<string, ASTNode>,
-  inputs: Set<string>,
-  visited: Set<string>,
-): void {
-  switch (node.kind) {
-    case 'literal':
-      return
- 
-    case 'array':
-      node.items.forEach((n: ASTNode) => collectContributingInputs(n, bindings, inputs, visited))
-      return
- 
-    case 'input':
-      inputs.add(node.name)
-      return
- 
-    case 'ref': {
-      if (visited.has(node.name)) return
-      visited.add(node.name)
-      const binding = bindings.get(node.name)
-      if (binding) collectContributingInputs(binding, bindings, inputs, visited)
-      return
-    }
- 
-    case 'field':
-      collectContributingInputs(node.source, bindings, inputs, visited)
-      return
- 
-    case 'operation':
-      for (const input of Object.values(node.inputs)) {
-        if (Array.isArray(input)) {
-          input.forEach((n: ASTNode) => collectContributingInputs(n, bindings, inputs, visited))
-        } else {
-          collectContributingInputs(input, bindings, inputs, visited)
-        }
-      }
-      return
- 
-    case 'higher_order':
-      for (const input of Object.values(node.inputs)) {
-        if (Array.isArray(input)) {
-          input.forEach((n: ASTNode) => collectContributingInputs(n, bindings, inputs, visited))
-        } else {
-          collectContributingInputs(input, bindings, inputs, visited)
-        }
-      }
-      // Also include external references used in the body.
-      collectContributingInputs(node.body, bindings, inputs, visited)
-      return
-  }
-}
-
-//? EvalState - persistent across events, one instance per program
- 
 export interface EvalState {
-  /**
-   * Resolved values for both bindings and input nodes.
-   * Maps names to values.
-   * Persists between events - clean nodes retain their values here.
-   */
-  environment: Map<string, unknown> // TODO: Should this be named cache or something else? Different from per eval cache.
+  inputs: Map<string, unknown>
+  nodeCache: WeakMap<object, unknown>
+  bodyScope: WeakMap<object, unknown> | undefined
+}
  
-  /** Bindings needing recomputation on next interpretProgram call */
-  dirty: Set<string>
+export function createEvalState(): EvalState {
+  return {
+    inputs: new Map(),
+    nodeCache: new WeakMap(),
+    bodyScope: undefined,
+  }
 }
 
 //? Parse Results
-// TODO: Duplicate bind? Or warning and ignore?
 export type ParseErrorKind =
   | 'syntax_error'
   | 'unexpected_token'
@@ -158,7 +94,6 @@ export interface ParseFailure {
   errors: ParseError[]
   warnings: ParseWarning[]
 }
-
 
 export type ParseResult = ParseSuccess | ParseFailure
  
@@ -207,57 +142,45 @@ export interface AnalysisFailure {
 export type AnalysisResult = AnalysisSuccess | AnalysisFailure
 
 
-//? Evalstate Management
-export function createEvalState(): EvalState {
-  return { environment: new Map(), dirty: new Set() }
-}
- 
-/** Mark all usedBindings dirty - call once after createEvalState */
-export function initializeProgram(
-  program: CoreProgram,
-  state: EvalState,
-): void {
-  for (const name of program.usedBindings) {
-    state.dirty.add(name)
-  }
-}
- 
-/**
- * Update a context input and propagate dirty forward through the DAG.
- * Beacon calls this when ATEM state changes.
- */
-export function updateInput(
-  name: string,
-  value: unknown,
-  state: EvalState,
-  program: CoreProgram,
-): void {
-  state.environment.set(name, value)
-  // Propagate to dependents directly - inputs are not bindings so they are
-  // never removed from dirty by evaluateProgram. Marking the input name itself
-  // would cause subsequent calls for the same input to return early without
-  // propagating, producing stale output.
-  for (const dep of program.dependents.get(name) ?? []) {
-    markDirty(dep, state, program)
-  }
-}
- 
-export function markDirty(
-  name: string,
-  state: EvalState,
-  program: CoreProgram,
-): void {
-  if (state.dirty.has(name)) return
-  state.dirty.add(name)
-  for (const dep of program.dependents.get(name) ?? []) {
-    markDirty(dep, state, program)
-  }
+//? Input management
+export function updateInput(name: string, value: unknown, state: EvalState): void {
+  state.inputs.set(name, value)
 }
 
+// isCached - shared cache check used by every non-trivial node kind.
+//
+// Iterates changedInputs and tests
+// membership in dependsOn, rather than the reverse, for better performance
+// when dependsOn is large.
+ 
+function isCached(
+  node: object,
+  cache: WeakMap<object, unknown>,
+  dependsOn: ReadonlySet<string>,
+  changedInputs: Set<string>,
+): boolean {
+  if (!cache.has(node)) return false
+  for (const d of changedInputs) {
+    if (dependsOn.has(d)) return false
+  }
+  return true
+}
+
+
 //? Evaluation
-export function evaluate( // TODO Should be named evaluateNode? To work well with evaluateProgram?
-  node: ASTNode,
+// Pull-based: each node checks its own dependsOn against changedInputs.
+// If no dependency changed AND a cached value exists, the cached value is
+// returned without recomputation.
+//
+// Both operation and higher_order cases look up from descriptor.evaluators.
+// operation  passes apply = undefined  (evaluator ignores it)
+// higher_order constructs apply and passes it  (evaluator uses it)
+ 
+export function evaluate(
+  node: CNode,
+  program: CoreProgram,
   state: EvalState,
+  changedInputs: Set<string>,
   descriptor: LanguageDescriptor,
   hostContext?: unknown,
 ): unknown {
@@ -266,97 +189,134 @@ export function evaluate( // TODO Should be named evaluateNode? To work well wit
     case 'literal':
       return node.value
  
-    case 'array':
-      return node.items.map((n: ASTNode) => evaluate(n, state, descriptor, hostContext))
+    case 'input': {
+      const value = state.inputs.get(node.name)
+      if (value === undefined) {
+        throw new EvalError('input_not_set', `Input '${node.name}' has no value — host must call updateInput before evaluating`)
+      }
+      return value
+    }
  
-    case 'input':
-      return state.environment.get(node.name)
+    case 'ref': {
+      const binding = program.bindings.get(node.name)
+      if (!binding) {
+        const val = state.inputs.get(node.name)
+        if (val !== undefined) return val
+        throw new EvalError('undefined_reference', `Reference '${node.name}' not found in bindings or scope — possible analyser bug`)
+      }
+      if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
+        return state.nodeCache.get(binding)
+      }
+      const result = evaluate(binding, program, state, changedInputs, descriptor, hostContext)
+      state.nodeCache.set(binding, result)
+      return result
+    }
  
-    case 'ref':
-      return state.environment.get(node.name)
+    case 'array': {
+      const cache = state.bodyScope ?? state.nodeCache
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node)
+      const result = node.items.map(n => evaluate(n, program, state, changedInputs, descriptor, hostContext))
+      cache.set(node, result)
+      return result
+    }
  
     case 'field': {
-      const src = evaluate(node.source, state, descriptor, hostContext) as Record<string, unknown>
-      return src[node.field]
+      const cache = state.bodyScope ?? state.nodeCache
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node)
+      const src = evaluate(node.struct, program, state, changedInputs, descriptor, hostContext)
+      if (src === null || src === undefined) {
+        throw new EvalError('invalid_field_access', `Cannot access field '${node.field}' on null/undefined`)
+      }
+      const record = src as Record<string, unknown>
+      if (!(node.field in record)) {
+        throw new EvalError('invalid_field_access', `Field '${node.field}' does not exist on value`)
+      }
+      const result = record[node.field]
+      cache.set(node, result)
+      return result
     }
  
     case 'higher_order': {
-      const evaluator = descriptor.higherOrderEvaluators.get(node.op)
-      if (!evaluator) throw new EvalError('evaluator_not_found', `No higher-order evaluator for op: ${node.op}`)
- 
+      if (isCached(node, state.nodeCache, node.dependsOn, changedInputs)) {
+        return state.nodeCache.get(node)
+      }
+      const evaluator = descriptor.evaluators.get(node.op)
+      if (!evaluator) {
+        throw new EvalError('evaluator_not_found', `No evaluator for op: '${node.op}'`)
+      }
       const resolved: Record<string, unknown> = {}
       for (const [key, input] of Object.entries(node.inputs)) {
         resolved[key] = Array.isArray(input)
-          ? input.map((n: ASTNode) => evaluate(n, state, descriptor, hostContext))
-          : evaluate(input, state, descriptor, hostContext)
+          ? input.map(n => evaluate(n, program, state, changedInputs, descriptor, hostContext))
+          : evaluate(input, program, state, changedInputs, descriptor, hostContext)
       }
- 
       const apply = (...args: unknown[]) => {
-        let inner = state
-        for (let i = 0; i < node.bindings.length; i++) {
-          inner = withBinding(inner, node.bindings[i], args[i])
+        const innerInputs = new Map(state.inputs)
+        node.bindings.forEach((b, i) => innerInputs.set(b, args[i]))
+        const innerState: EvalState = {
+          inputs: innerInputs,
+          nodeCache: state.nodeCache,
+          bodyScope: new WeakMap(),
         }
-        return evaluate(node.body, inner, descriptor, hostContext)
+        return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext)
       }
- 
-      return evaluator.evaluate(resolved, apply, hostContext)
+      try {
+        const result = evaluator.evaluate(resolved, apply, hostContext)
+        state.nodeCache.set(node, result)
+        return result
+      } catch (e) {
+        if (e instanceof EvalError) throw e
+        throw new EvalError('host_error', `Evaluator '${node.op}' threw: ${e}`)
+      }
     }
  
     case 'operation': {
+      const cache = state.bodyScope ?? state.nodeCache
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node)
       const evaluator = descriptor.evaluators.get(node.op)
-      if (!evaluator) throw new EvalError('evaluator_not_found', `No evaluator for op: ${node.op}`)
- 
+      if (!evaluator) {
+        throw new EvalError('evaluator_not_found', `No evaluator for op: '${node.op}'`)
+      }
       const resolved: Record<string, unknown> = {}
       for (const [key, input] of Object.entries(node.inputs)) {
         resolved[key] = Array.isArray(input)
-          ? input.map((n: ASTNode) => evaluate(n, state, descriptor, hostContext))
-          : evaluate(input, state, descriptor, hostContext)
+          ? input.map(n => evaluate(n, program, state, changedInputs, descriptor, hostContext))
+          : evaluate(input, program, state, changedInputs, descriptor, hostContext)
       }
- 
-      return evaluator.evaluate(resolved, hostContext)
+      try {
+        // apply is undefined for standard ops — evaluator should ignore it
+        const result = evaluator.evaluate(resolved, undefined, hostContext)
+        cache.set(node, result)
+        return result
+      } catch (e) {
+        if (e instanceof EvalError) throw e
+        throw new EvalError('host_error', `Evaluator '${node.op}' threw: ${e}`)
+      }
     }
   }
 }
 
-/**
- * Evaluate all dirty bindings in topological order, return named output values.
- * Clean nodes are skipped - their cached values are used directly.
- */
+//? evaluateProgram
 export function evaluateProgram(
   program: CoreProgram,
   state: EvalState,
   descriptor: LanguageDescriptor,
+  changedInputs: Set<string>,
   hostContext?: unknown,
 ): Map<string, unknown> {
-  for (const name of program.evalOrder) {
-    if (!state.dirty.has(name)) continue
-    const node = program.bindings.get(name)!
-    state.environment.set(name, evaluate(node, state, descriptor, hostContext))
-    state.dirty.delete(name)
-  }
- 
   const results = new Map<string, unknown>()
-  for (const [outputName, node] of program.outputs) {
-    results.set(outputName, evaluate(node, state, descriptor, hostContext))
+  for (const [name, node] of program.outputs) {
+    results.set(name, evaluate(node, program, state, changedInputs, descriptor, hostContext))
   }
   return results
 }
 
-//? Helpers
-/**
- * Create a derived EvalState with an extra binding for filter/map item scope.
- * Does not mutate the parent state.
- */
-function withBinding(state: EvalState, name: string, value: unknown): EvalState {
-  const inner = new Map(state.environment)
-  inner.set(name, value)
-  return { environment: inner, dirty: state.dirty }
-}
-
 
 //? Eval Errors
+// TODO: Should input not set be found before, or be handled in code?
 export type EvalErrorKind =
   | 'evaluator_not_found'   // safety net - analyser bug or descriptor mismatch
+  | 'undefined_reference'   // reference to a binding that doesn't exist in bindings or inputs
   | 'input_not_set'         // input node has no value in environment
   | 'invalid_field_access'  // field doesn't exist on struct value
   | 'host_error'            // host evaluator threw
