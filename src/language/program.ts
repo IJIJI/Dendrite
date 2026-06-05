@@ -130,6 +130,7 @@ export type ParseErrorKind =
   | 'syntax_error'
   | 'unexpected_token'
   | 'unexpected_end'
+  | 'duplicate_binding'   // Set x = ... declared twice in the same program
 
 export interface ParseError {
   kind: ParseErrorKind
@@ -138,7 +139,7 @@ export interface ParseError {
 }
 
 export type ParseWarningKind =
-  | 'deprecated_syntax'
+  | 'deprecated_syntax'   // valid but outdated syntax. Parser still succeeds.
 
 export interface ParseWarning {
   kind: ParseWarningKind
@@ -166,10 +167,10 @@ export type AnalysisErrorKind =
   | 'unknown_op'              // Op not registered → hard error
   | 'unknown_input'           // Input node not registered → hard error
   | 'unknown_type'            // Type reference not registered → hard error
-  | 'undefined_reference'     // Reference to undefined binding → hard error
-  | 'input_type_mismatch'     // op input receives wrong type
   | 'cycle'                   // Cycle in DAG → hard error
   | 'missing_required_output' // Registered required output not returned → hard error
+  | 'undefined_reference'     // Reference to undefined binding → hard error
+  | 'input_type_mismatch'     // op input receives wrong type
 
 export interface AnalysisError {
   kind: AnalysisErrorKind
