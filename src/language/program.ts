@@ -192,7 +192,7 @@ export function evaluate(
     case 'input': {
       const value = state.inputs.get(node.name)
       if (value === undefined) {
-        throw new EvalError('input_not_set', `Input '${node.name}' has no value — host must call updateInput before evaluating`)
+        throw new EvalError('input_not_set', `Input '${node.name}' has no value - host must call updateInput before evaluating`)
       }
       return value
     }
@@ -202,7 +202,7 @@ export function evaluate(
       if (!binding) {
         const val = state.inputs.get(node.name)
         if (val !== undefined) return val
-        throw new EvalError('undefined_reference', `Reference '${node.name}' not found in bindings or scope — possible analyser bug`)
+        throw new EvalError('undefined_reference', `Reference '${node.name}' not found in bindings or scope - possible analyser bug`)
       }
       if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
         return state.nodeCache.get(binding)
@@ -284,7 +284,7 @@ export function evaluate(
           : evaluate(input, program, state, changedInputs, descriptor, hostContext)
       }
       try {
-        // apply is undefined for standard ops — evaluator should ignore it
+        // apply is undefined for standard ops - evaluator should ignore it
         const result = evaluator.evaluate(resolved, undefined, hostContext)
         cache.set(node, result)
         return result
