@@ -5,6 +5,7 @@ import {
   createEvalState,
   updateInput,
   evaluateProgram,
+  outputDependencies,
 } from './program'
 
 
