@@ -3,7 +3,6 @@ import {
   type CoreProgram,
   type EvalState,
   createEvalState,
-  initializeProgram,
   updateInput,
   evaluateProgram,
 } from './program'
@@ -64,7 +63,7 @@ export interface Runtime {
   register(id: string, program: CoreProgram): ProgramHandle
  
   /**
-   * Unregister by ID - for cases where the handle is unavailable.
+   * Unregister by ID — for cases where the handle is unavailable.
    * Clears all per-program handlers. Prefer handle.unregister() when possible.
    */
   unregister(id: string): void
@@ -73,13 +72,13 @@ export interface Runtime {
   updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>
  
   /**
-   * Update multiple inputs atomically - one evaluation pass per program.
+   * Update multiple inputs atomically — one evaluation pass per program.
    * Preferred over multiple updateInput calls for the same ATEM event.
    */
   updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>
  
   /**
-   * Fire a trigger - sets the value, evaluates affected programs,
+   * Fire a trigger — sets the value, evaluates affected programs,
    * then resets to the trigger's default value.
    */
   fireTrigger(name: string, value: unknown): Map<string, Map<string, unknown>>
@@ -98,7 +97,7 @@ export interface Runtime {
  
   /**
    * Contributing inputs for each output of a registered program.
-   * Derived from output CNode.dependsOn - no separate map needed.
+   * Derived from output CNode.dependsOn — no separate map needed.
    */
   getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined
 }
@@ -109,11 +108,11 @@ export function createRuntime(
 ): Runtime {
   const programs = new Map<string, ProgramEntry>()
  
-  // Global handler sets - fire for every program, include programId
+  // Global handler sets — fire for every program, include programId
   const globalOutputHandlers = new Set<OutputHandler>()
   const globalErrorHandlers  = new Set<ErrorHandler>()
  
-  // inputIndex - input name → program IDs whose outputs depend on it
+  // inputIndex — input name → program IDs whose outputs depend on it
   const inputIndex = new Map<string, Set<string>>()
  
   function addToIndex(id: string, program: CoreProgram): void {
@@ -256,12 +255,7 @@ export function createRuntime(
  
     getOutputDependencies(programId) {
       const entry = programs.get(programId)
-      if (!entry) return undefined
-      const result = new Map<string, ReadonlySet<string>>()
-      for (const [name, node] of entry.program.outputs) {
-        result.set(name, node.dependsOn)
-      }
-      return result
+      return entry ? outputDependencies(entry.program) : undefined
     },
   }
 }
