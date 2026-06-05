@@ -8,147 +8,260 @@ import {
   evaluateProgram,
 } from './program'
 
-// ---------------------------------------------------------------------------
-// Runtime - library-level manager for multiple programs sharing inputs.
+
+//? ProgramHandle — returned by register(), scoped to one program.
 //
-// When an input changes, the Runtime finds every registered program that
-// depends on it (via outputDependencies) and re-evaluates only those.
+//  Provides subscriptions and unregistration for a specific program without
+//  the consumer needing to track or repeat the program ID.
+//  Unregister clears all per-program handlers and removes the program from
+//  the runtime index — no dangling handlers can fire after unregistration.
+ 
+export interface ProgramHandle {
+  readonly id: string
+ 
+  /**
+   * Outputs from the first evaluation, available immediately after register().
+   * Subsequent changes arrive via onOutput().
+   */
+  readonly initialOutputs: Map<string, unknown>
+ 
+  /** Subscribe to output changes for this program. Returns an unsubscribe function. */
+  onOutput(handler: (outputs: Map<string, unknown>) => void): () => void
+ 
+  /** Subscribe to evaluation errors for this program. Returns an unsubscribe function. */
+  onError(handler: (error: EvalError) => void): () => void
+ 
+  /** Unregister the program and clear all its subscriptions. */
+  unregister(): void
+}
+
 // ---------------------------------------------------------------------------
+// Global handler types — fired for every program, includes programId.
+// Useful for dashboards, loggers, or anything that observes all programs.
+// ---------------------------------------------------------------------------
+ 
+export type OutputHandler = (programId: string, outputs: Map<string, unknown>) => void
+export type ErrorHandler  = (programId: string, error: EvalError) => void
 
-export type OutputHandler = (
-  programId: string,
-  outputs: Map<string, unknown>,
-) => void
-
+// ---------------------------------------------------------------------------
+// Runtime — manages multiple programs sharing context inputs.
+// ---------------------------------------------------------------------------
+ 
 interface ProgramEntry {
   id: string
   program: CoreProgram
   state: EvalState
+  outputHandlers: Set<(outputs: Map<string, unknown>) => void>
+  errorHandlers: Set<(error: EvalError) => void>
 }
 
+
 export interface Runtime {
-  /** Register a program. Creates EvalState and runs initial evaluation. */
-  register(id: string, program: CoreProgram): Map<string, unknown>
-
-  /** Unregister a program and clean up its state. */
-  unregister(id: string): void
-
   /**
-   * Update a shared input and re-evaluate all affected programs.
-   * Returns a map of programId → outputs for every program that re-ran.
+   * Register a program. Initialises inputs to defaults, runs first evaluation,
+   * and returns a ProgramHandle for program-scoped subscriptions.
    */
-  updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>
-
+  register(id: string, program: CoreProgram): ProgramHandle
+ 
   /**
-   * Fire a trigger - sets the value, evaluates all affected programs,
+   * Unregister by ID — for cases where the handle is unavailable.
+   * Clears all per-program handlers. Prefer handle.unregister() when possible.
+   */
+  unregister(id: string): void
+ 
+  /** Update a single input and re-evaluate all affected programs. */
+  updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>
+ 
+  /**
+   * Update multiple inputs atomically — one evaluation pass per program.
+   * Preferred over multiple updateInput calls for the same ATEM event.
+   */
+  updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>
+ 
+  /**
+   * Fire a trigger — sets the value, evaluates affected programs,
    * then resets to the trigger's default value.
    */
   fireTrigger(name: string, value: unknown): Map<string, Map<string, unknown>>
-
-  /** Subscribe to output changes. Returns an unsubscribe function. */
-  onOutput(handler: OutputHandler): () => void
-
+ 
   /**
-   * Per-output contributing inputs for a registered program.
-   * Useful for host tooling and change listener setup.
+   * Subscribe to output changes for ALL programs. Returns an unsubscribe function.
+   * For program-specific subscriptions, use handle.onOutput() instead.
    */
-  getOutputDependencies(programId: string): Map<string, Set<string>> | undefined
+  onOutput(handler: OutputHandler): () => void
+ 
+  /**
+   * Subscribe to evaluation errors for ALL programs. Returns an unsubscribe function.
+   * For program-specific subscriptions, use handle.onError() instead.
+   */
+  onError(handler: ErrorHandler): () => void
+ 
+  /**
+   * Contributing inputs for each output of a registered program.
+   * Derived from output CNode.dependsOn — no separate map needed.
+   */
+  getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined
 }
-
+ 
 export function createRuntime(
   descriptor: LanguageDescriptor,
   hostContext?: unknown,
 ): Runtime {
   const programs = new Map<string, ProgramEntry>()
-  const handlers = new Set<OutputHandler>()
-
-  /**
-   * inputIndex - input name → Set of program IDs that depend on it.
-   * Built incrementally as programs are registered/unregistered.
-   * Avoids scanning all programs on every input change.
-   */
+ 
+  // Global handler sets — fire for every program, include programId
+  const globalOutputHandlers = new Set<OutputHandler>()
+  const globalErrorHandlers  = new Set<ErrorHandler>()
+ 
+  // inputIndex — input name → program IDs whose outputs depend on it
   const inputIndex = new Map<string, Set<string>>()
-
+ 
   function addToIndex(id: string, program: CoreProgram): void {
-    for (const inputSet of program.outputDependencies.values()) {
-      for (const inputName of inputSet) {
-        if (!inputIndex.has(inputName)) {
-          inputIndex.set(inputName, new Set())
-        }
+    for (const outputNode of program.outputs.values()) {
+      for (const inputName of outputNode.dependsOn) {
+        if (!inputIndex.has(inputName)) inputIndex.set(inputName, new Set())
         inputIndex.get(inputName)!.add(id)
       }
     }
   }
-
+ 
   function removeFromIndex(id: string, program: CoreProgram): void {
-    for (const inputSet of program.outputDependencies.values()) {
-      for (const inputName of inputSet) {
+    for (const outputNode of program.outputs.values()) {
+      for (const inputName of outputNode.dependsOn) {
         inputIndex.get(inputName)?.delete(id)
       }
     }
   }
-
-  function notify(id: string, outputs: Map<string, unknown>): void {
-    for (const handler of handlers) {
-      handler(id, outputs)
+ 
+  function notifyOutput(id: string, outputs: Map<string, unknown>): void {
+    for (const handler of globalOutputHandlers) handler(id, outputs)
+    const entry = programs.get(id)
+    if (entry) {
+      for (const handler of entry.outputHandlers) handler(outputs)
     }
   }
-
-  function runAffected(
-    name: string,
-    value: unknown,
-  ): Map<string, Map<string, unknown>> {
-    const results = new Map<string, Map<string, unknown>>()
-    const affected = inputIndex.get(name) ?? new Set()
-
-    for (const programId of affected) {
-      const entry = programs.get(programId)!
-      updateInput(name, value, entry.state, entry.program)
-      const outputs = evaluateProgram(entry.program, entry.state, descriptor, hostContext)
-      results.set(programId, outputs)
-      notify(programId, outputs)
+ 
+  function notifyError(id: string, error: EvalError): void {
+    for (const handler of globalErrorHandlers) handler(id, error)
+    const entry = programs.get(id)
+    if (entry) {
+      for (const handler of entry.errorHandlers) handler(error)
     }
-
+  }
+ 
+  function applyChanges(changes: Map<string, unknown>): Map<string, Map<string, unknown>> {
+    const changedInputs = new Set(changes.keys())
+ 
+    const affected = new Set<string>()
+    for (const name of changedInputs) {
+      for (const id of inputIndex.get(name) ?? []) affected.add(id)
+    }
+ 
+    for (const [name, value] of changes) {
+      for (const id of affected) {
+        updateInput(name, value, programs.get(id)!.state)
+      }
+    }
+ 
+    const results = new Map<string, Map<string, unknown>>()
+    for (const id of affected) {
+      const entry = programs.get(id)!
+      try {
+        const outputs = evaluateProgram(entry.program, entry.state, descriptor, changedInputs, hostContext)
+        results.set(id, outputs)
+        notifyOutput(id, outputs)
+      } catch (e) {
+        if (e instanceof EvalError) {
+          notifyError(id, e)
+        } else {
+          throw e
+        }
+      }
+    }
+ 
     return results
   }
-
+ 
+  function doUnregister(id: string): void {
+    const entry = programs.get(id)
+    if (!entry) return
+    entry.outputHandlers.clear()
+    entry.errorHandlers.clear()
+    removeFromIndex(id, entry.program)
+    programs.delete(id)
+  }
+ 
   return {
     register(id, program) {
-      const state = createEvalState()
-      initializeProgram(program, state)
-      programs.set(id, { id, program, state })
+      const state          = createEvalState()
+      const outputHandlers = new Set<(outputs: Map<string, unknown>) => void>()
+      const errorHandlers  = new Set<(error: EvalError) => void>()
+ 
+      programs.set(id, { id, program, state, outputHandlers, errorHandlers })
       addToIndex(id, program)
-
-      const outputs = evaluateProgram(program, state, descriptor, hostContext)
-      notify(id, outputs)
-      return outputs
+ 
+      for (const [name, def] of descriptor.inputs) {
+        updateInput(name, def.default ?? null, state)
+      }
+ 
+      const changedInputs  = new Set(descriptor.inputs.keys())
+      const initialOutputs = evaluateProgram(program, state, descriptor, changedInputs, hostContext)
+      notifyOutput(id, initialOutputs)
+ 
+      return {
+        id,
+        initialOutputs,
+        onOutput(handler) {
+          outputHandlers.add(handler)
+          return () => outputHandlers.delete(handler)
+        },
+        onError(handler) {
+          errorHandlers.add(handler)
+          return () => errorHandlers.delete(handler)
+        },
+        unregister() {
+          doUnregister(id)
+        },
+      }
     },
-
+ 
     unregister(id) {
-      const entry = programs.get(id)
-      if (!entry) return
-      removeFromIndex(id, entry.program)
-      programs.delete(id)
+      doUnregister(id)
     },
-
+ 
     updateInput(name, value) {
-      return runAffected(name, value)
+      return applyChanges(new Map([[name, value]]))
     },
-
+ 
+    updateInputs(changes) {
+      return applyChanges(new Map(Object.entries(changes)))
+    },
+ 
     fireTrigger(name, value) {
-      const results = runAffected(name, value)
+      const results      = applyChanges(new Map([[name, value]]))
       const defaultValue = descriptor.inputs.get(name)?.default ?? null
-      runAffected(name, defaultValue)
+      applyChanges(new Map([[name, defaultValue]]))
       return results
     },
-
+ 
     onOutput(handler) {
-      handlers.add(handler)
-      return () => handlers.delete(handler)
+      globalOutputHandlers.add(handler)
+      return () => globalOutputHandlers.delete(handler)
     },
-
+ 
+    onError(handler) {
+      globalErrorHandlers.add(handler)
+      return () => globalErrorHandlers.delete(handler)
+    },
+ 
     getOutputDependencies(programId) {
-      return programs.get(programId)?.program.outputDependencies
+      const entry = programs.get(programId)
+      if (!entry) return undefined
+      const result = new Map<string, ReadonlySet<string>>()
+      for (const [name, node] of entry.program.outputs) {
+        result.set(name, node.dependsOn)
+      }
+      return result
     },
   }
 }
