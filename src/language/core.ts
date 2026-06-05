@@ -12,9 +12,9 @@ export function createCoreLanguage(): Language {
  
   //? Primitive types 
   lang.registerType('boolean', z.boolean())
-  lang.registerType('number', z.number())
-  lang.registerType('string', z.string())
-  lang.registerType('any', z.unknown())
+  lang.registerType('number',  z.number())
+  lang.registerType('string',  z.string())
+  lang.registerType('any',     z.unknown())
  
   //? Logic ops
   lang.registerOp({
@@ -95,137 +95,45 @@ export function createCoreLanguage(): Language {
   //  in a new environment.
   //  Op definitions below describe input/output shape for the editor.
 
-  lang.registerOp({
-    name: 'Filter',
-    inputs: [{ name: 'list', type: 'any' }],
-    output: 'any',
-    category: 'list',
-  })
+  lang.registerOp({ name: 'Filter', inputs: [{ name: 'list', type: 'any' }],                                   output: 'any',     category: 'list', higherOrder: true, bodyBindings: ['item'] })
+  lang.registerOp({ name: 'Map',    inputs: [{ name: 'list', type: 'any' }],                                   output: 'any',     category: 'list', higherOrder: true, bodyBindings: ['item'] })
+  lang.registerOp({ name: 'Find',   inputs: [{ name: 'list', type: 'any' }],                                   output: 'any',     category: 'list', higherOrder: true, bodyBindings: ['item'] })
+  lang.registerOp({ name: 'Every',  inputs: [{ name: 'list', type: 'any' }],                                   output: 'boolean', category: 'list', higherOrder: true, bodyBindings: ['item'] })
+  lang.registerOp({ name: 'Some',   inputs: [{ name: 'list', type: 'any' }],                                   output: 'boolean', category: 'list', higherOrder: true, bodyBindings: ['item'] })
+  lang.registerOp({ name: 'Reduce', inputs: [{ name: 'list', type: 'any' }, { name: 'initial', type: 'any' }], output: 'any',     category: 'list', higherOrder: true, bodyBindings: ['acc', 'item'] })
  
-  lang.registerOp({
-    name: 'Map',
-    inputs: [{ name: 'list', type: 'any' }],
-    output: 'any',
-    category: 'list',
-  })
- 
-  lang.registerOp({
-    name: 'Find',
-    inputs: [{ name: 'list', type: 'any' }],
-    output: 'any',
-    category: 'list',
-  })
- 
-  lang.registerOp({
-    name: 'Reduce',
-    inputs: [
-      { name: 'list', type: 'any' },
-      { name: 'initial', type: 'any' },
-    ],
-    output: 'any',
-    category: 'list',
-  })
- 
-  lang.registerOp({
-    name: 'Every',
-    inputs: [{ name: 'list', type: 'any' }],
-    output: 'boolean',
-    category: 'list',
-  })
- 
-  lang.registerOp({
-    name: 'Some',
-    inputs: [{ name: 'list', type: 'any' }],
-    output: 'boolean',
-    category: 'list',
-  })
  
   //? Evaluators
-  lang.registerEvaluator({
-    op: 'And',
-    evaluate: ({ nodes }) => (nodes as boolean[]).every(Boolean),
-  })
+  lang.registerEvaluator({ op: 'And', evaluate: ({ nodes }) => (nodes as boolean[]).every(Boolean) })
+  lang.registerEvaluator({ op: 'Or',  evaluate: ({ nodes }) => (nodes as boolean[]).some(Boolean) })
+  lang.registerEvaluator({ op: 'Not', evaluate: ({ a })     => !a })
+  lang.registerEvaluator({ op: 'Xor', evaluate: ({ nodes }) => (nodes as boolean[]).filter(Boolean).length % 2 === 1 })
  
-  lang.registerEvaluator({
-    op: 'Or',
-    evaluate: ({ nodes }) => (nodes as boolean[]).some(Boolean),
-  })
- 
-  lang.registerEvaluator({
-    op: 'Not',
-    evaluate: ({ a }) => !Boolean(a),
-  })
- 
-  lang.registerEvaluator({
-    op: 'Xor',
-    evaluate: ({ nodes }) => (nodes as boolean[]).filter(Boolean).length % 2 === 1, // TODO: Probably not the desired xor behaviour for more than 2 inputs.
-  })
- 
-  lang.registerEvaluator({
-    op: 'Equals',
-    evaluate: ({ a, b }) => a === b,
-  })
- 
-  lang.registerEvaluator({
-    op: 'NotEquals',
-    evaluate: ({ a, b }) => a !== b,
-  })
- 
-  lang.registerEvaluator({
-    op: 'GreaterThan',
-    evaluate: ({ a, b }) => (a as number) > (b as number),
-  })
- 
-  lang.registerEvaluator({
-    op: 'LessThan',
-    evaluate: ({ a, b }) => (a as number) < (b as number),
-  })
+  lang.registerEvaluator({ op: 'Equals',      evaluate: ({ a, b }) => a === b })
+  lang.registerEvaluator({ op: 'NotEquals',   evaluate: ({ a, b }) => a !== b })
+  lang.registerEvaluator({ op: 'GreaterThan', evaluate: ({ a, b }) => (a as number) > (b as number) })
+  lang.registerEvaluator({ op: 'LessThan',   evaluate: ({ a, b }) => (a as number) < (b as number) })
  
   lang.registerEvaluator({
     op: 'If',
-    evaluate: ({ condition, then, else: otherwise }) =>
-      Boolean(condition) ? then : otherwise,
+    evaluate: ({ condition, then, else: otherwise }) => condition ? then : otherwise,
   })
 
-  //? Higher-order evaluators - list ops
-  //  apply() wraps environment extension + body interp.
-  //  Evaluators receive resolved inputs and a callable.
+  //? Evaluators - higher-order ops
+  // apply is always defined when called from the higher_order case in evaluate().
+  // The non-null assertion (apply!) is safe - undefined only occurs for standard ops.
  
-  lang.registerHigherOrder({
-    op: 'Filter',
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).filter(item => Boolean(apply(item))),
-  })
+  lang.registerEvaluator({ op: 'Filter', evaluate: ({ list }, apply) => (list as unknown[]).filter(item  => Boolean(apply!(item))) })
+  lang.registerEvaluator({ op: 'Map',    evaluate: ({ list }, apply) => (list as unknown[]).map(item    => apply!(item)) })
+  lang.registerEvaluator({ op: 'Find',   evaluate: ({ list }, apply) => (list as unknown[]).find(item   => Boolean(apply!(item))) ?? null })
+  lang.registerEvaluator({ op: 'Every',  evaluate: ({ list }, apply) => (list as unknown[]).every(item  => Boolean(apply!(item))) })
+  lang.registerEvaluator({ op: 'Some',   evaluate: ({ list }, apply) => (list as unknown[]).some(item   => Boolean(apply!(item))) })
  
-  lang.registerHigherOrder({
-    op: 'Map',
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).map(item => apply(item)),
-  })
- 
-  lang.registerHigherOrder({
-    op: 'Find',
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).find(item => Boolean(apply(item))) ?? null,
-  })
- 
-  lang.registerHigherOrder({
+  lang.registerEvaluator({
     op: 'Reduce',
     evaluate: ({ list, initial }, apply) =>
-      (list as unknown[]).reduce((acc, item) => apply(acc, item), initial),
+      (list as unknown[]).reduce((acc, item) => apply!(acc, item), initial),
   })
  
-  lang.registerHigherOrder({
-    op: 'Every',
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).every(item => Boolean(apply(item))),
-  })
- 
-  lang.registerHigherOrder({
-    op: 'Some',
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).some(item => Boolean(apply(item))),
-  })
-  
   return lang
 }
