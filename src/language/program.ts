@@ -9,26 +9,8 @@ export interface RawProgram {
 
 // ? Core C Program - output of analyse, input to interpreter.
 export interface CoreProgram {
-  /** All named bindings: Set x = ... */
-  bindings: Map<string, ASTNode>;
- 
-  /** Named program outputs: return tally: s1 */
-  outputs: Map<string, ASTNode>;
-
-  /**
-   * Topological sort of usedBindings.
-   * interp walks this in order - dependencies always before dependents.
-   * Computed at analyse time. Cycles produce an AnalysisError.
-   */
-  evalOrder: string[];
- 
-  /**
-   * Per-output contributing inputs
-   * outputName -> Set of input node names that transitively contribute to it.
-   * e.g. 'tally' → Set(['sourceBusNew', 'sourceBusOld'])
-   * Not currently used in the interpretter, but exposed outside the library to be used.
-   */
-  outputDependencies: Map<string, Set<string>>;
+  bindings: Map<string, CNode>
+  outputs: Map<string, CNode>
 }
 
 //? EvalState - persistent across input changes, one instance per program
