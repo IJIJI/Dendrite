@@ -9,43 +9,44 @@ export type SourceRef =
 // TODO: Add more complex types (structs, arrays, etc.) in the future.
 type LiteralValue = string | number | boolean;
 
-// OpInputType - single node or variadic (multiple connections in the editor).
-// ASTNode  = one wire, regardless of what type it produces (including lists).
-// ASTNode[] = multiple wires - variadic input, only for ops with variadic: true.
-export type OpInputType = ASTNode | ASTNode[]
+// InputType<T> — a single node or variadic (multiple connections in editor).
+// OpInputType and COpInputType are concrete aliases of this generic.
+export type InputType<T> = T | T[]
+export type OpInputType  = InputType<ASTNode>
+export type COpInputType = InputType<CNode>
 
 //? AST Nodes
 
 // Primitive value definition
 export interface LiteralNode {
-  kind: 'literal';
-  type: string;       // registered output type name - Validated against Zod schema at analysis time.
-  value: LiteralValue;
-  loc?: SourceRef;
+  kind: 'literal'
+  type: string
+  value: LiteralValue
+  source?: SourceRef
 }
 
 // Array of ASTNodes
 export interface ArrayNode {
-  kind: 'array';
-  items: ASTNode[];
-  type: string;        // inferred at analyse time from item types
-  loc?: SourceRef;
+  kind: 'array'
+  items: ASTNode[]
+  type: string
+  source?: SourceRef
 }
 
 // A named value loaded from context before eval: sourceBusNew, fallbackState
 export interface InputNode {
-  kind: 'input';
-  name: string;       // must match a registered InputDefinition
-  type: string;
-  loc?: SourceRef;
+  kind: 'input'
+  name: string
+  type: string
+  source?: SourceRef
 }
 
 // A reference to a named binding: Set x = ...; use x elsewhere
 export interface RefNode {
-  kind: 'ref';
-  name: string;       // binding name in RawProgram.bindings
-  type: string;       // output type of the referenced binding
-  loc?: SourceRef;
+  kind: 'ref'
+  name: string
+  type: string
+  source?: SourceRef
 }
 
 
@@ -53,21 +54,21 @@ export interface RefNode {
 // inputs values are either a single ASTNode or ASTNode[] for variadic inputs.
 // Variadic inputs are only valid for OpInputs with variadic: true.
 export interface OperationNode {
-  kind: 'operation';
-  op: string;                           // must match a registered OpDefinition
-  inputs: Record<string, OpInputType>;  // keyed by input name from OpDefinition
-  output: string;                       // type name - resolved at parse time
-  loc?: SourceRef;
+  kind: 'operation'
+  op: string
+  inputs: Record<string, OpInputType>
+  output: string
+  source?: SourceRef
 }
 
 // Field access on a struct-typed node: bus.program
 // Used for ops that return a struct type.
 export interface FieldAccessNode {
-  kind: 'field';
-  source: ASTNode;
-  field: string;
-  type: string;  // resolved at parse time from the struct type definition
-  loc?: SourceRef;
+  kind: 'field'
+  struct: ASTNode
+  field: string
+  type: string
+  source?: SourceRef
 }
 
 
@@ -85,12 +86,12 @@ export interface FieldAccessNode {
  * Evaluators never see interpreter internals.
  */
 export interface HigherOrderNode {
-  kind: 'higher_order';
-  op: string;                            // must match a registered HigherOrderEvaluatorDefinition
-  inputs: Record<string, OpInputType>;   // regular inputs - pre-resolved before evaluator call
-  bindings: string[];                    // scoped variable names - one per apply() argument
-  body: ASTNode;                         // evaluated in new environment per apply() call
-  loc?: SourceRef;
+  kind: 'higher_order'
+  op: string
+  inputs: Record<string, OpInputType>
+  bindings: string[]
+  body: ASTNode
+  source?: SourceRef
 }
  
 export type ASTNode =
@@ -101,3 +102,53 @@ export type ASTNode =
   | OperationNode
   | FieldAccessNode
   | HigherOrderNode
+
+//? Analysed: metadata added by the analyser to every node.
+//
+//  dependsOn: which context input names transitively affect this node.
+//  Invariant: CRefNode.dependsOn === program.bindings.get(name).dependsOn
+//  (set by analyser, enables cache check without binding lookup).
+//  Used at evaluate time to skip recomputation when no dependency changed.
+
+
+export interface Analysed {
+  readonly dependsOn: ReadonlySet<string>
+}
+ 
+//? CNodes analysed representation (CoreProgram).
+// Each variant extends its ASTNode counterpart, overriding recursive fields
+// with CNode variants and adding Analysed.
+
+export interface CLiteralNode    extends LiteralNode, Analysed {}
+export interface CInputNode      extends InputNode, Analysed {}
+export interface CRefNode        extends RefNode, Analysed {}
+ 
+export interface CLiteralNode    extends LiteralNode, Analysed {}
+export interface CInputNode      extends InputNode, Analysed {}
+export interface CRefNode        extends RefNode, Analysed {}
+ 
+export interface CArrayNode extends Omit<ArrayNode, 'items'>, Analysed {
+  readonly items: CNode[]
+}
+ 
+export interface COperationNode extends Omit<OperationNode, 'inputs'>, Analysed {
+  readonly inputs: Record<string, COpInputType>
+}
+ 
+export interface CFieldAccessNode extends Omit<FieldAccessNode, 'struct'>, Analysed {
+  readonly struct: CNode
+}
+ 
+export interface CHigherOrderNode extends Omit<HigherOrderNode, 'inputs' | 'body'>, Analysed {
+  readonly inputs: Record<string, COpInputType>
+  readonly body: CNode
+}
+
+export type CNode =
+  | CLiteralNode
+  | CArrayNode
+  | CInputNode
+  | CRefNode
+  | COperationNode
+  | CFieldAccessNode
+  | CHigherOrderNode
