@@ -86,11 +86,15 @@ runtime.register('topTier', topTierProgram)
 const scores = [45, 85, 95]
 for (const score of scores) {
   console.log(`\n--- updateInput score=${score} ---`)
+  const t0 = performance.now()
   runtime.updateInput('score', score)
+  console.log(`  (${(performance.now() - t0).toFixed(3)}ms)`)
 }
 
 console.log('\n--- unregister "grader" ---')
 runtime.unregister('grader')
 
 console.log('\n--- updateInput score=100 (only topTier active) ---')
+const t0 = performance.now()
 runtime.updateInput('score', 100)
+console.log(`  (${(performance.now() - t0).toFixed(3)}ms)`)

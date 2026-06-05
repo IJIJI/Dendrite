@@ -69,7 +69,9 @@ const testCases = [45, 60, 85]
 console.log('Dendrite score grader (passing threshold: > 60)\n')
 
 for (const score of testCases) {
+  const t0 = performance.now()
   updateInput('score', score, state, program)
   const outputs = evaluateProgram(program, state, lang.descriptor)
-  console.log(`  score=${score}  →  result="${outputs.get('result')}"`)
+  const elapsed = performance.now() - t0
+  console.log(`  score=${score}  →  result="${outputs.get('result')}"  (${elapsed.toFixed(3)}ms)`)
 }
