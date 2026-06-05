@@ -233,7 +233,7 @@ export function updateInput(
   program: CoreProgram,
 ): void {
   state.environment.set(name, value)
-  // Propagate to dependents directly — inputs are not bindings so they are
+  // Propagate to dependents directly - inputs are not bindings so they are
   // never removed from dirty by evaluateProgram. Marking the input name itself
   // would cause subsequent calls for the same input to return early without
   // propagating, producing stale output.

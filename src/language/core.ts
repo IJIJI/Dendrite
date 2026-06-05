@@ -78,7 +78,7 @@ export function createCoreLanguage(): Language {
  
   //? Control flow
   //  Note: If evaluates both branches eagerly (call-by-value).
-  //  Short-circuit would require lazy evaluation — future work.
+  //  Short-circuit would require lazy evaluation - future work.
   lang.registerOp({
     name: 'If',
     inputs: [
@@ -91,7 +91,7 @@ export function createCoreLanguage(): Language {
   })
 
   //? Higher-order list ops
-  //  These use HigherOrderNode in the AST — the body is evaluated per item
+  //  These use HigherOrderNode in the AST - the body is evaluated per item
   //  in a new environment.
   //  Op definitions below describe input/output shape for the editor.
 
@@ -187,7 +187,7 @@ export function createCoreLanguage(): Language {
       Boolean(condition) ? then : otherwise,
   })
 
-  //? Higher-order evaluators — list ops
+  //? Higher-order evaluators - list ops
   //  apply() wraps environment extension + body interp.
   //  Evaluators receive resolved inputs and a callable.
  

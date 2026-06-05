@@ -8,7 +8,7 @@ const lang = createCoreLanguage()
 lang.registerInput({ name: 'score', type: 'number' })
 
 // --- Programs ---------------------------------------------------------------
-// Program A — "grader":
+// Program A - "grader":
 //   Set isPassing = GreaterThan(score, 60)
 //   Set grade     = If(isPassing, "Pass", "Fail")
 //   return result: grade
@@ -45,7 +45,7 @@ const graderProgram: CoreProgram = {
   outputDependencies: new Map([['result', new Set(['score'])]]),
 }
 
-// Program B — "topTier":
+// Program B - "topTier":
 //   Set isTop = GreaterThan(score, 90)
 //   return topTier: isTop
 

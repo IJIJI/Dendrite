@@ -9,7 +9,7 @@ export type SourceRef =
 // TODO: Add more complex types (structs, arrays, etc.) in the future.
 type LiteralValue = string | number | boolean;
 
-// InputType<T> — a single node or variadic (multiple connections in editor).
+// InputType<T> - a single node or variadic (multiple connections in editor).
 // OpInputType and COpInputType are concrete aliases of this generic.
 export type InputType<T> = T | T[]
 export type OpInputType  = InputType<ASTNode>
