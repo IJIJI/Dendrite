@@ -311,6 +311,25 @@ export function evaluateProgram(
   return results
 }
 
+// ---------------------------------------------------------------------------
+// outputDependencies - derive which context inputs each output depends on.
+//
+// The same information lives on each output CNode's dependsOn, but accessing
+// it through this function is more convenient for tooling, persistence, or
+// any consumer that needs it without going through a Runtime instance.
+// The Runtime's getOutputDependencies delegates to this.
+// ---------------------------------------------------------------------------
+ 
+export function outputDependencies(
+  program: CoreProgram,
+): Map<string, ReadonlySet<string>> {
+  const result = new Map<string, ReadonlySet<string>>()
+  for (const [name, node] of program.outputs) {
+    result.set(name, node.dependsOn)
+  }
+  return result
+}
+ 
 
 //? Eval Errors
 // TODO: Should input not set be found before, or be handled in code?
