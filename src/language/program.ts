@@ -233,7 +233,13 @@ export function updateInput(
   program: CoreProgram,
 ): void {
   state.environment.set(name, value)
-  markDirty(name, state, program)
+  // Propagate to dependents directly — inputs are not bindings so they are
+  // never removed from dirty by evaluateProgram. Marking the input name itself
+  // would cause subsequent calls for the same input to return early without
+  // propagating, producing stale output.
+  for (const dep of program.dependents.get(name) ?? []) {
+    markDirty(dep, state, program)
+  }
 }
  
 export function markDirty(
