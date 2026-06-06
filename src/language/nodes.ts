@@ -4,10 +4,11 @@ export type SourceRef =
   | { kind: 'code'; line: number; column: number; length: number }
   | { kind: 'rete'; nodeId: string }
 
-//? Node types
-// LiteralValue - Used for primitives only for now.
-// TODO: Add more complex types (structs, arrays, etc.) in the future.
-type LiteralValue = string | number | boolean;
+
+//? LiteralValue - Used for primitives only for now.
+//  TODO: Add more complex types (structs, arrays, etc.) in the future.
+//  TODO: Add null/undefined?
+export type LiteralValue = string | number | boolean
 
 // InputType<T> - a single node or variadic (multiple connections in editor).
 // OpInputType and COpInputType are concrete aliases of this generic.
