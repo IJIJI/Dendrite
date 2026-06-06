@@ -173,6 +173,12 @@ export function time<T>(fn: () => T): { result: T; ms: number } {
 /** Time a function call, log the duration, and return the result. */
 export function timed<T>(label: string, fn: () => T): T {
   const { result, ms } = time(fn)
-  console.log(`  ⏱  ${label}: ${ms.toFixed(3)}ms`)
+  console.log(`  Runtime:  ${label}: ${ms.toFixed(3)}ms`)
   return result
 }
+
+/** Print the standard scenario header line used by all three example files. */
+export function logHeader(s: Scenario, note: string): void {
+  console.log(`\n[${s.label}] ${s.values.length} inputs, threshold: ${s.threshold}  (${note})`)
+}
+
