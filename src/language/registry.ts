@@ -15,6 +15,7 @@ export interface OpInput {
   variadic?: boolean
 }
 
+// TODO: Should there even be a difference between higher order and standard? Could higher order not be a standard op with a function as its arg? Would enable multi function higher order nodes too..
 export interface OpDefinition {
   name: string
   inputs: OpInput[]
