@@ -1,8 +1,8 @@
 /**
- * Core language — run() style.
+ * Core language using run().
  *
  * run() creates fresh EvalState on every call. No state is carried between
- * evaluations — every scenario computes from scratch regardless of how similar
+ * evaluations, every scenario computes from scratch regardless of how similar
  * it is to the previous one.
  *
  * Scenarios 5–7 share the same 10k values array; 8–9 share 100k.
