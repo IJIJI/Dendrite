@@ -43,7 +43,7 @@ export function createEvalState(): EvalState {
   }
 }
 
-//? Parse Results
+//? Parse Results: text/graph -> RawProgram + diagnostics warnings and errors.
 export type ParseErrorKind =
   | 'syntax_error'
   | 'unexpected_token'
@@ -63,7 +63,7 @@ export interface ParseWarning {
   kind: ParseWarningKind
   message: string
   source?: SourceRef
-} 
+}
 
 export interface ParseSuccess {
   ok: true
