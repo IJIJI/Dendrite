@@ -2,12 +2,11 @@
 import { ZodType } from 'zod'
 
 //? Definition types
-
 export interface TypeDefinition {
   name: string
   schema: ZodType<unknown>
 }
-
+ 
 export interface OpInput {
   name: string
   type: string
@@ -35,6 +34,7 @@ export interface OpDefinition {
   bodyBindings?: string[]
 }
 
+// TODO: Also use default for non-trigger inputs? Usefull for computation before they are set.
 export interface InputDefinition {
   name: string
   type: string
@@ -49,7 +49,7 @@ export interface InputDefinition {
  * 'required'  - AnalysisError (missing_required_output) if program doesn't declare it
  */
 export type OutputMode = 'optional' | 'desired' | 'required'
-
+ 
 export interface OutputDefinition {
   name: string
   type: string
@@ -66,10 +66,7 @@ export type Apply = (...args: unknown[]) => unknown
  * Unified evaluator definition. covers both standard and higher-order ops.
  *
  * apply is undefined for standard (OperationNode) ops, they should ignore it.
- * apply is always defined for higher-order (HigherOrderNode) ops - they require it.
- *
- * Using a single interface removes the mutual exclusivity check and the
- * two-map split that existed when these were separate types.
+ * apply is always defined for higher-order (HigherOrderNode) ops, they require it.
  */
 export interface EvaluatorDefinition {
   op: string
@@ -80,7 +77,7 @@ export interface EvaluatorDefinition {
   ) => unknown
 }
 
-//? Language descriptor - Single source of truth for the language shape. 
+//? Language descriptor - Single source of truth for the editor, analyser, evaluator.
 export interface LanguageDescriptor {
   types:      ReadonlyMap<string, TypeDefinition>
   ops:        ReadonlyMap<string, OpDefinition>
@@ -90,7 +87,7 @@ export interface LanguageDescriptor {
 }
 
 
-//? Language - The registration API
+//? Language: The registration API
 export interface Language {
   descriptor: LanguageDescriptor
   registerType(name: string, schema: ZodType<unknown>): void
@@ -121,9 +118,8 @@ export function createLanguage(): Language {
 }
 
 /**
- * Extend a language - child inherits all parent registrations.
- * Beacon calls this with the core language.
- * New registrations on child do not affect parent.
+ * Create a new Language pre-populated with all definitions from a parent.
+ * The child shares no mutable state with the parent.
  */
 export function extendLanguage(parent: Language): Language {
   const child = createLanguage()
