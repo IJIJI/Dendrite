@@ -51,9 +51,9 @@ export interface InputDefinition {
 export type OutputMode = 'optional' | 'desired' | 'required'
 
 export interface OutputDefinition {
-  name: string;
-  type: string;       // registered type name
-  required?: OutputMode;   // defaults to 'optional'
+  name: string
+  type: string
+  mode?: OutputMode   // defaults to 'optional'
 }
 
 /**
