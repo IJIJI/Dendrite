@@ -1,9 +1,4 @@
-import {
-  CoreProgram,
-  createEvalState,
-  evaluateProgram,
-  updateInput,
-} from "./program";
+import { CoreProgram, createEvalState, evaluateProgram, updateInput } from "./program";
 import { LanguageDescriptor } from "./registry";
 
 // runner.ts — single-program convenience API.
@@ -80,13 +75,7 @@ export function createProgramRunner(
       for (const [name, value] of Object.entries(changes)) {
         updateInput(name, value, state);
       }
-      return evaluateProgram(
-        program,
-        state,
-        descriptor,
-        changedInputs,
-        hostContext,
-      );
+      return evaluateProgram(program, state, descriptor, changedInputs, hostContext);
     },
   };
 }

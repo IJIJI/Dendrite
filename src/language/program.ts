@@ -124,11 +124,7 @@ export interface AnalysisFailure {
 export type AnalysisResult = AnalysisSuccess | AnalysisFailure;
 
 //? Input management: The host facing inputs, string-typed.
-export function updateInput(
-  name: string,
-  value: unknown,
-  state: EvalState,
-): void {
+export function updateInput(name: string, value: unknown, state: EvalState): void {
   state.inputs.set(name, value);
 }
 
@@ -197,22 +193,14 @@ export function evaluate(
       if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
         return state.nodeCache.get(binding);
       }
-      const result = evaluate(
-        binding,
-        program,
-        state,
-        changedInputs,
-        descriptor,
-        hostContext,
-      );
+      const result = evaluate(binding, program, state, changedInputs, descriptor, hostContext);
       state.nodeCache.set(binding, result);
       return result;
     }
 
     case "array": {
       const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs))
-        return cache.get(node);
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
       const result = node.items.map((n) =>
         evaluate(n, program, state, changedInputs, descriptor, hostContext),
       );
@@ -222,16 +210,8 @@ export function evaluate(
 
     case "field": {
       const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs))
-        return cache.get(node);
-      const src = evaluate(
-        node.struct,
-        program,
-        state,
-        changedInputs,
-        descriptor,
-        hostContext,
-      );
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
+      const src = evaluate(node.struct, program, state, changedInputs, descriptor, hostContext);
       if (src === null || src === undefined) {
         // TODO: Should this use a default struct not set value instead of throwing?
         throw new EvalError(
@@ -259,32 +239,13 @@ export function evaluate(
       const evaluator = descriptor.evaluators.get(node.op);
       if (!evaluator) {
         // TODO: Check if this is or can be caught on analysis to prevent evaluation errors.
-        throw new EvalError(
-          "evaluator_not_found",
-          `No evaluator for op: '${node.op}'`,
-        );
+        throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
       }
       const resolved: Record<string, unknown> = {};
       for (const [key, input] of Object.entries(node.inputs)) {
         resolved[key] = Array.isArray(input)
-          ? input.map((n) =>
-              evaluate(
-                n,
-                program,
-                state,
-                changedInputs,
-                descriptor,
-                hostContext,
-              ),
-            )
-          : evaluate(
-              input,
-              program,
-              state,
-              changedInputs,
-              descriptor,
-              hostContext,
-            );
+          ? input.map((n) => evaluate(n, program, state, changedInputs, descriptor, hostContext))
+          : evaluate(input, program, state, changedInputs, descriptor, hostContext);
       }
       const apply = (...args: unknown[]) => {
         const innerInputs = new Map(state.inputs);
@@ -294,14 +255,7 @@ export function evaluate(
           nodeCache: state.nodeCache,
           bodyScope: new WeakMap(),
         };
-        return evaluate(
-          node.body,
-          program,
-          innerState,
-          changedInputs,
-          descriptor,
-          hostContext,
-        );
+        return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
       };
       try {
         const result = evaluator.evaluate(resolved, apply, hostContext);
@@ -315,36 +269,16 @@ export function evaluate(
 
     case "operation": {
       const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs))
-        return cache.get(node);
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
       const evaluator = descriptor.evaluators.get(node.op);
       if (!evaluator) {
-        throw new EvalError(
-          "evaluator_not_found",
-          `No evaluator for op: '${node.op}'`,
-        );
+        throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
       }
       const resolved: Record<string, unknown> = {};
       for (const [key, input] of Object.entries(node.inputs)) {
         resolved[key] = Array.isArray(input)
-          ? input.map((n) =>
-              evaluate(
-                n,
-                program,
-                state,
-                changedInputs,
-                descriptor,
-                hostContext,
-              ),
-            )
-          : evaluate(
-              input,
-              program,
-              state,
-              changedInputs,
-              descriptor,
-              hostContext,
-            );
+          ? input.map((n) => evaluate(n, program, state, changedInputs, descriptor, hostContext))
+          : evaluate(input, program, state, changedInputs, descriptor, hostContext);
       }
       try {
         // apply is undefined for standard ops - evaluator should ignore it
@@ -369,10 +303,7 @@ export function evaluateProgram(
 ): Map<string, unknown> {
   const results = new Map<string, unknown>();
   for (const [name, node] of program.outputs) {
-    results.set(
-      name,
-      evaluate(node, program, state, changedInputs, descriptor, hostContext),
-    );
+    results.set(name, evaluate(node, program, state, changedInputs, descriptor, hostContext));
   }
   return results;
 }
@@ -381,9 +312,7 @@ export function evaluateProgram(
 //
 //  Each output is a CNode, this derives their dependencies from them.
 //  Helper function to ease that computation.
-export function outputDependencies(
-  program: CoreProgram,
-): Map<string, ReadonlySet<string>> {
+export function outputDependencies(program: CoreProgram): Map<string, ReadonlySet<string>> {
   const result = new Map<string, ReadonlySet<string>>();
   for (const [name, node] of program.outputs) {
     result.set(name, node.dependsOn);

@@ -119,18 +119,15 @@ export interface CArrayNode extends Omit<ArrayNode, "items">, Analysed {
   readonly items: CNode[];
 }
 
-export interface COperationNode
-  extends Omit<OperationNode, "inputs">, Analysed {
+export interface COperationNode extends Omit<OperationNode, "inputs">, Analysed {
   readonly inputs: Record<string, COpInputType>;
 }
 
-export interface CFieldAccessNode
-  extends Omit<FieldAccessNode, "struct">, Analysed {
+export interface CFieldAccessNode extends Omit<FieldAccessNode, "struct">, Analysed {
   readonly struct: CNode;
 }
 
-export interface CHigherOrderNode
-  extends Omit<HigherOrderNode, "inputs" | "body">, Analysed {
+export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body">, Analysed {
   readonly inputs: Record<string, COpInputType>;
   readonly body: CNode;
 }

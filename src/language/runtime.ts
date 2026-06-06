@@ -35,10 +35,7 @@ export interface ProgramHandle {
 
 //? Global handler types. Fired for every program, include programId.
 //  Useful for dashboards, loggers, or anything that observes all programs.
-export type OutputHandler = (
-  programId: string,
-  outputs: Map<string, unknown>,
-) => void;
+export type OutputHandler = (programId: string, outputs: Map<string, unknown>) => void;
 export type ErrorHandler = (programId: string, error: EvalError) => void;
 
 //? Runtime: Manages multiple programs sharing context inputs.
@@ -70,9 +67,7 @@ export interface Runtime {
    * Update multiple inputs atomically - one evaluation pass per program.
    * Preferred over multiple updateInput calls for the same ATEM event.
    */
-  updateInputs(
-    changes: Record<string, unknown>,
-  ): Map<string, Map<string, unknown>>;
+  updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>;
 
   /**
    * Fire a trigger - sets the value, evaluates affected programs,
@@ -96,15 +91,10 @@ export interface Runtime {
    * Contributing inputs for each output of a registered program.
    * Derived from output CNode.dependsOn - no separate map needed.
    */
-  getOutputDependencies(
-    programId: string,
-  ): Map<string, ReadonlySet<string>> | undefined;
+  getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined;
 }
 
-export function createRuntime(
-  descriptor: LanguageDescriptor,
-  hostContext?: unknown,
-): Runtime {
+export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unknown): Runtime {
   const programs = new Map<string, ProgramEntry>();
 
   // Global handler sets - fire for every program, include programId
@@ -147,9 +137,7 @@ export function createRuntime(
     }
   }
 
-  function applyChanges(
-    changes: Map<string, unknown>,
-  ): Map<string, Map<string, unknown>> {
+  function applyChanges(changes: Map<string, unknown>): Map<string, Map<string, unknown>> {
     const changedInputs = new Set(changes.keys());
 
     const affected = new Set<string>();

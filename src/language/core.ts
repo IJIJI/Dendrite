@@ -164,8 +164,7 @@ export function createCoreLanguage(): Language {
   lang.registerEvaluator({ op: "Not", evaluate: ({ a }) => !a });
   lang.registerEvaluator({
     op: "Xor",
-    evaluate: ({ nodes }) =>
-      (nodes as boolean[]).filter(Boolean).length % 2 === 1,
+    evaluate: ({ nodes }) => (nodes as boolean[]).filter(Boolean).length % 2 === 1,
   });
 
   lang.registerEvaluator({ op: "Equals", evaluate: ({ a, b }) => a === b });
@@ -181,21 +180,18 @@ export function createCoreLanguage(): Language {
 
   lang.registerEvaluator({
     op: "If",
-    evaluate: ({ condition, then, else: otherwise }) =>
-      condition ? then : otherwise,
+    evaluate: ({ condition, then, else: otherwise }) => (condition ? then : otherwise),
   });
 
   //? Evaluators - higher-order ops
   // apply is always defined when called from the higher_order case in evaluate().
   lang.registerEvaluator({
     op: "Filter",
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).filter((item) => Boolean(apply!(item))),
+    evaluate: ({ list }, apply) => (list as unknown[]).filter((item) => Boolean(apply!(item))),
   });
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).map((item) => apply!(item)),
+    evaluate: ({ list }, apply) => (list as unknown[]).map((item) => apply!(item)),
   });
   lang.registerEvaluator({
     op: "Find",
@@ -204,13 +200,11 @@ export function createCoreLanguage(): Language {
   });
   lang.registerEvaluator({
     op: "Every",
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).every((item) => Boolean(apply!(item))),
+    evaluate: ({ list }, apply) => (list as unknown[]).every((item) => Boolean(apply!(item))),
   });
   lang.registerEvaluator({
     op: "Some",
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).some((item) => Boolean(apply!(item))),
+    evaluate: ({ list }, apply) => (list as unknown[]).some((item) => Boolean(apply!(item))),
   });
 
   // TODO: Add foldLeft and foldRight (/reduceLeft and reduceRight) to cover different associativity needs?

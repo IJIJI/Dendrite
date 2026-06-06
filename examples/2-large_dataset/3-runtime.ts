@@ -28,9 +28,7 @@ const runtime = createRuntime(descriptor);
 const filtering = timed("register filtering", () =>
   runtime.register("filtering", filteringProgram),
 );
-const honors = timed("register honors", () =>
-  runtime.register("honors", honorsProgram),
-);
+const honors = timed("register honors", () => runtime.register("honors", honorsProgram));
 
 let prev: Scenario | undefined;
 let lastHonors = honors.initialOutputs;

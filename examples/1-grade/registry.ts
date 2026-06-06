@@ -41,9 +41,7 @@ const graderProgram: CoreProgram = {
       },
     ],
   ]),
-  outputs: new Map<string, ASTNode>([
-    ["result", { kind: "ref", name: "grade", type: "any" }],
-  ]),
+  outputs: new Map<string, ASTNode>([["result", { kind: "ref", name: "grade", type: "any" }]]),
   usedBindings: new Set(["isPassing", "grade"]),
   evalOrder: ["isPassing", "grade"],
   dependents: new Map([
@@ -72,9 +70,7 @@ const topTierProgram: CoreProgram = {
       },
     ],
   ]),
-  outputs: new Map<string, ASTNode>([
-    ["topTier", { kind: "ref", name: "isTop", type: "boolean" }],
-  ]),
+  outputs: new Map<string, ASTNode>([["topTier", { kind: "ref", name: "isTop", type: "boolean" }]]),
   usedBindings: new Set(["isTop"]),
   evalOrder: ["isTop"],
   dependents: new Map([["score", new Set(["isTop"])]]),
@@ -85,9 +81,7 @@ const topTierProgram: CoreProgram = {
 const runtime = createRuntime(lang.descriptor);
 
 runtime.onOutput((programId, outputs) => {
-  const values = [...outputs.entries()]
-    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-    .join(", ");
+  const values = [...outputs.entries()].map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ");
   console.log(`  [${programId}] ${values}`);
 });
 

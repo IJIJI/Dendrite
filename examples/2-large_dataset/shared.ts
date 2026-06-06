@@ -263,10 +263,7 @@ export const scenarios: Scenario[] = [
 // ---------------------------------------------------------------------------
 
 /** Describe what changed between two consecutive scenarios. */
-export function changesFrom(
-  prev: Scenario | undefined,
-  curr: Scenario,
-): string {
+export function changesFrom(prev: Scenario | undefined, curr: Scenario): string {
   if (!prev) return "initial";
   const v = prev.values !== curr.values;
   const t = prev.threshold !== curr.threshold;
@@ -277,22 +274,16 @@ export function changesFrom(
 }
 
 /** Pass only inputs that actually changed. Enables node-level and program-level caching. */
-export function delta(
-  prev: Scenario | undefined,
-  curr: Scenario,
-): Record<string, unknown> {
+export function delta(prev: Scenario | undefined, curr: Scenario): Record<string, unknown> {
   const changes: Record<string, unknown> = {};
   if (!prev || prev.values !== curr.values) changes.values = curr.values;
-  if (!prev || prev.threshold !== curr.threshold)
-    changes.threshold = curr.threshold;
+  if (!prev || prev.threshold !== curr.threshold) changes.threshold = curr.threshold;
   return changes;
 }
 
 /** Print the standard scenario header line. */
 export function logHeader(s: Scenario, note: string): void {
-  console.log(
-    `\n[${s.label}] ${s.values.length} inputs, threshold: ${s.threshold}  (${note})`,
-  );
+  console.log(`\n[${s.label}] ${s.values.length} inputs, threshold: ${s.threshold}  (${note})`);
 }
 
 /** Display outputs from a single program (run / runner). */

@@ -26,8 +26,7 @@ for (let i = 0; i < scenarios.length; i++) {
   const s = scenarios[i];
   const prev = scenarios[i - 1] as Scenario | undefined;
   const what = changesFrom(prev, s);
-  const note =
-    what === "threshold only" ? `${what}, run() recomputes all anyway` : what;
+  const note = what === "threshold only" ? `${what}, run() recomputes all anyway` : what;
 
   logHeader(s, note);
   const outputs = timed("run()", () =>

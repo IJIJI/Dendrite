@@ -45,9 +45,7 @@ const program: CoreProgram = {
     ["grade", grade],
   ]),
 
-  outputs: new Map<string, ASTNode>([
-    ["result", { kind: "ref", name: "grade", type: "any" }],
-  ]),
+  outputs: new Map<string, ASTNode>([["result", { kind: "ref", name: "grade", type: "any" }]]),
 
   usedBindings: new Set(["isPassing", "grade"]),
   evalOrder: ["isPassing", "grade"],
@@ -71,7 +69,5 @@ for (const score of testCases) {
   updateInput("score", score, state, program);
   const outputs = evaluateProgram(program, state, lang.descriptor);
   const elapsed = performance.now() - t0;
-  console.log(
-    `  score=${score}  →  result="${outputs.get("result")}"  (${elapsed.toFixed(3)}ms)`,
-  );
+  console.log(`  score=${score}  →  result="${outputs.get("result")}"  (${elapsed.toFixed(3)}ms)`);
 }

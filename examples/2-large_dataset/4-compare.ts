@@ -98,9 +98,7 @@ function speedup(base: number, other: number): string {
 }
 
 const C = { label: 22, count: 7, changed: 18, ms: 9, gain: 6 };
-const hr = "-".repeat(
-  C.label + C.count + 2 + C.changed + C.ms + C.ms + C.ms + C.gain + C.gain + 4,
-);
+const hr = "-".repeat(C.label + C.count + 2 + C.changed + C.ms + C.ms + C.ms + C.gain + C.gain + 4);
 
 console.log(
   "\n" +

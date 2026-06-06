@@ -29,8 +29,7 @@ let prev: Scenario | undefined;
 for (const s of scenarios) {
   const changes = delta(prev, s);
   const what = changesFrom(prev, s);
-  const note =
-    what === "threshold only" ? `${what} - anyCumLaude cached` : what;
+  const note = what === "threshold only" ? `${what} - anyCumLaude cached` : what;
 
   logHeader(s, note);
   const outputs = timed("runner.run()", () => runner.run(changes));
