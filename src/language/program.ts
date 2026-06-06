@@ -138,9 +138,10 @@ function isCached(
   node: object,
   cache: WeakMap<object, unknown>,
   dependsOn: ReadonlySet<string>,
-  changedInputs: Set<string>,
+  changedInputs: Set<string> | undefined,
 ): boolean {
   if (!cache.has(node)) return false
+  if (!changedInputs) return false   // undefined = all inputs changed, nothing is cached
   for (const d of changedInputs) {
     if (dependsOn.has(d)) return false
   }
@@ -161,7 +162,7 @@ export function evaluate(
   node: CNode,
   program: CoreProgram,
   state: EvalState,
-  changedInputs: Set<string>,
+  changedInputs: Set<string> | undefined,
   descriptor: LanguageDescriptor,
   hostContext?: unknown,
 ): unknown {
@@ -287,7 +288,7 @@ export function evaluateProgram(
   program: CoreProgram,
   state: EvalState,
   descriptor: LanguageDescriptor,
-  changedInputs: Set<string>,
+  changedInputs?: Set<string>,
   hostContext?: unknown,
 ): Map<string, unknown> {
   const results = new Map<string, unknown>()
