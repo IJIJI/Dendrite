@@ -15,6 +15,7 @@ export interface OpInput {
 }
 
 // TODO: Should there even be a difference between higher order and standard? Could higher order not be a standard op with a function as its arg? Would enable multi function higher order nodes too..
+// TODO: Should body bindings be named? What if e.g. a higher order filter node defines input and the user writes val?
 export interface OpDefinition {
   name: string
   inputs: OpInput[]
