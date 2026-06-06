@@ -119,11 +119,6 @@ export interface Analysed {
 //? CNodes analysed representation (CoreProgram).
 // Each variant extends its ASTNode counterpart, overriding recursive fields
 // with CNode variants and adding Analysed.
-
-export interface CLiteralNode    extends LiteralNode, Analysed {}
-export interface CInputNode      extends InputNode, Analysed {}
-export interface CRefNode        extends RefNode, Analysed {}
- 
 export interface CLiteralNode    extends LiteralNode, Analysed {}
 export interface CInputNode      extends InputNode, Analysed {}
 export interface CRefNode        extends RefNode, Analysed {}
