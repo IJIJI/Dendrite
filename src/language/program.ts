@@ -297,15 +297,10 @@ export function evaluateProgram(
   return results
 }
 
-// ---------------------------------------------------------------------------
-// outputDependencies - derive which context inputs each output depends on.
+//? outputDependencies - derive which context inputs each output depends on.
 //
-// The same information lives on each output CNode's dependsOn, but accessing
-// it through this function is more convenient for tooling, persistence, or
-// any consumer that needs it without going through a Runtime instance.
-// The Runtime's getOutputDependencies delegates to this.
-// ---------------------------------------------------------------------------
- 
+//  Each output is a CNode, this derives their dependencies from them.
+//  Helper function to ease that computation. 
 export function outputDependencies(
   program: CoreProgram,
 ): Map<string, ReadonlySet<string>> {
