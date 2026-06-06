@@ -1,5 +1,5 @@
 
-//? Source location - carried by nodes for editor/LSP/Node-editor diagnostics
+//? SourceRef: Points back to the origin of a node in either editor.
 export type SourceRef =
   | { kind: 'code'; line: number; column: number; length: number }
   | { kind: 'rete'; nodeId: string }
@@ -10,14 +10,13 @@ export type SourceRef =
 //  TODO: Add null/undefined?
 export type LiteralValue = string | number | boolean
 
-// InputType<T> - a single node or variadic (multiple connections in editor).
+// InputType<T> - a single or variadic node (multiple connections in editor).
 // OpInputType and COpInputType are concrete aliases of this generic.
 export type InputType<T> = T | T[]
 export type OpInputType  = InputType<ASTNode>
 export type COpInputType = InputType<CNode>
 
 //? AST Nodes
-
 // Primitive value definition
 export interface LiteralNode {
   kind: 'literal'
@@ -26,7 +25,7 @@ export interface LiteralNode {
   source?: SourceRef
 }
 
-// Array of ASTNodes
+// Combine an array of ASTNodes into a single array value.
 export interface ArrayNode {
   kind: 'array'
   items: ASTNode[]
@@ -74,8 +73,8 @@ export interface FieldAccessNode {
 
 
 /**
- * General higher-order operation - the generalisation of FilterNode/MapNode.
- * Registered ops (Filter, Map, Find, Reduce) use this node type.
+ * General higher-order operation.
+ * Registered ops (e.g. Filter, Map, Find, Reduce) use this node type.
  *
  * inputs   - pre-resolved before calling the evaluator (like OperationNode)
  * bindings - scoped variable names, one per argument to apply()
@@ -90,7 +89,7 @@ export interface HigherOrderNode {
   kind: 'higher_order'
   op: string
   inputs: Record<string, OpInputType>
-  bindings: string[]
+  bindings: string[]   // ordered. Positional args to apply(), one per scoped variable
   body: ASTNode
   source?: SourceRef
 }
@@ -107,11 +106,8 @@ export type ASTNode =
 //? Analysed: metadata added by the analyser to every node.
 //
 //  dependsOn: which context input names transitively affect this node.
-//  Invariant: CRefNode.dependsOn === program.bindings.get(name).dependsOn
 //  (set by analyser, enables cache check without binding lookup).
 //  Used at evaluate time to skip recomputation when no dependency changed.
-
-
 export interface Analysed {
   readonly dependsOn: ReadonlySet<string>
 }
