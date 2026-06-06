@@ -10,23 +10,28 @@
  * core.runner.example and core.runtime.example.
  */
 
-import { run } from '../../src/language/runner'
+import { run } from "../../src/language/runner";
 import {
-  descriptor, program,
-  scenarios, changesFrom,
-  display, timed, logHeader,
+  descriptor,
+  program,
+  scenarios,
+  changesFrom,
+  display,
+  timed,
+  logHeader,
   type Scenario,
-} from './shared'
+} from "./shared";
 
 for (let i = 0; i < scenarios.length; i++) {
-  const s    = scenarios[i]
-  const prev = scenarios[i - 1] as Scenario | undefined
-  const what = changesFrom(prev, s)
-  const note = what === 'threshold only' ? `${what}, run() recomputes all anyway` : what
+  const s = scenarios[i];
+  const prev = scenarios[i - 1] as Scenario | undefined;
+  const what = changesFrom(prev, s);
+  const note =
+    what === "threshold only" ? `${what}, run() recomputes all anyway` : what;
 
-  logHeader(s, note)
-  const outputs = timed('run()', () =>
-    run(program, descriptor, { values: s.values, threshold: s.threshold })
-  )
-  display(outputs)
+  logHeader(s, note);
+  const outputs = timed("run()", () =>
+    run(program, descriptor, { values: s.values, threshold: s.threshold }),
+  );
+  display(outputs);
 }

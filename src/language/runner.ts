@@ -1,7 +1,10 @@
-
-
-import { CoreProgram, createEvalState, evaluateProgram, updateInput } from "./program"
-import { LanguageDescriptor } from "./registry"
+import {
+  CoreProgram,
+  createEvalState,
+  evaluateProgram,
+  updateInput,
+} from "./program";
+import { LanguageDescriptor } from "./registry";
 
 // runner.ts — single-program convenience API.
 //
@@ -11,8 +14,6 @@ import { LanguageDescriptor } from "./registry"
 //   program.ts  — evaluation primitives (evaluate, evaluateProgram, EvalState)
 //   runner.ts   — single-program convenience API  ← you are here
 //   runtime.ts  — multi-program reactive system (createRuntime, ProgramHandle)
-
-
 
 //? run: one-shot evaluation for simple scripting and testing.
 //
@@ -29,13 +30,13 @@ export function run(
   inputs: Record<string, unknown>,
   hostContext?: unknown,
 ): Map<string, unknown> {
-  const state = createEvalState()
+  const state = createEvalState();
   for (const [name, value] of Object.entries(inputs)) {
-    updateInput(name, value, state)
+    updateInput(name, value, state);
   }
-  return evaluateProgram(program, state, descriptor, undefined, hostContext)
+  return evaluateProgram(program, state, descriptor, undefined, hostContext);
 }
- 
+
 //? ProgramRunner: stateful single-program evaluator without a full Runtime.
 //
 //  Used for single program evaluation, when you want caching across evaluations and default initialisation,
@@ -51,36 +52,41 @@ export function run(
 //   runner.run({ sourceBusNew: bus1 })  // computes everything (fresh cache)
 //   runner.run({ sourceBusNew: bus2 })  // only recomputes affected nodes
 // ---------------------------------------------------------------------------
- 
+
 export interface ProgramRunner {
   /**
    * Apply input changes and evaluate. Only nodes whose dependsOn intersects
    * the changed keys are recomputed. All other nodes return their cached value.
    */
-  run(changes: Record<string, unknown>): Map<string, unknown>
+  run(changes: Record<string, unknown>): Map<string, unknown>;
 }
- 
+
 export function createProgramRunner(
   program: CoreProgram,
   descriptor: LanguageDescriptor,
   hostContext?: unknown,
 ): ProgramRunner {
-  const state = createEvalState()
- 
+  const state = createEvalState();
+
   // Initialise all registered inputs from descriptor defaults —
   // same behaviour as Runtime.register, prevents input_not_set errors
   for (const [name, def] of descriptor.inputs) {
-    updateInput(name, def.default ?? null, state)
+    updateInput(name, def.default ?? null, state);
   }
- 
+
   return {
     run(changes) {
-      const changedInputs = new Set(Object.keys(changes))
+      const changedInputs = new Set(Object.keys(changes));
       for (const [name, value] of Object.entries(changes)) {
-        updateInput(name, value, state)
+        updateInput(name, value, state);
       }
-      return evaluateProgram(program, state, descriptor, changedInputs, hostContext)
+      return evaluateProgram(
+        program,
+        state,
+        descriptor,
+        changedInputs,
+        hostContext,
+      );
     },
-  }
+  };
 }
- 

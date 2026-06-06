@@ -10,24 +10,30 @@
  * and core.runtime.example.
  */
 
-import { createProgramRunner } from '../../src/language/runner'
+import { createProgramRunner } from "../../src/language/runner";
 import {
-  descriptor, program,
-  scenarios, changesFrom, delta,
-  display, timed, logHeader,
+  descriptor,
+  program,
+  scenarios,
+  changesFrom,
+  delta,
+  display,
+  timed,
+  logHeader,
   type Scenario,
-} from './shared'
+} from "./shared";
 
-const runner = createProgramRunner(program, descriptor)
-let prev: Scenario | undefined
+const runner = createProgramRunner(program, descriptor);
+let prev: Scenario | undefined;
 
 for (const s of scenarios) {
-  const changes = delta(prev, s)
-  const what    = changesFrom(prev, s)
-  const note    = what === 'threshold only' ? `${what} - anyCumLaude cached` : what
+  const changes = delta(prev, s);
+  const what = changesFrom(prev, s);
+  const note =
+    what === "threshold only" ? `${what} - anyCumLaude cached` : what;
 
-  logHeader(s, note)
-  const outputs = timed('runner.run()', () => runner.run(changes))
-  display(outputs)
-  prev = s
+  logHeader(s, note);
+  const outputs = timed("runner.run()", () => runner.run(changes));
+  display(outputs);
+  prev = s;
 }
