@@ -28,17 +28,17 @@ const thresholdInput: CInputNode   = { kind: 'input',   name: 'threshold', type:
 const itemRef:        CRefNode     = { kind: 'ref',     name: 'n',         type: 'number', dependsOn: new Set()              }
 const ninety:         CLiteralNode = { kind: 'literal',                    type: 'number', value: 90, dependsOn: new Set()   }
 
+const filterBody:   COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: thresholdInput }, output: 'boolean', dependsOn: new Set(['threshold']) }
+const somePassBody: COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: thresholdInput }, output: 'boolean', dependsOn: new Set(['threshold']) }
+const cumLaudeBody: COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: ninety          }, output: 'boolean', dependsOn: new Set()              }
+
 // ---------------------------------------------------------------------------
-// Program: single program for run() and ProgramRunner
+// Program — single program for run() and ProgramRunner
 //
 // Set passing     = Filter(values, n => GreaterThan(n, threshold))
 // Set anyPassed   = Some(values,   n => GreaterThan(n, threshold))
 // Set anyCumLaude = Some(values,   n => GreaterThan(n, 90))
 // ---------------------------------------------------------------------------
-
-const filterBody:   COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: thresholdInput }, output: 'boolean', dependsOn: new Set(['threshold']) }
-const somePassBody: COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: thresholdInput }, output: 'boolean', dependsOn: new Set(['threshold']) }
-const cumLaudeBody: COperationNode = { kind: 'operation', op: 'GreaterThan', inputs: { a: itemRef, b: ninety          }, output: 'boolean', dependsOn: new Set()              }
 
 export const program: CoreProgram = {
   bindings: new Map([
@@ -58,8 +58,6 @@ export const program: CoreProgram = {
 //
 // 'filtering'  dependsOn: values, threshold  →  passing, anyPassed
 // 'honors'     dependsOn: values only         →  anyCumLaude
-//
-// When only threshold changes, the inputIndex skips 'honors' entirely.
 // ---------------------------------------------------------------------------
 
 export const filteringProgram: CoreProgram = {
@@ -85,10 +83,10 @@ export const honorsProgram: CoreProgram = {
 // ---------------------------------------------------------------------------
 // Scenarios
 //
-// scores10k and scores100k are pre-allocated so consecutive scenarios that
-// use the same list share the same object reference. delta() uses reference
-// equality to detect whether values actually changed, allowing runner and
-// runtime to skip re-evaluating anyCumLaude when only threshold changes.
+// scores10k/scores100k are pre-allocated so consecutive scenarios sharing the
+// same list have the same object reference. delta() uses reference equality to
+// detect unchanged values — runner and runtime skip re-evaluating anyCumLaude
+// when only threshold changes (scenarios 5→7, 8→9).
 // ---------------------------------------------------------------------------
 
 export type Scenario = { label: string; values: number[]; threshold: number }
@@ -102,10 +100,10 @@ export const scenarios: Scenario[] = [
   { label: 'pass, no honors', values: [55, 65, 75, 85],              threshold: 50 },
   { label: 'all honors',      values: [91, 92, 95, 98],              threshold: 80 },
   { label: '10k  @ t=70',     values: scores10k,                     threshold: 70 },
-  { label: '10k  @ t=80',     values: scores10k,                     threshold: 80 }, // same values as above
+  { label: '10k  @ t=80',     values: scores10k,                     threshold: 80 }, // same values
   { label: '10k  @ t=90',     values: scores10k,                     threshold: 90 }, // same values
   { label: '100k @ t=80',     values: scores100k,                    threshold: 80 },
-  { label: '100k @ t=90',     values: scores100k,                    threshold: 90 }, // same values as above
+  { label: '100k @ t=90',     values: scores100k,                    threshold: 90 }, // same values
 ]
 
 // ---------------------------------------------------------------------------
@@ -123,19 +121,17 @@ export function changesFrom(prev: Scenario | undefined, curr: Scenario): string 
   return 'unchanged'
 }
 
-/**
- * Build a changes object containing only inputs that differ from the previous
- * scenario. Uses reference equality on values:  pre-allocated arrays like
- * scores10k compare equal across scenarios that reuse them.
- */
-export function delta(
-  prev: Scenario | undefined,
-  curr: Scenario,
-): Record<string, unknown> {
+/** Pass only inputs that actually changed. Enables node-level and program-level caching. */
+export function delta(prev: Scenario | undefined, curr: Scenario): Record<string, unknown> {
   const changes: Record<string, unknown> = {}
   if (!prev || prev.values    !== curr.values)    changes.values    = curr.values
   if (!prev || prev.threshold !== curr.threshold) changes.threshold = curr.threshold
   return changes
+}
+
+/** Print the standard scenario header line. */
+export function logHeader(s: Scenario, note: string): void {
+  console.log(`\n[${s.label}] ${s.values.length} inputs, threshold: ${s.threshold}  (${note})`)
 }
 
 /** Display outputs from a single program (run / runner). */
@@ -146,10 +142,7 @@ export function display(outputs: Map<string, unknown>): void {
   console.log(`  anyCumLaude: ${outputs.get('anyCumLaude')}`)
 }
 
-/**
- * Display outputs from the split runtime programs.
- * Shows whether 'honors' was evaluated or skipped this cycle.
- */
+/** Display outputs from the split runtime programs, noting when honors was skipped. */
 export function displayRuntime(
   results: Map<string, Map<string, unknown>>,
   lastHonors: Map<string, unknown>,
@@ -160,25 +153,20 @@ export function displayRuntime(
   const passing = f.get('passing') as unknown[]
   console.log(`  passing:      ${passing.length} items`)
   console.log(`  anyPassed:    ${f.get('anyPassed')}`)
-  console.log(`  anyCumLaude: ${h.get('anyCumLaude')}  ${honorsRan ? '' : '(honors not evaluated:  cached)'}`)
+  console.log(`  anyCumLaude: ${h.get('anyCumLaude')}  ${honorsRan ? '' : '(honors not evaluated — cached)'}`)
 }
 
-/** Time a function call, returning both the result and duration in ms. */
+/** Time a call silently. returns result and duration in ms. */
 export function time<T>(fn: () => T): { result: T; ms: number } {
   const t = performance.now()
   const result = fn()
   return { result, ms: performance.now() - t }
 }
 
-/** Time a function call, log the duration, and return the result. */
+/** Time a call and log the duration. */
 export function timed<T>(label: string, fn: () => T): T {
   const { result, ms } = time(fn)
-  console.log(`  Runtime:  ${label}: ${ms.toFixed(3)}ms`)
+  console.log(`  Runtime  ${label}: ${ms.toFixed(3)}ms`)
   return result
-}
-
-/** Print the standard scenario header line used by all three example files. */
-export function logHeader(s: Scenario, note: string): void {
-  console.log(`\n[${s.label}] ${s.values.length} inputs, threshold: ${s.threshold}  (${note})`)
 }
 
