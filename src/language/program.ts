@@ -14,7 +14,8 @@ export interface CoreProgram {
 }
 
 //? EvalState - persistent across input changes, one instance per program
-//
+// TODO: Check var naming
+// TODO: Check if there is a need for a split for scoped caching.
 // inputs:    values set by the host - context inputs and triggers.
 //            Keyed by name (host works with names, not CNode references).
 //
@@ -124,16 +125,14 @@ export interface AnalysisFailure {
 export type AnalysisResult = AnalysisSuccess | AnalysisFailure
 
 
-//? Input management
+//? Input management: The host facing inputs, string-typed.
 export function updateInput(name: string, value: unknown, state: EvalState): void {
   state.inputs.set(name, value)
 }
 
-// isCached - shared cache check used by every non-trivial node kind.
-//
-// Iterates changedInputs and tests
-// membership in dependsOn, rather than the reverse, for better performance
-// when dependsOn is large.
+//? isCached
+//  Checks if a node's value depends on changed inputs. If it does, the cached value is invalid.
+//  If it doesn't, it checks the cache and returns depending on that.
  
 function isCached(
   node: object,
@@ -149,15 +148,15 @@ function isCached(
 }
 
 
-//? Evaluation
-// Pull-based: each node checks its own dependsOn against changedInputs.
-// If no dependency changed AND a cached value exists, the cached value is
-// returned without recomputation.
+//? Evaluate
+//  Pull-based: each node checks its own dependsOn against changedInputs. (isCached)
+//  If a valid cache exists, it is used, else it is re-evaluated and cached.
 //
-// Both operation and higher_order cases look up from descriptor.evaluators.
-// operation  passes apply = undefined  (evaluator ignores it)
-// higher_order constructs apply and passes it  (evaluator uses it)
+//  Both operation and higher_order cases look up from descriptor.evaluators.
+//  operation  passes apply = undefined  (evaluator ignores it)
+//  higher_order constructs apply and passes it  (evaluator uses it)
  
+// TODO: Program is only used for bindings. Should this be handled differently?
 export function evaluate(
   node: CNode,
   program: CoreProgram,
@@ -174,6 +173,7 @@ export function evaluate(
     case 'input': {
       const value = state.inputs.get(node.name)
       if (value === undefined) {
+        // TODO: Should this use a default input not set value instead of throwing?
         throw new EvalError('input_not_set', `Input '${node.name}' has no value - host must call updateInput before evaluating`)
       }
       return value
@@ -184,6 +184,7 @@ export function evaluate(
       if (!binding) {
         const val = state.inputs.get(node.name)
         if (val !== undefined) return val
+        // TODO: Should this use a default reference not set value instead of throwing?
         throw new EvalError('undefined_reference', `Reference '${node.name}' not found in bindings or scope - possible analyser bug`)
       }
       if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
@@ -207,10 +208,12 @@ export function evaluate(
       if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node)
       const src = evaluate(node.struct, program, state, changedInputs, descriptor, hostContext)
       if (src === null || src === undefined) {
+        // TODO: Should this use a default struct not set value instead of throwing?
         throw new EvalError('invalid_field_access', `Cannot access field '${node.field}' on null/undefined`)
       }
       const record = src as Record<string, unknown>
       if (!(node.field in record)) {
+        // TODO: Should this use a default field not set value instead of throwing?
         throw new EvalError('invalid_field_access', `Field '${node.field}' does not exist on value`)
       }
       const result = record[node.field]
@@ -224,6 +227,7 @@ export function evaluate(
       }
       const evaluator = descriptor.evaluators.get(node.op)
       if (!evaluator) {
+        // TODO: Check if this is or can be caught on analysis to prevent evaluation errors.
         throw new EvalError('evaluator_not_found', `No evaluator for op: '${node.op}'`)
       }
       const resolved: Record<string, unknown> = {}
