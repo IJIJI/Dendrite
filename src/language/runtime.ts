@@ -9,13 +9,12 @@ import {
 } from './program'
 
 
-//? ProgramHandle - returned by register(), scoped to one program.
+//? ProgramHandle: returned by register(), scoped to one program.
 //
 //  Provides subscriptions and unregistration for a specific program without
 //  the consumer needing to track or repeat the program ID.
 //  Unregister clears all per-program handlers and removes the program from
-//  the runtime index - no dangling handlers can fire after unregistration.
- 
+//  the runtime index. No dangling handlers can fire after unregistration.
 export interface ProgramHandle {
   readonly id: string
  
@@ -35,18 +34,12 @@ export interface ProgramHandle {
   unregister(): void
 }
 
-// ---------------------------------------------------------------------------
-// Global handler types - fired for every program, includes programId.
-// Useful for dashboards, loggers, or anything that observes all programs.
-// ---------------------------------------------------------------------------
- 
+//? Global handler types. Fired for every program, include programId.
+//  Useful for dashboards, loggers, or anything that observes all programs.
 export type OutputHandler = (programId: string, outputs: Map<string, unknown>) => void
 export type ErrorHandler  = (programId: string, error: EvalError) => void
 
-// ---------------------------------------------------------------------------
-// Runtime - manages multiple programs sharing context inputs.
-// ---------------------------------------------------------------------------
- 
+//? Runtime: Manages multiple programs sharing context inputs.
 interface ProgramEntry {
   id: string
   program: CoreProgram
@@ -64,7 +57,7 @@ export interface Runtime {
   register(id: string, program: CoreProgram): ProgramHandle
  
   /**
-   * Unregister by ID — for cases where the handle is unavailable.
+   * Unregister by ID - for cases where the handle is unavailable.
    * Clears all per-program handlers. Prefer handle.unregister() when possible.
    */
   unregister(id: string): void
@@ -73,13 +66,13 @@ export interface Runtime {
   updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>
  
   /**
-   * Update multiple inputs atomically — one evaluation pass per program.
+   * Update multiple inputs atomically - one evaluation pass per program.
    * Preferred over multiple updateInput calls for the same ATEM event.
    */
   updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>
  
   /**
-   * Fire a trigger — sets the value, evaluates affected programs,
+   * Fire a trigger - sets the value, evaluates affected programs,
    * then resets to the trigger's default value.
    */
   fireTrigger(name: string, value: unknown): Map<string, Map<string, unknown>>
@@ -98,7 +91,7 @@ export interface Runtime {
  
   /**
    * Contributing inputs for each output of a registered program.
-   * Derived from output CNode.dependsOn — no separate map needed.
+   * Derived from output CNode.dependsOn - no separate map needed.
    */
   getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined
 }
@@ -109,11 +102,11 @@ export function createRuntime(
 ): Runtime {
   const programs = new Map<string, ProgramEntry>()
  
-  // Global handler sets — fire for every program, include programId
+  // Global handler sets - fire for every program, include programId
   const globalOutputHandlers = new Set<OutputHandler>()
   const globalErrorHandlers  = new Set<ErrorHandler>()
  
-  // inputIndex — input name → program IDs whose outputs depend on it
+  // inputIndex - input name → program IDs whose outputs depend on it
   const inputIndex = new Map<string, Set<string>>()
  
   function addToIndex(id: string, program: CoreProgram): void {
