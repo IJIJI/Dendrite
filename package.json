@@ -29,6 +29,8 @@
     "test": "test"
   },
   "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "packageManager": "yarn@4.15.0",
@@ -37,6 +39,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "eslint": "^10.4.1",
+    "prettier": "^3.8.3",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
