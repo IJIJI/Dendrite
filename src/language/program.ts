@@ -298,20 +298,6 @@ export function evaluateProgram(
   return results
 }
 
-//? outputDependencies - derive which context inputs each output depends on.
-//
-//  Each output is a CNode, this derives their dependencies from them.
-//  Helper function to ease that computation. 
-export function outputDependencies(
-  program: CoreProgram,
-): Map<string, ReadonlySet<string>> {
-  const result = new Map<string, ReadonlySet<string>>()
-  for (const [name, node] of program.outputs) {
-    result.set(name, node.dependsOn)
-  }
-  return result
-}
-
 //? run: one-shot evaluation for simple scripting and testing.
 //
 //  Creates fresh state, sets the provided inputs, and evaluates immediately.
@@ -334,6 +320,19 @@ export function run(
   return evaluateProgram(program, state, descriptor, undefined, hostContext)
 }
  
+//? outputDependencies - derive which context inputs each output depends on.
+//
+//  Each output is a CNode, this derives their dependencies from them.
+//  Helper function to ease that computation. 
+export function outputDependencies(
+  program: CoreProgram,
+): Map<string, ReadonlySet<string>> {
+  const result = new Map<string, ReadonlySet<string>>()
+  for (const [name, node] of program.outputs) {
+    result.set(name, node.dependsOn)
+  }
+  return result
+}
 
 //? Eval Errors
 // TODO: Should input not set be found before, or be handled in code?
