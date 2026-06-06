@@ -72,7 +72,6 @@ export interface FieldAccessNode {
 }
 
 
-// TODO: HigherOrderNode.
 /**
  * General higher-order operation - the generalisation of FilterNode/MapNode.
  * Registered ops (Filter, Map, Find, Reduce) use this node type.
@@ -85,6 +84,7 @@ export interface FieldAccessNode {
  * apply() handles environment extension and body evaluation internally.
  * Evaluators never see interpreter internals.
  */
+// TODO: Should there even be a difference between higher order and standard? Could higher order not be a standard op with a function as its arg? Would enable multi function higher order nodes too..
 export interface HigherOrderNode {
   kind: 'higher_order'
   op: string
