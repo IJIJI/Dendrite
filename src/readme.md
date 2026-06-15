@@ -1,27 +1,41 @@
-```
-Source / Graph
-    ↓  parse                    → ParseResult<RawProgram>
-RawProgram
-    ↓  analyse                  → AnalysisResult<CoreProgram>
-CoreProgram
-    ↓  evaluateProgram          → Map<string, unknown> ∨ EvalError(kind: EvalErrorKind, message: string)
-Output: Map<string, unknown>    → When using the runtime respective listeners are triggered.
-```
+# Dendrite Language
 
-Partial recomputation!
-TODO: Now is a per node dependency, works faster. Rewrite doc.
+A declarative dataflow language. Programs declare named bindings and outputs; when context inputs change, only affected nodes recompute.
+
+## Pipeline
 
 ```
-updateInput('sourceBusNew', value, state, program)
-  → markDirty('sourceBusNew')           // uses dependents to propagate
-    → markDirty('sourcelist')
-      → markDirty('s2')
-      → markDirty('s3')
-        → markDirty('combined')
-          → markDirty('result')
+SavedProgram → deserialise → RawProgram → analyse → CoreProgram → evaluate → Map<string, unknown>
+```
 
-evaluateProgram(program, state, ...)
-  → walks evalOrder: ['sourcelist', 's2', 's3', 'combined', 'result']
-    → skips clean nodes                 // uses dirty set
-    → calls evaluate only on dirty ones
+- **RawProgram** - unvalidated AST from the parser or rete adapter (`ASTNode`)
+- **CoreProgram** - validated, every node has `dependsOn: ReadonlySet<string>` (`CNode`)
+- Store RawProgram; CoreProgram is always re-derived on load
+
+## Pull-based evaluation
+
+Each `CNode` carries `dependsOn` - the set of context input names it transitively depends on. On each cycle `evaluateProgram` receives `changedInputs: Set<string>`. A node recomputes only when `changedInputs ∩ dependsOn` is non-empty and no cache entry exists.
+
+Caching uses two WeakMaps keyed on CNode object identity:
+- `nodeCache` - shared across the program, used for named bindings and top-level inline nodes
+- `bodyScope` - fresh per `apply()` call inside a higher-order body, prevents stale values when the scoped variable (`item`, `acc`) changes between iterations
+
+## Execution levels
+
+| | `run()` | `createProgramRunner()` | `createRuntime()` |
+|---|---|---|---|
+| State | None | Single program | Multi-program |
+| Caching | No | Yes | Yes |
+| Subscriptions | No | No | Yes (ProgramHandle) |
+
+## File layout
+
+```
+src/language/
+  nodes.ts     - ASTNode, CNode, SourceRef
+  registry.ts  - LanguageDescriptor, registration API, isCompatible
+  program.ts   - EvalState, evaluate, evaluateProgram, EvalError
+  runner.ts    - run(), createProgramRunner()
+  runtime.ts   - createRuntime(), ProgramHandle
+  core.ts      - createCoreLanguage() (logic, comparison, control, list ops)
 ```
