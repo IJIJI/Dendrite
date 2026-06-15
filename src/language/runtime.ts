@@ -8,12 +8,14 @@ import {
   outputDependencies,
 } from "./program";
 
-//? ProgramHandle: returned by register(), scoped to one program.
+// ---------------------------------------------------------------------------
+// ProgramHandle - returned by register(), scoped to one program.
 //
-//  Provides subscriptions and unregistration for a specific program without
-//  the consumer needing to track or repeat the program ID.
-//  Unregister clears all per-program handlers and removes the program from
-//  the runtime index. No dangling handlers can fire after unregistration.
+// Provides subscriptions and unregistration for a specific program without
+// the consumer needing to track or repeat the program ID.
+// Unregister clears all per-program handlers and removes the program from
+// the runtime index - no dangling handlers can fire after unregistration.
+// ---------------------------------------------------------------------------
 export interface ProgramHandle {
   readonly id: string;
 
@@ -33,12 +35,18 @@ export interface ProgramHandle {
   unregister(): void;
 }
 
-//? Global handler types. Fired for every program, include programId.
-//  Useful for dashboards, loggers, or anything that observes all programs.
+// ---------------------------------------------------------------------------
+// Global handler types - fired for every program, includes programId.
+// Useful for dashboards, loggers, or anything that observes all programs.
+// ---------------------------------------------------------------------------
+
 export type OutputHandler = (programId: string, outputs: Map<string, unknown>) => void;
 export type ErrorHandler = (programId: string, error: EvalError) => void;
 
-//? Runtime: Manages multiple programs sharing context inputs.
+// ---------------------------------------------------------------------------
+// Runtime - manages multiple programs sharing context inputs.
+// ---------------------------------------------------------------------------
+
 interface ProgramEntry {
   id: string;
   program: CoreProgram;
