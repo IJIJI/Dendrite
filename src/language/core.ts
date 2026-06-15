@@ -240,21 +240,27 @@ export function createCoreLanguage(): Language {
   lang.registerEvaluator({
     op: "Filter",
     evaluate: ({ list }, apply) => (list as unknown[]).filter((item) => Boolean(apply!(item))),
-    // Output element type = input list element type (e.g. Source[] → Source[])
     inferOutput: (inputTypes) => {
       const listType = inputTypes["list"];
       return listType?.endsWith("[]") ? listType : "any[]";
+    },
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return { item: listType?.endsWith("[]") ? listType.slice(0, -2) : "any" };
     },
   });
 
   lang.registerEvaluator({
     op: "Map",
     evaluate: ({ list }, apply) => (list as unknown[]).map((item) => apply!(item)),
-    // Output type = body output type as array (e.g. body → TallyState means TallyState[])
     inferOutput: (inputTypes, bodyOutputType) => {
       if (bodyOutputType && bodyOutputType !== "any") return `${bodyOutputType}[]`;
       const listType = inputTypes["list"];
       return listType?.endsWith("[]") ? listType : "any[]";
+    },
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return { item: listType?.endsWith("[]") ? listType.slice(0, -2) : "any" };
     },
   });
 
@@ -262,33 +268,47 @@ export function createCoreLanguage(): Language {
     op: "Find",
     evaluate: ({ list }, apply) =>
       (list as unknown[]).find((item) => Boolean(apply!(item))) ?? null,
-    // Output type = element type of input list (not array - Find returns one item or null)
     inferOutput: (inputTypes) => {
       const listType = inputTypes["list"];
       return listType?.endsWith("[]") ? listType.slice(0, -2) : "any";
+    },
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return { item: listType?.endsWith("[]") ? listType.slice(0, -2) : "any" };
     },
   });
 
   lang.registerEvaluator({
     op: "Every",
     evaluate: ({ list }, apply) => (list as unknown[]).every((item) => Boolean(apply!(item))),
-    // Always boolean - no inferOutput needed
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return { item: listType?.endsWith("[]") ? listType.slice(0, -2) : "any" };
+    },
   });
 
   lang.registerEvaluator({
     op: "Some",
     evaluate: ({ list }, apply) => (list as unknown[]).some((item) => Boolean(apply!(item))),
-    // Always boolean - no inferOutput needed
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return { item: listType?.endsWith("[]") ? listType.slice(0, -2) : "any" };
+    },
   });
 
   lang.registerEvaluator({
     op: "Reduce",
     evaluate: ({ list, initial }, apply) =>
       (list as unknown[]).reduce((acc, item) => apply!(acc, item), initial),
-    // Output type = accumulator type = type of the initial value
     inferOutput: (inputTypes) => {
       const initialType = inputTypes["initial"];
       return initialType && initialType !== "any" ? initialType : "any";
+    },
+    inferBodyBindings: (inputTypes) => {
+      const listType = inputTypes["list"];
+      const itemType = listType?.endsWith("[]") ? listType.slice(0, -2) : "any";
+      const accType = inputTypes["initial"] ?? "any";
+      return { acc: accType, item: itemType };
     },
   });
 
