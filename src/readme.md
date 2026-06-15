@@ -17,16 +17,17 @@ SavedProgram → deserialise → RawProgram → analyse → CoreProgram → eval
 Each `CNode` carries `dependsOn` - the set of context input names it transitively depends on. On each cycle `evaluateProgram` receives `changedInputs: Set<string>`. A node recomputes only when `changedInputs ∩ dependsOn` is non-empty and no cache entry exists.
 
 Caching uses two WeakMaps keyed on CNode object identity:
+
 - `nodeCache` - shared across the program, used for named bindings and top-level inline nodes
 - `bodyScope` - fresh per `apply()` call inside a higher-order body, prevents stale values when the scoped variable (`item`, `acc`) changes between iterations
 
 ## Execution levels
 
-| | `run()` | `createProgramRunner()` | `createRuntime()` |
-|---|---|---|---|
-| State | None | Single program | Multi-program |
-| Caching | No | Yes | Yes |
-| Subscriptions | No | No | Yes (ProgramHandle) |
+|               | `run()` | `createProgramRunner()` | `createRuntime()`   |
+| ------------- | ------- | ----------------------- | ------------------- |
+| State         | None    | Single program          | Multi-program       |
+| Caching       | No      | Yes                     | Yes                 |
+| Subscriptions | No      | No                      | Yes (ProgramHandle) |
 
 ## File layout
 
