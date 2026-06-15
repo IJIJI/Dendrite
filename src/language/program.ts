@@ -81,13 +81,15 @@ export type ParseResult = ParseSuccess | ParseFailure;
 
 //? Analysis Results
 export type AnalysisErrorKind =
-  | "unknown_op" // Op not registered → hard error
-  | "unknown_input" // Input node not registered → hard error
-  | "unknown_type" // Type reference not registered → hard error
-  | "cycle" // Cycle in DAG → hard error
-  | "missing_required_output" // Registered required output not returned → hard error
-  | "undefined_reference" // Reference to undefined binding → hard error
-  | "input_type_mismatch"; // op input receives wrong type
+  | "unknown_op" // Op not in descriptor
+  | "unknown_program_input" // Context input not in descriptor
+  | "unknown_type" // Type string not in descriptor
+  | "binding_cycle" // Cycle in binding DAG
+  | "missing_required_program_output" // Required program output not declared
+  | "undeclared_binding_reference" // Ref to a binding that was never declared
+  | "forward_reference" // Binding used before its declaration line (code editor only)
+  | "op_input_type_mismatch" // Op node input port receives an incompatible type
+  | "program_output_type_mismatch"; // Program output mapped to an incompatible type
 
 export interface AnalysisError {
   kind: AnalysisErrorKind;
@@ -97,10 +99,9 @@ export interface AnalysisError {
 }
 
 export type AnalysisWarningKind =
-  | "unknown_output" // return foo: x - 'foo' not registered → warning, dropped
-  | "output_type_mismatch" // return tally: s1 but s1 is not TallyState → warning, dropped
-  | "unused_binding" // Set x = ... but x never referenced → warning, kept
-  | "missing_desired_output"; // registered desired output not returned → warning
+  | "unknown_program_output" // Program declares an output name not in the descriptor → dropped
+  | "unused_binding" // Binding declared but never referenced by any output
+  | "missing_desired_program_output"; // Descriptor marks output as 'desired' but program omits it
 
 export interface AnalysisWarning {
   kind: AnalysisWarningKind;
@@ -228,8 +229,9 @@ export function evaluate(
     }
 
     case "higher_order": {
-      if (isCached(node, state.nodeCache, node.dependsOn, changedInputs)) {
-        return state.nodeCache.get(node);
+      const cache = state.bodyScope ?? state.nodeCache;
+      if (isCached(node, cache, node.dependsOn, changedInputs)) {
+        return cache.get(node);
       }
       const evaluator = descriptor.evaluators.get(node.op);
       if (!evaluator) {
@@ -253,7 +255,7 @@ export function evaluate(
       };
       try {
         const result = evaluator.evaluate(resolved, apply, hostContext);
-        state.nodeCache.set(node, result);
+        cache.set(node, result);
         return result;
       } catch (e) {
         if (e instanceof EvalError) throw e;
