@@ -113,6 +113,10 @@ export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unkn
   // inputIndex - input name → program IDs whose outputs depend on it
   const inputIndex = new Map<string, Set<string>>();
 
+  // currentInputs - tracks the live value of every input set since runtime creation.
+  // Used to seed programs registered after inputs have already been updated.
+  const currentInputs = new Map<string, unknown>();
+
   function addToIndex(id: string, program: CoreProgram): void {
     for (const outputNode of program.outputs.values()) {
       for (const inputName of outputNode.dependsOn) {
@@ -155,6 +159,7 @@ export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unkn
     }
 
     for (const [name, value] of changes) {
+      currentInputs.set(name, value);
       for (const id of affected) {
         updateInput(name, value, programs.get(id)!.state);
       }
@@ -205,6 +210,10 @@ export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unkn
 
       for (const [name, def] of descriptor.inputs) {
         updateInput(name, def.default ?? null, state);
+      }
+      // Overlay with any values already set at runtime since creation
+      for (const [name, value] of currentInputs) {
+        updateInput(name, value, state);
       }
 
       const changedInputs = new Set(descriptor.inputs.keys());
