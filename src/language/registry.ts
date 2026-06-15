@@ -57,8 +57,8 @@ export interface InputDefinition {
 /**
  * Output requirement mode:
  * 'optional'  - fine either way, no warning if absent
- * 'desired'   - AnalysisWarning (missing_desired_output) if program doesn't declare it
- * 'required'  - AnalysisError (missing_required_output) if program doesn't declare it
+ * 'desired'   - AnalysisWarning (missing_desired_program_output) if program doesn't declare it
+ * 'required'  - AnalysisError (missing_required_program_output) if program doesn't declare it
  */
 export type OutputMode = "optional" | "desired" | "required";
 
