@@ -9,14 +9,20 @@ import { createLanguage, type Language } from "./registry";
 export function createCoreLanguage(): Language {
   const lang = createLanguage();
 
-  //? Primitive types
-  lang.registerType("boolean", z.boolean());
-  lang.registerType("number", z.number());
-  lang.registerType("string", z.string());
-  lang.registerType("any", z.unknown());
+  // -------------------------------------------------------------------------
+  // Primitive types - defaults auto-derived for these four base types.
+  // T[] variants are auto-registered with default [] by registerType.
+  // -------------------------------------------------------------------------
 
-  //? Logic ops
-  // TODO: Short circuit evaluation? e.g. evaluate left to right, stop as the end result is determined.
+  lang.registerType("boolean", z.boolean(), { default: false });
+  lang.registerType("number", z.number(), { default: 0 });
+  lang.registerType("string", z.string(), { default: "" });
+  lang.registerType("any", z.unknown(), { default: null });
+
+  // -------------------------------------------------------------------------
+  // Logic ops
+  // -------------------------------------------------------------------------
+
   lang.registerOp({
     name: "And",
     inputs: [{ name: "nodes", type: "boolean", variadic: true }],
@@ -42,9 +48,10 @@ export function createCoreLanguage(): Language {
     category: "logic",
   });
 
-  // TODO: Add Nor, Nand, XNor?
+  // -------------------------------------------------------------------------
+  // Comparison ops
+  // -------------------------------------------------------------------------
 
-  //? Comparison ops
   lang.registerOp({
     name: "Equals",
     inputs: [
@@ -82,9 +89,10 @@ export function createCoreLanguage(): Language {
     category: "comparison",
   });
 
-  //? Control flow
-  //  Note: If evaluates both branches eagerly (call-by-value).
-  //  TODO: Short-circuit would require lazy evaluation - future work.
+  // -------------------------------------------------------------------------
+  // Control flow
+  // -------------------------------------------------------------------------
+
   lang.registerOp({
     name: "If",
     inputs: [
@@ -96,14 +104,31 @@ export function createCoreLanguage(): Language {
     category: "control",
   });
 
-  //? Higher-order list ops
-  //  higherOrder: true
-  //  editor renders a body sub-graph input
-  //  bodyBindings: Scoped variable names available inside the body
+  lang.registerOp({
+    name: "IsSet",
+    inputs: [{ name: "value", type: "any" }],
+    output: "boolean",
+    category: "control",
+  });
+
+  lang.registerOp({
+    name: "Default",
+    inputs: [
+      { name: "value", type: "any" },
+      { name: "fallback", type: "any" },
+    ],
+    output: "any",
+    category: "control",
+  });
+
+  // -------------------------------------------------------------------------
+  // Higher-order list ops
+  // -------------------------------------------------------------------------
+
   lang.registerOp({
     name: "Filter",
     inputs: [{ name: "list", type: "any" }],
-    output: "any",
+    output: "any[]",
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
@@ -111,7 +136,7 @@ export function createCoreLanguage(): Language {
   lang.registerOp({
     name: "Map",
     inputs: [{ name: "list", type: "any" }],
-    output: "any",
+    output: "any[]",
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
@@ -152,15 +177,15 @@ export function createCoreLanguage(): Language {
     bodyBindings: ["acc", "item"],
   });
 
-  //? Evaluators: Standard operations
+  // -------------------------------------------------------------------------
+  // Evaluators - logic ops (fixed output types, no inferOutput needed)
+  // -------------------------------------------------------------------------
+
   lang.registerEvaluator({
     op: "And",
     evaluate: ({ nodes }) => (nodes as boolean[]).every(Boolean),
   });
-  lang.registerEvaluator({
-    op: "Or",
-    evaluate: ({ nodes }) => (nodes as boolean[]).some(Boolean),
-  });
+  lang.registerEvaluator({ op: "Or", evaluate: ({ nodes }) => (nodes as boolean[]).some(Boolean) });
   lang.registerEvaluator({ op: "Not", evaluate: ({ a }) => !a });
   lang.registerEvaluator({
     op: "Xor",
@@ -173,45 +198,98 @@ export function createCoreLanguage(): Language {
     op: "GreaterThan",
     evaluate: ({ a, b }) => (a as number) > (b as number),
   });
-  lang.registerEvaluator({
-    op: "LessThan",
-    evaluate: ({ a, b }) => (a as number) < (b as number),
-  });
+  lang.registerEvaluator({ op: "LessThan", evaluate: ({ a, b }) => (a as number) < (b as number) });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - control flow
+  // -------------------------------------------------------------------------
 
   lang.registerEvaluator({
     op: "If",
     evaluate: ({ condition, then, else: otherwise }) => (condition ? then : otherwise),
+    // Output type = branch type when both branches match, else any
+    inferOutput: (inputTypes) => {
+      const t = inputTypes["then"],
+        e = inputTypes["else"];
+      return t === e && t !== "any" ? t : "any";
+    },
   });
 
-  //? Evaluators - higher-order ops
-  // apply is always defined when called from the higher_order case in evaluate().
+  lang.registerEvaluator({
+    op: "IsSet",
+    evaluate: ({ value }) => value !== null && value !== undefined,
+    // Always boolean - no inferOutput needed
+  });
+
+  lang.registerEvaluator({
+    op: "Default",
+    evaluate: ({ value, fallback }) => (value !== null && value !== undefined ? value : fallback),
+    // Output type = value's type when known, else fallback's type
+    inferOutput: (inputTypes) => {
+      const v = inputTypes["value"];
+      return v && v !== "any" ? v : (inputTypes["fallback"] ?? "any");
+    },
+  });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - higher-order list ops
+  // apply! is safe - always defined when called from the higher_order case.
+  // inferOutput propagates concrete types through generic list operations.
+  // -------------------------------------------------------------------------
+
   lang.registerEvaluator({
     op: "Filter",
     evaluate: ({ list }, apply) => (list as unknown[]).filter((item) => Boolean(apply!(item))),
+    // Output element type = input list element type (e.g. Source[] → Source[])
+    inferOutput: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return listType?.endsWith("[]") ? listType : "any[]";
+    },
   });
+
   lang.registerEvaluator({
     op: "Map",
     evaluate: ({ list }, apply) => (list as unknown[]).map((item) => apply!(item)),
+    // Output type = body output type as array (e.g. body → TallyState means TallyState[])
+    inferOutput: (inputTypes, bodyOutputType) => {
+      if (bodyOutputType && bodyOutputType !== "any") return `${bodyOutputType}[]`;
+      const listType = inputTypes["list"];
+      return listType?.endsWith("[]") ? listType : "any[]";
+    },
   });
+
   lang.registerEvaluator({
     op: "Find",
     evaluate: ({ list }, apply) =>
       (list as unknown[]).find((item) => Boolean(apply!(item))) ?? null,
+    // Output type = element type of input list (not array - Find returns one item or null)
+    inferOutput: (inputTypes) => {
+      const listType = inputTypes["list"];
+      return listType?.endsWith("[]") ? listType.slice(0, -2) : "any";
+    },
   });
+
   lang.registerEvaluator({
     op: "Every",
     evaluate: ({ list }, apply) => (list as unknown[]).every((item) => Boolean(apply!(item))),
+    // Always boolean - no inferOutput needed
   });
+
   lang.registerEvaluator({
     op: "Some",
     evaluate: ({ list }, apply) => (list as unknown[]).some((item) => Boolean(apply!(item))),
+    // Always boolean - no inferOutput needed
   });
 
-  // TODO: Add foldLeft and foldRight (/reduceLeft and reduceRight) to cover different associativity needs?
   lang.registerEvaluator({
     op: "Reduce",
     evaluate: ({ list, initial }, apply) =>
       (list as unknown[]).reduce((acc, item) => apply!(acc, item), initial),
+    // Output type = accumulator type = type of the initial value
+    inferOutput: (inputTypes) => {
+      const initialType = inputTypes["initial"];
+      return initialType && initialType !== "any" ? initialType : "any";
+    },
   });
 
   return lang;
