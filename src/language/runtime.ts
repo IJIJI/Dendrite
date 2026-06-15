@@ -6,6 +6,7 @@ import {
   updateInput,
   evaluateProgram,
   outputDependencies,
+  EvalError,
 } from "./program";
 
 // ---------------------------------------------------------------------------
