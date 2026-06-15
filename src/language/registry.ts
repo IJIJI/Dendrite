@@ -1,4 +1,4 @@
-import { ZodType } from "zod";
+import { z, ZodType } from "zod";
 
 //? Definition types
 export interface TypeDefinition {
