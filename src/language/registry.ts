@@ -97,6 +97,15 @@ export interface EvaluatorDefinition {
    * bodyOutputType: the derived output type of the body node (higher-order ops only).
    */
   inferOutput?: (inputTypes: Record<string, string>, bodyOutputType?: string) => string | undefined;
+  /**
+   * Analysis-time scoped binding type inference. Higher-order ops only.
+   * Called by the analyser before entering the body scope to populate boundNames.
+   * Returns binding name → type for each scoped variable (e.g. { item: 'Source' }).
+   * Absent bindings fall back to 'any'. Ignored for standard ops.
+   *
+   * inputTypes: same as inferOutput. Resolved input type strings.
+   */
+  inferBodyBindings?: (inputTypes: Record<string, string>) => Record<string, string>;
 }
 
 //? Language descriptor - Single source of truth for the editor, analyser, evaluator.
@@ -138,7 +147,7 @@ export interface Language {
   descriptor: LanguageDescriptor;
   /**
    * Register a type. Automatically also registers 'T[]' with schema z.array(schema)
-   * and default []. Do not manually register array variants — they are generated.
+   * and default []. Do not manually register array variants - they are generated.
    */
   registerType(
     name: string,
@@ -172,7 +181,7 @@ export function createLanguage(): Language {
           name: arrayName,
           schema: z.array(schema),
           default: [],
-          // T[] does not inherit extends from T — array covariance is handled
+          // T[] does not inherit extends from T - array covariance is handled
           // in isCompatible directly, not via the extends chain
         });
       }
@@ -193,7 +202,7 @@ export function createLanguage(): Language {
 export function extendLanguage(parent: Language): Language {
   const child = createLanguage();
   const d = parent.descriptor;
-  // Skip T[] types — auto-generated when their base T is copied
+  // Skip T[] types - auto-generated when their base T is copied
   d.types.forEach((v) => {
     if (!v.name.endsWith("[]")) {
       child.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
