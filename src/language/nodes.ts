@@ -18,7 +18,7 @@ export type COpInputType = InputType<CNode>;
 // Primitive value definition
 export interface LiteralNode {
   kind: "literal";
-  type: string;
+  type?: string; // derived by analyser from typeof value — not meaningful on raw nodes
   value: LiteralValue;
   source?: SourceRef;
 }
@@ -43,7 +43,7 @@ export interface InputNode {
 export interface RefNode {
   kind: "ref";
   name: string;
-  type: string;
+  type?: string; // set by analyser to the referenced binding's output type — not meaningful on raw nodes
   source?: SourceRef;
 }
 
@@ -116,9 +116,13 @@ export interface Analysed {
 //? CNodes analysed representation (CoreProgram).
 // Each variant extends its ASTNode counterpart, overriding recursive fields
 // with CNode variants and adding Analysed.
-export interface CLiteralNode extends LiteralNode, Analysed {}
+export interface CLiteralNode extends LiteralNode, Analysed {
+  readonly type: string; // required post-analysis
+}
 export interface CInputNode extends InputNode, Analysed {}
-export interface CRefNode extends RefNode, Analysed {}
+export interface CRefNode extends RefNode, Analysed {
+  readonly type: string; // required post-analysis
+}
 
 export interface CArrayNode extends Omit<ArrayNode, "items">, Analysed {
   readonly items: CNode[];
