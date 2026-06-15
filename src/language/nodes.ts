@@ -6,7 +6,7 @@ export type SourceRef =
 //? LiteralValue - Used for primitives only for now.
 //  TODO: Add more complex types (structs, arrays, etc.) in the future.
 //  TODO: Add null/undefined?
-export type LiteralValue = string | number | boolean;
+export type LiteralValue = string | number | boolean | null;
 
 // InputType<T> - a single or variadic node (multiple connections in editor).
 // OpInputType and COpInputType are concrete aliases of this generic.
@@ -87,6 +87,11 @@ export interface HigherOrderNode {
   inputs: Record<string, OpInputType>;
   bindings: string[]; // ordered. Positional args to apply(), one per scoped variable
   body: ASTNode;
+  /**
+   * Optional in raw — editor sets from opDef.output, analyser infers and overrides.
+   * Required on CHigherOrderNode.
+   */
+  output?: string;
   source?: SourceRef;
 }
 
@@ -130,6 +135,7 @@ export interface CFieldAccessNode extends Omit<FieldAccessNode, "struct">, Analy
 export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body">, Analysed {
   readonly inputs: Record<string, COpInputType>;
   readonly body: CNode;
+  readonly output: string; // required: analyser sets to inferred or opDef.output fallback
 }
 
 export type CNode =
