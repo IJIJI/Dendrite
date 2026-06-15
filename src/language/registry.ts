@@ -4,6 +4,18 @@ import { ZodType } from "zod";
 export interface TypeDefinition {
   name: string;
   schema: ZodType<unknown>;
+  /**
+   * The "zero" or "empty" value for this type. Used as a resilient fallback
+   * when a node produces null or is unset. Automatically set to [] for T[]
+   * types and auto-derived for primitives. Complex types should provide one.
+   */
+  default?: unknown;
+  /**
+   * Future subtyping. Name of the parent type this type extends.
+   * Not used in compatibility checks yet; reserved for later implementation.
+   * When implemented, isCompatible will walk this chain.
+   */
+  extends?: string;
 }
 
 export interface OpInput {
@@ -18,7 +30,7 @@ export interface OpInput {
 export interface OpDefinition {
   name: string;
   inputs: OpInput[];
-  output: string;
+  output: string; // static fallback: used when inferOutput is absent/undefined
   category?: string;
   /**
    * If true, this op uses HigherOrderNode in the AST rather than OperationNode.
@@ -75,6 +87,16 @@ export interface EvaluatorDefinition {
     apply: Apply | undefined,
     hostContext?: unknown,
   ) => unknown;
+  /**
+   * Analysis-time output type inference. Called by the analyser after resolving
+   * input types, with the body's output type for higher-order ops.
+   * Returns undefined to fall back to OpDefinition.output.
+   *
+   * inputTypes: Record of input name → output type string of the connected node.
+   *   For variadic inputs, the value is the element type (e.g. 'boolean', not 'boolean[]').
+   * bodyOutputType: the derived output type of the body node (higher-order ops only).
+   */
+  inferOutput?: (inputTypes: Record<string, string>, bodyOutputType?: string) => string | undefined;
 }
 
 //? Language descriptor - Single source of truth for the editor, analyser, evaluator.
@@ -86,10 +108,43 @@ export interface LanguageDescriptor {
   evaluators: ReadonlyMap<string, EvaluatorDefinition>;
 }
 
+//? isCompatible - type compatibility check for the analyser.
+//
+//  Rules:
+//    expected === 'any'            → always compatible
+//    actual === 'any' | 'null'     → compatible with any expected type
+//    actual === expected           → exact match
+//    actual = 'T[]', expected = 'any[]' → array covariance
+//
+//  Future: walk TypeDefinition.extends chain for subtype relationships.
+//  Always call this function - never inline - so subtyping can be added here.
+
+export function isCompatible(
+  actual: string,
+  expected: string,
+  _descriptor: LanguageDescriptor,
+): boolean {
+  if (expected === "any") return true;
+  if (actual === "any" || actual === "null") return true;
+  if (actual === expected) return true;
+  // Array covariance: T[] is compatible with any[]
+  if (actual.endsWith("[]") && expected === "any[]") return true;
+  // future: walk _descriptor.types.get(actual)?.extends
+  return false;
+}
+
 //? Language: The registration API
 export interface Language {
   descriptor: LanguageDescriptor;
-  registerType(name: string, schema: ZodType<unknown>): void;
+  /**
+   * Register a type. Automatically also registers 'T[]' with schema z.array(schema)
+   * and default []. Do not manually register array variants — they are generated.
+   */
+  registerType(
+    name: string,
+    schema: ZodType<unknown>,
+    config?: { default?: unknown; extends?: string },
+  ): void;
   registerOp(def: OpDefinition): void;
   registerInput(def: InputDefinition): void;
   registerOutput(def: OutputDefinition): void;
@@ -103,17 +158,26 @@ export function createLanguage(): Language {
   const outputs = new Map<string, OutputDefinition>();
   const evaluators = new Map<string, EvaluatorDefinition>();
 
-  const descriptor: LanguageDescriptor = {
-    types,
-    ops,
-    inputs,
-    outputs,
-    evaluators,
-  };
+  const descriptor: LanguageDescriptor = { types, ops, inputs, outputs, evaluators };
 
   return {
     descriptor,
-    registerType: (name, schema) => types.set(name, { name, schema }),
+
+    registerType(name, schema, config) {
+      types.set(name, { name, schema, ...config });
+      // Auto-register T[] variant unless this is already an array type
+      if (!name.endsWith("[]")) {
+        const arrayName = `${name}[]`;
+        types.set(arrayName, {
+          name: arrayName,
+          schema: z.array(schema),
+          default: [],
+          // T[] does not inherit extends from T — array covariance is handled
+          // in isCompatible directly, not via the extends chain
+        });
+      }
+    },
+
     registerOp: (def) => ops.set(def.name, def),
     registerInput: (def) => inputs.set(def.name, def),
     registerOutput: (def) => outputs.set(def.name, def),
@@ -123,12 +187,18 @@ export function createLanguage(): Language {
 
 /**
  * Create a new Language pre-populated with all definitions from a parent.
+ * Only non-array types are copied. T[] variants are re-generated automatically.
  * The child shares no mutable state with the parent.
  */
 export function extendLanguage(parent: Language): Language {
   const child = createLanguage();
   const d = parent.descriptor;
-  d.types.forEach((v) => child.registerType(v.name, v.schema));
+  // Skip T[] types — auto-generated when their base T is copied
+  d.types.forEach((v) => {
+    if (!v.name.endsWith("[]")) {
+      child.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
+    }
+  });
   d.ops.forEach((v) => child.registerOp(v));
   d.inputs.forEach((v) => child.registerInput(v));
   d.outputs.forEach((v) => child.registerOutput(v));
