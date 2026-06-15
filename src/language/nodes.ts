@@ -18,7 +18,7 @@ export type COpInputType = InputType<CNode>;
 // Primitive value definition
 export interface LiteralNode {
   kind: "literal";
-  type?: string; // derived by analyser from typeof value — not meaningful on raw nodes
+  type?: string; // derived by analyser from typeof value - not meaningful on raw nodes
   value: LiteralValue;
   source?: SourceRef;
 }
@@ -43,7 +43,7 @@ export interface InputNode {
 export interface RefNode {
   kind: "ref";
   name: string;
-  type?: string; // set by analyser to the referenced binding's output type — not meaningful on raw nodes
+  type?: string; // set by analyser to the referenced binding's output type - not meaningful on raw nodes
   source?: SourceRef;
 }
 
@@ -88,7 +88,7 @@ export interface HigherOrderNode {
   bindings: string[]; // ordered. Positional args to apply(), one per scoped variable
   body: ASTNode;
   /**
-   * Optional in raw — editor sets from opDef.output, analyser infers and overrides.
+   * Optional in raw - editor sets from opDef.output, analyser infers and overrides.
    * Required on CHigherOrderNode.
    */
   output?: string;
