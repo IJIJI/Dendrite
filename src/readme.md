@@ -1,4 +1,3 @@
-
 ```
 Source / Graph
     ↓  parse                    → ParseResult<RawProgram>
@@ -11,6 +10,7 @@ Output: Map<string, unknown>    → When using the runtime respective listeners 
 
 Partial recomputation!
 TODO: Now is a per node dependency, works faster. Rewrite doc.
+
 ```
 updateInput('sourceBusNew', value, state, program)
   → markDirty('sourceBusNew')           // uses dependents to propagate
