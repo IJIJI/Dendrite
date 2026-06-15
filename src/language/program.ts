@@ -49,7 +49,7 @@ export type ParseErrorKind =
   | "syntax_error"
   | "unexpected_token"
   | "unexpected_end"
-  | "duplicate_binding"; // Set x = ... declared twice in the same program
+  | "duplicate_binding";
 
 export interface ParseError {
   kind: ParseErrorKind;
@@ -57,7 +57,7 @@ export interface ParseError {
   source?: SourceRef;
 }
 
-export type ParseWarningKind = "deprecated_syntax"; // valid but outdated syntax. Parser still succeeds.
+export type ParseWarningKind = "deprecated_syntax";
 
 export interface ParseWarning {
   kind: ParseWarningKind;
@@ -131,7 +131,6 @@ export function updateInput(name: string, value: unknown, state: EvalState): voi
 //? isCached
 //  Checks if a node's value depends on changed inputs. If it does, the cached value is invalid.
 //  If it doesn't, it checks the cache and returns depending on that.
-
 function isCached(
   node: object,
   cache: WeakMap<object, unknown>,
@@ -170,7 +169,6 @@ export function evaluate(
     case "input": {
       const value = state.inputs.get(node.name);
       if (value === undefined) {
-        // TODO: Should this use a default input not set value instead of throwing?
         throw new EvalError(
           "input_not_set",
           `Input '${node.name}' has no value - host must call updateInput before evaluating`,
@@ -184,7 +182,6 @@ export function evaluate(
       if (!binding) {
         const val = state.inputs.get(node.name);
         if (val !== undefined) return val;
-        // TODO: Should this use a default reference not set value instead of throwing?
         throw new EvalError(
           "undefined_reference",
           `Reference '${node.name}' not found in bindings or scope - possible analyser bug`,
@@ -213,7 +210,6 @@ export function evaluate(
       if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
       const src = evaluate(node.struct, program, state, changedInputs, descriptor, hostContext);
       if (src === null || src === undefined) {
-        // TODO: Should this use a default struct not set value instead of throwing?
         throw new EvalError(
           "invalid_field_access",
           `Cannot access field '${node.field}' on null/undefined`,
@@ -221,7 +217,6 @@ export function evaluate(
       }
       const record = src as Record<string, unknown>;
       if (!(node.field in record)) {
-        // TODO: Should this use a default field not set value instead of throwing?
         throw new EvalError(
           "invalid_field_access",
           `Field '${node.field}' does not exist on value`,
@@ -238,7 +233,6 @@ export function evaluate(
       }
       const evaluator = descriptor.evaluators.get(node.op);
       if (!evaluator) {
-        // TODO: Check if this is or can be caught on analysis to prevent evaluation errors.
         throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
       }
       const resolved: Record<string, unknown> = {};
