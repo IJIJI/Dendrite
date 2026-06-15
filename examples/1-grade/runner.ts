@@ -19,8 +19,8 @@ const isPassing: CNode = {
   kind: "operation",
   op: "GreaterThan",
   inputs: {
-    a: { kind: "input",   name: "score", type: "number", dependsOn: new Set(["score"]) },
-    b: { kind: "literal", type: "number", value: 60,     dependsOn: new Set() },
+    a: { kind: "input", name: "score", type: "number", dependsOn: new Set(["score"]) },
+    b: { kind: "literal", type: "number", value: 60, dependsOn: new Set() },
   },
   output: "boolean",
   dependsOn: new Set(["score"]),
@@ -31,9 +31,9 @@ const grade: CNode = {
   op: "If",
   inputs: {
     // RefNode.dependsOn === the referenced binding's dependsOn — analyser invariant
-    condition: { kind: "ref",     name: "isPassing", type: "boolean", dependsOn: new Set(["score"]) },
-    then:      { kind: "literal", type: "string",    value: "Pass",   dependsOn: new Set() },
-    else:      { kind: "literal", type: "string",    value: "Fail",   dependsOn: new Set() },
+    condition: { kind: "ref", name: "isPassing", type: "boolean", dependsOn: new Set(["score"]) },
+    then: { kind: "literal", type: "string", value: "Pass", dependsOn: new Set() },
+    else: { kind: "literal", type: "string", value: "Fail", dependsOn: new Set() },
   },
   // inferOutput: both branches are "string" → analyser would infer "string" here
   output: "string",
@@ -43,7 +43,7 @@ const grade: CNode = {
 const program: CoreProgram = {
   bindings: new Map<string, CNode>([
     ["isPassing", isPassing],
-    ["grade",     grade],
+    ["grade", grade],
   ]),
   outputs: new Map<string, CNode>([
     // RefNode to "grade" — dependsOn mirrors the grade binding's dependsOn
