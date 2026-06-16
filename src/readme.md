@@ -40,3 +40,8 @@ src/language/
   runtime.ts   - createRuntime(), ProgramHandle
   core.ts      - createCoreLanguage() (logic, comparison, control, list ops)
 ```
+
+
+# TODO
+- [ ] Type extending
+- [ ] Auto type conversion. e.g. a numeric input into a boolean is true when not null?
