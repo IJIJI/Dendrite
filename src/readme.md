@@ -46,3 +46,4 @@ src/language/
 - [ ] Type extending
 - [ ] Auto type conversion. e.g. a numeric input into a boolean is true when not null?
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false.
+- [ ] Field typing (for structs)
