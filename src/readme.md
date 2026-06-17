@@ -48,3 +48,4 @@ src/language/
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false.
 - [ ] Field typing (for structs)
 - [ ] Subtyping
+- [ ] Output dependance. If one of a group fails analysis, then drop all of said group. Maybe directional.
