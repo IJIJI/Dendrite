@@ -6,6 +6,7 @@ import { EvalState, EvalError } from "./types";
 
 
 //? Input management: The host facing inputs, string-typed.
+// TODO: Maybe an evalstate object? Or some other centralised way to manage evalstates that can be easily used by the run types?
 export function updateInput(name: string, value: unknown, state: EvalState): void {
   state.inputs.set(name, value);
 }
