@@ -399,8 +399,8 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
 
   for (const [name, rawNode] of program.bindings) {
     declarationIndex.set(name, i++);
-    if (rawNode.source?.kind === "code") {
-      bindingSourceRefs.set(name, rawNode.source);
+    if (rawNode.source?.kind === "code") { // TODO: Should all editors not enforce lexical order? Rete should be able to compile to it.
+      bindingSourceRefs.set(name, rawNode.source); // TODO: Should rete not have its node id?
     } else {
       enforceCodeOrder = false; // rete source or absent → skip lexical order check
     }
