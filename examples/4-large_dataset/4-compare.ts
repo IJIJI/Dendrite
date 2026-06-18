@@ -9,8 +9,8 @@
  * runtime: 'honors' program not in affected set, not evaluated at all
  */
 
-import { createProgramRunner, run } from "../../src/language/runner";
-import { createRuntime } from "../../src/language/runtime";
+import { createProgramRunner, run } from "../../src/language/runtime/runner";
+import { createRuntime } from "../../src/language/runtime/runtime";
 import {
   descriptor,
   program,

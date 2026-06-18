@@ -1,4 +1,4 @@
-import { type LanguageDescriptor } from "./registry";
+import { type LanguageDescriptor } from "../registry";
 import {
   type CoreProgram,
   type EvalState,
@@ -7,7 +7,7 @@ import {
   evaluateProgram,
   outputDependencies,
   EvalError,
-} from "./program";
+} from "../program";
 
 // ---------------------------------------------------------------------------
 // ProgramHandle - returned by register(), scoped to one program.

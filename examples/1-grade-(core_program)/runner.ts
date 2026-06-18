@@ -1,5 +1,5 @@
 import { createCoreLanguage } from "../../src/language/core";
-import { createProgramRunner } from "../../src/language/runner";
+import { createProgramRunner } from "../../src/language/runtime/runner";
 import type { CoreProgram } from "../../src/language/program";
 import type { CNode } from "../../src/language/nodes";
 

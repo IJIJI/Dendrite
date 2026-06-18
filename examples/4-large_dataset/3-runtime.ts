@@ -10,7 +10,7 @@
  * Compare timing against core.run.example and core.runner.example.
  */
 
-import { createRuntime } from "../../src/language/runtime";
+import { createRuntime } from "../../src/language/runtime/runtime";
 import {
   descriptor,
   filteringProgram,

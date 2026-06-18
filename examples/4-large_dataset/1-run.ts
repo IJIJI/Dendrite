@@ -10,7 +10,7 @@
  * core.runner.example and core.runtime.example.
  */
 
-import { run } from "../../src/language/runner";
+import { run } from "../../src/language/runtime/runner";
 import {
   descriptor,
   program,

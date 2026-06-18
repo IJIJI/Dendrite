@@ -7,7 +7,7 @@
  * nodeCache. Compare timing against 1-run.ts and 3-runtime.ts.
  */
 
-import { createProgramRunner } from "../../src/language/runner";
+import { createProgramRunner } from "../../src/language/runtime/runner";
 import { fullLang, fullProgram, scenarios, changesFrom, delta, display, logHeader, type Scenario } from "./shared";
 
 const runner = createProgramRunner(fullProgram, fullLang.descriptor);

@@ -1,5 +1,5 @@
-import { CoreProgram, createEvalState, evaluateProgram, updateInput } from "./program";
-import { LanguageDescriptor } from "./registry";
+import { CoreProgram, createEvalState, evaluateProgram, updateInput } from "../program";
+import { LanguageDescriptor } from "../registry";
 
 // runner.ts — single-program convenience API.
 //

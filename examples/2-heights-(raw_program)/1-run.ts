@@ -6,7 +6,7 @@
  * changed. Compare timing against 2-runner.ts and 3-runtime.ts.
  */
 
-import { run } from "../../src/language/runner";
+import { run } from "../../src/language/runtime/runner";
 import { fullLang, fullProgram, scenarios, changesFrom, display, logHeader, type Scenario } from "./shared";
 
 for (let i = 0; i < scenarios.length; i++) {

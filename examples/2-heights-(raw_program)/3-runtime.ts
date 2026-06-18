@@ -13,7 +13,7 @@
  * Compare timing against 1-run.ts and 2-runner.ts.
  */
 
-import { createRuntime } from "../../src/language/runtime";
+import { createRuntime } from "../../src/language/runtime/runtime";
 import {
   runtimeLang,
   menProgram, womenProgram, unknownProgram, totalsProgram,
