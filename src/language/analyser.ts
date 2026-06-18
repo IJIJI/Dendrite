@@ -6,8 +6,8 @@
 
 import {
   type ASTNode,
+  type CErrorNode,
   type CNode,
-  type CLiteralNode,
   type LiteralValue,
   type SourceRef,
 } from "./nodes";
@@ -74,7 +74,7 @@ function union(...sets: ReadonlySet<string>[]): ReadonlySet<string> {
   return result;
 }
 
-function getOutputType(node: CNode): string {
+export function getOutputType(node: CNode): string {
   switch (node.kind) {
     case "literal":
       return node.type;
@@ -92,6 +92,8 @@ function getOutputType(node: CNode): string {
       return node.output;
     case "higher_order":
       return node.output;
+    case "error":
+      return node.type ?? "any";
   }
 }
 
@@ -116,8 +118,8 @@ function checkCompat(
   }
 }
 
-function placeholder(): CLiteralNode {
-  return { kind: "literal", type: "any", value: null, dependsOn: new Set() };
+function errorNode(type?: string, source?: SourceRef): CErrorNode {
+  return { kind: "error", type, source, dependsOn: new Set() };
 }
 
 function validateInputs(
@@ -171,7 +173,7 @@ function validateInputs(
       const rawArr: ASTNode[] = Array.isArray(raw) ? raw : raw !== undefined ? [raw as ASTNode] : [];
       const cItems = rawArr.map((item) => analyseNode(item, ctx));
       for (const ci of cItems) {
-        checkCompat(getOutputType(ci), opInput.type, name, ctx);
+        if (ci.kind !== "error") checkCompat(getOutputType(ci), opInput.type, name, ctx);
         // Flatten variadic CNode[] dependsOn - array itself has no .dependsOn
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
       }
@@ -180,7 +182,7 @@ function validateInputs(
     } else if (name in rawInputs) {
       const cnode = analyseNode(rawInputs[name] as ASTNode, ctx);
       const actualType = getOutputType(cnode);
-      checkCompat(actualType, opInput.type, name, ctx);
+      if (cnode.kind !== "error") checkCompat(actualType, opInput.type, name, ctx);
       for (const d of cnode.dependsOn) dependsOnAcc.add(d);
       analysedInputs[name] = cnode;
       inputTypes[name] = actualType;
@@ -226,7 +228,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Context input '${node.name}' is not declared in the descriptor`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(undefined, node.source);
       }
       return { ...node, type: def.type, dependsOn: new Set([node.name]) };
     }
@@ -234,7 +236,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "ref": {
       if (ctx.analysedBindings.has(node.name)) {
         // TODO: Check the use off placeholders. Might be possible to simplify.
-        if (ctx.failedBindings.has(node.name)) return placeholder(); // cascade suppression
+        if (ctx.failedBindings.has(node.name)) return errorNode(undefined, node.source); // cascade suppression
 
         // Lexical order check by declaration index - formatting-independent.
         // declarationIndex is the source of truth; bindingSourceRefs is for error messages only.
@@ -250,7 +252,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
                 `'${node.name}' is referenced before it is declared` +
                 (declaredAt?.kind === "code" ? ` (declared at line ${declaredAt.line})` : ""),
             });
-            return placeholder();
+            return errorNode(undefined, node.source);
           }
         }
 
@@ -269,14 +271,14 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         message: `'${node.name}' is not declared as a binding or scoped variable`,
         source: node.source,
       });
-      return placeholder();
+      return errorNode(undefined, node.source);
     }
 
     case "array": {
       const cItems = node.items.map((item) => analyseNode(item, ctx));
       // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
       for (const ci of cItems) {
-        checkCompat(getOutputType(ci), node.type, "(array item)", ctx);
+        if (ci.kind !== "error") checkCompat(getOutputType(ci), node.type, "(array item)", ctx);
       }
       return { ...node, items: cItems, dependsOn: union(...cItems.map((n) => n.dependsOn)) };
     }
@@ -305,7 +307,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Op '${node.op}' is not registered in the descriptor`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(undefined, node.source);
       }
       if (opDef.higherOrder) {
         ctx.errors.push({
@@ -314,7 +316,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Op '${node.op}' requires a higher_order node`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(opDef.output, node.source);
       }
       const { analysedInputs, inputTypes, inputDependsOn } = validateInputs(
         node.inputs,
@@ -335,7 +337,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Op '${node.op}' is not registered in the descriptor`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(undefined, node.source);
       }
       if (!opDef.higherOrder) {
         ctx.errors.push({
@@ -344,7 +346,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Op '${node.op}' requires a standard operation node`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(opDef.output, node.source);
       }
 
       const expectedBindings = opDef.bodyBindings?.length ?? 0;
@@ -355,7 +357,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           message: `Op '${node.op}' expects ${expectedBindings} body binding(s) but the node provides ${node.bindings.length}`,
           source: node.source,
         });
-        return placeholder();
+        return errorNode(opDef.output, node.source);
       }
 
       const { analysedInputs, inputTypes, inputDependsOn } = validateInputs(
