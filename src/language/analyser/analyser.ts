@@ -19,6 +19,9 @@ import {
 } from "../program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
 
+
+// TODO: Move more to types.ts!
+
 interface AnalysisContext {
   descriptor: LanguageDescriptor;
   analysedBindings: Map<string, CNode>;
