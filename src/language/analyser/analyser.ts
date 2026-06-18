@@ -10,14 +10,14 @@ import {
   type CNode,
   type LiteralValue,
   type SourceRef,
-} from "./nodes";
+} from "../nodes";
 import {
   type AnalysisError,
   type AnalysisResult,
   type AnalysisWarning,
   type RawProgram,
-} from "./program";
-import { isCompatible, type LanguageDescriptor } from "./infra/registry";
+} from "../program";
+import { isCompatible, type LanguageDescriptor } from "../infra/registry";
 
 interface AnalysisContext {
   descriptor: LanguageDescriptor;

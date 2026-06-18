@@ -8,7 +8,7 @@
  * Outputs: avgX / countX — average height and count above 185 cm, per category and total
  */
 
-import { analyse } from "../../src/language/analyser";
+import { analyse } from "../../src/language/analyser/analyser";
 import { extendCoreLanguage } from "../../src/language/infra/core";
 import { createLanguage } from "../../src/language/infra/registry";
 import type { ASTNode, OperationNode, HigherOrderNode } from "../../src/language/nodes";
