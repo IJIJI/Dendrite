@@ -64,3 +64,4 @@ src/language/
       -> Combine with analysis+running? -> Probably not, seperate things
 - [ ] Also add code to manage displaying editors
       -> Combine with parsing?
+- [ ] Add some sort of validation of the registry?
