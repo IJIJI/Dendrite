@@ -2,7 +2,7 @@
  * Shared definitions for the core large_dataset language examples.
  */
 
-import { createCoreLanguage } from "../../src/language/core";
+import { createCoreLanguage } from "../../src/language/stdlib";
 import { CoreProgram } from "../../src/language/program";
 import {
   CInputNode,

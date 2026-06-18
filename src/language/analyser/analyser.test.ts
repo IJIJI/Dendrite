@@ -4,7 +4,7 @@ import { analyse, getOutputType } from "./analyser";
 import { type ASTNode, type CErrorNode, type LiteralNode, type RefNode } from "../infra/nodes";
 import { type CoreProgram, type RawProgram, EvalError, createEvalState, evaluate } from "../program";
 import { isCompatible } from "../infra/registry";
-import { createCoreLanguage } from "../core";
+import { createCoreLanguage } from "../stdlib";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
