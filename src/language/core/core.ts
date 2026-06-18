@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLanguage, extendLanguage, type Language } from "./registry";
+import { createLanguage, extendLanguage, type Language } from "../infra/registry";
 
 /**
  * Creates the base language with primitive types, logical ops,
