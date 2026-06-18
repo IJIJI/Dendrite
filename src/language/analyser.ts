@@ -49,7 +49,7 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
       case "field":
         walk(n.struct);
         break;
-      case "operation":
+      case "operation": // TODO: Operations might depend on context. Should be handled.
         for (const val of Object.values(n.inputs)) {
           if (Array.isArray(val)) for (const v of val) walk(v);
           else walk(val);
@@ -97,7 +97,7 @@ function getOutputType(node: CNode): string {
 
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
-  opDef: { name: string; inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[] },
+  opDef: { name: string; inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[] }, // TODO: Should this be a shared type?
   ctx: AnalysisContext,
 ): {
   analysedInputs: Record<string, CNode | CNode[]>;
@@ -223,6 +223,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
     case "ref": {
       if (ctx.analysedBindings.has(node.name)) {
+        // TODO: Check the use off placeholders. Might be possible to simplify.
         if (ctx.failedBindings.has(node.name)) return placeholder(); // cascade suppression
 
         // Lexical order check by declaration index - formatting-independent.
@@ -263,6 +264,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
     case "array": {
       const cItems = node.items.map((item) => analyseNode(item, ctx));
+      // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
       cItems.forEach((ci) => {
         const actualType = getOutputType(ci);
         if (!isCompatible(actualType, node.type, ctx.descriptor)) {
@@ -285,6 +287,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "field": {
       const struct = analyseNode(node.struct, ctx);
       if (["string", "number", "boolean"].includes(getOutputType(struct))) {
+        // TODO: Should this be an error?
         ctx.warnings.push({
           kind: "field_access_on_primitive",
           name: node.field,
