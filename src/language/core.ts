@@ -353,5 +353,30 @@ export function createCoreLanguage(): Language {
     },
   });
 
+  // -------------------------------------------------------------------------
+  // Evaluators - arithmetic ops
+  // -------------------------------------------------------------------------
+
+  lang.registerEvaluator({
+    op: "Add",
+    evaluate: ({ nodes }) => (nodes as number[]).reduce((a, b) => a + b, 0),
+  });
+  lang.registerEvaluator({
+    op: "Subtract",
+    evaluate: ({ a, b }) => (a as number) - (b as number),
+  });
+  lang.registerEvaluator({
+    op: "Multiply",
+    evaluate: ({ nodes }) => (nodes as number[]).reduce((a, b) => a * b, 1),
+  });
+  lang.registerEvaluator({
+    op: "Divide",
+    evaluate: ({ a, b }) => (b as number) === 0 ? 0 : (a as number) / (b as number),
+  });
+  lang.registerEvaluator({
+    op: "Length",
+    evaluate: ({ list }) => (list as unknown[]).length,
+  });
+
   return lang;
 }
