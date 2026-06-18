@@ -1,5 +1,6 @@
-import { SourceRef } from "../infra/nodes";
+import { CNode, SourceRef } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
+import { LanguageDescriptor } from "../infra/registry";
 
 
 
@@ -44,6 +45,19 @@ export interface AnalysisWarning {
 export interface AnalysisResult {
   ok: boolean; // false ONLY when a required output was dropped or missing
   program: CoreProgram; // always present; outputs = only surviving outputs
+  errors: AnalysisError[];
+  warnings: AnalysisWarning[];
+}
+
+export interface AnalysisContext {
+  descriptor: LanguageDescriptor;
+  analysedBindings: Map<string, CNode>;
+  failedBindings: Set<string>;
+  boundNames: ReadonlyMap<string, string>; // scoped var name → type; empty at top level
+  declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
+  bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)
+  currentBindingIndex: number | undefined; // index of binding being analysed; undefined when analysing outputs
+  enforceCodeOrder: boolean; // true for code editor, false for rete/mixed
   errors: AnalysisError[];
   warnings: AnalysisWarning[];
 }
