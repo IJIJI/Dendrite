@@ -1,13 +1,7 @@
+import { evaluateProgram, outputDependencies, updateInput } from "../evaluator/evaluator";
+import { createEvalState, EvalState } from "../evaluator/types";
+import { CoreProgram } from "../infra/program";
 import { type LanguageDescriptor } from "../infra/registry";
-import {
-  type CoreProgram,
-  type EvalState,
-  createEvalState,
-  updateInput,
-  evaluateProgram,
-  outputDependencies,
-  EvalError,
-} from "../program";
 
 // ---------------------------------------------------------------------------
 // ProgramHandle - returned by register(), scoped to one program.

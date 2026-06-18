@@ -11,13 +11,9 @@ import {
   type LiteralValue,
   type SourceRef,
 } from "../infra/nodes";
-import {
-  type AnalysisError,
-  type AnalysisResult,
-  type AnalysisWarning,
-  type RawProgram,
-} from "../program";
+import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
+import { AnalysisError, AnalysisResult, AnalysisWarning } from "./types";
 
 
 // TODO: Move more to types.ts!
