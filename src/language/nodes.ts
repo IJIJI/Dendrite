@@ -142,6 +142,13 @@ export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body
   readonly output: string; // required: analyser sets to inferred or opDef.output fallback
 }
 
+export interface CErrorNode extends Analysed {
+  kind: "error";
+  readonly type?: string;      // known output type when available (e.g. wrong_node_kind_for_op);
+                               // absent when genuinely unknown (e.g. unknown_op)
+  readonly source?: SourceRef; // origin location — for editor diagnostics and debugging
+}
+
 export type CNode =
   | CLiteralNode
   | CArrayNode
@@ -149,4 +156,5 @@ export type CNode =
   | CRefNode
   | COperationNode
   | CFieldAccessNode
-  | CHigherOrderNode;
+  | CHigherOrderNode
+  | CErrorNode;
