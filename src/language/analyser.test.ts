@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { analyse } from "./analyser";
-import { type ASTNode, type LiteralNode, type RefNode } from "./nodes";
-import { type RawProgram } from "./program";
+import { analyse, getOutputType } from "./analyser";
+import { type ASTNode, type CErrorNode, type LiteralNode, type RefNode } from "./nodes";
+import { type CoreProgram, type RawProgram, EvalError, createEvalState, evaluate } from "./program";
 import { isCompatible } from "./registry";
 import { createCoreLanguage } from "./core";
 
@@ -646,7 +646,7 @@ describe("pruning", () => {
     expect(bNode.inputs.a.value).toBe(false); // boolean default
   });
 
-  it("no error placeholder (any/null) in program.bindings", () => {
+  it("no error node in program.bindings", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
       {
@@ -657,11 +657,7 @@ describe("pruning", () => {
     );
     const result = analyse(prog, lang.descriptor);
     for (const [, node] of result.program.bindings) {
-      if (node.kind === "literal") {
-        // Error placeholders have type 'any' and value null — check they're not present
-        const isErrorPlaceholder = node.type === "any" && node.value === null;
-        expect(isErrorPlaceholder).toBe(false);
-      }
+      expect(node.kind).not.toBe("error");
     }
   });
 });
@@ -849,5 +845,44 @@ describe("wrong_node_kind_for_op", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Not")).toBe(true);
+  });
+});
+
+// ─── CErrorNode ───────────────────────────────────────────────────────────────
+
+describe("CErrorNode", () => {
+  it("evaluator throws EvalError('error_node_reached') for a CErrorNode", () => {
+    const errNode: CErrorNode = { kind: "error", dependsOn: new Set() };
+    const prog: CoreProgram = { bindings: new Map(), outputs: new Map([["out", errNode]]) };
+    const lang = createCoreLanguage();
+    expect(() => evaluate(errNode, prog, createEvalState(), undefined, lang.descriptor))
+      .toThrow(expect.objectContaining({ kind: "error_node_reached" }));
+  });
+
+  it("unknown_op inline in a typed input → no implicit_any_cast warning", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      {
+        b: {
+          kind: "operation",
+          op: "Not",
+          inputs: {
+            a: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+          },
+          output: "boolean",
+        },
+      },
+      { out: ref("b") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "unknown_op")).toBe(true);
+    expect(result.warnings.filter((w) => w.kind === "implicit_any_cast")).toHaveLength(0);
+  });
+
+  it("getOutputType returns known type for typed CErrorNode, 'any' for untyped", () => {
+    const typed: CErrorNode = { kind: "error", type: "boolean", dependsOn: new Set() };
+    const untyped: CErrorNode = { kind: "error", dependsOn: new Set() };
+    expect(getOutputType(typed)).toBe("boolean");
+    expect(getOutputType(untyped)).toBe("any");
   });
 });
