@@ -497,6 +497,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
   const outputMap = new Map<string, CNode>();
   let okFlag = true;
 
+  // TODO: Check if the program should still compile if a required output is missing.
   for (const [name, rawNode] of program.outputs) {
     const def = descriptor.outputs.get(name);
     const isKnownOutput = def !== undefined;
@@ -511,6 +512,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
           name,
           message: `Output '${name}' depends on a binding that failed analysis`,
         });
+        // TODO: Add some sort of feedback depending on the required mode?
         if (!def.mode || def.mode === "required") okFlag = false;
       } else {
         // Unknown output + poisoned dep: warn only. Cannot affect okFlag.
