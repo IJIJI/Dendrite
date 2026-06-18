@@ -43,10 +43,4 @@ export interface EvalState {
   bodyScope: WeakMap<object, unknown> | undefined;
 }
 
-export function createEvalState(): EvalState {
-  return {
-    inputs: new Map(),
-    nodeCache: new WeakMap(),
-    bodyScope: undefined,
-  };
-}
+

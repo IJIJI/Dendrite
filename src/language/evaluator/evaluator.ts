@@ -3,7 +3,14 @@ import { CoreProgram } from "../infra/program";
 import { LanguageDescriptor } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
-
+//? Empty evalstate initialisation
+export function createEvalState(): EvalState {
+  return {
+    inputs: new Map(),
+    nodeCache: new WeakMap(),
+    bodyScope: undefined,
+  };
+}
 
 //? Input management: The host facing inputs, string-typed.
 // TODO: Maybe an evalstate object? Or some other centralised way to manage evalstates that can be easily used by the run types?
