@@ -136,9 +136,19 @@ function validateInputs(
   for (const opInput of opDef.inputs) {
     const { name } = opInput;
 
-    if (opInput.required && !(name in rawInputs)) {
+    if (opInput.required !== false && !(name in rawInputs)) {
       // Missing-input placeholder: carries declared type and type default.
       // Warning, not error - binding does NOT fail. Distinct from error placeholders.
+      if (opInput.variadic) {
+        // Variadic absent → empty array. Not added to inputTypes (same as populated variadic).
+        analysedInputs[name] = [];
+        ctx.warnings.push({
+          kind: "missing_op_input",
+          name,
+          message: `Required input '${name}' of op '${opDef.name}' is absent - using empty array`,
+        });
+        continue;
+      }
       const typeDef = ctx.descriptor.types.get(opInput.type);
       const defVal = typeDef?.default;
       const value: LiteralValue =
@@ -160,35 +170,17 @@ function validateInputs(
       const raw = rawInputs[name];
       const rawArr: ASTNode[] = Array.isArray(raw) ? raw : raw !== undefined ? [raw as ASTNode] : [];
       const cItems = rawArr.map((item) => analyseNode(item, ctx));
-      cItems.forEach((ci) => {
-        if (!isCompatible(getOutputType(ci), opInput.type, ctx.descriptor)) {
-          ctx.errors.push({
-            kind: "op_input_type_mismatch",
-            name,
-            message: `Variadic input '${name}' item type '${getOutputType(ci)}' is not compatible with expected '${opInput.type}'`,
-          });
-        }
+      for (const ci of cItems) {
+        checkCompat(getOutputType(ci), opInput.type, name, ctx);
         // Flatten variadic CNode[] dependsOn - array itself has no .dependsOn
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
-      });
+      }
       analysedInputs[name] = cItems;
       // variadic NOT added to inputTypes - inferOutput/inferBodyBindings must not rely on it
     } else if (name in rawInputs) {
       const cnode = analyseNode(rawInputs[name] as ASTNode, ctx);
       const actualType = getOutputType(cnode);
-      if (!isCompatible(actualType, opInput.type, ctx.descriptor)) {
-        ctx.errors.push({
-          kind: "op_input_type_mismatch",
-          name,
-          message: `Input '${name}' type '${actualType}' is not compatible with expected '${opInput.type}'`,
-        });
-      } else if (actualType === "any" && opInput.type !== "any") {
-        ctx.warnings.push({
-          kind: "implicit_any_cast",
-          name,
-          message: `Input '${name}' is 'any' typed - '${opInput.type}' expected`,
-        });
-      }
+      checkCompat(actualType, opInput.type, name, ctx);
       for (const d of cnode.dependsOn) dependsOnAcc.add(d);
       analysedInputs[name] = cnode;
       inputTypes[name] = actualType;
@@ -210,13 +202,6 @@ function validateInputs(
 }
 
 function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
-  const placeholder = (): CLiteralNode => ({
-    kind: "literal",
-    type: "any",
-    value: null,
-    dependsOn: new Set(),
-  });
-
   switch (node.kind) {
     case "literal": {
       const type =
@@ -290,33 +275,21 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "array": {
       const cItems = node.items.map((item) => analyseNode(item, ctx));
       // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
-      cItems.forEach((ci) => {
-        const actualType = getOutputType(ci);
-        if (!isCompatible(actualType, node.type, ctx.descriptor)) {
-          ctx.errors.push({
-            kind: "op_input_type_mismatch",
-            name: "(array item)",
-            message: `Array item type '${actualType}' is not compatible with element type '${node.type}'`,
-          });
-        } else if (actualType === "any" && node.type !== "any") {
-          ctx.warnings.push({
-            kind: "implicit_any_cast",
-            name: "(array item)",
-            message: `Array item is 'any' typed - element type '${node.type}' expected`,
-          });
-        }
-      });
+      for (const ci of cItems) {
+        checkCompat(getOutputType(ci), node.type, "(array item)", ctx);
+      }
       return { ...node, items: cItems, dependsOn: union(...cItems.map((n) => n.dependsOn)) };
     }
 
     case "field": {
       const struct = analyseNode(node.struct, ctx);
-      if (["string", "number", "boolean"].includes(getOutputType(struct))) {
+      const structType = getOutputType(struct);
+      if (["string", "number", "boolean"].includes(structType)) {
         // TODO: Should this be an error?
         ctx.warnings.push({
           kind: "field_access_on_primitive",
           name: node.field,
-          message: `Field access '${node.field}' on primitive type '${getOutputType(struct)}'`,
+          message: `Field access '${node.field}' on primitive type '${structType}'`,
           source: node.source,
         });
       }
@@ -571,7 +544,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
         if (!def.mode || def.mode === "required") okFlag = false;
         continue;
       }
-      if (actualType === "any" && def.type !== "any") {
+      if ((actualType === "any" || actualType === "null") && def.type !== "any") {
         ctx.warnings.push({
           kind: "implicit_any_cast",
           name,
