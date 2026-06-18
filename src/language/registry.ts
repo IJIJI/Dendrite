@@ -210,22 +210,25 @@ export function createLanguage(): Language {
 }
 
 /**
- * Create a new Language pre-populated with all definitions from a parent.
- * Only non-array types are copied. T[] variants are re-generated automatically.
- * The child shares no mutable state with the parent.
+ * Extend a language with definitions from a base, then return it.
+ * Extension definitions take precedence - base keys already present are skipped.
+ * Only non-array types are copied from base; T[] variants are re-generated automatically.
+ * Extension is mutated in place.
+ *
+ * Note: cannot default base to createCoreLanguage() here - core.ts imports registry.ts
+ * (circular). Use extendCoreLanguage() from core.ts when core is the intended default.
  */
-export function extendLanguage(parent: Language): Language {
-  const child = createLanguage();
-  const d = parent.descriptor;
-  // Skip T[] types - auto-generated when their base T is copied
-  d.types.forEach((v) => {
-    if (!v.name.endsWith("[]")) {
-      child.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
+export function extendLanguage(extension: Language, base: Language): Language {
+  const b = base.descriptor;
+  const e = extension.descriptor;
+  b.types.forEach((v) => {
+    if (!v.name.endsWith("[]") && !e.types.has(v.name)) {
+      extension.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
     }
   });
-  d.ops.forEach((v) => child.registerOp(v));
-  d.inputs.forEach((v) => child.registerInput(v));
-  d.outputs.forEach((v) => child.registerOutput(v));
-  d.evaluators.forEach((v) => child.registerEvaluator(v));
-  return child;
+  b.ops.forEach((v) => { if (!e.ops.has(v.name)) extension.registerOp(v); });
+  b.inputs.forEach((v) => { if (!e.inputs.has(v.name)) extension.registerInput(v); });
+  b.outputs.forEach((v) => { if (!e.outputs.has(v.name)) extension.registerOutput(v); });
+  b.evaluators.forEach((v) => { if (!e.evaluators.has(v.op)) extension.registerEvaluator(v); });
+  return extension;
 }

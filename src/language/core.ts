@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLanguage, type Language } from "./registry";
+import { createLanguage, extendLanguage, type Language } from "./registry";
 
 /**
  * Creates the base language with primitive types, logical ops,
@@ -379,4 +379,13 @@ export function createCoreLanguage(): Language {
   });
 
   return lang;
+}
+
+/**
+ * Extend a language with the core language as its base.
+ * Shorthand for extendLanguage(extension, createCoreLanguage()).
+ * Extension definitions take precedence over core on key conflicts.
+ */
+export function extendCoreLanguage(extension: Language): Language {
+  return extendLanguage(extension, createCoreLanguage());
 }
