@@ -11,9 +11,8 @@ export interface TypeDefinition {
    */
   default?: unknown;
   /**
-   * Future subtyping. Name of the parent type this type extends.
-   * Not used in compatibility checks yet; reserved for later implementation.
-   * When implemented, isCompatible will walk this chain.
+   * Subtyping. Name of the parent type this type extends.
+   * isCompatible walks this chain: a subtype is usable wherever its supertype is expected.
    */
   extends?: string;
 }
@@ -125,8 +124,8 @@ export interface LanguageDescriptor {
 //    actual === expected           → exact match
 //    actual = 'T[]', expected = 'any[]' → array covariance
 //
-//  Future: walk TypeDefinition.extends chain for subtype relationships.
-//  Always call this function - never inline - so subtyping can be added here.
+//  Subtyping: walks TypeDefinition.extends chain. A subtype is compatible with its supertype.
+//  Always call this function, never inline, so subtyping stays in one place.
 
 export function isCompatible(
   actual: string,
