@@ -53,3 +53,8 @@ src/language/
   - [ ] Make it easier to configure a language.
 - [ ] Add an operator to combine arrays
 - [ ] Add more operators in general
+- [ ] Remove normal and higher order node distinction?
+      -> Add a ArrowFunctionNode or ClosureNode, then take that as input?
+      -> Would mean higher order nodes can just be normal operations?
+      -> Would also mean operations should have the same extra functions higher order nodes do.
+      -> But, whould that mean that a user can define functions? Is that desirable? Do both or only allow as inputs?
