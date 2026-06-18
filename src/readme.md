@@ -58,3 +58,9 @@ src/language/
       -> Would mean higher order nodes can just be normal operations?
       -> Would also mean operations should have the same extra functions higher order nodes do.
       -> But, whould that mean that a user can define functions? Is that desirable? Do both or only allow as inputs?
+
+- [ ] Add code to manage analysis + run / runner / runtime
+- [ ] Also add code to manage editor(code/rete) parsing
+      -> Combine with analysis+running? -> Probably not, seperate things
+- [ ] Also add code to manage displaying editors
+      -> Combine with parsing?
