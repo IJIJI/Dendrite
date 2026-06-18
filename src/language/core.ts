@@ -122,6 +122,47 @@ export function createCoreLanguage(): Language {
   });
 
   // -------------------------------------------------------------------------
+  // Arithmetic ops
+  // -------------------------------------------------------------------------
+
+  lang.registerOp({
+    name: "Add",
+    inputs: [{ name: "nodes", type: "number", variadic: true }],
+    output: "number",
+    category: "arithmetic",
+  });
+  lang.registerOp({
+    name: "Subtract",
+    inputs: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+    ],
+    output: "number",
+    category: "arithmetic",
+  });
+  lang.registerOp({
+    name: "Multiply",
+    inputs: [{ name: "nodes", type: "number", variadic: true }],
+    output: "number",
+    category: "arithmetic",
+  });
+  lang.registerOp({
+    name: "Divide",
+    inputs: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+    ],
+    output: "number",
+    category: "arithmetic",
+  });
+  lang.registerOp({
+    name: "Length",
+    inputs: [{ name: "list", type: "any" }],
+    output: "number",
+    category: "arithmetic",
+  });
+
+  // -------------------------------------------------------------------------
   // Higher-order list ops
   // -------------------------------------------------------------------------
 
