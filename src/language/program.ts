@@ -164,6 +164,12 @@ export function evaluate(
   hostContext?: unknown,
 ): unknown {
   switch (node.kind) {
+    case "error":
+      throw new EvalError(
+        "error_node_reached",
+        "Error node reached the evaluator — analyser or pruning bug",
+      );
+
     case "literal":
       return node.value;
 
@@ -323,7 +329,8 @@ export type EvalErrorKind =
   | "undefined_reference" // reference to a binding that doesn't exist in bindings or inputs
   | "input_not_set" // input node has no value in environment
   | "invalid_field_access" // field doesn't exist on struct value
-  | "host_error"; // host evaluator threw
+  | "host_error" // host evaluator threw
+  | "error_node_reached"; // error node survived pruning — analyser or pruning bug
 
 // TODO: Also add parse and analyse errors?
 export class EvalError extends Error {
