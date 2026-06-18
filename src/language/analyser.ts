@@ -95,6 +95,31 @@ function getOutputType(node: CNode): string {
   }
 }
 
+function checkCompat(
+  actual: string,
+  expected: string,
+  name: string,
+  ctx: AnalysisContext,
+): void {
+  if (!isCompatible(actual, expected, ctx.descriptor)) {
+    ctx.errors.push({
+      kind: "op_input_type_mismatch",
+      name,
+      message: `Input '${name}' type '${actual}' is not compatible with expected '${expected}'`,
+    });
+  } else if ((actual === "any" || actual === "null") && expected !== "any") {
+    ctx.warnings.push({
+      kind: "implicit_any_cast",
+      name,
+      message: `Input '${name}' is 'any' typed - '${expected}' expected`,
+    });
+  }
+}
+
+function placeholder(): CLiteralNode {
+  return { kind: "literal", type: "any", value: null, dependsOn: new Set() };
+}
+
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
   opDef: { name: string; inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[] }, // TODO: Should this be a shared type?
