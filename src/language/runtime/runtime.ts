@@ -1,5 +1,5 @@
-import { evaluateProgram, outputDependencies, updateInput } from "../evaluator/evaluator";
-import { createEvalState, EvalState } from "../evaluator/types";
+import { createEvalState, evaluateProgram, outputDependencies, updateInput } from "../evaluator/evaluator";
+import { EvalState } from "../evaluator/types";
 import { CoreProgram } from "../infra/program";
 import { type LanguageDescriptor } from "../infra/registry";
 
