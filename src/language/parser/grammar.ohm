@@ -1,33 +1,54 @@
-CoreLang {
-  // The entry point of your parser
-  Program = ListOf<Expression, ";">
+Dendrite {
+  Program = Statement*
 
-  Expression
-    = ArrowFunction
-    | ComparisonExp
+  Statement = Binding | Output
 
-  // Arrow functions for higher-order operations
-  // TODO: Should te simple be allowed?
-  ArrowFunction 
-    = "(" identifier ")" "=>" Expression  -- parenthesized
-    | identifier "=>" Expression          -- simple
+  Binding = "let" identifier "=" Expression -- binding
+  Output  = "output" identifier "=" Expression -- output
 
-  // Precedence level 1: Comparisons
-  ComparisonExp
-    = ArithmeticExp ">" ArithmeticExp  -- greaterThan
-    | ArithmeticExp "<" ArithmeticExp  -- lessThan
-    | ArithmeticExp
+  Expression =
+    | HigherOrderOp
+    | Operation
+    | FieldAccess
+    | PrimaryExpression
 
-  // Precedence level 2: Function calls and base primitives
-  ArithmeticExp
-    = identifier "(" ListOf<Expression, ","> ")" -- call
-    | identifier                                 -- variableRef
-    | number                                     -- numLiteral
-    | string                                     -- strLiteral
-    
+  PrimaryExpression =
+    | Literal
+    | Array
+    | identifier
+    | "(" Expression ")"
 
-  // Lexical rules (tokens)
+// TODO: Make higher order op a normal operation with a arrow function (todo) as argument.
+  HigherOrderOp = identifier "(" ArgList? ")" "{" BindingIdentifiers "=>" Expression "}"
+
+  BindingIdentifiers = "(" ListOf<identifier, ","> ")" | NonemptyListOf<identifier, ","> | identifier
+
+
+  Operation = identifier "(" ArgList? ")"
+
+  ArgList = NonemptyListOf<Argument, ","> | NonemptyListOf<Expression, ",">
+
+  Argument = identifier ":" Expression
+
+  FieldAccess (left-associative) = PrimaryExpression "." identifier -- dotAccess
+                                 | PrimaryExpression "[" Expression "]" -- bracketAccess // TODO: Check if this could and should be possible.
+
+  Array = "[" ListOf<Expression, ","> "]"
+
+  Literal =
+    | stringLiteral
+    | numberLiteral
+    | booleanLiteral
+    | nullLiteral
+
+  stringLiteral = "\"" (~"\"" any)* "\""
+  numberLiteral = "-"? digit+ ("." digit+)?
+  booleanLiteral = "true" | "false"
+  nullLiteral = "null"
+
   identifier = letter (alnum | "_")*
-  number = digit+ ("." digit+)?
-  string = "\"" (~"\"" any)* "\""
+  
+  space += comment
+  comment = "//" (~"\n" any)* -- singleLine
+          | "/*" (~"*/" any)* "*/" -- multiLine
 }
