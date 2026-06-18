@@ -1,4 +1,4 @@
-import { type LanguageDescriptor } from "../registry";
+import { type LanguageDescriptor } from "../infra/registry";
 import {
   type CoreProgram,
   type EvalState,

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { analyse, getOutputType } from "./analyser";
 import { type ASTNode, type CErrorNode, type LiteralNode, type RefNode } from "./nodes";
 import { type CoreProgram, type RawProgram, EvalError, createEvalState, evaluate } from "./program";
-import { isCompatible } from "./registry";
-import { createCoreLanguage } from "./core";
+import { isCompatible } from "./infra/registry";
+import { createCoreLanguage } from "./infra/core";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

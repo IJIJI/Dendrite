@@ -17,7 +17,7 @@ import {
   type AnalysisWarning,
   type RawProgram,
 } from "./program";
-import { isCompatible, type LanguageDescriptor } from "./registry";
+import { isCompatible, type LanguageDescriptor } from "./infra/registry";
 
 interface AnalysisContext {
   descriptor: LanguageDescriptor;

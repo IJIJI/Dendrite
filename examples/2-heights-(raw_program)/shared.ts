@@ -9,8 +9,8 @@
  */
 
 import { analyse } from "../../src/language/analyser";
-import { extendCoreLanguage } from "../../src/language/core";
-import { createLanguage } from "../../src/language/registry";
+import { extendCoreLanguage } from "../../src/language/infra/core";
+import { createLanguage } from "../../src/language/infra/registry";
 import type { ASTNode, OperationNode, HigherOrderNode } from "../../src/language/nodes";
 import type { CoreProgram, RawProgram } from "../../src/language/program";
 

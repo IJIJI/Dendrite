@@ -1,5 +1,5 @@
 import { CNode, type ASTNode, type SourceRef } from "./nodes";
-import { type LanguageDescriptor } from "./registry";
+import { type LanguageDescriptor } from "./infra/registry";
 
 //? Raw EXT Program - Parser output without validation. Nothing is computed with this.
 export interface RawProgram {
