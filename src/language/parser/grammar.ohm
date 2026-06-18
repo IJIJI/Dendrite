@@ -1,0 +1,33 @@
+CoreLang {
+  // The entry point of your parser
+  Program = ListOf<Expression, ";">
+
+  Expression
+    = ArrowFunction
+    | ComparisonExp
+
+  // Arrow functions for higher-order operations
+  // TODO: Should te simple be allowed?
+  ArrowFunction 
+    = "(" identifier ")" "=>" Expression  -- parenthesized
+    | identifier "=>" Expression          -- simple
+
+  // Precedence level 1: Comparisons
+  ComparisonExp
+    = ArithmeticExp ">" ArithmeticExp  -- greaterThan
+    | ArithmeticExp "<" ArithmeticExp  -- lessThan
+    | ArithmeticExp
+
+  // Precedence level 2: Function calls and base primitives
+  ArithmeticExp
+    = identifier "(" ListOf<Expression, ","> ")" -- call
+    | identifier                                 -- variableRef
+    | number                                     -- numLiteral
+    | string                                     -- strLiteral
+    
+
+  // Lexical rules (tokens)
+  identifier = letter (alnum | "_")*
+  number = digit+ ("." digit+)?
+  string = "\"" (~"\"" any)* "\""
+}
