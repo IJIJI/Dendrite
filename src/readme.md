@@ -49,3 +49,5 @@ src/language/
 - [ ] Field typing (for structs)
 - [ ] Subtyping
 - [ ] Output dependance. If one of a group fails analysis, then drop all of said group. Maybe directional.
+- [ ] More levels of core language? E.g. empty, skeleton, base, core and extended? Probably core as the top level default.
+  - [ ] Make it easier to configure a language.
