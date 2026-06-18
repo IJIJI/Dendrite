@@ -10,7 +10,7 @@ import {
   CLiteralNode,
   COperationNode,
   CHigherOrderNode,
-} from "../../src/language/nodes";
+} from "../../src/language/infra/nodes";
 
 // ---------------------------------------------------------------------------
 // Language

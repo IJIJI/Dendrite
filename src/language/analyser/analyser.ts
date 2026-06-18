@@ -10,7 +10,7 @@ import {
   type CNode,
   type LiteralValue,
   type SourceRef,
-} from "../nodes";
+} from "../infra/nodes";
 import {
   type AnalysisError,
   type AnalysisResult,

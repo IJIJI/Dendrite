@@ -1,4 +1,4 @@
-import { CNode, type ASTNode, type SourceRef } from "./nodes";
+import { CNode, type ASTNode, type SourceRef } from "./infra/nodes";
 import { type LanguageDescriptor } from "./infra/registry";
 
 //? Raw EXT Program - Parser output without validation. Nothing is computed with this.

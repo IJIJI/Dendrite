@@ -1,7 +1,7 @@
 import { createCoreLanguage } from "../../src/language/core/core";
 import { createRuntime } from "../../src/language/runtime/runtime";
 import type { CoreProgram } from "../../src/language/program";
-import type { CNode } from "../../src/language/nodes";
+import type { CNode } from "../../src/language/infra/nodes";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
