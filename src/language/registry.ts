@@ -131,14 +131,30 @@ export interface LanguageDescriptor {
 export function isCompatible(
   actual: string,
   expected: string,
-  _descriptor: LanguageDescriptor,
+  descriptor: LanguageDescriptor,
 ): boolean {
   if (expected === "any") return true;
   if (actual === "any" || actual === "null") return true;
   if (actual === expected) return true;
-  // Array covariance: T[] is compatible with any[]
-  if (actual.endsWith("[]") && expected === "any[]") return true;
-  // future: walk _descriptor.types.get(actual)?.extends
+
+  // Array covariance through extends chain: T[] compat with S[] iff T compat with S.
+  // Dendrite arrays are read-only (no mutation ops), so covariance is sound.
+  if (actual.endsWith("[]") && expected.endsWith("[]")) {
+    return isCompatible(actual.slice(0, -2), expected.slice(0, -2), descriptor);
+  }
+
+  // Walk the extends chain upward from actual toward expected.
+  // Subtyping is one-directional: a subtype is usable where its supertype is expected.
+  let current: string | undefined = actual;
+  const seen = new Set<string>(); // cycle guard for malformed extends chains
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const def = descriptor.types.get(current);
+    if (!def?.extends) break;
+    if (def.extends === expected) return true;
+    current = def.extends;
+  }
+
   return false;
 }
 
