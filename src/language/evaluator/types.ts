@@ -19,7 +19,6 @@ export class EvalError extends Error {
   }
 }
 
-
 //? EvalState - persistent across input changes, one instance per program
 // TODO: Check var naming
 // TODO: Check if there is a need for a split for scoped caching.
@@ -42,5 +41,3 @@ export interface EvalState {
   nodeCache: WeakMap<object, unknown>;
   bodyScope: WeakMap<object, unknown> | undefined;
 }
-
-
