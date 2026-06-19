@@ -7,7 +7,10 @@ export type ParseErrorKind =
   | "syntax_error"
   | "unexpected_token"
   | "unexpected_end"
-  | "duplicate_binding";
+  | "duplicate_binding"
+  // Lexer-originated errors (recoverable: the lexer never throws).
+  | "unterminated_string"
+  | "unknown_character";
 
 export interface ParseError {
   kind: ParseErrorKind;
@@ -15,7 +18,11 @@ export interface ParseError {
   source?: SourceRef;
 }
 
-export type ParseWarningKind = "deprecated_syntax";
+export type ParseWarningKind =
+  | "deprecated_syntax"
+  // Lexer-originated warnings.
+  | "unterminated_comment"
+  | "invalid_escape";
 
 export interface ParseWarning {
   kind: ParseWarningKind;
