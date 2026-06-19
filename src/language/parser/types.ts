@@ -1,7 +1,25 @@
 import { SourceRef } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 
-//? Parse Results: text/graph -> RawProgram + diagnostics warnings and errors.
+//? Tokenization
+export type TokenKind =
+  | "keyword" // let, output
+  | "ident" // myVar, Filter, sourceBus
+  | "string" // "hello"
+  | "number" // 3, 3.14
+  | "boolean" // true, false
+  | "null" // null
+  | "punct" // ( ) [ ] { } , . : = => == != > >= < <= + - * / % !
+  | "eof";
+
+export interface Token {
+  kind: TokenKind;
+  value: string; // raw source text of this token
+  source: SourceRef;
+}
+
+
+//? Parsing
 export type ParseErrorKind =
   | "syntax_error"
   | "unexpected_token"
