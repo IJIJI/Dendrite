@@ -226,9 +226,17 @@ export function extendLanguage(extension: Language, base: Language): Language {
       extension.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
     }
   });
-  b.ops.forEach((v) => { if (!e.ops.has(v.name)) extension.registerOp(v); });
-  b.inputs.forEach((v) => { if (!e.inputs.has(v.name)) extension.registerInput(v); });
-  b.outputs.forEach((v) => { if (!e.outputs.has(v.name)) extension.registerOutput(v); });
-  b.evaluators.forEach((v) => { if (!e.evaluators.has(v.op)) extension.registerEvaluator(v); });
+  b.ops.forEach((v) => {
+    if (!e.ops.has(v.name)) extension.registerOp(v);
+  });
+  b.inputs.forEach((v) => {
+    if (!e.inputs.has(v.name)) extension.registerInput(v);
+  });
+  b.outputs.forEach((v) => {
+    if (!e.outputs.has(v.name)) extension.registerOutput(v);
+  });
+  b.evaluators.forEach((v) => {
+    if (!e.evaluators.has(v.op)) extension.registerEvaluator(v);
+  });
   return extension;
 }
