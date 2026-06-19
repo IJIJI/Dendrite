@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { tokenise, type Token, type TokenKind } from "./lexer";
 
+// A representative stdlib-like operator set. Core Dendrite has no operators, so
+// any test exercising them passes its own vocabulary - exactly how the assembled
+// language will hand operators to the lexer.
+const OPS = ["=>", "==", "!=", ">=", "<=", "!", "<", ">", "+", "-", "*", "/", "%"];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // Token kinds excluding the trailing eof - the part each test actually asserts.
@@ -116,27 +121,29 @@ describe("identifiers", () => {
 
 describe("operators", () => {
   it("=> is one token, not = then >", () => {
-    expect(kinds("=>")).toEqual(["punct"]);
-    expect(values("=>")).toEqual(["=>"]);
+    expect(kinds("=>", OPS)).toEqual(["punct"]);
+    expect(values("=>", OPS)).toEqual(["=>"]);
   });
 
-  it("single = stays single", () => {
+  it("single = is structural and stays single even with operators present", () => {
+    // = is core binding punctuation, not an operator - recognised with no OPS.
     expect(values("=")).toEqual(["="]);
+    expect(values("=", OPS)).toEqual(["="]);
   });
 
   it("comparison operators", () => {
-    expect(values("==")).toEqual(["=="]);
-    expect(values(">=")).toEqual([">="]);
-    expect(values("<=")).toEqual(["<="]);
-    expect(values("!=")).toEqual(["!="]);
-    expect(values(">")).toEqual([">"]);
-    expect(values("<")).toEqual(["<"]);
-    expect(values("!")).toEqual(["!"]);
+    expect(values("==", OPS)).toEqual(["=="]);
+    expect(values(">=", OPS)).toEqual([">="]);
+    expect(values("<=", OPS)).toEqual(["<="]);
+    expect(values("!=", OPS)).toEqual(["!="]);
+    expect(values(">", OPS)).toEqual([">"]);
+    expect(values("<", OPS)).toEqual(["<"]);
+    expect(values("!", OPS)).toEqual(["!"]);
   });
 
   it("longest match mid-stream", () => {
-    expect(kinds("a>=b")).toEqual(["ident", "punct", "ident"]);
-    expect(values("a>=b")).toEqual(["a", ">=", "b"]);
+    expect(kinds("a>=b", OPS)).toEqual(["ident", "punct", "ident"]);
+    expect(values("a>=b", OPS)).toEqual(["a", ">=", "b"]);
   });
 
   it("custom operators are supplied via the operators param", () => {
@@ -145,8 +152,14 @@ describe("operators", () => {
   });
 
   it("=-3 is = then -3, not the operator =-", () => {
-    // Longest-match against the KNOWN set: =- is not registered, so it splits.
-    expect(values("=-3")).toEqual(["=", "-", "3"]);
+    // = is structural, - is an operator; =- is in neither set, so it splits.
+    expect(values("=-3", OPS)).toEqual(["=", "-", "3"]);
+  });
+
+  it("core has no operators: an operator char is unknown without a vocabulary", () => {
+    const { errors } = tokenise("1+2");
+    expect(errors).toHaveLength(1);
+    expect(errors[0].kind).toBe("unknown_character");
   });
 });
 
@@ -154,12 +167,12 @@ describe("operators", () => {
 
 describe("negative numbers", () => {
   it("-3 is two tokens", () => {
-    expect(kinds("-3")).toEqual(["punct", "number"]);
-    expect(values("-3")).toEqual(["-", "3"]);
+    expect(kinds("-3", OPS)).toEqual(["punct", "number"]);
+    expect(values("-3", OPS)).toEqual(["-", "3"]);
   });
 
   it("a - 3 is subtraction-shaped", () => {
-    expect(values("a - 3")).toEqual(["a", "-", "3"]);
+    expect(values("a - 3", OPS)).toEqual(["a", "-", "3"]);
   });
 });
 
@@ -244,7 +257,7 @@ describe("diagnostics", () => {
 describe("integration", () => {
   it("tokenises a full statement", () => {
     const src = "let x = Filter(sources, item => item.active)";
-    expect(kinds(src)).toEqual([
+    expect(kinds(src, ["=>"])).toEqual([
       "ident", // let
       "ident", // x
       "punct", // =
@@ -259,7 +272,7 @@ describe("integration", () => {
       "ident", // active
       "punct", // )
     ]);
-    expect(values(src)).toEqual([
+    expect(values(src, ["=>"])).toEqual([
       "let",
       "x",
       "=",

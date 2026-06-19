@@ -34,15 +34,17 @@ export interface LexResult {
   readonly warnings: ParseWarning[];
 }
 
-//? Defaults
-// Core multi-char operators. The real vocabulary is sourced from the language
-// descriptor and passed into tokenise(); this is only the standalone fallback.
-// TODO: Check if there should be a default or these should be removed.
-const DEFAULT_OPERATORS: readonly string[] = ["=>", "==", "!=", ">=", "<="];
-
-// Structural single-char punctuation. Always one token, never extensible.
-// TODO: Is this the right list? Should it be extensible somehow?
-const SINGLE_CHAR_PUNCT = new Set("()[]{},.=!<>+-*/%:");
+//? Core syntax
+// Dendrite's core has NO operators: comparisons, arithmetic, and the arrow are
+// all stdlib grammar over ops. The operator vocabulary (single- AND multi-char)
+// is supplied by the assembled language via tokenise(source, operators).
+//
+// Structural punctuation is the only thing the lexer hardcodes: the delimiters
+// of core syntax, which exist independent of any registered op.
+//   ( ) grouping & calls   [ ] array literals   , separators
+//   .   field access        =   binding (let x = …)   :   named arg / body binding
+// Operators (+ - < > ! == => …) are deliberately absent: they arrive via operators.
+const STRUCTURAL_PUNCT = new Set("()[],.=:");
 
 // Only literal values are recognised at the lexer level (see the note above TokenKind).
 const LITERAL_WORDS: Record<string, TokenKind> = {
@@ -186,10 +188,10 @@ function scanIdent(s: Scanner): Token {
   return { kind, value, source: s.ref(start, value.length) };
 }
 
-// operators MUST be pre-sorted longest-first so multi-char ops beat their
-// single-char prefixes (=> over =, >= over >). Returns null when the character
-// starts no token (unknown char): the error is recorded and the char skipped.
-// These are sorted by the lexer.
+// operators are pre-sorted longest-first by tokenise() (so multi-char ops beat
+// their single-char prefixes: >= over >, => over =), and are tried before
+// structural punctuation. Returns null when the character starts no token
+// (unknown char): the error is recorded and the char skipped.
 function scanPunct(s: Scanner, operators: readonly string[]): Token | null {
   const start = s.mark();
 
@@ -201,7 +203,7 @@ function scanPunct(s: Scanner, operators: readonly string[]): Token | null {
   }
 
   const ch = s.peek();
-  if (SINGLE_CHAR_PUNCT.has(ch)) {
+  if (STRUCTURAL_PUNCT.has(ch)) {
     s.advance();
     return { kind: "punct", value: ch, source: s.ref(start, 1) };
   }
@@ -236,7 +238,7 @@ function skipComment(s: Scanner): void {
 //? Driver
 export function tokenise(
   source: string,
-  operators: readonly string[] = DEFAULT_OPERATORS,
+  operators: readonly string[] = [],
 ): LexResult {
   const s = new Scanner(source);
   const ops = [...operators].sort((a, b) => b.length - a.length);
