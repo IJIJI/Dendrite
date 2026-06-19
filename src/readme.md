@@ -61,7 +61,7 @@ src/language/
 - [ ] Add Lambda / arow functions 
       -> Add LambdaNode/closure
       -> Add CallNode/Application
-
+- [ ] Add some helper to convert noderef to loggable? Like in example 3-(code)/1-lexer.ts
 - [ ] Add code to manage analysis + run / runner / runtime
 - [ ] Also add code to manage editor(code/rete) parsing
       -> Combine with analysis+running? -> Probably not, seperate things
