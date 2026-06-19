@@ -1,7 +1,6 @@
 import { SourceRef } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 
-
 //? Parse Results: text/graph -> RawProgram + diagnostics warnings and errors.
 export type ParseErrorKind =
   | "syntax_error"
