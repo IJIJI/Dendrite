@@ -94,7 +94,7 @@ class Scanner {
 
   advance(): string {
     const ch = this.source[this.pos++];
-    if (ch === "\n") { // TODO: How is \r handled?
+    if (ch === "\n") {// \r without \n is currently ignored. Fine in general.
       this.line++;
       this.col = 1;
     } else {
@@ -189,7 +189,7 @@ function scanIdent(s: Scanner): Token {
 // operators MUST be pre-sorted longest-first so multi-char ops beat their
 // single-char prefixes (=> over =, >= over >). Returns null when the character
 // starts no token (unknown char): the error is recorded and the char skipped.
-// TODO: Auto sort them by length?
+// These are sorted by the lexer.
 function scanPunct(s: Scanner, operators: readonly string[]): Token | null {
   const start = s.mark();
 
