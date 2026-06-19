@@ -16,24 +16,30 @@
 import { createRuntime } from "../../src/language/runtime/runtime";
 import {
   runtimeLang,
-  menProgram, womenProgram, unknownProgram, totalsProgram,
-  scenarios, changesFrom, delta, logHeader,
+  menProgram,
+  womenProgram,
+  unknownProgram,
+  totalsProgram,
+  scenarios,
+  changesFrom,
+  delta,
+  logHeader,
   type Scenario,
 } from "./shared";
 
 const runtime = createRuntime(runtimeLang.descriptor);
 
-const menHandle     = runtime.register("men",     menProgram);
-const womenHandle   = runtime.register("women",   womenProgram);
+const menHandle = runtime.register("men", menProgram);
+const womenHandle = runtime.register("women", womenProgram);
 const unknownHandle = runtime.register("unknown", unknownProgram);
-const totalsHandle  = runtime.register("totals",  totalsProgram);
+const totalsHandle = runtime.register("totals", totalsProgram);
 
 let prev: Scenario | undefined;
 const last: Record<string, Map<string, unknown>> = {
-  men:     menHandle.initialOutputs,
-  women:   womenHandle.initialOutputs,
+  men: menHandle.initialOutputs,
+  women: womenHandle.initialOutputs,
   unknown: unknownHandle.initialOutputs,
-  totals:  totalsHandle.initialOutputs,
+  totals: totalsHandle.initialOutputs,
 };
 
 for (const s of scenarios) {
@@ -48,8 +54,12 @@ for (const s of scenarios) {
   const fmt = (prog: string, key: string) => (get(prog).get(key) as number).toFixed(1);
   const skipped = ["men", "women", "unknown", "totals"].filter((k) => !results.has(k));
 
-  console.log(`  avg:   men=${fmt("men", "avgMen")}  women=${fmt("women", "avgWomen")}  unknown=${fmt("unknown", "avgUnknown")}  total=${fmt("totals", "avgTotal")}`);
-  console.log(`  >185:  men=${get("men").get("countMen")}  women=${get("women").get("countWomen")}  unknown=${get("unknown").get("countUnknown")}  total=${get("totals").get("countTotal")}`);
+  console.log(
+    `  avg:   men=${fmt("men", "avgMen")}  women=${fmt("women", "avgWomen")}  unknown=${fmt("unknown", "avgUnknown")}  total=${fmt("totals", "avgTotal")}`,
+  );
+  console.log(
+    `  >185:  men=${get("men").get("countMen")}  women=${get("women").get("countWomen")}  unknown=${get("unknown").get("countUnknown")}  total=${get("totals").get("countTotal")}`,
+  );
   if (skipped.length) console.log(`  (skipped — no change: ${skipped.join(", ")})`);
 
   prev = s;

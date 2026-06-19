@@ -7,7 +7,15 @@
  */
 
 import { run } from "../../src/language/runtime/runner";
-import { fullLang, fullProgram, scenarios, changesFrom, display, logHeader, type Scenario } from "./shared";
+import {
+  fullLang,
+  fullProgram,
+  scenarios,
+  changesFrom,
+  display,
+  logHeader,
+  type Scenario,
+} from "./shared";
 
 for (let i = 0; i < scenarios.length; i++) {
   const s = scenarios[i];
@@ -15,7 +23,11 @@ for (let i = 0; i < scenarios.length; i++) {
 
   logHeader(s, changesFrom(prev, s));
   const t0 = performance.now();
-  const outputs = run(fullProgram, fullLang.descriptor, { men: s.men, women: s.women, unknown: s.unknown });
+  const outputs = run(fullProgram, fullLang.descriptor, {
+    men: s.men,
+    women: s.women,
+    unknown: s.unknown,
+  });
   console.log(`  run(): ${(performance.now() - t0).toFixed(3)}ms`);
   display(outputs);
 }

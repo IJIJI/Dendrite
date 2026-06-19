@@ -8,7 +8,16 @@
  */
 
 import { createProgramRunner } from "../../src/language/runtime/runner";
-import { fullLang, fullProgram, scenarios, changesFrom, delta, display, logHeader, type Scenario } from "./shared";
+import {
+  fullLang,
+  fullProgram,
+  scenarios,
+  changesFrom,
+  delta,
+  display,
+  logHeader,
+  type Scenario,
+} from "./shared";
 
 const runner = createProgramRunner(fullProgram, fullLang.descriptor);
 let prev: Scenario | undefined;
