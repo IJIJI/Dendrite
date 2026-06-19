@@ -207,7 +207,9 @@ describe("warnings", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram({ unused: lit(1) }, { out: lit(2) });
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "unused_binding" && w.name === "unused")).toBe(true);
+    expect(result.warnings.some((w) => w.kind === "unused_binding" && w.name === "unused")).toBe(
+      true,
+    );
   });
 
   it("missing desired output", () => {
@@ -216,7 +218,11 @@ describe("warnings", () => {
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
-    expect(result.warnings.some((w) => w.kind === "missing_desired_program_output" && w.name === "desired")).toBe(true);
+    expect(
+      result.warnings.some(
+        (w) => w.kind === "missing_desired_program_output" && w.name === "desired",
+      ),
+    ).toBe(true);
   });
 
   it("unknown program output", () => {
@@ -224,7 +230,9 @@ describe("warnings", () => {
     const prog = makeProgram({}, { mystery: lit("hello") });
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
-    expect(result.warnings.some((w) => w.kind === "unknown_program_output" && w.name === "mystery")).toBe(true);
+    expect(
+      result.warnings.some((w) => w.kind === "unknown_program_output" && w.name === "mystery"),
+    ).toBe(true);
     // Still included in program
     expect(result.program.outputs.has("mystery")).toBe(true);
   });
@@ -243,7 +251,9 @@ describe("warnings", () => {
       },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "field_access_on_primitive" && w.name === "length")).toBe(true);
+    expect(
+      result.warnings.some((w) => w.kind === "field_access_on_primitive" && w.name === "length"),
+    ).toBe(true);
   });
 
   it("unknown op input key warns", () => {
@@ -263,7 +273,9 @@ describe("warnings", () => {
       },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "unknown_op_input_key" && w.name === "extra")).toBe(true);
+    expect(
+      result.warnings.some((w) => w.kind === "unknown_op_input_key" && w.name === "extra"),
+    ).toBe(true);
     expect(result.ok).toBe(true);
   });
 
@@ -311,7 +323,9 @@ describe("warnings", () => {
       { out: ref("cmp") },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "implicit_any_cast" && w.name === "a")).toBe(true);
+    expect(result.warnings.some((w) => w.kind === "implicit_any_cast" && w.name === "a")).toBe(
+      true,
+    );
     expect(result.errors).toHaveLength(0);
     expect(result.ok).toBe(true);
     expect(result.program.bindings.has("cmp")).toBe(true);
@@ -323,7 +337,9 @@ describe("warnings", () => {
     // Output is any-typed (literal null)
     const prog = makeProgram({}, { score: lit(null) });
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "implicit_any_cast" && w.name === "score")).toBe(true);
+    expect(result.warnings.some((w) => w.kind === "implicit_any_cast" && w.name === "score")).toBe(
+      true,
+    );
     expect(result.errors).toHaveLength(0);
     expect(result.ok).toBe(true);
     expect(result.program.outputs.has("score")).toBe(true);
@@ -375,7 +391,9 @@ describe("errors and output poisoning", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "unknown_op")).toBe(true);
-    expect(result.errors.some((e) => e.kind === "output_depends_on_failed_binding" && e.name === "bad")).toBe(true);
+    expect(
+      result.errors.some((e) => e.kind === "output_depends_on_failed_binding" && e.name === "bad"),
+    ).toBe(true);
     expect(result.ok).toBe(false);
     // Independent output survives
     expect(result.program.outputs.has("good")).toBe(true);
@@ -448,7 +466,9 @@ describe("errors and output poisoning", () => {
     lang.registerOutput({ name: "score", type: "number", mode: "required" });
     const prog = makeProgram({}, { score: lit("not a number") });
     const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "program_output_type_mismatch" && e.name === "score")).toBe(true);
+    expect(
+      result.errors.some((e) => e.kind === "program_output_type_mismatch" && e.name === "score"),
+    ).toBe(true);
     expect(result.ok).toBe(false);
     expect(result.program.outputs.has("score")).toBe(false);
   });
@@ -458,17 +478,18 @@ describe("errors and output poisoning", () => {
     lang.registerOutput({ name: "required", type: "boolean", mode: "required" });
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "missing_required_program_output" && e.name === "required")).toBe(true);
+    expect(
+      result.errors.some(
+        (e) => e.kind === "missing_required_program_output" && e.name === "required",
+      ),
+    ).toBe(true);
     expect(result.ok).toBe(false);
   });
 
   it("undeclared_binding_reference → binding poisoned", () => {
     const lang = createCoreLanguage();
     lang.registerOutput({ name: "out", type: "number", mode: "required" });
-    const prog = makeProgram(
-      { bad: ref("doesNotExist") },
-      { out: ref("bad") },
-    );
+    const prog = makeProgram({ bad: ref("doesNotExist") }, { out: ref("bad") });
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "undeclared_binding_reference")).toBe(true);
     expect(result.ok).toBe(false);
@@ -481,7 +502,10 @@ describe("errors and output poisoning", () => {
     const prog: RawProgram = {
       bindings: new Map([
         ["b", { kind: "ref", name: "a", source: { kind: "code", line: 1, column: 0, length: 1 } }],
-        ["a", { kind: "literal", value: 42, source: { kind: "code", line: 2, column: 0, length: 2 } }],
+        [
+          "a",
+          { kind: "literal", value: 42, source: { kind: "code", line: 2, column: 0, length: 2 } },
+        ],
       ]),
       outputs: new Map([["out", ref("b")]]),
     };
@@ -518,7 +542,9 @@ describe("errors and output poisoning", () => {
       { out: ref("r") },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "body_binding_count_mismatch" && e.name === "Reduce")).toBe(true);
+    expect(
+      result.errors.some((e) => e.kind === "body_binding_count_mismatch" && e.name === "Reduce"),
+    ).toBe(true);
     expect(result.ok).toBe(false);
   });
 });
@@ -572,7 +598,9 @@ describe("ok flag semantics", () => {
       { mystery: ref("b") }, // unknown output (not in descriptor)
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.warnings.some((w) => w.kind === "unknown_program_output" && w.name === "mystery")).toBe(true);
+    expect(
+      result.warnings.some((w) => w.kind === "unknown_program_output" && w.name === "mystery"),
+    ).toBe(true);
     expect(result.ok).toBe(true);
   });
 });
@@ -673,7 +701,10 @@ describe("forward_reference", () => {
       bindings: new Map([
         // b declared first (index 0), references a (index 1)
         ["b", { kind: "ref", name: "a", source: { kind: "code", line: 1, column: 0, length: 1 } }],
-        ["a", { kind: "literal", value: 42, source: { kind: "code", line: 2, column: 0, length: 2 } }],
+        [
+          "a",
+          { kind: "literal", value: 42, source: { kind: "code", line: 2, column: 0, length: 2 } },
+        ],
       ]),
       outputs: new Map([["out", ref("b")]]),
     };
@@ -688,7 +719,10 @@ describe("forward_reference", () => {
     const lang = createCoreLanguage();
     const prog: RawProgram = {
       bindings: new Map([
-        ["a", { kind: "literal", value: 42, source: { kind: "code", line: 1, column: 0, length: 2 } }],
+        [
+          "a",
+          { kind: "literal", value: 42, source: { kind: "code", line: 1, column: 0, length: 2 } },
+        ],
         ["b", { kind: "ref", name: "a", source: { kind: "code", line: 2, column: 0, length: 1 } }],
       ]),
       outputs: new Map([["out", ref("b")]]),
@@ -827,7 +861,9 @@ describe("wrong_node_kind_for_op", () => {
       { out: ref("b") },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Filter")).toBe(true);
+    expect(
+      result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Filter"),
+    ).toBe(true);
   });
 
   it("higher_order node for standard op → wrong_node_kind_for_op", () => {
@@ -845,7 +881,9 @@ describe("wrong_node_kind_for_op", () => {
       { out: ref("b") },
     );
     const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Not")).toBe(true);
+    expect(result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Not")).toBe(
+      true,
+    );
   });
 });
 
@@ -856,8 +894,9 @@ describe("CErrorNode", () => {
     const errNode: CErrorNode = { kind: "error", dependsOn: new Set() };
     const prog: CoreProgram = { bindings: new Map(), outputs: new Map([["out", errNode]]) };
     const lang = createCoreLanguage();
-    expect(() => evaluate(errNode, prog, createEvalState(), undefined, lang.descriptor))
-      .toThrow(expect.objectContaining({ kind: "error_node_reached" }));
+    expect(() => evaluate(errNode, prog, createEvalState(), undefined, lang.descriptor)).toThrow(
+      expect.objectContaining({ kind: "error_node_reached" }),
+    );
   });
 
   it("unknown_op inline in a typed input → no implicit_any_cast warning", () => {

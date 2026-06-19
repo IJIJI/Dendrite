@@ -2,8 +2,6 @@ import { CNode, SourceRef } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
 import { LanguageDescriptor } from "../infra/registry";
 
-
-
 //? Analysis Results
 export type AnalysisErrorKind =
   | "unknown_op" // Op not in descriptor

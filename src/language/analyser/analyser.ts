@@ -15,8 +15,6 @@ import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
 import { AnalysisContext, AnalysisError, AnalysisResult, AnalysisWarning } from "./types";
 
-
-
 // Recursive DFS collecting names of RefNodes whose name is in `bindings`.
 function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
   const refs = new Set<string>();
@@ -82,12 +80,7 @@ export function getOutputType(node: CNode): string {
   }
 }
 
-function checkCompat(
-  actual: string,
-  expected: string,
-  name: string,
-  ctx: AnalysisContext,
-): void {
+function checkCompat(actual: string, expected: string, name: string, ctx: AnalysisContext): void {
   if (!isCompatible(actual, expected, ctx.descriptor)) {
     ctx.errors.push({
       kind: "op_input_type_mismatch",
@@ -109,7 +102,10 @@ function errorNode(type?: string, source?: SourceRef): CErrorNode {
 
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
-  opDef: { name: string; inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[] }, // TODO: Should this be a shared type?
+  opDef: {
+    name: string;
+    inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[];
+  }, // TODO: Should this be a shared type?
   ctx: AnalysisContext,
 ): {
   analysedInputs: Record<string, CNode | CNode[]>;
@@ -155,7 +151,11 @@ function validateInputs(
 
     if (opInput.variadic) {
       const raw = rawInputs[name];
-      const rawArr: ASTNode[] = Array.isArray(raw) ? raw : raw !== undefined ? [raw as ASTNode] : [];
+      const rawArr: ASTNode[] = Array.isArray(raw)
+        ? raw
+        : raw !== undefined
+          ? [raw as ASTNode]
+          : [];
       const cItems = rawArr.map((item) => analyseNode(item, ctx));
       for (const ci of cItems) {
         if (ci.kind !== "error") checkCompat(getOutputType(ci), opInput.type, name, ctx);
@@ -363,7 +363,10 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const userBoundNames = new Map(ctx.boundNames);
       node.bindings.forEach((userName, i) => {
         const opName = opBodyBindings[i];
-        userBoundNames.set(userName, opName !== undefined ? (inferredByOpName[opName] ?? "any") : "any");
+        userBoundNames.set(
+          userName,
+          opName !== undefined ? (inferredByOpName[opName] ?? "any") : "any",
+        );
       });
       const bodyCtx = { ...ctx, boundNames: userBoundNames };
 
@@ -387,7 +390,8 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
 
   for (const [name, rawNode] of program.bindings) {
     declarationIndex.set(name, i++);
-    if (rawNode.source?.kind === "code") { // TODO: Should all editors not enforce lexical order? Rete should be able to compile to it.
+    if (rawNode.source?.kind === "code") {
+      // TODO: Should all editors not enforce lexical order? Rete should be able to compile to it.
       bindingSourceRefs.set(name, rawNode.source); // TODO: Should rete not have its node id?
     } else {
       enforceCodeOrder = false; // rete source or absent → skip lexical order check
@@ -446,9 +450,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
   }
 
   // globalReachable - union over ALL outputs. Used ONLY for unused_binding (Pass 5).
-  const globalReachable = new Set(
-    [...outputReachable.values()].flatMap((s) => [...s]),
-  );
+  const globalReachable = new Set([...outputReachable.values()].flatMap((s) => [...s]));
 
   // Pass 3 - Analyse bindings in topological order
   const ctx: AnalysisContext = {
