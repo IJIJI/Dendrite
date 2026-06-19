@@ -14,23 +14,24 @@ const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 const { tokens, errors, warnings } = tokenise(source, [">="]);
 
 console.log("=== Tokens ===");
+function loc(source: import("../../src/language/infra/nodes").SourceRef): string {
+  return source.kind === "code" ? `${source.line}:${source.column}` : source.nodeId;
+}
+
 for (const tok of tokens) {
-  const loc = `${tok.source.line}:${tok.source.column}`;
-  console.log(`  [${tok.kind.padEnd(7)}] ${JSON.stringify(tok.value).padEnd(12)}  @ ${loc}`);
+  console.log(`  [${tok.kind.padEnd(7)}] ${JSON.stringify(tok.value).padEnd(12)}  @ ${loc(tok.source)}`);
 }
 
 if (warnings.length > 0) {
   console.log("\n=== Warnings ===");
   for (const w of warnings) {
-    const loc = w.source ? `${w.source.line}:${w.source.column}` : "?";
-    console.log(`  ${w.kind} @ ${loc}: ${w.message}`);
+    console.log(`  ${w.kind} @ ${w.source ? loc(w.source) : "?"}:  ${w.message}`);
   }
 }
 
 if (errors.length > 0) {
   console.log("\n=== Errors ===");
   for (const e of errors) {
-    const loc = e.source ? `${e.source.line}:${e.source.column}` : "?";
-    console.log(`  ${e.kind} @ ${loc}: ${e.message}`);
+    console.log(`  ${e.kind} @ ${e.source ? loc(e.source) : "?"}:  ${e.message}`);
   }
 }
