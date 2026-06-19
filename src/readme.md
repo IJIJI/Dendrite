@@ -68,3 +68,4 @@ src/language/
 - [ ] Also add code to manage displaying editors
       -> Combine with parsing?
 - [ ] Add some sort of validation of the registry?
+- [ ] Move tests to a seperate folder (structure)? It adds a lot of clutter now.
