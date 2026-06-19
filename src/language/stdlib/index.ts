@@ -371,7 +371,7 @@ export function createCoreLanguage(): Language {
   });
   lang.registerEvaluator({
     op: "Divide",
-    evaluate: ({ a, b }) => (b as number) === 0 ? 0 : (a as number) / (b as number),
+    evaluate: ({ a, b }) => ((b as number) === 0 ? 0 : (a as number) / (b as number)),
   });
   lang.registerEvaluator({
     op: "Length",
