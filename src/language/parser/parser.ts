@@ -178,13 +178,17 @@ NUDS.set("boolean", (_p, t): LiteralNode => ({
 }));
 NUDS.set("null", (_p, t): LiteralNode => ({ kind: "literal", value: null, source: t.source }));
 
-// Identifier: a declared context input becomes an InputNode, anything else a
-// RefNode. This is name classification (a Set lookup), not type resolution -
-// the parser already holds the descriptor, so it is the natural home.
-NUDS.set("ident", (p, t): InputNode | RefNode => {
-  const input = p.descriptor.inputs.get(t.value);
-  if (input) return { kind: "input", name: t.value, type: input.type, source: t.source };
-  return { kind: "ref", name: t.value, source: t.source };
+// Identifier → always a binding reference. Context inputs use the $ sigil
+// (below), so a bare name is never an input: no descriptor lookup, no shadowing.
+NUDS.set("ident", (_p, t): RefNode => ({ kind: "ref", name: t.value, source: t.source }));
+
+// Input sigil: $name → InputNode. Declared type comes from the descriptor; an
+// unknown name still produces the node so the analyser's unknown_program_input
+// fires (it overrides the type for valid inputs anyway).
+NUDS.set("$", (p, t): InputNode => {
+  const name = p.expect("ident");
+  const def = p.descriptor.inputs.get(name.value);
+  return { kind: "input", name: name.value, type: def?.type ?? "any", source: t.source };
 });
 
 // Grouping: ( expr ) - the parentheses only steer precedence, so the inner node
