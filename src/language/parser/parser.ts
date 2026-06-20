@@ -143,14 +143,12 @@ export class Parser {
     return items;
   }
 
-  // Panic-mode recovery: skip tokens until the next statement keyword or EOF.
-  // No statement terminator needed. let/output are unambiguous anchors.
-  sync(): void {
-    while (!this.atEnd()) {
-      const t = this.peek();
-      if (t.kind === "ident" && STATEMENTS.has(t.value)) break;
-      this.advance();
-    }
+  // Generic panic-mode primitive: skip tokens until `stop` matches, or EOF. The
+  // caller supplies the anchor, so the Parser stays free of statement knowledge
+  // (the statement layer passes its keyword check; slice 3 reuses this for
+  // call-arg recovery).
+  skipUntil(stop: (token: Token) => boolean): void {
+    while (!this.atEnd() && !stop(this.peek())) this.advance();
   }
 }
 
@@ -261,6 +259,11 @@ const STATEMENTS = new Map<string, (p: Parser) => Statement>([
   ["output", (p) => parseBinding(p, "output")],
 ]);
 
+// A statement begins with a registered keyword — the recovery anchor that
+// `skipUntil` resyncs to. Lives here, with the statement layer, not on Parser.
+const isStatementStart = (token: Token): boolean =>
+  token.kind === "ident" && STATEMENTS.has(token.value);
+
 //? Program entry: parse a token stream into a RawProgram.
 // Gated: any error → no program. Lexer diagnostics are merged in by
 // the source→program pipeline, not here.
@@ -280,15 +283,15 @@ export function parse(tokens: Token[], descriptor: LanguageDescriptor): ParseRes
         `Expected a statement ('let' or 'output') but found '${head.value || head.kind}'`,
         head.source,
       );
-      p.sync();
+      p.skipUntil(isStatementStart);
       continue;
     }
 
     const before = p.errors.length;
     const stmt = statement(p);
     if (p.errors.length > before) {
-      // Poisoned: identity or value failed to parse. Drop it (gate A) and resync.
-      p.sync();
+      // Poisoned: identity or value failed to parse. Drop it and resync.
+      p.skipUntil(isStatementStart);
       continue;
     }
 
