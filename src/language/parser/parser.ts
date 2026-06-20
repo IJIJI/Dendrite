@@ -128,6 +128,28 @@ export class Parser {
     }
     return left;
   }
+
+  // Comma-separated expressions up to a closing punct, trailing comma allowed.
+  // Reusable list machinery: arrays now, call-args and arrow-params later.
+  parseDelimited(close: string): ASTNode[] {
+    const items: ASTNode[] = [];
+    while (!this.check("punct", close) && !this.atEnd()) {
+      items.push(this.parseExpr(0));
+      if (!this.match("punct", ",")) break;
+    }
+    this.expect("punct", close);
+    return items;
+  }
+
+  // Panic-mode recovery: skip tokens until the next statement keyword or EOF.
+  // No statement terminator needed. let/output are unambiguous anchors.
+  sync(): void {
+    while (!this.atEnd()) {
+      const t = this.peek();
+      if (t.kind === "ident" && STATEMENTS.has(t.value)) break;
+      this.advance();
+    }
+  }
 }
 
 // Recovery node: a failed expression yields a null literal so callers always get
@@ -176,7 +198,7 @@ NUDS.set("(", (p): ASTNode => {
 // Array literal: [ a, b, c ] with an optional trailing comma. ArrayNode.type is
 // the ELEMENT type; left as "any" for the analyser to derive.
 NUDS.set("[", (p, t): ArrayNode => {
-  const items = parseDelimited(p, "]");
+  const items = p.parseDelimited("]");
   return { kind: "array", items, type: "any", source: t.source };
 });
 
@@ -188,18 +210,6 @@ LEDS.set(".", {
     return { kind: "field", struct: left, field: name.value, type: "any", source: name.source };
   },
 });
-
-// Comma-separated expressions up to a closing punct, trailing comma allowed.
-// TODO: Should this not be part of the parser?
-function parseDelimited(p: Parser, close: string): ASTNode[] {
-  const items: ASTNode[] = [];
-  while (!p.check("punct", close) && !p.atEnd()) {
-    items.push(p.parseExpr(0));
-    if (!p.match("punct", ",")) break;
-  }
-  p.expect("punct", close);
-  return items;
-}
 
 //? Entry point (slice 1) - parse a single expression from a token stream.
 export interface ExpressionResult {
