@@ -4,6 +4,7 @@
  *
  * The parser is descriptor-driven: it needs the language to resolve op calls
  * (positional → named input mapping) and to know which $names are real inputs.
+ * In this example the stdlib is used.
  */
 
 import { readFileSync } from "fs";
