@@ -43,8 +43,9 @@ export interface LexResult {
 // of core syntax, which exist independent of any registered op.
 //   ( ) grouping & calls   [ ] array literals   , separators
 //   .   field access        =   binding (let x = …)   :   named arg / body binding
+//   $   input sigil ($name → InputNode, resolved by the parser)
 // Operators (+ - < > ! == => …) are deliberately absent: they arrive via operators.
-const STRUCTURAL_PUNCT = new Set("()[],.=:");
+const STRUCTURAL_PUNCT = new Set("()[],.=:$");
 
 // Only literal values are recognised at the lexer level (see the note above TokenKind).
 const LITERAL_WORDS: Record<string, TokenKind> = {

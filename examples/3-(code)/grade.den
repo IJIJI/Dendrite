@@ -1,6 +1,6 @@
 
 
-let isPassing = Input("score") >= 60 // TODO: Inputs as reference, helper functions or something like In::score?
+let isPassing = $score >= 60 // TODO: Inputs as reference, helper functions or something like In::score?
 
 let grade = If(isPassing, "Pass", "Fail")
 
