@@ -88,3 +88,63 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
 - **`environment.ts`** — unified wrapper holding `descriptor` + `hostContext`, exposing `analyse`, `load` (deserialise+analyse), `run`, `createRunner`, `runtime`, and a convenience `register(id, saved)`. Build after the analyser is working, since it wraps the analyser.
 - **Parser** — `source string → RawProgram` with `SourceRef { kind: 'code', ... }`. Enables `parse` and `compile` (parse+analyse) on environment.
 - **Rete adapter** — `rete graph ↔ RawProgram` with `SourceRef { kind: 'rete', nodeId }`. Lives in `@dendrite-lang/editor`.
+
+---
+
+## Parser & Lexer — build worklist
+
+Active near-term work for `parser/lexer.ts` + `parser/parser.ts`. Lexer (slice 0) and the
+expression core (slice 1) are done and green; the rest is sequenced below.
+
+### Decided changes to apply
+
+- **`parseDelimited` → `Parser` method.** It is reusable list-parsing machinery (arrays now,
+  call-args and arrow-params later), so it belongs with `peek/advance/expect/parseExpr`, not as a
+  free function.
+- **Input syntax = sigil `$name`.** Lexer: tokenise `$`. Parser: a `$` nud → `InputNode` (type
+  from `descriptor.inputs`; unknown name still emits the node and lets the analyser's existing
+  `unknown_program_input` fire). Side effect: the `ident` nud becomes trivial — a bare identifier
+  is now ALWAYS a `RefNode`, and the input-vs-ref collision problem disappears.
+- **Recovery = error-count delta (recommended) — OR throw-to-boundary (open).** Keep the
+  `placeholder` as inert sub-expression filler; the statement loop snapshots `errors.length`,
+  parses, and drops the binding if the count grew — mirroring `analyse()`
+  (analyser.ts:471). Throw-to-boundary is the alternative if statement-only granularity + no
+  placeholder is preferred over consistency + sub-expression recovery. **Confirm before slice 2.**
+- **Name the inline nud/led handlers** (`nudIdent`, `ledField`, …) once slice 3 adds bulk, for
+  greppability (avoids the analyser's Long-Function / Switch-Statement smell).
+
+### Slice roadmap
+
+- **Slice 2 — statements + program.** `let`/`output` statement layer → `parseProgram` →
+  `RawProgram`; `duplicate_binding` detection; `sync()` to the next `let`/`output` on error; drop
+  poisoned bindings (no terminator — keyword anchors). First end-to-end lex→parse→analyse run.
+- **Slice 3 — calls + arrows.** Positional-then-named args → `OperationNode`; arrow args →
+  `HigherOrderNode`. **Resolve body-binding syntax first:** arrow `item => …` (slice plan) vs colon
+  `item: …` (the form in CLAUDE.md / analyser-spec examples). Standalone arrow = parse error;
+  parselet written to generalize to lambdas later. Call-led accepts any left expression as callee
+  (keeps `f(3)` / lambdas open).
+- **Slice 4 — grammar registration API.** `registerNud`/`registerLed` + `prefix`/`infixLeft`/
+  `infixRight` + `registerStatement` on `Language`; operators desugar to ops; **move core grammar
+  into the descriptor** so lexer + parser + core are single-sourced (the can't-desync fix, done
+  incrementally here rather than early). `infixRight` passes `bp - 1` (right-associativity —
+  needed for lambda currying `a => b => c` and `**`).
+
+### Review findings (simplify / expandability)
+
+- **Compound-node source spans.** Array / grouping / field-access nodes currently take a single
+  token's `source`, not the full start→end span. Compute the real span for correct editor
+  highlighting. (Quality; affects tooling, not correctness.)
+- **Literal nuds are near-duplicate.** `number/string/boolean/null` differ only by a value
+  conversion; an optional `literalNud(convert)` factory removes the repetition. (Minor DRY.)
+- **Formalize binding-power tiers.** Document the `BP` levels before operators land in slice 4 so
+  stdlib operators slot in consistently.
+- **Core-grammar consistency test.** Until slice 4 single-sources it, add a cheap test that every
+  structural punct the lexer can emit has a parser handler (and vice versa), catching drift.
+- **Lexer `\r` edge.** `advance` only increments `line` on `\n`; a lone `\r` (classic-Mac line
+  ending) would not. Non-issue for `\n` / `\r\n`; normalize only if it ever matters.
+
+### Doc fixes
+
+- **Stale syntax in docs.** CLAUDE.md and analyser-spec use `Set name = …` (now `let`) and the
+  CLAUDE.md file-structure block predates the `infra/` / `parser/` split. Refresh once syntax is
+  settled.
