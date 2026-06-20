@@ -7,6 +7,8 @@
 let passing  = GreaterThan($score, 60)
 let grade    = If(passing, "Pass", "Fail")
 
+let madagascar = "Country" // Should be pruned by the analyser, as it is unused. There should also be a warning.
+
 let adjusted = Add($score, $bonus)
 let topMark  = GreaterThan(adjusted, 100)
 let label    = If(topMark, "Distinction", grade)
