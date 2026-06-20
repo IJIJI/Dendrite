@@ -143,6 +143,27 @@ expression core (slice 1) are done and green; the rest is sequenced below.
 - **Lexer `\r` edge.** `advance` only increments `line` on `\n`; a lone `\r` (classic-Mac line
   ending) would not. Non-issue for `\n` / `\r\n`; normalize only if it ever matters.
 
+### Deferred
+
+- **Full TS-style non-gated parsing (option B), via a raw error node.** Today parsing gates the
+  pipeline: any parse error → `ParseFailure` (no program) → analyser does not run, so only real
+  parse errors surface (option A). TS/Roslyn/rustc instead always produce a tree (with explicit
+  error nodes) and run the checker on it, showing syntax + semantic errors together. The clean
+  design — two tiers:
+  - **Binding identity unparseable** (`let = …`, no name) → `ok: false`, program fails. Still sync
+    to the next `let`/`output` and collect other statements' diagnostics.
+  - **Binding identified, value errors** → replace the RHS with a raw `ErrorNode`; the analyser
+    maps it to the existing `CErrorNode`, poisons the binding, and cascade-drops dependents — with
+    no bogus `null`-type errors, because an error node is unambiguously "broken," and refs to the
+    binding still resolve (no spurious `undeclared`).
+
+  **Requires:** add `ErrorNode { kind: "error"; source? }` to the raw `ASTNode` union (reverses the
+  minimal-AST decision — justified: error nodes are load-bearing for recovery, as in TS/Roslyn); a
+  `case "error"` in `analyseNode` (return `CErrorNode` + poison) and in `collectRefs` (no refs);
+  parser emits `ErrorNode` for a poisoned binding's value. This is the correct, bounded form of B
+  (no general missing-node recovery needed). **Do it with the language-server work, not before** —
+  editor-grade all-errors-at-once isn't needed until then, and it touches the analyser.
+
 ### Doc fixes
 
 - **Stale syntax in docs.** CLAUDE.md and analyser-spec use `Set name = …` (now `let`) and the
