@@ -6,6 +6,7 @@ import { createLanguage, extendLanguage, type Language } from "../infra/registry
  * and general-purpose higher-order list ops.
  * No host-specific knowledge - safe to use standalone.
  */
+// TODO: Rename to stdlib
 export function createCoreLanguage(): Language {
   const lang = createLanguage();
 

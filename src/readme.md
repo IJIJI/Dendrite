@@ -49,8 +49,9 @@ src/language/
 - [ ] Field typing (for structs)
 - [ ] Subtyping
 - [ ] Output dependance. If one of a group fails analysis, then drop all of said group. Maybe directional.
-- [ ] More levels of core language? E.g. empty, skeleton, base, core and extended? Probably core as the top level default.
+- [ ] More levels of stdlinb? E.g. empty, skeleton, base, core and extended? Probably core as the top level default.
   - [ ] Make it easier to configure a language.
+- [ ] Make sure stdlib is named correctly everywhere, core is still used in some places.
 - [ ] Add an operator to combine arrays
 - [ ] Add more operators in general
 - [ ] Remove normal and higher order node distinction?
