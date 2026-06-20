@@ -222,7 +222,8 @@ export interface ExpressionResult {
   warnings: ParseWarning[];
 }
 
-// TODO: Should this not be part of the parser?
+// Parse a single expression. The public program entry is parse() below; this
+// stays for expression-level testing and reuse.
 export function parseExpression(tokens: Token[], descriptor: LanguageDescriptor): ExpressionResult {
   const p = new Parser(tokens, descriptor);
   const node = p.parseExpr(0);
