@@ -163,6 +163,8 @@ export function createCoreLanguage(): Language {
     category: "arithmetic",
   });
 
+  //TODO: Add more math operations like min, max, average(?), etc.
+
   // -------------------------------------------------------------------------
   // Higher-order list ops
   // -------------------------------------------------------------------------
