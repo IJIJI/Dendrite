@@ -182,9 +182,28 @@ expression core (slice 1) are done and green; the rest is sequenced below.
   *provided* function-position values are never `any`. Adding explicit `letrec` later is what would
   break totality — at which point a fuel/step limit (to avoid hanging the reactive eval cycle) must
   be decided.
-- **Lambda param-type inference from body usage.** Hindley-Milner-style constraint solving to
-  deduce a param's type from how it's used (e.g. `x` flows into `Add` ⇒ `x: number`). Deferred —
-  explicit optional annotations cover the strong-typing need for now; default to `any` otherwise.
+- **Full lexical closures (nested capture).** v1 lambdas capture nothing: program bindings and
+  inputs are global (no capture), and only lambda params are lexically scoped. The one case needing
+  real capture is a nested lambda referencing an *enclosing lambda's* param (e.g. inner `Map` using
+  the outer `row`). Deferred until nested-lambda power is wanted; v1 forbids it (free-variable
+  resolution finds only own params + globals). **Approach when added:** chain the enclosing params
+  into the inner lambda's scope (capture only those few names, not a whole env). The analyser likely
+  already handles it — the higher-order case copies-and-extends `boundNames` (`new Map(ctx.boundNames)`)
+  per body. The real work is the **evaluator**: make the per-apply scope chain to its parent so the
+  inner body resolves outer params (today it is flat). Localized, moderate.
+- **Lambda param-type inference from body usage.** Collect the expected type at each use site of a
+  param (each op input slot is typed) and meet them into the most specific common type; conflicting
+  uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
+  higher-order ops already supply param types (`inferBodyBindings`) and explicit annotations cover
+  standalone lambdas; this only closes the standalone-unannotated gap.
+- **Optional / default params.** `(x?: number)` declined for now (no use case yet — higher-order
+  ops are fixed-arity). Deferred for lack of need, *not* difficulty. Three escalating options:
+  1. **Unset default (preferred).** Trailing-only optional params; an absent arg binds to an
+     `unset`/`null` sentinel, queried with the existing `IsSet` and handled with `Default(x, …)`.
+     Cleanest — no nullability unions, leans entirely on stdlib ops you already have.
+  2. **Null default.** Same idea, absent → `null` (compatible with every type via `isCompatible`).
+  3. **Default values** `(x: number = 0)` — richer but must evaluate the default expression.
+  In all cases the only real cost is the arity-rule surface (trailing-only enforcement).
 - **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
   (`return { a: …, b: … }`). Needs struct literals + struct types (see *Static field typing for
   FieldAccessNode*). Until then, a lambda returns one value. Keep `return` (lambda, single value)
