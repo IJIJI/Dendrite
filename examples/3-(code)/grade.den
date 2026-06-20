@@ -1,7 +1,15 @@
+// Dendrite grade example (code-editor syntax).
+//
+// Host inputs are referenced with the $ sigil. Operators like >= arrive with
+// slice 4 (the grammar API); until then, ops are written in function form
+// (GreaterThan(...) rather than $score >= 60).
 
+let passing  = GreaterThan($score, 60)
+let grade    = If(passing, "Pass", "Fail")
 
-let isPassing = $score >= 60 // TODO: Inputs as reference, helper functions or something like In::score?
+let adjusted = Add($score, $bonus)
+let topMark  = GreaterThan(adjusted, 100)
+let label    = If(topMark, "Distinction", grade)
 
-let grade = If(isPassing, "Pass", "Fail")
-
-output result = grade
+output result     = label
+output finalScore = adjusted
