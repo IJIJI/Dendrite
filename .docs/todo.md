@@ -118,11 +118,19 @@ expression core (slice 1) are done and green; the rest is sequenced below.
 - **Slice 2 — statements + program.** `let`/`output` statement layer → `parseProgram` →
   `RawProgram`; `duplicate_binding` detection; `sync()` to the next `let`/`output` on error; drop
   poisoned bindings (no terminator — keyword anchors). First end-to-end lex→parse→analyse run.
-- **Slice 3 — calls + arrows.** Positional-then-named args → `OperationNode`; arrow args →
-  `HigherOrderNode`. **Resolve body-binding syntax first:** arrow `item => …` (slice plan) vs colon
-  `item: …` (the form in CLAUDE.md / analyser-spec examples). Standalone arrow = parse error;
-  parselet written to generalize to lambdas later. Call-led accepts any left expression as callee
-  (keeps `f(3)` / lambdas open).
+- **Slice 3a — calls (DONE).** Call-led → `OperationNode`; positional-then-named args (variadic
+  input soaks remaining positionals); descriptor-driven arg→input mapping. Callee must be a ref to
+  a registered op (generalized-callee seam kept for lambdas). Higher-order ops error for now.
+- **Slice 3b — arrows + higher-order (next).** Body syntax decided: **arrow** `item => …`
+  (`(acc, item) => …` for Reduce). Requires adding `=>` as **core lexer syntax** (it's lambda
+  syntax, not a stdlib operator — a minimal core multi-char set, always recognized). Inline arrow
+  in a higher-order call → `HigherOrderNode` (arrow params → `bindings`, body → `body`). The arrow
+  is parsed by ONE shared routine so it generalizes to first-class lambdas later.
+- **Lambda reuse (future, with the lambda work).** Same `=>` syntax for standalone lambdas
+  (`let pred = item => …`), and allow passing a lambda *ref* into a higher-order op when its
+  param count matches the op's `bodyBindings`. Needs `LambdaNode` (the option-B error-node /
+  minimal-AST reversal) + analyser param-count checking. The shared arrow routine + generalized
+  call-led are the hooks.
 - **Slice 4 — grammar registration API.** `registerNud`/`registerLed` + `prefix`/`infixLeft`/
   `infixRight` + `registerStatement` on `Language`; operators desugar to ops; **move core grammar
   into the descriptor** so lexer + parser + core are single-sourced (the can't-desync fix, done
