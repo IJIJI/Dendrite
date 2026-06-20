@@ -1,0 +1,56 @@
+/**
+ * Stage 3: Analyser. Lex + parse + analyse grade.den, printing the inferred
+ * output type of every binding and output, plus any diagnostics.
+ *
+ * This is the first stage that needs the full descriptor: declared inputs AND
+ * declared outputs. This way, output type-checking has something to check against.
+ * In this example the stdlib language is used.
+ */
+
+import { readFileSync } from "fs";
+import { tokenise } from "../../src/language/parser/lexer";
+import { parse } from "../../src/language/parser/parser";
+import { analyse, getOutputType } from "../../src/language/analyser/analyser";
+import { createCoreLanguage } from "../../src/language/stdlib";
+
+// --- Language ---------------------------------------------------------------
+const lang = createCoreLanguage();
+lang.registerInput({ name: "score", type: "number" });
+lang.registerInput({ name: "bonus", type: "number" });
+lang.registerOutput({ name: "result", type: "string" });
+lang.registerOutput({ name: "finalScore", type: "number" });
+
+// --- Lex + parse ------------------------------------------------------------
+const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
+const { tokens } = tokenise(source);
+const parsed = parse(tokens, lang.descriptor);
+
+if (!parsed.ok) {
+  console.log("=== Parse failed ===");
+  for (const e of parsed.errors) console.log(`  ${e.kind}: ${e.message}`);
+  process.exit(1);
+}
+
+// --- Analyse ----------------------------------------------------------------
+const analysis = analyse(parsed.program, lang.descriptor);
+
+console.log(`=== Analysis: ${analysis.ok ? "OK" : "FAILED"} ===\n`);
+
+console.log("=== Binding types ===");
+for (const [name, node] of analysis.program.bindings) {
+  console.log(`  ${name.padEnd(10)} : ${getOutputType(node)}  (dependsOn: ${[...node.dependsOn].join(", ") || "—"})`);
+}
+
+console.log("\n=== Output types ===");
+for (const [name, node] of analysis.program.outputs) {
+  console.log(`  ${name.padEnd(10)} : ${getOutputType(node)}`);
+}
+
+if (analysis.errors.length > 0) {
+  console.log("\n=== Errors ===");
+  for (const e of analysis.errors) console.log(`  ${e.kind}: ${e.message}`);
+}
+if (analysis.warnings.length > 0) {
+  console.log("\n=== Warnings ===");
+  for (const w of analysis.warnings) console.log(`  ${w.kind}: ${w.message}`);
+}
