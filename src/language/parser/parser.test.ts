@@ -178,6 +178,86 @@ describe("diagnostics", () => {
   });
 });
 
+// ─── Operation calls ──────────────────────────────────────────────────────────
+
+describe("operation calls", () => {
+  it("a variadic op collects positional args into its array input", () => {
+    expect(parse("And(true, false)").node).toMatchObject({
+      kind: "operation",
+      op: "And",
+      inputs: { nodes: [{ value: true }, { value: false }] },
+    });
+  });
+
+  it("a fixed-arity op maps positional args by declared order", () => {
+    expect(parse("GreaterThan(1, 2)").node).toMatchObject({
+      kind: "operation",
+      op: "GreaterThan",
+      inputs: { a: { value: 1 }, b: { value: 2 } },
+    });
+  });
+
+  it("named arguments bind by name", () => {
+    expect(parse("GreaterThan(a: 1, b: 2)").node).toMatchObject({
+      inputs: { a: { value: 1 }, b: { value: 2 } },
+    });
+  });
+
+  it("positional then named mix", () => {
+    expect(parse("If(true, then: 1, else: 2)").node).toMatchObject({
+      kind: "operation",
+      op: "If",
+      inputs: { condition: { value: true }, then: { value: 1 }, else: { value: 2 } },
+    });
+  });
+
+  it("output type is read from the descriptor", () => {
+    expect(parse("GreaterThan(1, 2)").node).toMatchObject({ output: "boolean" });
+  });
+
+  it("nested calls", () => {
+    expect(parse("Not(And(true, false))").node).toMatchObject({
+      op: "Not",
+      inputs: { a: { kind: "operation", op: "And" } },
+    });
+  });
+
+  it("calls bind tighter than field access", () => {
+    // Not(true).foo  ==  (Not(true)).foo
+    expect(parse("Not(true).foo").node).toMatchObject({
+      kind: "field",
+      field: "foo",
+      struct: { kind: "operation", op: "Not" },
+    });
+  });
+
+  it("empty arg list", () => {
+    expect(parse("And()").node).toMatchObject({ kind: "operation", op: "And", inputs: { nodes: [] } });
+  });
+});
+
+describe("call diagnostics", () => {
+  it("positional after named is an error", () => {
+    expect(parse("If(condition: true, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+
+  it("an unknown op is an error", () => {
+    expect(parse("Bogus(1)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+
+  it("too many positional args is an error", () => {
+    expect(parse("Not(1, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+
+  it("calling a non-op is an error", () => {
+    expect(parse("(1)(2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+
+  it("higher-order ops are deferred to slice 3b", () => {
+    expect(parse("Filter([1, 2])").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+});
+
 // ─── Programs (statements) ────────────────────────────────────────────────────
 
 describe("programs", () => {
