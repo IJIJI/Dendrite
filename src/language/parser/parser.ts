@@ -4,10 +4,11 @@ import {
   type FieldAccessNode,
   type InputNode,
   type LiteralNode,
+  type OperationNode,
   type RefNode,
   type SourceRef,
 } from "../infra/nodes";
-import { type LanguageDescriptor } from "../infra/registry";
+import { type LanguageDescriptor, type OpDefinition } from "../infra/registry";
 import { type Token, type TokenKind } from "./lexer";
 import {
   type ParseError,
@@ -38,6 +39,7 @@ interface Led {
 // only member access (.) is an infix form.
 const BP = {
   MEMBER: 90,
+  CALL: 100,
 } as const;
 
 // A token's grammar key: punctuation dispatches on its text (so ( [ . and future
@@ -215,6 +217,105 @@ LEDS.set(".", {
   },
 });
 
+// Call: callee(args) → OperationNode. The callee may be any left expression
+// (keeping f(3) / lambdas open); for now only a ref to a registered op is callable.
+LEDS.set("(", {
+  bp: BP.CALL,
+  parse: (p, left, token) => buildCall(p, left, parseCallArgs(p), token),
+});
+
+//? Call arguments (slice 3a)
+// Arrows for higher-order bodies are in slice 3b. They slot in as another Arg variant.
+type Arg =
+  | { kind: "positional"; node: ASTNode }
+  | { kind: "named"; name: string; node: ASTNode };
+
+// IDENT ':' EXPR is a named argument; anything else is positional.
+function parseArg(p: Parser): Arg {
+  if (p.check("ident") && p.peek(1).kind === "punct" && p.peek(1).value === ":") {
+    const name = p.advance().value;
+    p.advance(); // ':'
+    return { kind: "named", name, node: p.parseExpr(0) };
+  }
+  return { kind: "positional", node: p.parseExpr(0) };
+}
+
+// Parse a (…)-delimited argument list, enforcing positional-before-named.
+// Consumes the closing ')'.
+function parseCallArgs(p: Parser): Arg[] {
+  const args: Arg[] = [];
+  let sawNamed = false;
+  while (!p.check("punct", ")") && !p.atEnd()) {
+    const start = p.peek();
+    const arg = parseArg(p);
+    if (arg.kind === "named") sawNamed = true;
+    else if (sawNamed) {
+      p.error("syntax_error", "Positional argument after a named argument", start.source);
+    }
+    args.push(arg);
+    if (!p.match("punct", ",")) break;
+  }
+  p.expect("punct", ")");
+  return args;
+}
+
+// Resolve the callee to a registered op, then map args to its named inputs.
+function buildCall(p: Parser, callee: ASTNode, args: Arg[], token: Token): ASTNode {
+  if (callee.kind !== "ref") {
+    p.error("syntax_error", "Only operations can be called", token.source);
+    return callee;
+  }
+
+  //TODO: Lambda (calling so application) support here?
+  const opDef = p.descriptor.ops.get(callee.name);
+  if (!opDef) {
+    p.error("syntax_error", `Unknown operation '${callee.name}'`, callee.source ?? token.source);
+    return callee;
+  }
+  if (opDef.higherOrder) {
+    // Higher-order ops need an arrow body — slice 3b.
+    p.error("syntax_error", `Operation '${callee.name}' requires a body`, token.source);
+    return callee;
+  }
+
+  const positional: ASTNode[] = [];
+  const named = new Map<string, ASTNode>();
+  for (const arg of args) {
+    if (arg.kind === "positional") positional.push(arg.node);
+    else named.set(arg.name, arg.node);
+  }
+  const inputs = mapArgsToInputs(p, opDef, positional, named, token);
+  return { kind: "operation", op: callee.name, inputs, output: opDef.output, source: callee.source };
+}
+
+// Positional args fill the op's declared inputs in order (a variadic input soaks
+// all remaining); named args bind by name, overriding. Completeness (missing /
+// unknown inputs) is the analyser's job, not the parser's.
+function mapArgsToInputs(
+  p: Parser,
+  opDef: OpDefinition,
+  positional: ASTNode[],
+  named: Map<string, ASTNode>,
+  token: Token,
+): OperationNode["inputs"] {
+  const inputs: OperationNode["inputs"] = {};
+  let pi = 0;
+  for (const input of opDef.inputs) {
+    if (input.variadic) {
+      inputs[input.name] = positional.slice(pi);
+      pi = positional.length;
+    } else if (pi < positional.length) {
+      inputs[input.name] = positional[pi++];
+    }
+  }
+  if (pi < positional.length) {
+    p.error("syntax_error", `Too many positional arguments for '${opDef.name}'`, token.source);
+  }
+  for (const [name, node] of named) inputs[name] = node;
+  return inputs;
+}
+
+// TODO: Make slice ordering linear
 //? Entry point (slice 1) - parse a single expression from a token stream.
 export interface ExpressionResult {
   node: ASTNode;
