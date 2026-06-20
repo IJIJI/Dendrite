@@ -172,6 +172,24 @@ expression core (slice 1) are done and green; the rest is sequenced below.
   (no general missing-node recovery needed). **Do it with the language-server work, not before** —
   editor-grade all-errors-at-once isn't needed until then, and it touches the analyser.
 
+### Lambdas — deferred sub-features
+
+(Decided during lambda design; the core lambda/app work comes first.)
+
+- **Recursion / `letrec`.** Deliberately not allowed initially. Note: full first-class functions
+  admit recursion via self-application (Y-combinator), but a **strongly-typed system with no
+  recursive types makes self-application untypable** → programs stay total (strong normalisation),
+  *provided* function-position values are never `any`. Adding explicit `letrec` later is what would
+  break totality — at which point a fuel/step limit (to avoid hanging the reactive eval cycle) must
+  be decided.
+- **Lambda param-type inference from body usage.** Hindley-Milner-style constraint solving to
+  deduce a param's type from how it's used (e.g. `x` flows into `Add` ⇒ `x: number`). Deferred —
+  explicit optional annotations cover the strong-typing need for now; default to `any` otherwise.
+- **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
+  (`return { a: …, b: … }`). Needs struct literals + struct types (see *Static field typing for
+  FieldAccessNode*). Until then, a lambda returns one value. Keep `return` (lambda, single value)
+  and `output` (program, multiple) as distinct constructs — do not overload.
+
 ### Doc fixes
 
 - **Stale syntax in docs.** CLAUDE.md and analyser-spec use `Set name = …` (now `let`) and the
