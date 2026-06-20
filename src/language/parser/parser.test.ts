@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { tokenise } from "./lexer";
-import { parseExpression } from "./parser";
+import { parse as parseProgram, parseExpression } from "./parser";
 import { createCoreLanguage } from "../stdlib";
 import { createLanguage, type LanguageDescriptor } from "../infra/registry";
 
@@ -20,6 +20,11 @@ function withInput(name: string, type = "number"): LanguageDescriptor {
 function parse(src: string, descriptor: LanguageDescriptor = CORE, operators: string[] = []) {
   const { tokens } = tokenise(src, operators);
   return parseExpression(tokens, descriptor);
+}
+
+function program(src: string, descriptor: LanguageDescriptor = CORE, operators: string[] = []) {
+  const { tokens } = tokenise(src, operators);
+  return parseProgram(tokens, descriptor);
 }
 
 // ─── Literals ─────────────────────────────────────────────────────────────────
@@ -50,24 +55,28 @@ describe("literal nodes", () => {
 
 // ─── Identifiers: ref vs input ────────────────────────────────────────────────
 
-describe("identifier classification", () => {
-  it("an undeclared identifier is a ref", () => {
+describe("identifier & input classification", () => {
+  it("a bare identifier is always a ref", () => {
     expect(parse("myVar").node).toMatchObject({ kind: "ref", name: "myVar" });
   });
 
-  it("a declared context input is an input node", () => {
+  it("the $ sigil produces an input node, typed from the descriptor", () => {
     const desc = withInput("sourceBus", "string");
-    expect(parse("sourceBus", desc).node).toEqual({
+    expect(parse("$sourceBus", desc).node).toMatchObject({
       kind: "input",
       name: "sourceBus",
       type: "string",
-      source: { kind: "code", line: 1, column: 1, length: 9 },
     });
   });
 
-  it("non-input identifiers stay refs even when inputs exist", () => {
+  it("a bare name stays a ref even when an input shares the name (no shadowing)", () => {
     const desc = withInput("sourceBus");
-    expect(parse("other", desc).node).toMatchObject({ kind: "ref", name: "other" });
+    expect(parse("sourceBus", desc).node).toMatchObject({ kind: "ref", name: "sourceBus" });
+  });
+
+  it("$ followed by a non-identifier is a recoverable error", () => {
+    const { errors } = parse("$ 3");
+    expect(errors.length).toBeGreaterThan(0);
   });
 });
 
@@ -166,5 +175,101 @@ describe("diagnostics", () => {
     const { errors } = parse("a b");
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toContain("trailing");
+  });
+});
+
+// ─── Programs (statements) ────────────────────────────────────────────────────
+
+describe("programs", () => {
+  it("a let binding lands in bindings", () => {
+    const r = program("let x = 3");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect([...r.program.bindings.keys()]).toEqual(["x"]);
+    expect(r.program.bindings.get("x")).toMatchObject({ kind: "literal", value: 3 });
+    expect(r.program.outputs.size).toBe(0);
+  });
+
+  it("an output statement lands in outputs", () => {
+    const r = program("output result = x");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect([...r.program.outputs.keys()]).toEqual(["result"]);
+    expect(r.program.outputs.get("result")).toMatchObject({ kind: "ref", name: "x" });
+  });
+
+  it("multiple statements across lines", () => {
+    const r = program("let a = 1\nlet b = 2\noutput o = b");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect([...r.program.bindings.keys()]).toEqual(["a", "b"]);
+    expect([...r.program.outputs.keys()]).toEqual(["o"]);
+  });
+
+  it("a binding and an output may share a name (separate namespaces)", () => {
+    const r = program("let x = 1\noutput x = x");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.bindings.has("x")).toBe(true);
+    expect(r.program.outputs.has("x")).toBe(true);
+  });
+
+  it("the $ sigil works inside a binding", () => {
+    const desc = withInput("bus", "string");
+    const r = program("let live = $bus", desc);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.bindings.get("live")).toMatchObject({ kind: "input", name: "bus" });
+  });
+
+  it("empty source is an empty program", () => {
+    const r = program("");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.bindings.size).toBe(0);
+    expect(r.program.outputs.size).toBe(0);
+  });
+});
+
+// ─── Program diagnostics & recovery ───────────────────────────────────────────
+
+describe("program diagnostics & recovery", () => {
+  it("a duplicate binding is an error, the first is kept", () => {
+    const r = program("let x = 1\nlet x = 2");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.some((e) => e.kind === "duplicate_binding")).toBe(true);
+  });
+
+  it("a non-statement is reported and parsing resyncs to the next statement", () => {
+    const r = program("foo\nlet y = 1");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    // Exactly one error (the stray 'foo'); 'let y' parsed cleanly after resync.
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0].kind).toBe("syntax_error");
+  });
+
+  it("a broken binding value is dropped, the next statement still parses", () => {
+    const r = program("let x = )\nlet y = 1");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    // Only the ')' error — proves 'let y' was reached after resync (no cascade).
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0].kind).toBe("unexpected_token");
+  });
+
+  it("resyncs across a poisoned middle statement to reach later ones", () => {
+    // 'let b = )' is poisoned; sync must skip it and land on 'let c'.
+    const r = program("let a = 1\nlet b = )\nlet c = 3");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    // Exactly one error (b's ')') — proves a and c parsed cleanly, no cascade.
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0].kind).toBe("unexpected_token");
+  });
+
+  it("never throws on garbage", () => {
+    expect(() => program("@#^&")).not.toThrow();
   });
 });

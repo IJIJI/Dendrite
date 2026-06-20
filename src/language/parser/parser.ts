@@ -5,12 +5,14 @@ import {
   type InputNode,
   type LiteralNode,
   type RefNode,
+  type SourceRef,
 } from "../infra/nodes";
 import { type LanguageDescriptor } from "../infra/registry";
 import { type Token, type TokenKind } from "./lexer";
 import {
   type ParseError,
   type ParseErrorKind,
+  type ParseResult,
   type ParseWarning,
   type ParseWarningKind,
 } from "./types";
@@ -232,4 +234,72 @@ export function parseExpression(tokens: Token[], descriptor: LanguageDescriptor)
     p.error("unexpected_token", `Unexpected trailing '${token.value || token.kind}'`, token.source);
   }
   return { node, errors: p.errors, warnings: p.warnings };
+}
+
+//? Statements (slice 2)
+interface Statement {
+  target: "binding" | "output";
+  name: string;
+  node: ASTNode;
+  source: SourceRef;
+}
+
+// let NAME = EXPR  /  output NAME = EXPR. They differ only in which map they feed,
+// so one helper covers both. The leading keyword is already matched by the caller.
+function parseBinding(p: Parser, target: "binding" | "output"): Statement {
+  p.advance(); // 'let' / 'output'
+  const name = p.expect("ident");
+  p.expect("punct", "=");
+  const node = p.parseExpr(0);
+  return { target, name: name.value, node, source: name.source };
+}
+
+// Statement registry, keyed by leading keyword — the same handler-table shape as
+// NUDS/LEDS. User-defined statements register here in slice 4.
+const STATEMENTS = new Map<string, (p: Parser) => Statement>([
+  ["let", (p) => parseBinding(p, "binding")],
+  ["output", (p) => parseBinding(p, "output")],
+]);
+
+//? Program entry: parse a token stream into a RawProgram.
+// Gated: any error → no program. Lexer diagnostics are merged in by
+// the source→program pipeline, not here.
+// TODO: implement partial parsing where errored bindings are set to an error ast node, implement in analyser to drop all bindings and outputs that depend on it without error.
+// TODO: Build some sort of pipeline helper to combine parser and lexer inputs and outputs.
+export function parse(tokens: Token[], descriptor: LanguageDescriptor): ParseResult {
+  const p = new Parser(tokens, descriptor);
+  const bindings = new Map<string, ASTNode>();
+  const outputs = new Map<string, ASTNode>();
+
+  while (!p.atEnd()) {
+    const head = p.peek();
+    const statement = head.kind === "ident" ? STATEMENTS.get(head.value) : undefined;
+    if (!statement) {
+      p.error(
+        "syntax_error",
+        `Expected a statement ('let' or 'output') but found '${head.value || head.kind}'`,
+        head.source,
+      );
+      p.sync();
+      continue;
+    }
+
+    const before = p.errors.length;
+    const stmt = statement(p);
+    if (p.errors.length > before) {
+      // Poisoned: identity or value failed to parse. Drop it (gate A) and resync.
+      p.sync();
+      continue;
+    }
+
+    const map = stmt.target === "output" ? outputs : bindings;
+    if (map.has(stmt.name)) {
+      p.error("duplicate_binding", `Duplicate ${stmt.target} '${stmt.name}'`, stmt.source);
+    } else {
+      map.set(stmt.name, stmt.node);
+    }
+  }
+
+  if (p.errors.length > 0) return { ok: false, errors: p.errors, warnings: p.warnings };
+  return { ok: true, program: { bindings, outputs }, warnings: p.warnings };
 }
