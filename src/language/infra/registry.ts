@@ -155,18 +155,23 @@ export function isCompatible(actual: Type, expected: Type, descriptor: LanguageD
     );
   }
 
-  // Walk the extends chain upward from actual toward expected.
+  // Named types: exact match, or walk the extends chain upward from actual.
   // Subtyping is one-directional: a subtype is usable where its supertype is expected.
-  let current: string | undefined = actual;
-  const seen = new Set<string>(); // cycle guard for malformed extends chains
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    const def = descriptor.types.get(current);
-    if (!def?.extends) break;
-    if (def.extends === expected) return true;
-    current = def.extends;
+  if (actual.kind === "name" && expected.kind === "name") {
+    if (actual.name === expected.name) return true;
+    let current: string | undefined = actual.name;
+    const seen = new Set<string>(); // cycle guard for malformed extends chains
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const def = descriptor.types.get(current);
+      if (!def?.extends) break;
+      if (def.extends === expected.name) return true;
+      current = def.extends;
+    }
+    return false;
   }
 
+  // Mismatched kinds (e.g. array vs name) are incompatible.
   return false;
 }
 
