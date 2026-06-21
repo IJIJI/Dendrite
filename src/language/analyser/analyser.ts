@@ -110,16 +110,16 @@ function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
   opDef: {
     name: string;
-    inputs: { name: string; type: string; required?: boolean; variadic?: boolean }[];
+    inputs: { name: string; type: Type; required?: boolean; variadic?: boolean }[];
   }, // TODO: Should this be a shared type?
   ctx: AnalysisContext,
 ): {
   analysedInputs: Record<string, CNode | CNode[]>;
-  inputTypes: Record<string, string>;
+  inputTypes: Record<string, Type>;
   inputDependsOn: ReadonlySet<string>;
 } {
   const analysedInputs: Record<string, CNode | CNode[]> = {};
-  const inputTypes: Record<string, string> = {};
+  const inputTypes: Record<string, Type> = {};
   const dependsOnAcc = new Set<string>();
 
   for (const opInput of opDef.inputs) {
@@ -138,7 +138,10 @@ function validateInputs(
         });
         continue;
       }
-      const typeDef = ctx.descriptor.types.get(opInput.type);
+      // Defaults come from named types only; arrays/functions have no registry entry. They are derived.
+      // TODO: Double check if arrays and functions are handled correctly.
+      const typeDef =
+        opInput.type.kind === "name" ? ctx.descriptor.types.get(opInput.type.name) : undefined;
       const defVal = typeDef?.default;
       const value: LiteralValue =
         typeof defVal === "string" || typeof defVal === "number" || typeof defVal === "boolean"
