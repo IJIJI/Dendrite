@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { analyse, getOutputType } from "./analyser";
-import { type ASTNode, type CErrorNode, type LiteralNode, type RefNode } from "../infra/nodes";
+import {
+  type ASTNode,
+  type CErrorNode,
+  type LambdaNode,
+  type LiteralNode,
+  type RefNode,
+} from "../infra/nodes";
 import { isCompatible } from "../infra/registry";
 import { Type, typeToString } from "../infra/types";
 import { createCoreLanguage } from "../stdlib";
@@ -976,5 +982,97 @@ describe("CErrorNode", () => {
     const untyped: CErrorNode = { kind: "error", dependsOn: new Set() };
     expect(typeToString(getOutputType(typed))).toBe("boolean");
     expect(typeToString(getOutputType(untyped))).toBe("any");
+  });
+});
+
+// ─── lambda (C1: definition + analysis) ──────────────────────────────────────
+
+function lambda(params: LambdaNode["params"], body: ASTNode, returnType?: Type): LambdaNode {
+  return { kind: "lambda", params, body, returnType };
+}
+
+describe("lambda (C1)", () => {
+  it("infers function type from typed params and body", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toHaveLength(0);
+    const f = result.program.bindings.get("f")!;
+    expect(typeToString(getOutputType(f))).toBe("(number) -> number");
+  });
+
+  it("untyped param defaults to any (gradual)", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram({ f: lambda([{ name: "x" }], ref("x")) }, { out: ref("f") });
+    const result = analyse(prog, lang.descriptor);
+    const f = result.program.bindings.get("f")!;
+    expect(typeToString(getOutputType(f))).toBe("(any) -> any");
+  });
+
+  it("return annotation matching the body → no error", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x"), Type.number) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toHaveLength(0);
+    const f = result.program.bindings.get("f")!;
+    expect(typeToString(getOutputType(f))).toBe("(number) -> number");
+  });
+
+  it("return annotation incompatible with the body → lambda_return_type_mismatch", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x"), Type.boolean) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "lambda_return_type_mismatch")).toBe(true);
+  });
+
+  it("param shadows a same-named global binding (local-first)", () => {
+    const lang = createCoreLanguage();
+    // global x is boolean; the param x is number and must win inside the body.
+    const prog = makeProgram(
+      { x: lit(true), f: lambda([{ name: "x", type: Type.number }], ref("x")) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toHaveLength(0);
+    const f = result.program.bindings.get("f")!;
+    // return is number (the param), not boolean (the shadowed global)
+    expect(typeToString(getOutputType(f))).toBe("(number) -> number");
+  });
+
+  it("nested lambda: inner body sees the enclosing param (lexical layering)", () => {
+    const lang = createCoreLanguage();
+    // x => (y => x)  →  (any) -> (any) -> any  (arrow is right-associative)
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }], lambda([{ name: "y" }], ref("x"))) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toHaveLength(0);
+    const f = result.program.bindings.get("f")!;
+    expect(typeToString(getOutputType(f))).toBe("(any) -> (any) -> any");
+  });
+
+  it("collectRefs strips params: a param ref creates no false dependency edge / cycle", () => {
+    const lang = createCoreLanguage();
+    // global x references f; f's body refs x = its PARAM (shadowed), so there is no
+    // f → x edge and hence no x ⇄ f cycle.
+    const prog = makeProgram(
+      { x: ref("f"), f: lambda([{ name: "x" }], ref("x")) },
+      { out: ref("x") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "binding_cycle")).toBe(false);
+    expect(result.program.bindings.has("f")).toBe(true);
+    // f reads only its param → no input dependencies
+    expect(result.program.bindings.get("f")!.dependsOn.size).toBe(0);
   });
 });
