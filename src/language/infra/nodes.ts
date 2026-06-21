@@ -97,6 +97,32 @@ export interface HigherOrderNode {
   source?: SourceRef;
 }
 
+// A lambda param: ordered, with an optional type annotation.
+// Untyped params default to `any` at analysis time (gradual typing).
+export interface LambdaParam {
+  name: string;
+  type?: Type;
+}
+
+/**
+ * A first-class function value: ordered params + an expression body.
+ * The body is analysed/evaluated in a scope extended with the params (lexical) -
+ * see localBindings in the analyser/evaluator.
+ *
+ * returnType - optional annotation, checked against the inferred body type.
+ * type       - the inferred function Type (Type.fn), set by the analyser.
+ *              Optional in raw, required on CLambdaNode.
+ */
+// TODO: Check if returnType and type should be seperate. 
+export interface LambdaNode {
+  kind: "lambda";
+  params: LambdaParam[];
+  body: ASTNode;
+  returnType?: Type;
+  type?: Type;
+  source?: SourceRef;
+}
+
 export type ASTNode =
   | LiteralNode
   | ArrayNode
@@ -104,7 +130,8 @@ export type ASTNode =
   | RefNode
   | OperationNode
   | FieldAccessNode
-  | HigherOrderNode;
+  | HigherOrderNode
+  | LambdaNode;
 
 //? Analysed: metadata added by the analyser to every node.
 //
@@ -144,6 +171,11 @@ export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body
   readonly output: Type; // required: analyser sets to inferred or opDef.output fallback
 }
 
+export interface CLambdaNode extends Omit<LambdaNode, "body" | "type">, Analysed {
+  readonly body: CNode;
+  readonly type: Type; // required post-analysis: inferred function Type (Type.fn)
+}
+
 export interface CErrorNode extends Analysed {
   kind: "error";
   readonly type?: Type; // known output type when available (e.g. wrong_node_kind_for_op);
@@ -159,4 +191,5 @@ export type CNode =
   | COperationNode
   | CFieldAccessNode
   | CHigherOrderNode
+  | CLambdaNode
   | CErrorNode;
