@@ -12,11 +12,12 @@ import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createCoreLanguage } from "../../src/language/stdlib";
 import type { ASTNode } from "../../src/language/infra/nodes";
+import { Type } from "../../src/language/infra/types";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
-lang.registerInput({ name: "score", type: "number" });
-lang.registerInput({ name: "bonus", type: "number" });
+lang.registerInput({ name: "score", type: Type.number });
+lang.registerInput({ name: "bonus", type: Type.number });
 
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
