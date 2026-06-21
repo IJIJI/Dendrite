@@ -202,14 +202,14 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "literal": {
       const type =
         node.value === null
-          ? "null"
+          ? Type.null
           : typeof node.value === "string"
-            ? "string"
+            ? Type.string
             : typeof node.value === "number"
-              ? "number"
+              ? Type.number
               : typeof node.value === "boolean"
-                ? "boolean"
-                : "any";
+                ? Type.boolean
+                : Type.any;
       return { ...node, type, dependsOn: new Set() };
     }
 
@@ -256,7 +256,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
       if (ctx.boundNames.has(node.name)) {
         // Scoped vars are not context inputs - dependsOn is empty
-        return { ...node, type: ctx.boundNames.get(node.name) ?? "any", dependsOn: new Set() };
+        return { ...node, type: ctx.boundNames.get(node.name) ?? Type.any, dependsOn: new Set() };
       }
 
       ctx.errors.push({
@@ -280,12 +280,12 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "field": {
       const struct = analyseNode(node.struct, ctx);
       const structType = getOutputType(struct);
-      if (["string", "number", "boolean"].includes(structType)) {
+      if (structType.kind === "name" && ["string", "number", "boolean"].includes(structType.name)) {
         // TODO: Should this be an error?
         ctx.warnings.push({
           kind: "field_access_on_primitive",
           name: node.field,
-          message: `Field access '${node.field}' on primitive type '${structType}'`,
+          message: `Field access '${node.field}' on primitive type '${typeToString(structType)}'`,
           source: node.source,
         });
       }
@@ -374,7 +374,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         const opName = opBodyBindings[i];
         userBoundNames.set(
           userName,
-          opName !== undefined ? (inferredByOpName[opName] ?? "any") : "any",
+          opName !== undefined ? (inferredByOpName[opName] ?? Type.any) : Type.any,
         );
       });
       const bodyCtx = { ...ctx, boundNames: userBoundNames };
