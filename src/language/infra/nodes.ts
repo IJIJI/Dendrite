@@ -18,7 +18,7 @@ export type COpInputType = InputType<CNode>;
 // Primitive value definition
 export interface LiteralNode {
   kind: "literal";
-  type?: string; // derived by analyser from typeof value - not meaningful on raw nodes
+  type?: Type; // derived by analyser from typeof value - not meaningful on raw nodes
   value: LiteralValue;
   source?: SourceRef;
 }
@@ -27,7 +27,7 @@ export interface LiteralNode {
 export interface ArrayNode {
   kind: "array";
   items: ASTNode[];
-  type: string;
+  type: Type;
   source?: SourceRef;
 }
 
@@ -35,7 +35,7 @@ export interface ArrayNode {
 export interface InputNode {
   kind: "input";
   name: string;
-  type: string;
+  type: Type;
   source?: SourceRef;
 }
 
@@ -43,7 +43,7 @@ export interface InputNode {
 export interface RefNode {
   kind: "ref";
   name: string;
-  type?: string; // set by analyser to the referenced binding's output type - not meaningful on raw nodes
+  type?: Type; // set by analyser to the referenced binding's output type - not meaningful on raw nodes
   source?: SourceRef;
 }
 
@@ -54,7 +54,7 @@ export interface OperationNode {
   kind: "operation";
   op: string;
   inputs: Record<string, OpInputType>;
-  output: string;
+  output: Type;
   source?: SourceRef;
 }
 
@@ -64,7 +64,7 @@ export interface FieldAccessNode {
   kind: "field";
   struct: ASTNode;
   field: string;
-  type: string;
+  type: Type;
   source?: SourceRef;
 }
 
@@ -91,7 +91,7 @@ export interface HigherOrderNode {
    * Optional in raw - editor sets from opDef.output, analyser infers and overrides.
    * Required on CHigherOrderNode.
    */
-  output?: string;
+  output?: Type;
   source?: SourceRef;
 }
 
@@ -117,11 +117,11 @@ export interface Analysed {
 // Each variant extends its ASTNode counterpart, overriding recursive fields
 // with CNode variants and adding Analysed.
 export interface CLiteralNode extends LiteralNode, Analysed {
-  readonly type: string; // required post-analysis
+  readonly type: Type; // required post-analysis
 }
 export interface CInputNode extends InputNode, Analysed {}
 export interface CRefNode extends RefNode, Analysed {
-  readonly type: string; // required post-analysis
+  readonly type: Type; // required post-analysis
 }
 
 export interface CArrayNode extends Omit<ArrayNode, "items">, Analysed {
@@ -139,12 +139,12 @@ export interface CFieldAccessNode extends Omit<FieldAccessNode, "struct">, Analy
 export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body">, Analysed {
   readonly inputs: Record<string, COpInputType>;
   readonly body: CNode;
-  readonly output: string; // required: analyser sets to inferred or opDef.output fallback
+  readonly output: Type; // required: analyser sets to inferred or opDef.output fallback
 }
 
 export interface CErrorNode extends Analysed {
   kind: "error";
-  readonly type?: string; // known output type when available (e.g. wrong_node_kind_for_op);
+  readonly type?: Type; // known output type when available (e.g. wrong_node_kind_for_op);
   // absent when genuinely unknown (e.g. unknown_op)
   readonly source?: SourceRef; // origin location — for editor diagnostics and debugging
 }
