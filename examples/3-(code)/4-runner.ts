@@ -12,13 +12,14 @@ import { parse } from "../../src/language/parser/parser";
 import { analyse } from "../../src/language/analyser/analyser";
 import { createProgramRunner } from "../../src/language/runtime/runner";
 import { createCoreLanguage } from "../../src/language/stdlib";
+import { Type } from "../../src/language/infra/types";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
-lang.registerInput({ name: "score", type: "number" });
-lang.registerInput({ name: "bonus", type: "number" });
-lang.registerOutput({ name: "result", type: "string" });
-lang.registerOutput({ name: "finalScore", type: "number" });
+lang.registerInput({ name: "score", type: Type.number });
+lang.registerInput({ name: "bonus", type: Type.number });
+lang.registerOutput({ name: "result", type: Type.string });
+lang.registerOutput({ name: "finalScore", type: Type.number });
 
 // --- source → CoreProgram ---------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
