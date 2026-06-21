@@ -102,7 +102,7 @@ function checkCompat(actual: Type, expected: Type, name: string, ctx: AnalysisCo
   }
 }
 
-function errorNode(type?: string, source?: SourceRef): CErrorNode {
+function errorNode(type?: Type, source?: SourceRef): CErrorNode {
   return { kind: "error", type, source, dependsOn: new Set() };
 }
 
