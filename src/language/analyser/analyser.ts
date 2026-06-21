@@ -384,19 +384,20 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // inferBodyBindings returns op-conventional names as keys → map positionally to user names.
       // Example: user writes Filter(list, s: ...) → node.bindings = ['s'],
       //          opBodyBindings = ['item'], inferred = { item: 'Source' }
-      //          → userBoundNames.set('s', 'Source')
+      //          → userLocalBindings.set('s', 'Source')
+      // Todo: Check if the user... is the right naming.
       const opBodyBindings = opDef.bodyBindings ?? [];
       const evaluator = ctx.descriptor.evaluators.get(node.op);
       const inferredByOpName = evaluator?.inferBodyBindings?.(inputTypes) ?? {};
-      const userBoundNames = new Map(ctx.boundNames);
+      const userLocalBindings = new Map(ctx.localBindings);
       node.bindings.forEach((userName, i) => {
         const opName = opBodyBindings[i];
-        userBoundNames.set(
+        userLocalBindings.set(
           userName,
           opName !== undefined ? (inferredByOpName[opName] ?? Type.any) : Type.any,
         );
       });
-      const bodyCtx = { ...ctx, boundNames: userBoundNames };
+      const bodyCtx = { ...ctx, localBindings: userLocalBindings };
 
       const body = analyseNode(node.body, bodyCtx);
       const bodyOutputType = getOutputType(body);
