@@ -191,17 +191,6 @@ export function createLanguage(): Language {
 
     registerType(name, schema, config) {
       types.set(name, { name, schema, ...config });
-      // Auto-register T[] variant unless this is already an array type
-      if (!name.endsWith("[]")) {
-        const arrayName = `${name}[]`;
-        types.set(arrayName, {
-          name: arrayName,
-          schema: z.array(schema),
-          default: [],
-          // T[] does not inherit extends from T - array covariance is handled
-          // in isCompatible directly, not via the extends chain
-        });
-      }
     },
 
     registerOp: (def) => ops.set(def.name, def),
@@ -214,7 +203,6 @@ export function createLanguage(): Language {
 /**
  * Extend a language with definitions from a base, then return it.
  * Extension definitions take precedence - base keys already present are skipped.
- * Only non-array types are copied from base; T[] variants are re-generated automatically.
  * Extension is mutated in place.
  *
  * Note: cannot default base to createCoreLanguage() here - core.ts imports registry.ts
@@ -224,7 +212,7 @@ export function extendLanguage(extension: Language, base: Language): Language {
   const b = base.descriptor;
   const e = extension.descriptor;
   b.types.forEach((v) => {
-    if (!v.name.endsWith("[]") && !e.types.has(v.name)) {
+    if (!e.types.has(v.name)) {
       extension.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
     }
   });
