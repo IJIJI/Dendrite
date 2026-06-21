@@ -13,7 +13,7 @@ import {
 } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
-import { Type, typeToString } from "../infra/types";
+import { Type, isAny, isAnyOrNull, typeToString } from "../infra/types";
 import { AnalysisContext, AnalysisError, AnalysisResult, AnalysisWarning } from "./types";
 
 // Recursive DFS collecting names of RefNodes whose name is in `bindings`.
@@ -79,11 +79,6 @@ export function getOutputType(node: CNode): Type {
       return node.type ?? Type.any;
   }
 }
-
-// any/null detection on the structured Type (for the implicit-any-cast warning).
-const isAny = (t: Type): boolean => t.kind === "name" && t.name === "any";
-const isAnyOrNull = (t: Type): boolean =>
-  t.kind === "name" && (t.name === "any" || t.name === "null");
 
 function checkCompat(actual: Type, expected: Type, name: string, ctx: AnalysisContext): void {
   if (!isCompatible(actual, expected, ctx.descriptor)) {
