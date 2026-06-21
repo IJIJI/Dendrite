@@ -72,4 +72,6 @@ src/language/
 - [ ] Move tests to a seperate folder (structure)? It adds a lot of clutter now.
 - [ ] Decide between .den, .dndr, .dnr or something else.
 - [ ] Currently null is castable to any type. This means nullability. Do we want that?
-  - [ ] If not, do we at some point want to allow multiple types in operations and lambdas?
+  - [ ] If not, do we at some point want to allow multiple types in operations and lambdas/ nodes?
+- [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues. 
+      -> Better name shadowing.
