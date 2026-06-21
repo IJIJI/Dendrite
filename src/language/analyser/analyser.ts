@@ -88,7 +88,6 @@ function checkCompat(actual: Type, expected: Type, name: string, ctx: AnalysisCo
       message: `Input '${name}' type '${typeToString(actual)}' is not compatible with expected '${typeToString(expected)}'`,
     });
   } else if (isAnyOrNull(actual) && !isAny(expected)) {
-    // TODO: Should null really be castable like any?
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,

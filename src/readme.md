@@ -71,3 +71,5 @@ src/language/
 - [ ] Add some sort of validation of the registry?
 - [ ] Move tests to a seperate folder (structure)? It adds a lot of clutter now.
 - [ ] Decide between .den, .dndr, .dnr or something else.
+- [ ] Currently null is castable to any type. This means nullability. Do we want that?
+  - [ ] If not, do we at some point want to allow multiple types in operations and lambdas?
