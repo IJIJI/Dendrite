@@ -1,4 +1,6 @@
-import { z, ZodType } from "zod";
+import { type ZodType } from "zod";
+
+import { type Type } from "./types";
 
 //? Definition types
 export interface TypeDefinition {
@@ -19,7 +21,7 @@ export interface TypeDefinition {
 
 export interface OpInput {
   name: string;
-  type: string;
+  type: Type;
   required?: boolean;
   variadic?: boolean;
 }
@@ -29,7 +31,7 @@ export interface OpInput {
 export interface OpDefinition {
   name: string;
   inputs: OpInput[];
-  output: string; // static fallback: used when inferOutput is absent/undefined
+  output: Type; // static fallback: used when inferOutput is absent/undefined
   category?: string;
   /**
    * If true, this op uses HigherOrderNode in the AST rather than OperationNode.
@@ -48,7 +50,7 @@ export interface OpDefinition {
 // TODO: Also use default for non-trigger inputs? Usefull for computation before they are set.
 export interface InputDefinition {
   name: string;
-  type: string;
+  type: Type;
   trigger?: boolean; // discrete event. value resets to default after firing
   default?: unknown; // value when inactive (used by Runtime.fireTrigger to reset)
 }
@@ -63,7 +65,7 @@ export type OutputMode = "optional" | "desired" | "required";
 
 export interface OutputDefinition {
   name: string;
-  type: string;
+  type: Type;
   mode?: OutputMode; // defaults to 'optional'
 }
 
