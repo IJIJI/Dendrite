@@ -99,7 +99,7 @@ export interface EvaluatorDefinition {
   inferOutput?: (inputTypes: Record<string, Type>, bodyOutputType?: Type) => Type | undefined;
   /**
    * Analysis-time scoped binding type inference. Higher-order ops only.
-   * Called by the analyser before entering the body scope to populate boundNames.
+   * Called by the analyser before entering the body scope to populate localBindings.
    * Returns binding name → type for each scoped variable (e.g. { item: 'Source' }).
    * Absent bindings fall back to 'any'. Ignored for standard ops.
    *
