@@ -515,7 +515,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     descriptor,
     analysedBindings: new Map(),
     failedBindings,
-    boundNames: new Map(),
+    localBindings: new Map(),
     declarationIndex,
     bindingSourceRefs,
     currentBindingIndex: undefined,
