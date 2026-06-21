@@ -75,3 +75,4 @@ src/language/
   - [ ] If not, do we at some point want to allow multiple types in operations and lambdas/ nodes?
 - [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues. 
       -> Better name shadowing.
+- [ ] Work on lambda depends on and caching efficiency. How much does really need to be recomputed?
