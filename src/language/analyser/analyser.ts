@@ -247,6 +247,12 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     }
 
     case "ref": {
+      // Local-first: a lambda param / scoped var shadows a same-named global binding.
+      // Scoped vars are not context inputs - dependsOn is empty.
+      if (ctx.localBindings.has(node.name)) {
+        return { ...node, type: ctx.localBindings.get(node.name) ?? Type.any, dependsOn: new Set() };
+      }
+
       if (ctx.analysedBindings.has(node.name)) {
         if (ctx.failedBindings.has(node.name)) return errorNode(undefined, node.source); // cascade suppression
 
@@ -270,11 +276,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
         const binding = ctx.analysedBindings.get(node.name)!;
         return { ...node, type: getOutputType(binding), dependsOn: binding.dependsOn };
-      }
-
-      if (ctx.boundNames.has(node.name)) {
-        // Scoped vars are not context inputs - dependsOn is empty
-        return { ...node, type: ctx.boundNames.get(node.name) ?? Type.any, dependsOn: new Set() };
       }
 
       ctx.errors.push({
