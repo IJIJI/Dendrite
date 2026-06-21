@@ -33,6 +33,23 @@ export function typeToString(t: Type): string {
   }
 }
 
-// Structural equality via the canonical form (e.g. for "both branches same type").
-// TODO: Check if this is the best way to do structural equality.
-export const typesEqual = (a: Type, b: Type): boolean => typeToString(a) === typeToString(b);
+// Structural equality (e.g. for "both If branches are the same type").
+export function typesEqual(a: Type, b: Type): boolean {
+  if (a.kind === "name" && b.kind === "name") return a.name === b.name;
+  if (a.kind === "array" && b.kind === "array") return typesEqual(a.element, b.element);
+  if (a.kind === "function" && b.kind === "function") {
+    return (
+      a.params.length === b.params.length &&
+      a.params.every((p, i) => typesEqual(p, b.params[i])) &&
+      typesEqual(a.returns, b.returns)
+    );
+  }
+  return false;
+}
+
+// Common predicates / accessors over types. Centralised here so the analyser,
+// stdlib, and extensions share one definition instead of each re-deriving them.
+export const isAny = (t: Type): boolean => t.kind === "name" && t.name === "any";
+export const isAnyOrNull = (t: Type): boolean =>
+  t.kind === "name" && (t.name === "any" || t.name === "null");
+export const elementOf = (t: Type | undefined): Type => (t?.kind === "array" ? t.element : Type.any);
