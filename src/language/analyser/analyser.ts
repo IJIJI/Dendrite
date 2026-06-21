@@ -13,6 +13,7 @@ import {
 } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
+import { Type, typeToString } from "../infra/types";
 import { AnalysisContext, AnalysisError, AnalysisResult, AnalysisWarning } from "./types";
 
 // Recursive DFS collecting names of RefNodes whose name is in `bindings`.
@@ -57,14 +58,13 @@ function union(...sets: ReadonlySet<string>[]): ReadonlySet<string> {
   return result;
 }
 
-export function getOutputType(node: CNode): string {
+export function getOutputType(node: CNode): Type {
   switch (node.kind) {
     case "literal":
       return node.type;
     case "array":
-      // ArrayNode.type is the ELEMENT type, not the array type. getOutputType returns
-      // `${node.type}[]`. This element-type convention from nodes.ts must be preserved.
-      return `${node.type}[]`;
+      // ArrayNode.type is the element, then outputted in its array form.
+      return Type.array(node.type);
     case "input":
       return node.type;
     case "ref":
@@ -76,22 +76,27 @@ export function getOutputType(node: CNode): string {
     case "higher_order":
       return node.output;
     case "error":
-      return node.type ?? "any";
+      return node.type ?? Type.any;
   }
 }
 
-function checkCompat(actual: string, expected: string, name: string, ctx: AnalysisContext): void {
+// any/null detection on the structured Type (for the implicit-any-cast warning).
+const isAny = (t: Type): boolean => t.kind === "name" && t.name === "any";
+const isAnyOrNull = (t: Type): boolean =>
+  t.kind === "name" && (t.name === "any" || t.name === "null");
+
+function checkCompat(actual: Type, expected: Type, name: string, ctx: AnalysisContext): void {
   if (!isCompatible(actual, expected, ctx.descriptor)) {
     ctx.errors.push({
       kind: "op_input_type_mismatch",
       name,
-      message: `Input '${name}' type '${actual}' is not compatible with expected '${expected}'`,
+      message: `Input '${name}' type '${typeToString(actual)}' is not compatible with expected '${typeToString(expected)}'`,
     });
-  } else if ((actual === "any" || actual === "null") && expected !== "any") {
+  } else if (isAnyOrNull(actual) && !isAny(expected)) {
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,
-      message: `Input '${name}' is 'any' typed - '${expected}' expected`,
+      message: `Input '${name}' is 'any' typed - '${typeToString(expected)}' expected`,
     });
   }
 }
