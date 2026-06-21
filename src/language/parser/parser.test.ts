@@ -4,6 +4,7 @@ import { tokenise } from "./lexer";
 import { parse as parseProgram, parseExpression } from "./parser";
 import { createCoreLanguage } from "../stdlib";
 import { createLanguage, type LanguageDescriptor } from "../infra/registry";
+import { Type } from "../infra/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ const CORE = createCoreLanguage().descriptor;
 function withInput(name: string, type = "number"): LanguageDescriptor {
   const lang = createLanguage();
   lang.registerType(type, z.unknown());
-  lang.registerInput({ name, type });
+  lang.registerInput({ name, type: Type.name(type) });
   return lang.descriptor;
 }
 
@@ -65,7 +66,7 @@ describe("identifier & input classification", () => {
     expect(parse("$sourceBus", desc).node).toMatchObject({
       kind: "input",
       name: "sourceBus",
-      type: "string",
+      type: Type.name("string"),
     });
   });
 
@@ -212,7 +213,7 @@ describe("operation calls", () => {
   });
 
   it("output type is read from the descriptor", () => {
-    expect(parse("GreaterThan(1, 2)").node).toMatchObject({ output: "boolean" });
+    expect(parse("GreaterThan(1, 2)").node).toMatchObject({ output: Type.boolean });
   });
 
   it("nested calls", () => {
