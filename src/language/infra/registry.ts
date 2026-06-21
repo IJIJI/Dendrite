@@ -97,7 +97,7 @@ export interface EvaluatorDefinition {
    *   For variadic inputs, the value is the element type (e.g. 'boolean', not 'boolean[]').
    * bodyOutputType: the derived output type of the body node (higher-order ops only).
    */
-  inferOutput?: (inputTypes: Record<string, string>, bodyOutputType?: string) => string | undefined;
+  inferOutput?: (inputTypes: Record<string, Type>, bodyOutputType?: Type) => Type | undefined;
   /**
    * Analysis-time scoped binding type inference. Higher-order ops only.
    * Called by the analyser before entering the body scope to populate boundNames.
@@ -106,7 +106,7 @@ export interface EvaluatorDefinition {
    *
    * inputTypes: same as inferOutput. Resolved input type strings.
    */
-  inferBodyBindings?: (inputTypes: Record<string, string>) => Record<string, string>;
+  inferBodyBindings?: (inputTypes: Record<string, Type>) => Record<string, Type>;
 }
 
 //? Language descriptor - Single source of truth for the editor, analyser, evaluator.
@@ -163,8 +163,8 @@ export function isCompatible(
 export interface Language {
   descriptor: LanguageDescriptor;
   /**
-   * Register a type. Automatically also registers 'T[]' with schema z.array(schema)
-   * and default []. Do not manually register array variants - they are generated.
+   * Register a named type. Arrays (and functions) are structural - any type is
+   * implicitly arrayable - so there are no array variants to register.
    */
   registerType(
     name: string,
