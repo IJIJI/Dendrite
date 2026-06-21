@@ -158,6 +158,14 @@ export function evaluate(
       }
     }
 
+    case "lambda":
+      // Lambda values become callable closures in C2 (application). With no AppNode
+      // or function-typed op input yet, a lambda cannot reach the evaluator on its own.
+      throw new EvalError(
+        "unsupported_node",
+        "Lambda evaluation requires application — implemented in Phase C2",
+      );
+
     case "operation": {
       const cache = state.bodyScope ?? state.nodeCache;
       if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
