@@ -405,6 +405,35 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const dependsOn = union(inputDependsOn, body.dependsOn);
       return { ...node, inputs: analysedInputs, body, output, dependsOn };
     }
+
+    case "lambda": {
+      // Bind params into the local scope (untyped → any, gradual), then analyse the
+      // body in that extended scope. Nested lambdas recurse naturally, layering more
+      // params onto localBindings.
+      const paramTypes = node.params.map((p) => p.type ?? Type.any);
+      const lambdaScope = new Map(ctx.localBindings);
+      node.params.forEach((p, i) => lambdaScope.set(p.name, paramTypes[i]));
+
+      const body = analyseNode(node.body, { ...ctx, localBindings: lambdaScope });
+      const bodyReturn = getOutputType(body);
+
+      // Optional return annotation: the body must be compatible with it.
+      if (node.returnType && body.kind !== "error") {
+        checkCompat(
+          bodyReturn,
+          node.returnType,
+          "(lambda return)",
+          ctx,
+          "lambda_return_type_mismatch",
+        );
+      }
+
+      // Declared return (the annotation) is the contract when present, else inferred.
+      // Param refs contribute ∅ dependsOn, so body.dependsOn is exactly the lambda's
+      // free global/input deps - the function's dependsOn.
+      const type = Type.fn(paramTypes, node.returnType ?? bodyReturn);
+      return { ...node, body, type, dependsOn: body.dependsOn };
+    }
   }
 }
 
