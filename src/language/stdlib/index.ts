@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { createLanguage, extendLanguage, type Language } from "../infra/registry";
+import { Type, typesEqual } from "../infra/types";
+
+// Small structural-type helpers for the generic list ops below.
+// TODO: Is this the best way to do structural equality?
+const isAny = (t: Type | undefined): boolean => t?.kind === "name" && t.name === "any";
+const elementOf = (t: Type | undefined): Type => (t?.kind === "array" ? t.element : Type.any);
 
 /**
  * Creates the base language with primitive types, logical ops,
@@ -11,8 +17,7 @@ export function createCoreLanguage(): Language {
   const lang = createLanguage();
 
   // -------------------------------------------------------------------------
-  // Primitive types - defaults auto-derived for these four base types.
-  // T[] variants are auto-registered with default [] by registerType.
+  // Primitive types. Arrays are structural (Type.array), so nothing to register.
   // -------------------------------------------------------------------------
 
   lang.registerType("boolean", z.boolean(), { default: false });
@@ -26,26 +31,26 @@ export function createCoreLanguage(): Language {
 
   lang.registerOp({
     name: "And",
-    inputs: [{ name: "nodes", type: "boolean", variadic: true }],
-    output: "boolean",
+    inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
+    output: Type.boolean,
     category: "logic",
   });
   lang.registerOp({
     name: "Or",
-    inputs: [{ name: "nodes", type: "boolean", variadic: true }],
-    output: "boolean",
+    inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
+    output: Type.boolean,
     category: "logic",
   });
   lang.registerOp({
     name: "Not",
-    inputs: [{ name: "a", type: "boolean" }],
-    output: "boolean",
+    inputs: [{ name: "a", type: Type.boolean }],
+    output: Type.boolean,
     category: "logic",
   });
   lang.registerOp({
     name: "Xor",
-    inputs: [{ name: "nodes", type: "boolean", variadic: true }],
-    output: "boolean",
+    inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
+    output: Type.boolean,
     category: "logic",
   });
 
@@ -56,37 +61,37 @@ export function createCoreLanguage(): Language {
   lang.registerOp({
     name: "Equals",
     inputs: [
-      { name: "a", type: "any" },
-      { name: "b", type: "any" },
+      { name: "a", type: Type.any },
+      { name: "b", type: Type.any },
     ],
-    output: "boolean",
+    output: Type.boolean,
     category: "comparison",
   });
   lang.registerOp({
     name: "NotEquals",
     inputs: [
-      { name: "a", type: "any" },
-      { name: "b", type: "any" },
+      { name: "a", type: Type.any },
+      { name: "b", type: Type.any },
     ],
-    output: "boolean",
+    output: Type.boolean,
     category: "comparison",
   });
   lang.registerOp({
     name: "GreaterThan",
     inputs: [
-      { name: "a", type: "number" },
-      { name: "b", type: "number" },
+      { name: "a", type: Type.number },
+      { name: "b", type: Type.number },
     ],
-    output: "boolean",
+    output: Type.boolean,
     category: "comparison",
   });
   lang.registerOp({
     name: "LessThan",
     inputs: [
-      { name: "a", type: "number" },
-      { name: "b", type: "number" },
+      { name: "a", type: Type.number },
+      { name: "b", type: Type.number },
     ],
-    output: "boolean",
+    output: Type.boolean,
     category: "comparison",
   });
 
@@ -97,28 +102,28 @@ export function createCoreLanguage(): Language {
   lang.registerOp({
     name: "If",
     inputs: [
-      { name: "condition", type: "boolean" },
-      { name: "then", type: "any" },
-      { name: "else", type: "any" },
+      { name: "condition", type: Type.boolean },
+      { name: "then", type: Type.any },
+      { name: "else", type: Type.any },
     ],
-    output: "any",
+    output: Type.any,
     category: "control",
   });
 
   lang.registerOp({
     name: "IsSet",
-    inputs: [{ name: "value", type: "any" }],
-    output: "boolean",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.boolean,
     category: "control",
   });
 
   lang.registerOp({
     name: "Default",
     inputs: [
-      { name: "value", type: "any" },
-      { name: "fallback", type: "any" },
+      { name: "value", type: Type.any },
+      { name: "fallback", type: Type.any },
     ],
-    output: "any",
+    output: Type.any,
     category: "control",
   });
 
@@ -128,38 +133,38 @@ export function createCoreLanguage(): Language {
 
   lang.registerOp({
     name: "Add",
-    inputs: [{ name: "nodes", type: "number", variadic: true }],
-    output: "number",
+    inputs: [{ name: "nodes", type: Type.number, variadic: true }],
+    output: Type.number,
     category: "arithmetic",
   });
   lang.registerOp({
     name: "Subtract",
     inputs: [
-      { name: "a", type: "number" },
-      { name: "b", type: "number" },
+      { name: "a", type: Type.number },
+      { name: "b", type: Type.number },
     ],
-    output: "number",
+    output: Type.number,
     category: "arithmetic",
   });
   lang.registerOp({
     name: "Multiply",
-    inputs: [{ name: "nodes", type: "number", variadic: true }],
-    output: "number",
+    inputs: [{ name: "nodes", type: Type.number, variadic: true }],
+    output: Type.number,
     category: "arithmetic",
   });
   lang.registerOp({
     name: "Divide",
     inputs: [
-      { name: "a", type: "number" },
-      { name: "b", type: "number" },
+      { name: "a", type: Type.number },
+      { name: "b", type: Type.number },
     ],
-    output: "number",
+    output: Type.number,
     category: "arithmetic",
   });
   lang.registerOp({
     name: "Length",
-    inputs: [{ name: "list", type: "any" }],
-    output: "number",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.number,
     category: "arithmetic",
   });
 
@@ -171,40 +176,40 @@ export function createCoreLanguage(): Language {
 
   lang.registerOp({
     name: "Filter",
-    inputs: [{ name: "list", type: "any" }],
-    output: "any[]",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.array(Type.any),
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Map",
-    inputs: [{ name: "list", type: "any" }],
-    output: "any[]",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.array(Type.any),
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Find",
-    inputs: [{ name: "list", type: "any" }],
-    output: "any",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.any,
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Every",
-    inputs: [{ name: "list", type: "any" }],
-    output: "boolean",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.boolean,
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Some",
-    inputs: [{ name: "list", type: "any" }],
-    output: "boolean",
+    inputs: [{ name: "list", type: Type.any }],
+    output: Type.boolean,
     category: "list",
     higherOrder: true,
     bodyBindings: ["item"],
@@ -212,10 +217,10 @@ export function createCoreLanguage(): Language {
   lang.registerOp({
     name: "Reduce",
     inputs: [
-      { name: "list", type: "any" },
-      { name: "initial", type: "any" },
+      { name: "list", type: Type.any },
+      { name: "initial", type: Type.any },
     ],
-    output: "any",
+    output: Type.any,
     category: "list",
     higherOrder: true,
     bodyBindings: ["acc", "item"],
