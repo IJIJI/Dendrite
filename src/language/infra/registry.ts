@@ -125,7 +125,6 @@ export interface LanguageDescriptor {
 //    arrays                → covariant: T[] compat S[] iff T compat S
 //    functions             → same arity, invariant params + return
 //    names                 → exact match, or actual extends … expected (extends chain)
-// TODO: Decide if null should be treated as a subtype of any. Value nullability.
 //
 //  "functions are never any" is the totality guard: it blocks the Z combinator
 //  (a function cannot be smuggled through an `any` slot). Always call this
