@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { analyse, getOutputType } from "./analyser";
 import { type ASTNode, type CErrorNode, type LiteralNode, type RefNode } from "../infra/nodes";
 import { isCompatible } from "../infra/registry";
+import { Type, typeToString } from "../infra/types";
 import { createCoreLanguage } from "../stdlib";
 import { CoreProgram, RawProgram } from "../infra/program";
 import { createEvalState, evaluate } from "../evaluator/evaluator";
@@ -32,51 +33,51 @@ function makeProgram(
 describe("isCompatible", () => {
   it("any expected → always compatible", () => {
     const lang = createCoreLanguage();
-    expect(isCompatible("string", "any", lang.descriptor)).toBe(true);
-    expect(isCompatible("number", "any", lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.string, Type.any, lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.number, Type.any, lang.descriptor)).toBe(true);
   });
 
   it("null actual → always compatible", () => {
     const lang = createCoreLanguage();
-    expect(isCompatible("null", "string", lang.descriptor)).toBe(true);
-    expect(isCompatible("null", "boolean", lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.null, Type.string, lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.null, Type.boolean, lang.descriptor)).toBe(true);
   });
 
   it("exact match → compatible", () => {
     const lang = createCoreLanguage();
-    expect(isCompatible("string", "string", lang.descriptor)).toBe(true);
-    expect(isCompatible("number", "number", lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.string, Type.string, lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.number, Type.number, lang.descriptor)).toBe(true);
   });
 
   it("exact mismatch → incompatible", () => {
     const lang = createCoreLanguage();
-    expect(isCompatible("string", "number", lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.string, Type.number, lang.descriptor)).toBe(false);
   });
 
   it("B extends A: B compat with A, not reverse", () => {
     const lang = createCoreLanguage();
     lang.registerType("A", (lang as any).descriptor.types.get("any")!.schema, {});
     lang.registerType("B", (lang as any).descriptor.types.get("any")!.schema, { extends: "A" });
-    expect(isCompatible("B", "A", lang.descriptor)).toBe(true);
-    expect(isCompatible("A", "B", lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.name("B"), Type.name("A"), lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.name("A"), Type.name("B"), lang.descriptor)).toBe(false);
   });
 
   it("B[] compat with A[] when B extends A, not reverse", () => {
     const lang = createCoreLanguage();
     lang.registerType("A", z.unknown(), {});
     lang.registerType("B", z.unknown(), { extends: "A" });
-    expect(isCompatible("B[]", "A[]", lang.descriptor)).toBe(true);
-    expect(isCompatible("A[]", "B[]", lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.array(Type.name("B")), Type.array(Type.name("A")), lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.array(Type.name("A")), Type.array(Type.name("B")), lang.descriptor)).toBe(false);
   });
 
   it("malformed extends cycle terminates and returns false", () => {
     const lang = createCoreLanguage();
     lang.registerType("X", z.unknown(), { extends: "Y" });
     lang.registerType("Y", z.unknown(), { extends: "X" });
-    expect(isCompatible("X", "Y", lang.descriptor)).toBe(true); // one step gets there
-    expect(isCompatible("Y", "X", lang.descriptor)).toBe(true); // one step gets there
+    expect(isCompatible(Type.name("X"), Type.name("Y"), lang.descriptor)).toBe(true); // one step gets there
+    expect(isCompatible(Type.name("Y"), Type.name("X"), lang.descriptor)).toBe(true); // one step gets there
     // Neither X nor Y is a subtype of "other"
-    expect(isCompatible("X", "other", lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.name("X"), Type.name("other"), lang.descriptor)).toBe(false);
   });
 });
 
@@ -91,28 +92,28 @@ describe("happy path", () => {
     expect(result.errors).toHaveLength(0);
     const node = result.program.outputs.get("out")!;
     expect(node.kind).toBe("literal");
-    expect((node as any).type).toBe("number");
+    expect(typeToString((node as any).type)).toBe("number");
     expect(node.dependsOn.size).toBe(0);
   });
 
   it("input → correct type, single-item dependsOn", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "score", type: "number" });
-    const prog = makeProgram({}, { out: { kind: "input", name: "score", type: "number" } });
+    lang.registerInput({ name: "score", type: Type.number });
+    const prog = makeProgram({}, { out: { kind: "input", name: "score", type: Type.number } });
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out")!;
-    expect((node as any).type).toBe("number");
+    expect(typeToString((node as any).type)).toBe("number");
     expect([...node.dependsOn]).toEqual(["score"]);
   });
 
   it("chained refs → dependsOn propagates transitively", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "x", type: "number" });
+    lang.registerInput({ name: "x", type: Type.number });
     // a = input(x), b = ref(a)
     const prog = makeProgram(
       {
-        a: { kind: "input", name: "x", type: "number" },
+        a: { kind: "input", name: "x", type: Type.number },
         b: ref("a"),
       },
       { out: ref("b") },
@@ -125,8 +126,8 @@ describe("happy path", () => {
 
   it("operation (And) → correct output type, unioned dependsOn", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "p", type: "boolean" });
-    lang.registerInput({ name: "q", type: "boolean" });
+    lang.registerInput({ name: "p", type: Type.boolean });
+    lang.registerInput({ name: "q", type: Type.boolean });
     const prog = makeProgram(
       {},
       {
@@ -135,18 +136,18 @@ describe("happy path", () => {
           op: "And",
           inputs: {
             nodes: [
-              { kind: "input", name: "p", type: "boolean" },
-              { kind: "input", name: "q", type: "boolean" },
+              { kind: "input", name: "p", type: Type.boolean },
+              { kind: "input", name: "q", type: Type.boolean },
             ],
           },
-          output: "boolean",
+          output: Type.boolean,
         },
       },
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out")!;
-    expect((node as any).output).toBe("boolean");
+    expect(typeToString((node as any).output)).toBe("boolean");
     expect([...node.dependsOn]).toContain("p");
     expect([...node.dependsOn]).toContain("q");
   });
@@ -154,7 +155,7 @@ describe("happy path", () => {
   it("Filter on typed list → inferred output type, body scope with element type", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
-    lang.registerInput({ name: "sources", type: "Source[]" });
+    lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter(list: input(sources), item: ref(item) → lit(true))
     const prog = makeProgram(
       {},
@@ -162,7 +163,7 @@ describe("happy path", () => {
         out: {
           kind: "higher_order",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "sources", type: "Source[]" } },
+          inputs: { list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) } },
           bindings: ["item"],
           body: lit(true),
         },
@@ -172,13 +173,13 @@ describe("happy path", () => {
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
     const node = result.program.outputs.get("out")! as any;
-    expect(node.output).toBe("Source[]");
+    expect(typeToString(node.output)).toBe("Source[]");
   });
 
   it("higher-order with user-chosen binding name refs correctly in body", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
-    lang.registerInput({ name: "sources", type: "Source[]" });
+    lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter with user-chosen name 's' instead of 'item'
     const prog = makeProgram(
       {},
@@ -186,7 +187,7 @@ describe("happy path", () => {
         out: {
           kind: "higher_order",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "sources", type: "Source[]" } },
+          inputs: { list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) } },
           bindings: ["s"],
           body: ref("s"), // 's' is the scoped var — should resolve to 'Source' type
         },
@@ -196,7 +197,7 @@ describe("happy path", () => {
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
     const body = (result.program.outputs.get("out") as any).body;
-    expect(body.type).toBe("Source");
+    expect(typeToString(body.type)).toBe("Source");
   });
 });
 
@@ -214,7 +215,7 @@ describe("warnings", () => {
 
   it("missing desired output", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "desired", type: "number", mode: "desired" });
+    lang.registerOutput({ name: "desired", type: Type.number, mode: "desired" });
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
@@ -246,7 +247,7 @@ describe("warnings", () => {
           kind: "field",
           struct: lit("hello"),
           field: "length",
-          type: "number",
+          type: Type.number,
         },
       },
     );
@@ -268,7 +269,7 @@ describe("warnings", () => {
             a: lit(true),
             extra: lit(42), // not declared by Not
           },
-          output: "boolean",
+          output: Type.boolean,
         },
       },
     );
@@ -288,7 +289,7 @@ describe("warnings", () => {
           kind: "operation",
           op: "Not",
           inputs: {},
-          output: "boolean",
+          output: Type.boolean,
         },
       },
       { out: ref("b") },
@@ -301,12 +302,12 @@ describe("warnings", () => {
     expect(result.program.bindings.has("b")).toBe(true);
     // Placeholder carries the declared type (boolean), not 'any'/null
     const inputNode = (result.program.bindings.get("b") as any).inputs.a;
-    expect(inputNode.type).toBe("boolean");
+    expect(typeToString(inputNode.type)).toBe("boolean");
   });
 
   it("implicit_any_cast: any-typed value into narrow op input → warning, binding not poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "val", type: "any" });
+    lang.registerInput({ name: "val", type: Type.any });
     // GreaterThan expects number inputs; we pass an any-typed input
     const prog = makeProgram(
       {
@@ -314,10 +315,10 @@ describe("warnings", () => {
           kind: "operation",
           op: "GreaterThan",
           inputs: {
-            a: { kind: "input", name: "val", type: "any" },
+            a: { kind: "input", name: "val", type: Type.any },
             b: lit(0),
           },
-          output: "boolean",
+          output: Type.boolean,
         },
       },
       { out: ref("cmp") },
@@ -333,7 +334,7 @@ describe("warnings", () => {
 
   it("implicit_any_cast: any-typed output into narrow descriptor output → warning, output included", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "score", type: "number", mode: "required" });
+    lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
     // Output is any-typed (literal null)
     const prog = makeProgram({}, { score: lit(null) });
     const result = analyse(prog, lang.descriptor);
@@ -347,7 +348,7 @@ describe("warnings", () => {
 
   it("no implicit_any_cast for null-typed values or when expected is any", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "x", type: "any" });
+    lang.registerInput({ name: "x", type: Type.any });
     // Equals accepts any on both sides
     const prog = makeProgram(
       {},
@@ -356,10 +357,10 @@ describe("warnings", () => {
           kind: "operation",
           op: "Equals",
           inputs: {
-            a: { kind: "input", name: "x", type: "any" },
+            a: { kind: "input", name: "x", type: Type.any },
             b: lit("hello"),
           },
-          output: "boolean",
+          output: Type.boolean,
         },
       },
     );
@@ -373,15 +374,15 @@ describe("warnings", () => {
 describe("errors and output poisoning", () => {
   it("unknown_op → binding poisoned; dependent output dropped; independent output survives", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "good", type: "boolean", mode: "required" });
-    lang.registerOutput({ name: "bad", type: "boolean", mode: "required" });
+    lang.registerOutput({ name: "good", type: Type.boolean, mode: "required" });
+    lang.registerOutput({ name: "bad", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
       {
         broken: {
           kind: "operation",
           op: "NonExistentOp",
           inputs: {},
-          output: "boolean",
+          output: Type.boolean,
         },
       },
       {
@@ -443,14 +444,14 @@ describe("errors and output poisoning", () => {
 
   it("op_input_type_mismatch → binding poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "boolean", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
       {
         wrong: {
           kind: "operation",
           op: "Not",
           inputs: { a: lit(42) }, // number, not boolean
-          output: "boolean",
+          output: Type.boolean,
         },
       },
       { out: ref("wrong") },
@@ -463,7 +464,7 @@ describe("errors and output poisoning", () => {
 
   it("program_output_type_mismatch → output dropped", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "score", type: "number", mode: "required" });
+    lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
     const prog = makeProgram({}, { score: lit("not a number") });
     const result = analyse(prog, lang.descriptor);
     expect(
@@ -475,7 +476,7 @@ describe("errors and output poisoning", () => {
 
   it("missing_required_program_output → ok:false", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "required", type: "boolean", mode: "required" });
+    lang.registerOutput({ name: "required", type: Type.boolean, mode: "required" });
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
     expect(
@@ -488,7 +489,7 @@ describe("errors and output poisoning", () => {
 
   it("undeclared_binding_reference → binding poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "number", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog = makeProgram({ bad: ref("doesNotExist") }, { out: ref("bad") });
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "undeclared_binding_reference")).toBe(true);
@@ -497,7 +498,7 @@ describe("errors and output poisoning", () => {
 
   it("forward_reference (code editor) → binding poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "number", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     // b (index 0) references a (index 1) — forward reference
     const prog: RawProgram = {
       bindings: new Map([
@@ -516,9 +517,9 @@ describe("errors and output poisoning", () => {
 
   it("unknown_program_input → binding poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "string", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.string, mode: "required" });
     const prog = makeProgram(
-      { b: { kind: "input", name: "undeclaredInput", type: "string" } },
+      { b: { kind: "input", name: "undeclaredInput", type: Type.string } },
       { out: ref("b") },
     );
     const result = analyse(prog, lang.descriptor);
@@ -528,7 +529,7 @@ describe("errors and output poisoning", () => {
 
   it("body_binding_count_mismatch (Reduce with 1 binding) → error, binding poisoned", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "any", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.any, mode: "required" });
     const prog = makeProgram(
       {
         r: {
@@ -554,9 +555,9 @@ describe("errors and output poisoning", () => {
 describe("ok flag semantics", () => {
   it("required output dropped → ok:false", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "req", type: "boolean", mode: "required" });
+    lang.registerOutput({ name: "req", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
-      { b: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" } },
+      { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
       { req: ref("b") },
     );
     const result = analyse(prog, lang.descriptor);
@@ -565,9 +566,9 @@ describe("ok flag semantics", () => {
 
   it("only optional output dropped → ok:true", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "opt", type: "boolean", mode: "optional" });
+    lang.registerOutput({ name: "opt", type: Type.boolean, mode: "optional" });
     const prog = makeProgram(
-      { b: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" } },
+      { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
       { opt: ref("b") },
     );
     const result = analyse(prog, lang.descriptor);
@@ -577,10 +578,10 @@ describe("ok flag semantics", () => {
 
   it("binding fails but no output depends on it → ok:true", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "good", type: "number", mode: "required" });
+    lang.registerOutput({ name: "good", type: Type.number, mode: "required" });
     const prog = makeProgram(
       {
-        broken: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+        broken: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
         fine: lit(42),
       },
       { good: ref("fine") },
@@ -594,7 +595,7 @@ describe("ok flag semantics", () => {
   it("unknown output + poisoned dep → warns unknown_program_output, does NOT set ok:false", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
-      { b: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" } },
+      { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
       { mystery: ref("b") }, // unknown output (not in descriptor)
     );
     const result = analyse(prog, lang.descriptor);
@@ -612,7 +613,7 @@ describe("cascade suppression", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
       {
-        a: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+        a: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
         b: ref("a"),
       },
       { out: ref("b") },
@@ -633,7 +634,7 @@ describe("pruning", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
       {
-        broken: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+        broken: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
         fine: lit(42),
       },
       { out: ref("fine") },
@@ -645,10 +646,10 @@ describe("pruning", () => {
 
   it("surviving output's binding chain is fully present", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "x", type: "number" });
+    lang.registerInput({ name: "x", type: Type.number });
     const prog = makeProgram(
       {
-        a: { kind: "input", name: "x", type: "number" },
+        a: { kind: "input", name: "x", type: Type.number },
         b: ref("a"),
       },
       { out: ref("b") },
@@ -662,7 +663,7 @@ describe("pruning", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
       {
-        b: { kind: "operation", op: "Not", inputs: {}, output: "boolean" },
+        b: { kind: "operation", op: "Not", inputs: {}, output: Type.boolean },
       },
       { out: ref("b") },
     );
@@ -671,7 +672,7 @@ describe("pruning", () => {
     expect(result.program.bindings.has("b")).toBe(true);
     // Placeholder should carry declared boolean type, not 'any'/null from error placeholder
     const bNode = result.program.bindings.get("b") as any;
-    expect(bNode.inputs.a.type).toBe("boolean");
+    expect(typeToString(bNode.inputs.a.type)).toBe("boolean");
     expect(bNode.inputs.a.value).toBe(false); // boolean default
   });
 
@@ -679,7 +680,7 @@ describe("pruning", () => {
     const lang = createCoreLanguage();
     const prog = makeProgram(
       {
-        broken: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+        broken: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
         fine: lit(42),
       },
       { out: ref("fine") },
@@ -696,7 +697,7 @@ describe("pruning", () => {
 describe("forward_reference", () => {
   it("earlier-declared binding refs later-declared → forward_reference", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "number", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog: RawProgram = {
       bindings: new Map([
         // b declared first (index 0), references a (index 1)
@@ -734,7 +735,7 @@ describe("forward_reference", () => {
 
   it("rete program → no forward_reference even when index order would trigger it", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: "number", mode: "required" });
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog: RawProgram = {
       bindings: new Map([
         // b declared first (index 0), references a (index 1), but source is rete
@@ -755,14 +756,14 @@ describe("inferOutput / inferBodyBindings", () => {
   it("Filter on Source[] → output Source[], body item type Source", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
-    lang.registerInput({ name: "items", type: "Source[]" });
+    lang.registerInput({ name: "items", type: Type.array(Type.name("Source")) });
     const prog = makeProgram(
       {},
       {
         out: {
           kind: "higher_order",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "items", type: "Source[]" } },
+          inputs: { list: { kind: "input", name: "items", type: Type.array(Type.name("Source")) } },
           bindings: ["item"],
           body: ref("item"),
         },
@@ -771,20 +772,20 @@ describe("inferOutput / inferBodyBindings", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out") as any;
-    expect(node.output).toBe("Source[]");
-    expect(node.body.type).toBe("Source");
+    expect(typeToString(node.output)).toBe("Source[]");
+    expect(typeToString(node.body.type)).toBe("Source");
   });
 
   it("Map with body returning boolean → output boolean[]", () => {
     const lang = createCoreLanguage();
-    lang.registerInput({ name: "items", type: "any[]" });
+    lang.registerInput({ name: "items", type: Type.array(Type.any) });
     const prog = makeProgram(
       {},
       {
         out: {
           kind: "higher_order",
           op: "Map",
-          inputs: { list: { kind: "input", name: "items", type: "any[]" } },
+          inputs: { list: { kind: "input", name: "items", type: Type.array(Type.any) } },
           bindings: ["item"],
           body: lit(true), // boolean body
         },
@@ -793,7 +794,7 @@ describe("inferOutput / inferBodyBindings", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out") as any;
-    expect(node.output).toBe("boolean[]");
+    expect(typeToString(node.output)).toBe("boolean[]");
   });
 
   it("If with matching branch types → concrete output type", () => {
@@ -809,14 +810,14 @@ describe("inferOutput / inferBodyBindings", () => {
             then: lit(42),
             else: lit(0),
           },
-          output: "any",
+          output: Type.any,
         },
       },
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out") as any;
-    expect(node.output).toBe("number");
+    expect(typeToString(node.output)).toBe("number");
   });
 });
 
@@ -825,10 +826,10 @@ describe("inferOutput / inferBodyBindings", () => {
 describe("AnalysisResult shape", () => {
   it("failing analysis still has program with surviving outputs", () => {
     const lang = createCoreLanguage();
-    lang.registerOutput({ name: "req", type: "boolean", mode: "required" });
-    lang.registerOutput({ name: "opt", type: "boolean", mode: "optional" });
+    lang.registerOutput({ name: "req", type: Type.boolean, mode: "required" });
+    lang.registerOutput({ name: "opt", type: Type.boolean, mode: "optional" });
     const prog = makeProgram(
-      { bad: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" } },
+      { bad: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
       {
         req: ref("bad"), // dropped
         opt: lit(true), // survives
@@ -855,7 +856,7 @@ describe("wrong_node_kind_for_op", () => {
           kind: "operation",
           op: "Filter", // higher_order op used with standard node
           inputs: {},
-          output: "any[]",
+          output: Type.array(Type.any),
         },
       },
       { out: ref("b") },
@@ -907,9 +908,9 @@ describe("CErrorNode", () => {
           kind: "operation",
           op: "Not",
           inputs: {
-            a: { kind: "operation", op: "Unknown", inputs: {}, output: "boolean" },
+            a: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
           },
-          output: "boolean",
+          output: Type.boolean,
         },
       },
       { out: ref("b") },
@@ -920,9 +921,9 @@ describe("CErrorNode", () => {
   });
 
   it("getOutputType returns known type for typed CErrorNode, 'any' for untyped", () => {
-    const typed: CErrorNode = { kind: "error", type: "boolean", dependsOn: new Set() };
+    const typed: CErrorNode = { kind: "error", type: Type.boolean, dependsOn: new Set() };
     const untyped: CErrorNode = { kind: "error", dependsOn: new Set() };
-    expect(getOutputType(typed)).toBe("boolean");
-    expect(getOutputType(untyped)).toBe("any");
+    expect(typeToString(getOutputType(typed))).toBe("boolean");
+    expect(typeToString(getOutputType(untyped))).toBe("any");
   });
 });
