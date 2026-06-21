@@ -9,6 +9,7 @@ import {
   type SourceRef,
 } from "../infra/nodes";
 import { type LanguageDescriptor, type OpDefinition } from "../infra/registry";
+import { Type } from "../infra/types";
 import { type Token, type TokenKind } from "./lexer";
 import {
   type ParseError,
@@ -190,7 +191,7 @@ NUDS.set("ident", (_p, t): RefNode => ({ kind: "ref", name: t.value, source: t.s
 NUDS.set("$", (p, t): InputNode => {
   const name = p.expect("ident");
   const def = p.descriptor.inputs.get(name.value);
-  return { kind: "input", name: name.value, type: def?.type ?? "any", source: t.source };
+  return { kind: "input", name: name.value, type: def?.type ?? Type.any, source: t.source };
 });
 
 // Grouping: ( expr ) - the parentheses only steer precedence, so the inner node
@@ -205,7 +206,7 @@ NUDS.set("(", (p): ASTNode => {
 // the ELEMENT type; left as "any" for the analyser to derive.
 NUDS.set("[", (p, t): ArrayNode => {
   const items = p.parseDelimited("]");
-  return { kind: "array", items, type: "any", source: t.source };
+  return { kind: "array", items, type: Type.any, source: t.source };
 });
 
 // Field access: left . field  (left-associative via the loop in parseExpr).
@@ -213,7 +214,7 @@ LEDS.set(".", {
   bp: BP.MEMBER,
   parse: (p, left): FieldAccessNode => {
     const name = p.expect("ident");
-    return { kind: "field", struct: left, field: name.value, type: "any", source: name.source };
+    return { kind: "field", struct: left, field: name.value, type: Type.any, source: name.source };
   },
 });
 
