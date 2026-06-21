@@ -52,6 +52,17 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
         }
         walk(n.body);
         break;
+      case "lambda": {
+        // Lambda params shadow same-named bindings within the body. Recurse with
+        // the params removed from the tracked set so they don't register as
+        // dependency edges (e.g. `let x = 5; let f = x => x` has no f → x edge).
+        // Nested lambdas strip their own params at each level via this recursion.
+        // TODO: Test if this works correctly and all dependencies are added.
+        const paramNames = new Set(n.params.map((p) => p.name));
+        const inner = new Set([...bindings].filter((b) => !paramNames.has(b)));
+        for (const r of collectRefs(n.body, inner)) refs.add(r);
+        break;
+      }
     }
   }
   walk(node);
