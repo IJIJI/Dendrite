@@ -6,8 +6,8 @@ export type SourceRef =
   | { kind: "rete"; nodeId: string };
 
 //? LiteralValue - Used for primitives only for now.
-//  TODO: Add more complex types (structs, arrays, etc.) in the future.
-//  TODO: Add null/undefined?
+//  TODO: Add more complex types (structs, object even? etc.) in the future.
+//  TODO: Add undefined for optional values? Or should they always have a default or use null?
 export type LiteralValue = string | number | boolean | null;
 
 // InputType<T> - a single or variadic node (multiple connections in editor).
