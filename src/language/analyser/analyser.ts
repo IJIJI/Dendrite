@@ -14,7 +14,13 @@ import {
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor } from "../infra/registry";
 import { Type, isAny, isAnyOrNull, typeToString } from "../infra/types";
-import { AnalysisContext, AnalysisError, AnalysisResult, AnalysisWarning } from "./types";
+import {
+  AnalysisContext,
+  AnalysisError,
+  AnalysisErrorKind,
+  AnalysisResult,
+  AnalysisWarning,
+} from "./types";
 
 // Recursive DFS collecting names of RefNodes whose name is in `bindings`.
 function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
