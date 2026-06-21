@@ -118,16 +118,19 @@ export interface LanguageDescriptor {
   evaluators: ReadonlyMap<string, EvaluatorDefinition>;
 }
 
-//? isCompatible - type compatibility check for the analyser.
+//? isCompatible: Structural type compatibility check for the analyser.
 //
-//  Rules:
-//    expected === 'any'            → always compatible
-//    actual === 'any' | 'null'     → compatible with any expected type
-//    actual === expected           → exact match
-//    actual = 'T[]', expected = 'any[]' → array covariance
+//  Rules (on the structured Type union):
+//    expected = any        → any DATA value (arrays included), NOT a function
+//    actual   = any | null → usable where any DATA value is expected, NOT a function
+//    arrays                → covariant: T[] compat S[] iff T compat S
+//    functions             → same arity, invariant params + return
+//    names                 → exact match, or actual extends … expected (extends chain)
+// TODO: Decide if null should be treated as a subtype of any. Value nullability.
 //
-//  Subtyping: walks TypeDefinition.extends chain. A subtype is compatible with its supertype.
-//  Always call this function, never inline, so subtyping stays in one place.
+//  "functions are never any" is the totality guard: it blocks the Z combinator
+//  (a function cannot be smuggled through an `any` slot). Always call this
+//  function, never inline, so subtyping stays in one place.
 
 export function isCompatible(
   actual: string,
