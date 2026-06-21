@@ -16,7 +16,8 @@ export type AnalysisErrorKind =
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
   | "body_binding_count_mismatch" // HigherOrderNode.bindings length ≠ op's bodyBindings length
-  | "wrong_node_kind_for_op"; // Standard node used for a higher-order op, or vice versa
+  | "wrong_node_kind_for_op" // Standard node used for a higher-order op, or vice versa
+  | "lambda_return_type_mismatch"; // Lambda body type incompatible with its return annotation
 
 export interface AnalysisError {
   kind: AnalysisErrorKind;
