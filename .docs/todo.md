@@ -191,6 +191,11 @@ expression core (slice 1) are done and green; the rest is sequenced below.
   already handles it — the higher-order case copies-and-extends `boundNames` (`new Map(ctx.boundNames)`)
   per body. The real work is the **evaluator**: make the per-apply scope chain to its parent so the
   inner body resolves outer params (today it is flat). Localized, moderate.
+- **Relax functions-⊄-`any` + better recursion guards.** The functions-⊄-`any` rule is the
+  totality guard for v1 — it cleanly blocks the Z combinator (`(number, any) => number` can't
+  swallow a function), but it's blunt, not fully principled. When deliberate recursion (`letrec`)
+  is added, revisit: allow functions under `any` again, guarded instead by a runtime fuel/step
+  limit and/or proper recursion detection. Ties to the recursion/`letrec` item above.
 - **Lambda param-type inference from body usage.** Collect the expected type at each use site of a
   param (each op input slot is typed) and meet them into the most specific common type; conflicting
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
