@@ -92,15 +92,23 @@ export function getOutputType(node: CNode): Type {
       return node.output;
     case "higher_order":
       return node.output;
+    case "lambda":
+      return node.type;
     case "error":
       return node.type ?? Type.any;
   }
 }
 
-function checkCompat(actual: Type, expected: Type, name: string, ctx: AnalysisContext): void {
+function checkCompat(
+  actual: Type,
+  expected: Type,
+  name: string,
+  ctx: AnalysisContext,
+  kind: AnalysisErrorKind = "op_input_type_mismatch",
+): void {
   if (!isCompatible(actual, expected, ctx.descriptor)) {
     ctx.errors.push({
-      kind: "op_input_type_mismatch",
+      kind,
       name,
       message: `Input '${name}' type '${typeToString(actual)}' is not compatible with expected '${typeToString(expected)}'`,
     });
