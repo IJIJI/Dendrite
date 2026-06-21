@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { createLanguage, extendLanguage, type Language } from "../infra/registry";
-import { Type, typesEqual } from "../infra/types";
-
-// Small structural-type helpers for the generic list ops below.
-// TODO: Is this the best way to do structural equality?
-const isAny = (t: Type | undefined): boolean => t?.kind === "name" && t.name === "any";
-const elementOf = (t: Type | undefined): Type => (t?.kind === "array" ? t.element : Type.any);
+import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
 /**
  * Creates the base language with primitive types, logical ops,
