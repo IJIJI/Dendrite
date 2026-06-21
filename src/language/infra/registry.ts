@@ -132,19 +132,27 @@ export interface LanguageDescriptor {
 //  (a function cannot be smuggled through an `any` slot). Always call this
 //  function, never inline, so subtyping stays in one place.
 
-export function isCompatible(
-  actual: string,
-  expected: string,
-  descriptor: LanguageDescriptor,
-): boolean {
-  if (expected === "any") return true;
-  if (actual === "any" || actual === "null") return true;
-  if (actual === expected) return true;
+export function isCompatible(actual: Type, expected: Type, descriptor: LanguageDescriptor): boolean {
+  // any/null permissive rules apply to DATA only — functions are never `any`.
+  if (expected.kind === "name" && expected.name === "any") {
+    return actual.kind !== "function";
+  }
+  if (actual.kind === "name" && (actual.name === "any" || actual.name === "null")) {
+    return expected.kind !== "function";
+  }
 
-  // Array covariance through extends chain: T[] compat with S[] iff T compat with S.
-  // Dendrite arrays are read-only (no mutation ops), so covariance is sound.
-  if (actual.endsWith("[]") && expected.endsWith("[]")) {
-    return isCompatible(actual.slice(0, -2), expected.slice(0, -2), descriptor);
+  // Arrays are covariant. Dendrite arrays are read-only, so covariance is sound.
+  if (actual.kind === "array" && expected.kind === "array") {
+    return isCompatible(actual.element, expected.element, descriptor);
+  }
+
+  // Functions: same arity, invariant params and return.
+  if (actual.kind === "function" && expected.kind === "function") {
+    return (
+      actual.params.length === expected.params.length &&
+      actual.params.every((p, i) => isCompatible(p, expected.params[i], descriptor)) &&
+      isCompatible(actual.returns, expected.returns, descriptor)
+    );
   }
 
   // Walk the extends chain upward from actual toward expected.
