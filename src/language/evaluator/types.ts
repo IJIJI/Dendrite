@@ -6,7 +6,8 @@ export type EvalErrorKind =
   | "input_not_set" // input node has no value in environment
   | "invalid_field_access" // field doesn't exist on struct value
   | "host_error" // host evaluator threw
-  | "error_node_reached"; // error node survived pruning — analyser or pruning bug
+  | "error_node_reached" // error node survived pruning — analyser or pruning bug
+  | "unsupported_node"; // node kind the evaluator can't handle in this build
 
 // TODO: Also add parse and analyse errors?
 export class EvalError extends Error {
