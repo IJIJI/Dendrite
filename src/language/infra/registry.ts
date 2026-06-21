@@ -123,7 +123,7 @@ export interface LanguageDescriptor {
 //    expected = any        → any DATA value (arrays included), NOT a function
 //    actual   = any | null → usable where any DATA value is expected, NOT a function
 //    arrays                → covariant: T[] compat S[] iff T compat S
-//    functions             → same arity, invariant params + return
+//    functions             → same arity, contravariant params, covariant return
 //    names                 → exact match, or actual extends … expected (extends chain)
 //
 //  "functions are never any" is the totality guard: it blocks the Z combinator
@@ -144,11 +144,15 @@ export function isCompatible(actual: Type, expected: Type, descriptor: LanguageD
     return isCompatible(actual.element, expected.element, descriptor);
   }
 
-  // Functions: same arity, invariant params and return.
+  // Functions: same arity, contravariant params, covariant return. This lets an
+  // (any) -> T lambda flow where (Concrete) -> T is expected (gradual typing), and
+  // keeps extends-subtyping sound.
   if (actual.kind === "function" && expected.kind === "function") {
     return (
       actual.params.length === expected.params.length &&
-      actual.params.every((p, i) => isCompatible(p, expected.params[i], descriptor)) &&
+      // Contravariant: each expected param must be usable as the actual's param.
+      expected.params.every((ep, i) => isCompatible(ep, actual.params[i], descriptor)) &&
+      // Covariant return.
       isCompatible(actual.returns, expected.returns, descriptor)
     );
   }
