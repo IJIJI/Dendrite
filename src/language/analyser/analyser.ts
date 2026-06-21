@@ -223,7 +223,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
     case "ref": {
       if (ctx.analysedBindings.has(node.name)) {
-        // TODO: Check the use off placeholders. Might be possible to simplify.
         if (ctx.failedBindings.has(node.name)) return errorNode(undefined, node.source); // cascade suppression
 
         // Lexical order check by declaration index - formatting-independent.
