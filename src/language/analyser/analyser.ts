@@ -536,17 +536,17 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
         ctx.errors.push({
           kind: "program_output_type_mismatch",
           name,
-          message: `Output '${name}' type '${actualType}' is not compatible with expected '${def.type}'`,
+          message: `Output '${name}' type '${typeToString(actualType)}' is not compatible with expected '${typeToString(def.type)}'`,
           source: rawNode.source,
         });
         if (!def.mode || def.mode === "required") okFlag = false;
         continue;
       }
-      if ((actualType === "any" || actualType === "null") && def.type !== "any") {
+      if (isAnyOrNull(actualType) && !isAny(def.type)) {
         ctx.warnings.push({
           kind: "implicit_any_cast",
           name,
-          message: `Output '${name}' is 'any' typed - '${def.type}' expected`,
+          message: `Output '${name}' is 'any' typed - '${typeToString(def.type)}' expected`,
         });
       }
       outputMap.set(name, cnode);
