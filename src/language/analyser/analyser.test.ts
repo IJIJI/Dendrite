@@ -79,6 +79,57 @@ describe("isCompatible", () => {
     // Neither X nor Y is a subtype of "other"
     expect(isCompatible(Type.name("X"), Type.name("other"), lang.descriptor)).toBe(false);
   });
+
+  it("function: identical types compatible; arity mismatch incompatible", () => {
+    const lang = createCoreLanguage();
+    const f = Type.fn([Type.number], Type.boolean);
+    expect(isCompatible(f, Type.fn([Type.number], Type.boolean), lang.descriptor)).toBe(true);
+    expect(
+      isCompatible(f, Type.fn([Type.number, Type.number], Type.boolean), lang.descriptor),
+    ).toBe(false);
+  });
+
+  it("function: an (any)-param fn flows where a concrete-param fn is expected (untyped lambdas)", () => {
+    const lang = createCoreLanguage();
+    // (any) -> boolean usable where (number) -> boolean is expected
+    expect(
+      isCompatible(
+        Type.fn([Type.any], Type.boolean),
+        Type.fn([Type.number], Type.boolean),
+        lang.descriptor,
+      ),
+    ).toBe(true);
+  });
+
+  it("function: contravariant params, covariant return (via extends)", () => {
+    const lang = createCoreLanguage();
+    lang.registerType("Animal", z.unknown(), {});
+    lang.registerType("Cat", z.unknown(), { extends: "Animal" });
+    const Animal = Type.name("Animal");
+    const Cat = Type.name("Cat");
+
+    // params contravariant: (Animal)->X is usable where (Cat)->X is expected (sound).
+    expect(
+      isCompatible(Type.fn([Animal], Type.boolean), Type.fn([Cat], Type.boolean), lang.descriptor),
+    ).toBe(true);
+    expect(
+      isCompatible(Type.fn([Cat], Type.boolean), Type.fn([Animal], Type.boolean), lang.descriptor),
+    ).toBe(false);
+
+    // return covariant: ()->Cat is usable where ()->Animal is expected (a Cat is an Animal).
+    expect(isCompatible(Type.fn([], Cat), Type.fn([], Animal), lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.fn([], Animal), Type.fn([], Cat), lang.descriptor)).toBe(false);
+  });
+
+  it("functions are never any (totality guard): blocks the Z combinator", () => {
+    const lang = createCoreLanguage();
+    const f = Type.fn([], Type.number);
+    // A function is not compatible with `any` — so it can't be smuggled through an
+    // `any` slot, which is exactly what a Z/Y combinator needs.
+    expect(isCompatible(f, Type.any, lang.descriptor)).toBe(false);
+    // And an `any` value is not callable as a function.
+    expect(isCompatible(Type.any, f, lang.descriptor)).toBe(false);
+  });
 });
 
 // ─── Happy path ──────────────────────────────────────────────────────────────
