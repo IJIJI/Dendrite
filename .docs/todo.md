@@ -214,6 +214,17 @@ expression core (slice 1) are done and green; the rest is sequenced below.
   FieldAccessNode*). Until then, a lambda returns one value. Keep `return` (lambda, single value)
   and `output` (program, multiple) as distinct constructs — do not overload.
 
+### Type system — deferred
+
+- **Explicit nullability via union types.** Today `null` is compatible with every type (a bottom
+  type), giving *implicit* nullability + an `implicit_any_cast` warning when it flows into a concrete
+  type. The sound alternative is strict-null + unions (`T | null`): a new `{ kind: "union"; members }`
+  `Type` variant; `isCompatible` distribution (`A` ⊆ `B|C` iff A⊆B or A⊆C; `A|B` ⊆ `C` iff both);
+  normalization (flatten nested, dedup, `any`-absorption); `typeToString` (`A | B`); `typesEqual` as
+  set equality; and inference that produces unions (`If` differing branches → `T | U`, `Find` →
+  `T | null`). Nodes that might-or-might-not output then type as `T | null`, narrowed via
+  `Default`/`IsSet`. Significant — touches the whole type system. Deferred; nice for soundness.
+
 ### Doc fixes
 
 - **Stale syntax in docs.** CLAUDE.md and analyser-spec use `Set name = …` (now `let`) and the
