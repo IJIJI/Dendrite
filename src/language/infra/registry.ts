@@ -47,7 +47,6 @@ export interface OpDefinition {
   bodyBindings?: string[];
 }
 
-// TODO: Also use default for non-trigger inputs? Usefull for computation before they are set.
 export interface InputDefinition {
   name: string;
   type: Type;
