@@ -1,3 +1,5 @@
+import { type Type } from "./types";
+
 //? SourceRef: Points back to the origin of a node in either editor.
 export type SourceRef =
   | { kind: "code"; line: number; column: number; length: number }
