@@ -1,6 +1,7 @@
 import { CNode, SourceRef } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
 import { LanguageDescriptor } from "../infra/registry";
+import { type Type } from "../infra/types";
 
 //? Analysis Results
 export type AnalysisErrorKind =
@@ -51,7 +52,7 @@ export interface AnalysisContext {
   descriptor: LanguageDescriptor;
   analysedBindings: Map<string, CNode>;
   failedBindings: Set<string>;
-  boundNames: ReadonlyMap<string, string>; // scoped var name → type; empty at top level
+  boundNames: ReadonlyMap<string, Type>; // scoped var name → type; empty at top level
   declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
   bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)
   currentBindingIndex: number | undefined; // index of binding being analysed; undefined when analysing outputs
