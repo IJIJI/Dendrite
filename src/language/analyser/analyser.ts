@@ -103,18 +103,21 @@ function checkCompat(
   name: string,
   ctx: AnalysisContext,
   kind: AnalysisErrorKind = "op_input_type_mismatch",
+  source?: SourceRef,
 ): void {
   if (!isCompatible(actual, expected, ctx.descriptor)) {
     ctx.errors.push({
       kind,
       name,
       message: `Input '${name}' type '${typeToString(actual)}' is not compatible with expected '${typeToString(expected)}'`,
+      source,
     });
   } else if (isAnyOrNull(actual) && !isAny(expected)) {
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,
       message: `Input '${name}' is 'any' typed - '${typeToString(expected)}' expected`,
+      source,
     });
   }
 }
@@ -201,7 +204,8 @@ function validateInputs(
           : [];
       const cItems = rawArr.map((item) => analyseNode(item, ctx));
       for (const ci of cItems) {
-        if (ci.kind !== "error") checkCompat(getOutputType(ci), opInput.type, name, ctx);
+        if (ci.kind !== "error")
+          checkCompat(getOutputType(ci), opInput.type, name, ctx, "op_input_type_mismatch", ci.source);
         // Flatten variadic CNode[] dependsOn - array itself has no .dependsOn
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
       }
@@ -213,7 +217,8 @@ function validateInputs(
       const expectedType = inferInputTypes?.(inputTypes)?.[name] ?? opInput.type;
       const cnode = analyseNode(withExpectedParams(rawInputs[name] as ASTNode, expectedType), ctx);
       const actualType = getOutputType(cnode);
-      if (cnode.kind !== "error") checkCompat(actualType, expectedType, name, ctx);
+      if (cnode.kind !== "error")
+        checkCompat(actualType, expectedType, name, ctx, "op_input_type_mismatch", cnode.source);
       for (const d of cnode.dependsOn) dependsOnAcc.add(d);
       analysedInputs[name] = cnode;
       inputTypes[name] = actualType;
@@ -309,7 +314,8 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const cItems = node.items.map((item) => analyseNode(item, ctx));
       // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
       for (const ci of cItems) {
-        if (ci.kind !== "error") checkCompat(getOutputType(ci), node.type, "(array item)", ctx);
+        if (ci.kind !== "error")
+          checkCompat(getOutputType(ci), node.type, "(array item)", ctx, "op_input_type_mismatch", ci.source);
       }
       return { ...node, items: cItems, dependsOn: union(...cItems.map((n) => n.dependsOn)) };
     }
@@ -369,6 +375,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           "(lambda return)",
           ctx,
           "lambda_return_type_mismatch",
+          node.source,
         );
       }
 
@@ -483,6 +490,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
             calleeType.paramNames?.[i] ?? `#${i}`,
             ctx,
             "app_argument_type_mismatch",
+            ca.source,
           );
         }
         for (const d of ca.dependsOn) deps.add(d);
@@ -616,6 +624,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
           kind: "output_depends_on_failed_binding",
           name,
           message: `Output '${name}' depends on a binding that failed analysis`,
+          source: rawNode.source,
         });
         // TODO: Add some sort of feedback depending on the required mode?
         if (!def.mode || def.mode === "required") okFlag = false;
