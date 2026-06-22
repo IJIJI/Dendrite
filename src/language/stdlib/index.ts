@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLanguage, extendLanguage, type Language } from "../infra/registry";
+import { createLanguage, extendLanguage, type FnValue, type Language } from "../infra/registry";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
 /**
