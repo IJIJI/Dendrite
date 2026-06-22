@@ -242,20 +242,142 @@ describe("call diagnostics", () => {
     expect(parse("If(condition: true, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
   });
 
-  it("an unknown op is an error", () => {
-    expect(parse("Bogus(1)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  it("a call to a non-op name parses as an application (analyser checks callability)", () => {
+    // `Bogus` isn't a registered op, so this is a function application; whether Bogus
+    // resolves to a callable binding is the analyser's job, not the parser's.
+    const { node, errors } = parse("Bogus(1)");
+    expect(errors).toEqual([]);
+    expect(node).toMatchObject({
+      kind: "app",
+      callee: { kind: "ref", name: "Bogus" },
+      positional: [{ value: 1 }],
+    });
   });
 
   it("too many positional args is an error", () => {
     expect(parse("Not(1, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
   });
 
-  it("calling a non-op is an error", () => {
-    expect(parse("(1)(2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  it("calling a non-ref callee parses as an application", () => {
+    const { node, errors } = parse("(1)(2)");
+    expect(errors).toEqual([]);
+    expect(node).toMatchObject({ kind: "app", callee: { value: 1 }, positional: [{ value: 2 }] });
   });
 
   it("higher-order ops are deferred to slice 3b", () => {
     expect(parse("Filter([1, 2])").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+});
+
+// ─── Lambdas ──────────────────────────────────────────────────────────────────
+
+describe("lambdas", () => {
+  it("single bare parameter: x => x", () => {
+    expect(parse("x => x").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "x" }],
+      body: { kind: "ref", name: "x" },
+    });
+  });
+
+  it("parenthesised params: (x, y) => x", () => {
+    expect(parse("(x, y) => x").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "x" }, { name: "y" }],
+      body: { kind: "ref", name: "x" },
+    });
+  });
+
+  it("zero params: () => 1", () => {
+    expect(parse("() => 1").node).toMatchObject({ kind: "lambda", params: [], body: { value: 1 } });
+  });
+
+  it("typed parameter: (x: number) => x", () => {
+    expect(parse("(x: number) => x").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "x", type: Type.number }],
+    });
+  });
+
+  it("array-typed parameter: (xs: number[]) => xs", () => {
+    expect(parse("(xs: number[]) => xs").node).toMatchObject({
+      params: [{ name: "xs", type: Type.array(Type.number) }],
+    });
+  });
+
+  it("function-typed parameter: (f: (number) -> boolean) => f", () => {
+    expect(parse("(f: (number) -> boolean) => f").node).toMatchObject({
+      params: [{ name: "f", type: Type.fn([Type.number], Type.boolean) }],
+    });
+  });
+
+  it("the body extends as far right as possible: x => Not(x)", () => {
+    expect(parse("x => Not(x)").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "x" }],
+      body: { kind: "operation", op: "Not", inputs: { a: { kind: "ref", name: "x" } } },
+    });
+  });
+
+  it("curries right-associatively: x => y => x", () => {
+    expect(parse("x => y => x").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "x" }],
+      body: { kind: "lambda", params: [{ name: "y" }], body: { kind: "ref", name: "x" } },
+    });
+  });
+
+  it("(x) is a grouping, (x) => … is a lambda", () => {
+    expect(parse("(x)").node).toMatchObject({ kind: "ref", name: "x" });
+    expect(parse("(x) => x").node).toMatchObject({ kind: "lambda", params: [{ name: "x" }] });
+  });
+
+  it("a lambda can be an operation argument (comma split is correct)", () => {
+    expect(parse("Default(x => x, null)").node).toMatchObject({
+      kind: "operation",
+      op: "Default",
+      inputs: { value: { kind: "lambda", params: [{ name: "x" }] }, fallback: { value: null } },
+    });
+  });
+
+  it("a non-name parameter (via =>) is a recoverable error", () => {
+    expect(parse("1 => 2").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  });
+});
+
+// ─── Application ──────────────────────────────────────────────────────────────
+
+describe("application", () => {
+  it("applies a binding: f(1, 2)", () => {
+    expect(parse("f(1, 2)").node).toMatchObject({
+      kind: "app",
+      callee: { kind: "ref", name: "f" },
+      positional: [{ value: 1 }, { value: 2 }],
+    });
+  });
+
+  it("named application arguments: f(x: 1)", () => {
+    expect(parse("f(x: 1)").node).toMatchObject({
+      kind: "app",
+      callee: { kind: "ref", name: "f" },
+      named: { x: { value: 1 } },
+    });
+  });
+
+  it("applies a lambda literal immediately: (x => x)(5)", () => {
+    expect(parse("(x => x)(5)").node).toMatchObject({
+      kind: "app",
+      callee: { kind: "lambda", params: [{ name: "x" }] },
+      positional: [{ value: 5 }],
+    });
+  });
+
+  it("chains application: f(1)(2)", () => {
+    expect(parse("f(1)(2)").node).toMatchObject({
+      kind: "app",
+      callee: { kind: "app", callee: { kind: "ref", name: "f" }, positional: [{ value: 1 }] },
+      positional: [{ value: 2 }],
+    });
   });
 });
 
