@@ -58,4 +58,5 @@ export function typesEqual(a: Type, b: Type): boolean {
 export const isAny = (t: Type): boolean => t.kind === "name" && t.name === "any";
 export const isAnyOrNull = (t: Type): boolean =>
   t.kind === "name" && (t.name === "any" || t.name === "null");
-export const elementOf = (t: Type | undefined): Type => (t?.kind === "array" ? t.element : Type.any);
+export const elementOf = (t: Type | undefined): Type =>
+  t?.kind === "array" ? t.element : Type.any;

@@ -72,8 +72,12 @@ describe("isCompatible", () => {
     const lang = createCoreLanguage();
     lang.registerType("A", z.unknown(), {});
     lang.registerType("B", z.unknown(), { extends: "A" });
-    expect(isCompatible(Type.array(Type.name("B")), Type.array(Type.name("A")), lang.descriptor)).toBe(true);
-    expect(isCompatible(Type.array(Type.name("A")), Type.array(Type.name("B")), lang.descriptor)).toBe(false);
+    expect(
+      isCompatible(Type.array(Type.name("B")), Type.array(Type.name("A")), lang.descriptor),
+    ).toBe(true);
+    expect(
+      isCompatible(Type.array(Type.name("A")), Type.array(Type.name("B")), lang.descriptor),
+    ).toBe(false);
   });
 
   it("malformed extends cycle terminates and returns false", () => {
@@ -598,7 +602,6 @@ describe("errors and output poisoning", () => {
     expect(result.errors.some((e) => e.kind === "unknown_program_input")).toBe(true);
     expect(result.ok).toBe(false);
   });
-
 });
 
 // ─── ok flag semantics ───────────────────────────────────────────────────────

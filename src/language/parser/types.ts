@@ -1,7 +1,6 @@
 import { SourceRef } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 
-
 //? Parsing
 export type ParseErrorKind =
   | "syntax_error"

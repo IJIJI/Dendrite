@@ -59,7 +59,7 @@ src/language/
       -> Would mean higher order nodes can just be normal operations?
       -> Would also mean operations should have the same extra functions higher order nodes do.
       -> But, whould that mean that a user can define functions? Is that desirable? Do both or only allow as inputs?
-- [ ] Add Lambda / arow functions 
+- [ ] Add Lambda / arow functions
       -> Add LambdaNode/closure
       -> Add CallNode/Application
 - [ ] Add some helper to convert noderef to loggable? Like in example 3-(code)/1-lexer.ts
@@ -73,7 +73,7 @@ src/language/
 - [ ] Decide between .den, .dndr, .dnr or something else.
 - [ ] Currently null is castable to any type. This means nullability. Do we want that?
   - [ ] If not, do we at some point want to allow multiple types in operations and lambdas/ nodes?
-- [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues. 
+- [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues.
       -> Better name shadowing.
 - [ ] Work on lambda depends on and caching efficiency. How much does really need to be recomputed?
 - [ ] It would be really nice to be able to do definable generic type extensions. For example the higher order node could have for both the array input as the function input a generic type T extends any, but in this way they always match.

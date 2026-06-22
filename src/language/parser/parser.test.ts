@@ -233,13 +233,19 @@ describe("operation calls", () => {
   });
 
   it("empty arg list", () => {
-    expect(parse("And()").node).toMatchObject({ kind: "operation", op: "And", inputs: { nodes: [] } });
+    expect(parse("And()").node).toMatchObject({
+      kind: "operation",
+      op: "And",
+      inputs: { nodes: [] },
+    });
   });
 });
 
 describe("call diagnostics", () => {
   it("positional after named is an error", () => {
-    expect(parse("If(condition: true, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+    expect(parse("If(condition: true, 2)").errors.some((e) => e.kind === "syntax_error")).toBe(
+      true,
+    );
   });
 
   it("a call to a non-op name parses as an application (analyser checks callability)", () => {

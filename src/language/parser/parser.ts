@@ -29,7 +29,7 @@ import {
 //? Pratt building blocks
 // nud (null denotation): how a token STARTS an expression (prefix position).
 // led (left denotation): how a token CONTINUES one, given a parsed left (infix/
-// postfix). bp is the led's left binding power. Higher binds tighter. 
+// postfix). bp is the led's left binding power. Higher binds tighter.
 // e.g. if + has bp 50 and * has bp 60, a + b * c expression will parse as
 // a + (b * c) due to the higher precedence of *.
 type Nud = (p: Parser, token: Token) => ASTNode;
@@ -179,9 +179,18 @@ const literalNud =
   (_p, t): LiteralNode => ({ kind: "literal", value: convert(t.value), source: t.source });
 
 NUDS.set("number", literalNud(Number));
-NUDS.set("string", literalNud((v) => v));
-NUDS.set("boolean", literalNud((v) => v === "true"));
-NUDS.set("null", literalNud(() => null));
+NUDS.set(
+  "string",
+  literalNud((v) => v),
+);
+NUDS.set(
+  "boolean",
+  literalNud((v) => v === "true"),
+);
+NUDS.set(
+  "null",
+  literalNud(() => null),
+);
 
 // Identifier → always a binding reference. Context inputs use the $ sigil
 // (below), so a bare name is never an input: no descriptor lookup, no shadowing.
@@ -253,9 +262,7 @@ LEDS.set("(", {
 
 //? Call arguments (slice 3a)
 // Arrows for higher-order bodies are in slice 3b. They slot in as another Arg variant.
-type Arg =
-  | { kind: "positional"; node: ASTNode }
-  | { kind: "named"; name: string; node: ASTNode };
+type Arg = { kind: "positional"; node: ASTNode } | { kind: "named"; name: string; node: ASTNode };
 
 // IDENT ':' EXPR is a named argument; anything else is positional.
 function parseArg(p: Parser): Arg {

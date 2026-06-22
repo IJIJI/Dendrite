@@ -102,7 +102,8 @@ class Scanner {
 
   advance(): string {
     const ch = this.source[this.pos++];
-    if (ch === "\n") {// \r without \n is currently ignored. Fine in general.
+    if (ch === "\n") {
+      // \r without \n is currently ignored. Fine in general.
       this.line++;
       this.col = 1;
     } else {
@@ -131,7 +132,7 @@ class Scanner {
 
 //? Scan functions (one concern each)
 
-// Handles both " and ' (interchangeable) value holds the unquoted, unescaped content; 
+// Handles both " and ' (interchangeable) value holds the unquoted, unescaped content;
 // source spans the full literal including quotes, computed from the consumed range so
 // escapes do not throw the length off.
 function scanString(s: Scanner, quote: string): Token {
@@ -242,10 +243,7 @@ function skipComment(s: Scanner): void {
 }
 
 //? Driver
-export function tokenise(
-  source: string,
-  operators: readonly string[] = [],
-): LexResult {
+export function tokenise(source: string, operators: readonly string[] = []): LexResult {
   const s = new Scanner(source);
   // Core operators first, then language-supplied; longest-first so multi-char ops
   // beat their single-char prefixes (=> over =, -> over -).

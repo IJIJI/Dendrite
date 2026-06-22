@@ -108,7 +108,14 @@ export function evaluate(
               bodyScope: undefined,
               localBindings: NO_LOCALS,
             };
-      const result = evaluate(binding, program, globalState, changedInputs, descriptor, hostContext);
+      const result = evaluate(
+        binding,
+        program,
+        globalState,
+        changedInputs,
+        descriptor,
+        hostContext,
+      );
       // Don't cache closures: they capture `changedInputs`, so re-create them each
       // pass to stay correct under incremental re-evaluation. (Cheap to rebuild.)
       if (typeof result !== "function") state.nodeCache.set(binding, result);

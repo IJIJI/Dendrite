@@ -111,7 +111,11 @@ export interface LanguageDescriptor {
 //  (a function cannot be smuggled through an `any` slot). Always call this
 //  function, never inline, so subtyping stays in one place.
 
-export function isCompatible(actual: Type, expected: Type, descriptor: LanguageDescriptor): boolean {
+export function isCompatible(
+  actual: Type,
+  expected: Type,
+  descriptor: LanguageDescriptor,
+): boolean {
   // any/null permissive rules apply to DATA only — functions are never `any`.
   if (expected.kind === "name" && expected.name === "any") {
     return actual.kind !== "function";

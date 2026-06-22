@@ -56,7 +56,10 @@ function run(bindings: Record<string, ASTNode>, output: ASTNode) {
 
 describe("application", () => {
   it("applies a lambda to a positional argument", () => {
-    const { result, value } = run({ f: lambda([{ name: "x" }], ref("x")) }, app(ref("f"), [lit(5)]));
+    const { result, value } = run(
+      { f: lambda([{ name: "x" }], ref("x")) },
+      app(ref("f"), [lit(5)]),
+    );
     expect(result.errors).toHaveLength(0);
     expect(value).toBe(5);
   });

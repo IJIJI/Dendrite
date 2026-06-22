@@ -305,7 +305,8 @@ export function createCoreLanguage(): Language {
 
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list, transform }) => (list as unknown[]).map((item) => (transform as FnValue)(item)),
+    evaluate: ({ list, transform }) =>
+      (list as unknown[]).map((item) => (transform as FnValue)(item)),
     inferInputTypes: (inputTypes) => ({
       transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
     }),

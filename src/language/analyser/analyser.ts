@@ -208,7 +208,14 @@ function validateInputs(
       const cItems = rawArr.map((item) => analyseNode(item, ctx));
       for (const ci of cItems) {
         if (ci.kind !== "error")
-          checkCompat(getOutputType(ci), opInput.type, name, ctx, "op_input_type_mismatch", ci.source);
+          checkCompat(
+            getOutputType(ci),
+            opInput.type,
+            name,
+            ctx,
+            "op_input_type_mismatch",
+            ci.source,
+          );
         // Flatten variadic CNode[] dependsOn - array itself has no .dependsOn
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
       }
@@ -279,7 +286,11 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // Local-first: a lambda param / scoped var shadows a same-named global binding.
       // Scoped vars are not context inputs - dependsOn is empty.
       if (ctx.localBindings.has(node.name)) {
-        return { ...node, type: ctx.localBindings.get(node.name) ?? Type.any, dependsOn: new Set() };
+        return {
+          ...node,
+          type: ctx.localBindings.get(node.name) ?? Type.any,
+          dependsOn: new Set(),
+        };
       }
 
       if (ctx.analysedBindings.has(node.name)) {
@@ -321,7 +332,14 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
       for (const ci of cItems) {
         if (ci.kind !== "error")
-          checkCompat(getOutputType(ci), node.type, "(array item)", ctx, "op_input_type_mismatch", ci.source);
+          checkCompat(
+            getOutputType(ci),
+            node.type,
+            "(array item)",
+            ctx,
+            "op_input_type_mismatch",
+            ci.source,
+          );
       }
       return { ...node, items: cItems, dependsOn: union(...cItems.map((n) => n.dependsOn)) };
     }
@@ -507,7 +525,14 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // dependsOn = callee ∪ args. The body's free deps already ride along on the
       // callee (a ref to a lambda binding carries the lambda's body deps), so no
       // special-casing is needed.
-      return { kind: "app", callee, args, type: calleeType.returns, source: node.source, dependsOn: deps };
+      return {
+        kind: "app",
+        callee,
+        args,
+        type: calleeType.returns,
+        source: node.source,
+        dependsOn: deps,
+      };
     }
   }
 }
