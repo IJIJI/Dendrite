@@ -444,7 +444,15 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         node.returnType ?? bodyReturn,
         node.params.map((p) => p.name),
       );
-      return { ...node, body, type, dependsOn: body.dependsOn };
+      // returnType is intentionally dropped: `type.returns` is now the source of truth.
+      return {
+        kind: "lambda",
+        params: node.params,
+        body,
+        type,
+        source: node.source,
+        dependsOn: body.dependsOn,
+      };
     }
 
     case "app": {
