@@ -113,7 +113,6 @@ export interface LambdaParam {
  * type       - the inferred function Type (Type.fn), set by the analyser.
  *              Optional in raw, required on CLambdaNode.
  */
-// TODO: Check if returnType and type should be seperate. 
 export interface LambdaNode {
   kind: "lambda";
   params: LambdaParam[];
@@ -132,8 +131,7 @@ export interface LambdaNode {
  * type is the application's result type (the function's return), set by the
  * analyser. Not meaningful on raw nodes.
  */
-// TODO: Should positional and named args be combined somehow?
-// TODO: Should ASTNodes even have type? What about the defined return type?
+// TODO: Should raw ASTNodes even have type?
 export interface AppNode {
   kind: "app";
   callee: ASTNode;
