@@ -190,7 +190,11 @@ export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body
   readonly output: Type; // required: analyser sets to inferred or opDef.output fallback
 }
 
-export interface CLambdaNode extends Omit<LambdaNode, "body" | "type">, Analysed {
+// Analysed lambda. `returnType` is intentionally omitted: post-analysis the resolved
+// `type` is the single source of truth - `type.returns` already holds the annotation
+// (if one was given) or the inferred body type. The raw annotation lives only on the
+// unanalysed LambdaNode.
+export interface CLambdaNode extends Omit<LambdaNode, "body" | "type" | "returnType">, Analysed {
   readonly body: CNode;
   readonly type: Type; // required post-analysis: inferred function Type (Type.fn)
 }
