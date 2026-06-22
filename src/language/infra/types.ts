@@ -5,14 +5,20 @@
 export type Type =
   | { kind: "name"; name: string } // number, boolean, string, any, null, Source…
   | { kind: "array"; element: Type } // T[]
-  | { kind: "function"; params: Type[]; returns: Type }; // (A, B) -> C
+  // (A, B) -> C. paramNames is optional metadata (set by the analyser from a lambda's
+  // params) used to resolve named application arguments. It does NOT affect type
+  // identity/compatibility - typeToString, typesEqual and isCompatible all ignore it.
+  | { kind: "function"; params: Type[]; returns: Type; paramNames?: string[] };
 
 // A value const grouping the constructors so call sites
 // read as type builders: Type.array(Type.number), Type.fn([Type.number], Type.boolean).
 export const Type = {
   name: (name: string): Type => ({ kind: "name", name }),
   array: (element: Type): Type => ({ kind: "array", element }),
-  fn: (params: Type[], returns: Type): Type => ({ kind: "function", params, returns }),
+  fn: (params: Type[], returns: Type, paramNames?: string[]): Type =>
+    paramNames
+      ? { kind: "function", params, returns, paramNames }
+      : { kind: "function", params, returns },
   any: { kind: "name", name: "any" } as Type,
   null: { kind: "name", name: "null" } as Type,
   number: { kind: "name", name: "number" } as Type,
