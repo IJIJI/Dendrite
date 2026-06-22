@@ -138,12 +138,13 @@ export class Parser {
     return left;
   }
 
-  // Comma-separated expressions up to a closing punct, trailing comma allowed.
-  // Reusable list machinery: arrays now, call-args and arrow-params later.
-  parseDelimited(close: string): ASTNode[] {
-    const items: ASTNode[] = [];
+  // Comma-separated items up to a closing punct, trailing comma allowed. The kernel
+  // list primitive: arrays, call-args, lambda-params and type-lists all build on it,
+  // each supplying its own per-item parser.
+  separated<T>(close: string, parseItem: () => T): T[] {
+    const items: T[] = [];
     while (!this.check("punct", close) && !this.atEnd()) {
-      items.push(this.parseExpr(0));
+      items.push(parseItem());
       if (!this.match("punct", ",")) break;
     }
     this.expect("punct", close);
