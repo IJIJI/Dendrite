@@ -437,7 +437,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
       // Declared return (the annotation) is the contract when present, else inferred.
       // Param refs contribute ∅ dependsOn, so body.dependsOn is exactly the lambda's
-      // free global/input deps - the function's dependsOn. paramNames ride along on the
+      // free global/input deps the function's dependsOn. paramNames ride along on the
       // type so application sites can resolve named arguments.
       const type = Type.fn(
         paramTypes,
