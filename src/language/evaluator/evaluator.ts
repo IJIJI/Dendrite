@@ -218,6 +218,10 @@ export function evaluate(
       const args = node.args.map((a) =>
         evaluate(a, program, state, changedInputs, descriptor, hostContext),
       );
+      const result = (callee as (...a: unknown[]) => unknown)(...args);
+      cache.set(node, result);
+      return result;
+    }
 
     case "operation": {
       const cache = state.bodyScope ?? state.nodeCache;
