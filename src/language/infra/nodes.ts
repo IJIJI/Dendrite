@@ -70,33 +70,6 @@ export interface FieldAccessNode {
   source?: SourceRef;
 }
 
-/**
- * General higher-order operation.
- * Registered ops (e.g. Filter, Map, Find, Reduce) use this node type.
- *
- * inputs   - pre-resolved before calling the evaluator (like OperationNode)
- * bindings - scoped variable names, one per argument to apply()
- * body     - evaluated in a new environment per apply() call
- *
- * The evaluator receives pre-resolved inputs and a pre-built apply() function.
- * apply() handles environment extension and body evaluation internally.
- * Evaluators never see interpreter internals.
- */
-// TODO: Should there even be a difference between higher order and standard? Could higher order not be a standard op with a function as its arg? Would enable multi function higher order nodes too..
-export interface HigherOrderNode {
-  kind: "higher_order";
-  op: string;
-  inputs: Record<string, OpInputType>;
-  bindings: string[]; // ordered. Positional args to apply(), one per scoped variable
-  body: ASTNode;
-  /**
-   * Optional in raw - editor sets from opDef.output, analyser infers and overrides.
-   * Required on CHigherOrderNode.
-   */
-  output?: Type;
-  source?: SourceRef;
-}
-
 // A lambda param: ordered, with an optional type annotation.
 // Untyped params default to `any` at analysis time (gradual typing).
 export interface LambdaParam {
@@ -148,7 +121,6 @@ export type ASTNode =
   | RefNode
   | OperationNode
   | FieldAccessNode
-  | HigherOrderNode
   | LambdaNode
   | AppNode;
 
@@ -184,12 +156,6 @@ export interface CFieldAccessNode extends Omit<FieldAccessNode, "struct">, Analy
   readonly struct: CNode;
 }
 
-export interface CHigherOrderNode extends Omit<HigherOrderNode, "inputs" | "body">, Analysed {
-  readonly inputs: Record<string, COpInputType>;
-  readonly body: CNode;
-  readonly output: Type; // required: analyser sets to inferred or opDef.output fallback
-}
-
 // Analysed lambda. `returnType` is intentionally omitted: post-analysis the resolved
 // `type` is the single source of truth - `type.returns` already holds the annotation
 // (if one was given) or the inferred body type. The raw annotation lives only on the
@@ -223,7 +189,6 @@ export type CNode =
   | CRefNode
   | COperationNode
   | CFieldAccessNode
-  | CHigherOrderNode
   | CLambdaNode
   | CAppNode
   | CErrorNode;
