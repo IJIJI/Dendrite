@@ -185,12 +185,38 @@ export function evaluate(
       }
     }
 
-    case "lambda":
-      // Lambda values become callable closures in C2 (application). With no AppNode
-      // or function-typed op input yet, a lambda cannot reach the evaluator on its own.
-      throw new EvalError(
-        "unsupported_node",
-        "Lambda evaluation requires application — implemented in Phase C2",
+    case "lambda": {
+      // A lambda evaluates to a closure capturing its definition-site local scope.
+      // Applying it extends that scope with the args (lexical capture). The captured
+      // scope map is never mutated, so the closure sees exactly what was in scope when
+      // it was defined, including enclosing lambda params (nesting/currying).
+      const captured = state;
+      return (...args: unknown[]): unknown => {
+        const innerLocal = new Map(captured.localBindings);
+        node.params.forEach((p, i) => innerLocal.set(p.name, args[i]));
+        const innerState: EvalState = {
+          inputs: captured.inputs,
+          nodeCache: captured.nodeCache,
+          bodyScope: new WeakMap(),
+          localBindings: innerLocal,
+        };
+        return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
+      };
+    }
+
+    case "app": {
+      const cache = state.bodyScope ?? state.nodeCache;
+      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
+      const callee = evaluate(node.callee, program, state, changedInputs, descriptor, hostContext);
+      if (typeof callee !== "function") {
+        throw new EvalError(
+          "not_a_function",
+          "Application callee did not evaluate to a function — analyser bug",
+        );
+      }
+      // args are already resolved to param order by the analyser. Call-by-value, L→R.
+      const args = node.args.map((a) =>
+        evaluate(a, program, state, changedInputs, descriptor, hostContext),
       );
 
     case "operation": {
