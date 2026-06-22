@@ -147,44 +147,6 @@ export function evaluate(
       return result;
     }
 
-    case "higher_order": {
-      const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs)) {
-        return cache.get(node);
-      }
-      const evaluator = descriptor.evaluators.get(node.op);
-      if (!evaluator) {
-        throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
-      }
-      const resolved: Record<string, unknown> = {};
-      for (const [key, input] of Object.entries(node.inputs)) {
-        resolved[key] = Array.isArray(input)
-          ? input.map((n) => evaluate(n, program, state, changedInputs, descriptor, hostContext))
-          : evaluate(input, program, state, changedInputs, descriptor, hostContext);
-      }
-      const apply = (...args: unknown[]) => {
-        // Scoped vars go into a fresh local scope (copy-extend, never mutate the
-        // parent); host inputs are shared, not cloned.
-        const innerLocal = new Map(state.localBindings);
-        node.bindings.forEach((b, i) => innerLocal.set(b, args[i]));
-        const innerState: EvalState = {
-          inputs: state.inputs,
-          nodeCache: state.nodeCache,
-          bodyScope: new WeakMap(),
-          localBindings: innerLocal,
-        };
-        return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
-      };
-      try {
-        const result = evaluator.evaluate(resolved, apply, hostContext);
-        cache.set(node, result);
-        return result;
-      } catch (e) {
-        if (e instanceof EvalError) throw e;
-        throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
-      }
-    }
-
     case "lambda": {
       // A lambda evaluates to a closure capturing its definition-site local scope.
       // Applying it extends that scope with the args (lexical capture). The captured
