@@ -26,25 +26,11 @@ export interface OpInput {
   variadic?: boolean;
 }
 
-// TODO: Should there even be a difference between higher order and standard? Could higher order not be a standard op with a function as its arg? Would enable multi function higher order nodes too..
-// TODO: Should body bindings be named? What if e.g. a higher order filter node defines input and the user writes val?
 export interface OpDefinition {
   name: string;
   inputs: OpInput[];
   output: Type; // static fallback: used when inferOutput is absent/undefined
   category?: string;
-  /**
-   * If true, this op uses HigherOrderNode in the AST rather than OperationNode.
-   * The editor renders a body sub-graph input instead of wired inputs.
-   */
-  higherOrder?: boolean;
-  /**
-   * Scoped variable names available inside the body sub-graph.
-   * Declared here so the editor knows what can be wired inside the body.
-   * Must match the bindings[] array on the HigherOrderNode at evaluate time.
-   * e.g. ['item'] for Filter/Map, ['acc', 'item'] for Reduce
-   */
-  bodyBindings?: string[];
 }
 
 export interface InputDefinition {
