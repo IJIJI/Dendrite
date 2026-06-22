@@ -302,12 +302,6 @@ function buildCall(p: Parser, callee: ASTNode, args: Arg[], token: Token): ASTNo
   if (callee.kind === "ref") {
     const opDef = p.descriptor.ops.get(callee.name);
     if (opDef) {
-      if (opDef.higherOrder) {
-        // Higher-order ops need an arrow body — collapsed into function inputs in Phase E.
-        // TODO: Why not allow a lambda def where the argument names, or types+positions match?
-        p.error("syntax_error", `Operation '${callee.name}' requires a body`, token.source);
-        return callee;
-      }
       const inputs = mapArgsToInputs(p, opDef, positional, named, token);
       return {
         kind: "operation",
