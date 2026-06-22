@@ -196,12 +196,36 @@ NUDS.set("$", (p, t): InputNode => {
   return { kind: "input", name: name.value, type: def?.type ?? Type.any, source: t.source };
 });
 
-// Grouping: ( expr ) - the parentheses only steer precedence, so the inner node
-// is returned as-is.
-NUDS.set("(", (p): ASTNode => {
+// '(' opens either a parenthesised lambda - (x: T, y) => body, () => body - or a
+// grouping. They're told apart by a lookahead: a '(' whose matching ')' is followed
+// by '=>' is a lambda param list; otherwise the parens only steer precedence.
+NUDS.set("(", (p, t): ASTNode => {
+  if (arrowParamsAhead(p)) {
+    const params = parseLambdaParams(p);
+    p.expect("punct", "=>");
+    const body = p.parseExpr(0);
+    return { kind: "lambda", params, body, source: t.source };
+  }
   const inner = p.parseExpr(0);
   p.expect("punct", ")");
   return inner;
+});
+
+// Single-parameter lambda without parens: x => body. The left, already parsed as a
+// ref, is reinterpreted as the (untyped) parameter. parseExpr(0) makes the body
+// extend as far right as possible (lowest precedence) and right-associative.
+LEDS.set("=>", {
+  bp: BP.ARROW,
+  parse: (p, left, token): ASTNode => {
+    const params: LambdaParam[] = [];
+    if (left.kind === "ref") {
+      params.push({ name: left.name });
+    } else {
+      p.error("syntax_error", "A lambda parameter must be a name", token.source);
+    }
+    const body = p.parseExpr(0);
+    return { kind: "lambda", params, body, source: left.source ?? token.source };
+  },
 });
 
 // Array literal: [ a, b, c ] with an optional trailing comma. ArrayNode.type is
