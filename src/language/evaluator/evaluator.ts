@@ -45,9 +45,9 @@ function isCached(
 //  Pull-based: each node checks its own dependsOn against changedInputs. (isCached)
 //  If a valid cache exists, it is used, else it is re-evaluated and cached.
 //
-//  Both operation and higher_order cases look up from descriptor.evaluators.
-//  operation  passes apply = undefined  (evaluator ignores it)
-//  higher_order constructs apply and passes it  (evaluator uses it)
+//  Ops look up their evaluator from descriptor.evaluators. Higher-order ops are
+//  ordinary ops with a function-typed input: the lambda evaluates to a closure that
+//  arrives as a normal resolved input value, which the op evaluator calls directly.
 
 // TODO: Program is only used for bindings. Should this be handled differently?
 export function evaluate(
@@ -237,8 +237,7 @@ export function evaluate(
           : evaluate(input, program, state, changedInputs, descriptor, hostContext);
       }
       try {
-        // apply is undefined for standard ops - evaluator should ignore it
-        const result = evaluator.evaluate(resolved, undefined, hostContext);
+        const result = evaluator.evaluate(resolved, hostContext);
         cache.set(node, result);
         return result;
       } catch (e) {
