@@ -15,8 +15,6 @@ export type AnalysisErrorKind =
   | "op_input_type_mismatch" // Op node input port receives an incompatible type
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
-  | "body_binding_count_mismatch" // HigherOrderNode.bindings length ≠ op's bodyBindings length
-  | "wrong_node_kind_for_op" // Standard node used for a higher-order op, or vice versa
   | "lambda_return_type_mismatch" // Lambda body type incompatible with its return annotation
   | "app_callee_not_function" // Application callee is not function-typed
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
