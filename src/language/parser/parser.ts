@@ -5,6 +5,7 @@ import {
   type InputNode,
   type LambdaParam,
   type LiteralNode,
+  type LiteralValue,
   type OperationNode,
   type RefNode,
   type SourceRef,
@@ -171,18 +172,15 @@ const NUDS = new Map<string, Nud>();
 const LEDS = new Map<string, Led>();
 
 // Literals -------------------------------------------------------------------
-NUDS.set("number", (_p, t): LiteralNode => ({
-  kind: "literal",
-  value: Number(t.value),
-  source: t.source,
-}));
-NUDS.set("string", (_p, t): LiteralNode => ({ kind: "literal", value: t.value, source: t.source }));
-NUDS.set("boolean", (_p, t): LiteralNode => ({
-  kind: "literal",
-  value: t.value === "true",
-  source: t.source,
-}));
-NUDS.set("null", (_p, t): LiteralNode => ({ kind: "literal", value: null, source: t.source }));
+// The four literal nuds differ only in how the raw token text becomes a value.
+const literalNud =
+  (convert: (raw: string) => LiteralValue): Nud =>
+  (_p, t): LiteralNode => ({ kind: "literal", value: convert(t.value), source: t.source });
+
+NUDS.set("number", literalNud(Number));
+NUDS.set("string", literalNud((v) => v));
+NUDS.set("boolean", literalNud((v) => v === "true"));
+NUDS.set("null", literalNud(() => null));
 
 // Identifier → always a binding reference. Context inputs use the $ sigil
 // (below), so a bare name is never an input: no descriptor lookup, no shadowing.
