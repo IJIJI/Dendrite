@@ -209,20 +209,22 @@ describe("happy path", () => {
     expect([...node.dependsOn]).toContain("q");
   });
 
-  it("Filter on typed list → inferred output type, body scope with element type", () => {
+  it("Filter on a typed list → output is the list type, predicate param gets the element type", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
-    // Filter(list: input(sources), item: ref(item) → lit(true))
+    // Filter(sources, item => true) — item is contextually typed Source
     const prog = makeProgram(
       {},
       {
         out: {
-          kind: "higher_order",
+          kind: "operation",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) } },
-          bindings: ["item"],
-          body: lit(true),
+          inputs: {
+            list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) },
+            predicate: { kind: "lambda", params: [{ name: "item" }], body: lit(true) },
+          },
+          output: Type.array(Type.any),
         },
       },
     );
@@ -231,30 +233,43 @@ describe("happy path", () => {
     expect(result.errors).toHaveLength(0);
     const node = result.program.outputs.get("out")! as any;
     expect(typeToString(node.output)).toBe("Source[]");
+    expect(typeToString(node.inputs.predicate.type)).toBe("(Source) -> boolean");
   });
 
-  it("higher-order with user-chosen binding name refs correctly in body", () => {
+  it("a differently-named predicate param still gets the element type (contextual typing)", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
-    // Filter with user-chosen name 's' instead of 'item'
+    // Filter(sources, s => IsSet(s)) — 's' is contextually typed Source
     const prog = makeProgram(
       {},
       {
         out: {
-          kind: "higher_order",
+          kind: "operation",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) } },
-          bindings: ["s"],
-          body: ref("s"), // 's' is the scoped var — should resolve to 'Source' type
+          inputs: {
+            list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) },
+            predicate: {
+              kind: "lambda",
+              params: [{ name: "s" }],
+              body: {
+                kind: "operation",
+                op: "IsSet",
+                inputs: { value: ref("s") },
+                output: Type.boolean,
+              },
+            },
+          },
+          output: Type.array(Type.any),
         },
       },
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
-    const body = (result.program.outputs.get("out") as any).body;
-    expect(typeToString(body.type)).toBe("Source");
+    expect(typeToString((result.program.outputs.get("out") as any).inputs.predicate.type)).toBe(
+      "(Source) -> boolean",
+    );
   });
 });
 
@@ -584,27 +599,6 @@ describe("errors and output poisoning", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("body_binding_count_mismatch (Reduce with 1 binding) → error, binding poisoned", () => {
-    const lang = createCoreLanguage();
-    lang.registerOutput({ name: "out", type: Type.any, mode: "required" });
-    const prog = makeProgram(
-      {
-        r: {
-          kind: "higher_order",
-          op: "Reduce",
-          inputs: { list: lit(null), initial: lit(0) },
-          bindings: ["x"], // Reduce needs 2: ['acc', 'item']
-          body: lit(0),
-        },
-      },
-      { out: ref("r") },
-    );
-    const result = analyse(prog, lang.descriptor);
-    expect(
-      result.errors.some((e) => e.kind === "body_binding_count_mismatch" && e.name === "Reduce"),
-    ).toBe(true);
-    expect(result.ok).toBe(false);
-  });
 });
 
 // ─── ok flag semantics ───────────────────────────────────────────────────────
@@ -807,10 +801,10 @@ describe("forward_reference", () => {
   });
 });
 
-// ─── inferOutput / inferBodyBindings ─────────────────────────────────────────
+// ─── inferOutput / inferInputTypes ───────────────────────────────────────────
 
-describe("inferOutput / inferBodyBindings", () => {
-  it("Filter on Source[] → output Source[], body item type Source", () => {
+describe("inferOutput / inferInputTypes", () => {
+  it("Filter on Source[] → output Source[], predicate type (Source) -> boolean", () => {
     const lang = createCoreLanguage();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "items", type: Type.array(Type.name("Source")) });
@@ -818,11 +812,22 @@ describe("inferOutput / inferBodyBindings", () => {
       {},
       {
         out: {
-          kind: "higher_order",
+          kind: "operation",
           op: "Filter",
-          inputs: { list: { kind: "input", name: "items", type: Type.array(Type.name("Source")) } },
-          bindings: ["item"],
-          body: ref("item"),
+          inputs: {
+            list: { kind: "input", name: "items", type: Type.array(Type.name("Source")) },
+            predicate: {
+              kind: "lambda",
+              params: [{ name: "item" }],
+              body: {
+                kind: "operation",
+                op: "IsSet",
+                inputs: { value: ref("item") },
+                output: Type.boolean,
+              },
+            },
+          },
+          output: Type.array(Type.any),
         },
       },
     );
@@ -830,21 +835,23 @@ describe("inferOutput / inferBodyBindings", () => {
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out") as any;
     expect(typeToString(node.output)).toBe("Source[]");
-    expect(typeToString(node.body.type)).toBe("Source");
+    expect(typeToString(node.inputs.predicate.type)).toBe("(Source) -> boolean");
   });
 
-  it("Map with body returning boolean → output boolean[]", () => {
+  it("Map with a boolean-returning transform → output boolean[]", () => {
     const lang = createCoreLanguage();
     lang.registerInput({ name: "items", type: Type.array(Type.any) });
     const prog = makeProgram(
       {},
       {
         out: {
-          kind: "higher_order",
+          kind: "operation",
           op: "Map",
-          inputs: { list: { kind: "input", name: "items", type: Type.array(Type.any) } },
-          bindings: ["item"],
-          body: lit(true), // boolean body
+          inputs: {
+            list: { kind: "input", name: "items", type: Type.array(Type.any) },
+            transform: { kind: "lambda", params: [{ name: "item" }], body: lit(true) },
+          },
+          output: Type.array(Type.any),
         },
       },
     );
@@ -899,49 +906,6 @@ describe("AnalysisResult shape", () => {
     expect(result.program.outputs.has("opt")).toBe(true);
     expect(result.program.outputs.has("req")).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
-  });
-});
-
-// ─── wrong_node_kind_for_op ──────────────────────────────────────────────────
-
-describe("wrong_node_kind_for_op", () => {
-  it("standard operation node for higher_order op → wrong_node_kind_for_op", () => {
-    const lang = createCoreLanguage();
-    const prog = makeProgram(
-      {
-        b: {
-          kind: "operation",
-          op: "Filter", // higher_order op used with standard node
-          inputs: {},
-          output: Type.array(Type.any),
-        },
-      },
-      { out: ref("b") },
-    );
-    const result = analyse(prog, lang.descriptor);
-    expect(
-      result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Filter"),
-    ).toBe(true);
-  });
-
-  it("higher_order node for standard op → wrong_node_kind_for_op", () => {
-    const lang = createCoreLanguage();
-    const prog = makeProgram(
-      {
-        b: {
-          kind: "higher_order",
-          op: "Not", // standard op used with higher_order node
-          inputs: { a: lit(true) },
-          bindings: [],
-          body: lit(true),
-        },
-      },
-      { out: ref("b") },
-    );
-    const result = analyse(prog, lang.descriptor);
-    expect(result.errors.some((e) => e.kind === "wrong_node_kind_for_op" && e.name === "Not")).toBe(
-      true,
-    );
   });
 });
 
