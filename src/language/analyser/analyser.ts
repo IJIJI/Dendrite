@@ -123,6 +123,19 @@ function errorNode(type?: Type, source?: SourceRef): CErrorNode {
   return { kind: "error", type, source, dependsOn: new Set() };
 }
 
+// Contextual typing: when an inline lambda flows into a function-typed slot, fill its
+// untyped params from the expected param types so the body sees precise types
+// (e.g. `item` is `number` inside `Filter(numbers, item => …)`). Annotated params and
+// non-lambda args are left untouched; an arity mismatch is left for checkCompat to flag.
+function withExpectedParams(node: ASTNode, expected: Type): ASTNode {
+  if (node.kind !== "lambda" || expected.kind !== "function") return node;
+  if (node.params.length !== expected.params.length) return node;
+  return {
+    ...node,
+    params: node.params.map((p, i) => (p.type ? p : { ...p, type: expected.params[i] })),
+  };
+}
+
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
   opDef: {
@@ -138,6 +151,10 @@ function validateInputs(
   const analysedInputs: Record<string, CNode | CNode[]> = {};
   const inputTypes: Record<string, Type> = {};
   const dependsOnAcc = new Set<string>();
+
+  // Function-typed inputs whose type is generic in the other inputs (a predicate over
+  // the list's element type) are refined per-op once the earlier inputs have resolved.
+  const inferInputTypes = ctx.descriptor.evaluators.get(opDef.name)?.inferInputTypes;
 
   for (const opInput of opDef.inputs) {
     const { name } = opInput;
@@ -189,11 +206,14 @@ function validateInputs(
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
       }
       analysedInputs[name] = cItems;
-      // variadic NOT added to inputTypes - inferOutput/inferBodyBindings must not rely on it
+      // variadic NOT added to inputTypes - inferOutput/inferInputTypes must not rely on it
     } else if (name in rawInputs) {
-      const cnode = analyseNode(rawInputs[name] as ASTNode, ctx);
+      // Refine the expected type (generic function inputs) and contextually type an
+      // inline lambda's untyped params from it before analysing the body.
+      const expectedType = inferInputTypes?.(inputTypes)?.[name] ?? opInput.type;
+      const cnode = analyseNode(withExpectedParams(rawInputs[name] as ASTNode, expectedType), ctx);
       const actualType = getOutputType(cnode);
-      if (cnode.kind !== "error") checkCompat(actualType, opInput.type, name, ctx);
+      if (cnode.kind !== "error") checkCompat(actualType, expectedType, name, ctx);
       for (const d of cnode.dependsOn) dependsOnAcc.add(d);
       analysedInputs[name] = cnode;
       inputTypes[name] = actualType;
