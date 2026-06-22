@@ -38,7 +38,8 @@ interface Led {
 }
 
 // Binding-power tiers. Operators slot in here as the grammar API lands; for now
-// only member access (.) is an infix form.
+// member access (.) and call (() are infix forms, and the lambda arrow (=>) is the
+// lowest-binding, right-associative infix (so `x => body` grabs the whole body).
 const BP = {
   ARROW: 5,
   MEMBER: 90,
@@ -286,33 +287,45 @@ function parseCallArgs(p: Parser): Arg[] {
   return args;
 }
 
-// Resolve the callee to a registered op, then map args to its named inputs.
+// callee(args) is one of two things: an OperationNode when the callee is a ref to a
+// registered op, or otherwise a function application (AppNode) - a ref to a lambda
+// binding, a lambda literal, another application, … . Whether a non-op callee is
+// actually callable is the analyser's check (app_callee_not_function), not ours.
 function buildCall(p: Parser, callee: ASTNode, args: Arg[], token: Token): ASTNode {
-  if (callee.kind !== "ref") {
-    p.error("syntax_error", "Only operations can be called", token.source);
-    return callee;
-  }
-
-  //TODO: Lambda (calling so application) support here?
-  const opDef = p.descriptor.ops.get(callee.name);
-  if (!opDef) {
-    p.error("syntax_error", `Unknown operation '${callee.name}'`, callee.source ?? token.source);
-    return callee;
-  }
-  if (opDef.higherOrder) {
-    // Higher-order ops need an arrow body — slice 3b.
-    p.error("syntax_error", `Operation '${callee.name}' requires a body`, token.source);
-    return callee;
-  }
-
   const positional: ASTNode[] = [];
   const named = new Map<string, ASTNode>();
   for (const arg of args) {
     if (arg.kind === "positional") positional.push(arg.node);
     else named.set(arg.name, arg.node);
   }
-  const inputs = mapArgsToInputs(p, opDef, positional, named, token);
-  return { kind: "operation", op: callee.name, inputs, output: opDef.output, source: callee.source };
+
+  if (callee.kind === "ref") {
+    const opDef = p.descriptor.ops.get(callee.name);
+    if (opDef) {
+      if (opDef.higherOrder) {
+        // Higher-order ops need an arrow body — collapsed into function inputs in Phase E.
+        // TODO: Why not allow a lambda def where the argument names, or types+positions match?
+        p.error("syntax_error", `Operation '${callee.name}' requires a body`, token.source);
+        return callee;
+      }
+      const inputs = mapArgsToInputs(p, opDef, positional, named, token);
+      return {
+        kind: "operation",
+        op: callee.name,
+        inputs,
+        output: opDef.output,
+        source: callee.source,
+      };
+    }
+  }
+
+  return {
+    kind: "app",
+    callee,
+    positional,
+    named: Object.fromEntries(named),
+    source: token.source,
+  };
 }
 
 // Positional args fill the op's declared inputs in order (a variadic input soaks
