@@ -31,9 +31,12 @@ if (!parsed.ok) {
   process.exit(1);
 }
 
+const at = (s?: { kind: string; line?: number; column?: number }) =>
+  s?.kind === "code" ? ` (line ${s.line}:${s.column})` : "";
+
 const analysis = analyse(parsed.program, lang.descriptor);
 if (!analysis.ok) {
-  for (const e of analysis.errors) console.log(`analysis ${e.kind}: ${e.message}`);
+  for (const e of analysis.errors) console.log(`analysis ${e.kind}${at(e.source)}: ${e.message}`);
   process.exit(1);
 }
 
