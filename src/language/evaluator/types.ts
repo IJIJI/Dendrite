@@ -30,7 +30,7 @@ export class EvalError extends Error {
 //            Keyed by CNode object reference (WeakMap uses object identity).
 //            WeakMap allows GC when CoreProgram is unregistered.
 //
-// bodyScope: fresh per apply() call inside a HigherOrderNode body / lambda.
+// bodyScope: fresh per lambda/closure application.
 //            Inline body nodes are cached here, not in nodeCache, to prevent
 //            stale results across items (scoped vars are not tracked in dependsOn
 //            since they are not context inputs).
