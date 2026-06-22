@@ -375,8 +375,9 @@ function parseLambdaParams(p: Parser): LambdaParam[] {
   });
 }
 
-// Type sub-grammar for annotations: NAME, T[], and (A, B) -> C function types
-// (with parenthesised grouping, so a function type can be a return or an element).
+// Type sub-grammar for annotations (a separate little language. It yields a `Type`,
+// not an `ASTNode`): NAME, T[], and (A, B) -> C function types, with parenthesised
+// grouping so a function type can be a return or an array element.
 function parseType(p: Parser): Type {
   let t = parseTypeAtom(p);
   // Array suffixes: T[], T[][], …
