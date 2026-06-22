@@ -123,6 +123,26 @@ export interface LambdaNode {
   source?: SourceRef;
 }
 
+/**
+ * Function application: callee(args). The callee is any expression of function
+ * type (a lambda, a ref to one, …). Arguments may be positional and/or named -
+ * named keys match the callee's param names. The analyser resolves them into a
+ * single ordered arg list aligned to the params (see CAppNode.args).
+ *
+ * type is the application's result type (the function's return), set by the
+ * analyser. Not meaningful on raw nodes.
+ */
+// TODO: Should positional and named args be combined somehow?
+// TODO: Should ASTNodes even have type? What about the defined return type?
+export interface AppNode {
+  kind: "app";
+  callee: ASTNode;
+  positional: ASTNode[];
+  named: Record<string, ASTNode>;
+  type?: Type;
+  source?: SourceRef;
+}
+
 export type ASTNode =
   | LiteralNode
   | ArrayNode
@@ -131,7 +151,8 @@ export type ASTNode =
   | OperationNode
   | FieldAccessNode
   | HigherOrderNode
-  | LambdaNode;
+  | LambdaNode
+  | AppNode;
 
 //? Analysed: metadata added by the analyser to every node.
 //
@@ -176,6 +197,16 @@ export interface CLambdaNode extends Omit<LambdaNode, "body" | "type">, Analysed
   readonly type: Type; // required post-analysis: inferred function Type (Type.fn)
 }
 
+// Analysed application: positional/named args are resolved into `args`, ordered to
+// match the callee's params. The evaluator binds them positionally to the closure.
+export interface CAppNode extends Analysed {
+  kind: "app";
+  readonly callee: CNode;
+  readonly args: CNode[];
+  readonly type: Type; // required post-analysis: the function's return type
+  readonly source?: SourceRef;
+}
+
 export interface CErrorNode extends Analysed {
   kind: "error";
   readonly type?: Type; // known output type when available (e.g. wrong_node_kind_for_op);
@@ -192,4 +223,5 @@ export type CNode =
   | CFieldAccessNode
   | CHigherOrderNode
   | CLambdaNode
+  | CAppNode
   | CErrorNode;
