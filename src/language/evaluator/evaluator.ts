@@ -9,6 +9,7 @@ export function createEvalState(): EvalState {
     inputs: new Map(),
     nodeCache: new WeakMap(),
     bodyScope: undefined,
+    localBindings: new Map(),
   };
 }
 
@@ -74,6 +75,9 @@ export function evaluate(
     }
 
     case "ref": {
+      // Local-first: a lambda param / scoped var shadows a same-named global binding.
+      if (state.localBindings.has(node.name)) return state.localBindings.get(node.name);
+
       const binding = program.bindings.get(node.name);
       if (!binding) {
         const val = state.inputs.get(node.name);
@@ -86,8 +90,23 @@ export function evaluate(
       if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
         return state.nodeCache.get(binding);
       }
-      const result = evaluate(binding, program, state, changedInputs, descriptor, hostContext);
-      state.nodeCache.set(binding, result);
+      // A global binding is lexically in the global scope: evaluate it WITHOUT the
+      // caller's local scope (and outside any body scope), so a scoped var never
+      // shadows a name used inside the binding. At the top level `state` already is
+      // the global scope, so reuse it.
+      const globalState: EvalState =
+        state.localBindings.size === 0 && state.bodyScope === undefined
+          ? state
+          : {
+              inputs: state.inputs,
+              nodeCache: state.nodeCache,
+              bodyScope: undefined,
+              localBindings: NO_LOCALS,
+            };
+      const result = evaluate(binding, program, globalState, changedInputs, descriptor, hostContext);
+      // Don't cache closures: they capture `changedInputs`, so re-create them each
+      // pass to stay correct under incremental re-evaluation. (Cheap to rebuild.)
+      if (typeof result !== "function") state.nodeCache.set(binding, result);
       return result;
     }
 
@@ -139,12 +158,15 @@ export function evaluate(
           : evaluate(input, program, state, changedInputs, descriptor, hostContext);
       }
       const apply = (...args: unknown[]) => {
-        const innerInputs = new Map(state.inputs);
-        node.bindings.forEach((b, i) => innerInputs.set(b, args[i]));
+        // Scoped vars go into a fresh local scope (copy-extend, never mutate the
+        // parent); host inputs are shared, not cloned.
+        const innerLocal = new Map(state.localBindings);
+        node.bindings.forEach((b, i) => innerLocal.set(b, args[i]));
         const innerState: EvalState = {
-          inputs: innerInputs,
+          inputs: state.inputs,
           nodeCache: state.nodeCache,
           bodyScope: new WeakMap(),
+          localBindings: innerLocal,
         };
         return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
       };
