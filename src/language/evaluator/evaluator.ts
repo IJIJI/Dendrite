@@ -3,6 +3,11 @@ import { CoreProgram } from "../infra/program";
 import { LanguageDescriptor } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
+// Shared empty local scope for evaluating global bindings. Scope maps are never
+// mutated in place (each scope is a fresh `new Map(parent)`), so sharing is safe.
+// TODO: Naming
+const NO_LOCALS: Map<string, unknown> = new Map();
+
 //? Empty evalstate initialisation
 export function createEvalState(): EvalState {
   return {
