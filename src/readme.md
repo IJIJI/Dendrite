@@ -76,3 +76,4 @@ src/language/
 - [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues. 
       -> Better name shadowing.
 - [ ] Work on lambda depends on and caching efficiency. How much does really need to be recomputed?
+- [ ] It would be really nice to be able to do definable generic type extensions. For example the higher order node could have for both the array input as the function input a generic type T extends any, but in this way they always match.
