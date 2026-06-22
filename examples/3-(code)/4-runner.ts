@@ -37,14 +37,17 @@ if (!parsed.ok) {
 
 const analysis = analyse(parsed.program, lang.descriptor);
 if (!analysis.ok) {
-  for (const e of analysis.errors) console.log(`analysis ${e.kind} @ ${loc(e.source)}: ${e.message}`);
+  for (const e of analysis.errors)
+    console.log(`analysis ${e.kind} @ ${loc(e.source)}: ${e.message}`);
   process.exit(1);
 }
 
 // --- Evaluate ---------------------------------------------------------------
 const runner = createProgramRunner(analysis.program, lang.descriptor);
 
-console.log("Dendrite grader './grade.den' - (pass threshold: > 60, distinction: adjusted > 100)\n");
+console.log(
+  "Dendrite grader './grade.den' - (pass threshold: > 60, distinction: adjusted > 100)\n",
+);
 
 const cases = [
   { score: 45, bonus: 0 },

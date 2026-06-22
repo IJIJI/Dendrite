@@ -20,7 +20,9 @@ function loc(source: import("../../src/language/infra/nodes").SourceRef): string
 }
 
 for (const tok of tokens) {
-  console.log(`  [${tok.kind.padEnd(7)}] ${JSON.stringify(tok.value).padEnd(12)}  @ ${loc(tok.source)}`);
+  console.log(
+    `  [${tok.kind.padEnd(7)}] ${JSON.stringify(tok.value).padEnd(12)}  @ ${loc(tok.source)}`,
+  );
 }
 
 if (warnings.length > 0) {

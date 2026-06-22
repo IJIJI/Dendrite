@@ -44,7 +44,9 @@ console.log(`=== Analysis: ${analysis.ok ? "OK" : "FAILED"} ===\n`);
 
 console.log("=== Binding types ===");
 for (const [name, node] of analysis.program.bindings) {
-  console.log(`  ${name.padEnd(10)} : ${typeToString(getOutputType(node))}  (dependsOn: ${[...node.dependsOn].join(", ") || "—"})`);
+  console.log(
+    `  ${name.padEnd(10)} : ${typeToString(getOutputType(node))}  (dependsOn: ${[...node.dependsOn].join(", ") || "—"})`,
+  );
 }
 
 console.log("\n=== Output types ===");

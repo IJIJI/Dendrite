@@ -59,7 +59,8 @@ if (!result.ok) {
   console.log("=== Bindings ===");
   for (const [name, node] of result.program.bindings) console.log(`  let ${name} = ${show(node)}`);
   console.log("\n=== Outputs ===");
-  for (const [name, node] of result.program.outputs) console.log(`  output ${name} = ${show(node)}`);
+  for (const [name, node] of result.program.outputs)
+    console.log(`  output ${name} = ${show(node)}`);
   if (lexWarnings.length + result.warnings.length > 0) {
     console.log("\n=== Warnings ===");
     for (const w of [...lexWarnings, ...result.warnings])
