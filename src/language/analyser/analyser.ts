@@ -99,6 +99,8 @@ export function getOutputType(node: CNode): Type {
       return node.output;
     case "lambda":
       return node.type;
+    case "app":
+      return node.type;
     case "error":
       return node.type ?? Type.any;
   }
@@ -435,9 +437,117 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
       // Declared return (the annotation) is the contract when present, else inferred.
       // Param refs contribute ∅ dependsOn, so body.dependsOn is exactly the lambda's
-      // free global/input deps - the function's dependsOn.
-      const type = Type.fn(paramTypes, node.returnType ?? bodyReturn);
+      // free global/input deps - the function's dependsOn. paramNames ride along on the
+      // type so application sites can resolve named arguments.
+      const type = Type.fn(
+        paramTypes,
+        node.returnType ?? bodyReturn,
+        node.params.map((p) => p.name),
+      );
       return { ...node, body, type, dependsOn: body.dependsOn };
+    }
+
+    case "app": {
+      const callee = analyseNode(node.callee, ctx);
+      if (callee.kind === "error") return errorNode(undefined, node.source);
+
+      const calleeType = getOutputType(callee);
+      if (calleeType.kind !== "function") {
+        ctx.errors.push({
+          kind: "app_callee_not_function",
+          name: "(app callee)",
+          message: `Application callee has type '${typeToString(calleeType)}', which is not a function`,
+          source: node.source,
+        });
+        return errorNode(undefined, node.source);
+      }
+
+      // Resolve positional + named args into one list aligned to the params.
+      const arity = calleeType.params.length;
+      const slots: (ASTNode | undefined)[] = new Array(arity).fill(undefined);
+      let resolutionFailed = false;
+
+      if (node.positional.length > arity) {
+        ctx.errors.push({
+          kind: "app_argument_mismatch",
+          name: "(app)",
+          message: `Too many positional arguments: ${node.positional.length} for ${arity} parameter(s)`,
+          source: node.source,
+        });
+        resolutionFailed = true;
+      }
+      node.positional.forEach((arg, i) => {
+        if (i < arity) slots[i] = arg;
+      });
+
+      for (const [argName, arg] of Object.entries(node.named)) {
+        const idx = calleeType.paramNames?.indexOf(argName) ?? -1;
+        if (!calleeType.paramNames) {
+          ctx.errors.push({
+            kind: "app_argument_mismatch",
+            name: argName,
+            message: `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`,
+            source: node.source,
+          });
+          resolutionFailed = true;
+        } else if (idx === -1) {
+          ctx.errors.push({
+            kind: "app_argument_mismatch",
+            name: argName,
+            message: `Unknown parameter name '${argName}'`,
+            source: node.source,
+          });
+          resolutionFailed = true;
+        } else if (slots[idx] !== undefined) {
+          ctx.errors.push({
+            kind: "app_argument_mismatch",
+            name: argName,
+            message: `Parameter '${argName}' is bound by both a positional and a named argument`,
+            source: node.source,
+          });
+          resolutionFailed = true;
+        } else {
+          slots[idx] = arg;
+        }
+      }
+
+      for (let i = 0; i < arity; i++) {
+        if (slots[i] === undefined) {
+          const pname = calleeType.paramNames?.[i] ?? `#${i}`;
+          ctx.errors.push({
+            kind: "app_argument_mismatch",
+            name: pname,
+            message: `Missing argument for parameter '${pname}'`,
+            source: node.source,
+          });
+          resolutionFailed = true;
+        }
+      }
+
+      if (resolutionFailed) return errorNode(calleeType.returns, node.source);
+
+      // All slots filled: analyse each arg and type-check it against its param.
+      const args: CNode[] = [];
+      const deps = new Set<string>(callee.dependsOn);
+      for (let i = 0; i < arity; i++) {
+        const ca = analyseNode(slots[i]!, ctx);
+        if (ca.kind !== "error") {
+          checkCompat(
+            getOutputType(ca),
+            calleeType.params[i],
+            calleeType.paramNames?.[i] ?? `#${i}`,
+            ctx,
+            "app_argument_type_mismatch",
+          );
+        }
+        for (const d of ca.dependsOn) deps.add(d);
+        args.push(ca);
+      }
+
+      // dependsOn = callee ∪ args. The body's free deps already ride along on the
+      // callee (a ref to a lambda binding carries the lambda's body deps), so no
+      // special-casing is needed.
+      return { kind: "app", callee, args, type: calleeType.returns, source: node.source, dependsOn: deps };
     }
   }
 }
