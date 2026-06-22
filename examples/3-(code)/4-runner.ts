@@ -13,6 +13,7 @@ import { analyse } from "../../src/language/analyser/analyser";
 import { createProgramRunner } from "../../src/language/runtime/runner";
 import { createCoreLanguage } from "../../src/language/stdlib";
 import { Type } from "../../src/language/infra/types";
+import type { SourceRef } from "../../src/language/infra/nodes";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
@@ -25,18 +26,18 @@ lang.registerOutput({ name: "finalScore", type: Type.number });
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 const { tokens } = tokenise(source);
 
+const loc = (s?: SourceRef): string =>
+  s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
+
 const parsed = parse(tokens, lang.descriptor);
 if (!parsed.ok) {
-  for (const e of parsed.errors) console.log(`parse ${e.kind}: ${e.message}`);
+  for (const e of parsed.errors) console.log(`parse ${e.kind} @ ${loc(e.source)}: ${e.message}`);
   process.exit(1);
 }
 
-const at = (s?: { kind: string; line?: number; column?: number }) =>
-  s?.kind === "code" ? ` (line ${s.line}:${s.column})` : "";
-
 const analysis = analyse(parsed.program, lang.descriptor);
 if (!analysis.ok) {
-  for (const e of analysis.errors) console.log(`analysis ${e.kind}${at(e.source)}: ${e.message}`);
+  for (const e of analysis.errors) console.log(`analysis ${e.kind} @ ${loc(e.source)}: ${e.message}`);
   process.exit(1);
 }
 

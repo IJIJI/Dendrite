@@ -11,8 +11,12 @@ import { readFileSync } from "fs";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createCoreLanguage } from "../../src/language/stdlib";
-import type { ASTNode } from "../../src/language/infra/nodes";
+import type { ASTNode, SourceRef } from "../../src/language/infra/nodes";
 import { Type } from "../../src/language/infra/types";
+
+// Format a source ref as line:column (or the rete node id), "?" when absent.
+const loc = (s?: SourceRef): string =>
+  s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
@@ -49,7 +53,8 @@ function show(node: ASTNode): string {
 // --- Report -----------------------------------------------------------------
 if (!result.ok) {
   console.log("=== Parse failed ===");
-  for (const e of [...lexErrors, ...result.errors]) console.log(`  ${e.kind}: ${e.message}`);
+  for (const e of [...lexErrors, ...result.errors])
+    console.log(`  ${e.kind} @ ${loc(e.source)}: ${e.message}`);
 } else {
   console.log("=== Bindings ===");
   for (const [name, node] of result.program.bindings) console.log(`  let ${name} = ${show(node)}`);
@@ -57,6 +62,7 @@ if (!result.ok) {
   for (const [name, node] of result.program.outputs) console.log(`  output ${name} = ${show(node)}`);
   if (lexWarnings.length + result.warnings.length > 0) {
     console.log("\n=== Warnings ===");
-    for (const w of [...lexWarnings, ...result.warnings]) console.log(`  ${w.kind}: ${w.message}`);
+    for (const w of [...lexWarnings, ...result.warnings])
+      console.log(`  ${w.kind} @ ${loc(w.source)}: ${w.message}`);
   }
 }

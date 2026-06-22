@@ -13,6 +13,11 @@ import { parse } from "../../src/language/parser/parser";
 import { analyse, getOutputType } from "../../src/language/analyser/analyser";
 import { createCoreLanguage } from "../../src/language/stdlib";
 import { Type, typeToString } from "../../src/language/infra/types";
+import type { SourceRef } from "../../src/language/infra/nodes";
+
+// Format a source ref as line:column (or the rete node id), "?" when absent.
+const loc = (s?: SourceRef): string =>
+  s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
 // --- Language ---------------------------------------------------------------
 const lang = createCoreLanguage();
@@ -28,7 +33,7 @@ const parsed = parse(tokens, lang.descriptor);
 
 if (!parsed.ok) {
   console.log("=== Parse failed ===");
-  for (const e of parsed.errors) console.log(`  ${e.kind}: ${e.message}`);
+  for (const e of parsed.errors) console.log(`  ${e.kind} @ ${loc(e.source)}: ${e.message}`);
   process.exit(1);
 }
 
@@ -49,9 +54,9 @@ for (const [name, node] of analysis.program.outputs) {
 
 if (analysis.errors.length > 0) {
   console.log("\n=== Errors ===");
-  for (const e of analysis.errors) console.log(`  ${e.kind}: ${e.message}`);
+  for (const e of analysis.errors) console.log(`  ${e.kind} @ ${loc(e.source)}: ${e.message}`);
 }
 if (analysis.warnings.length > 0) {
   console.log("\n=== Warnings ===");
-  for (const w of analysis.warnings) console.log(`  ${w.kind}: ${w.message}`);
+  for (const w of analysis.warnings) console.log(`  ${w.kind} @ ${loc(w.source)}: ${w.message}`);
 }
