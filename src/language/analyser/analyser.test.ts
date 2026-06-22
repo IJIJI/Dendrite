@@ -1076,3 +1076,95 @@ describe("lambda (C1)", () => {
     expect(result.program.bindings.get("f")!.dependsOn.size).toBe(0);
   });
 });
+
+// ─── app (C2: application analysis) ──────────────────────────────────────────
+
+function app(
+  callee: ASTNode,
+  positional: ASTNode[] = [],
+  named: Record<string, ASTNode> = {},
+): ASTNode {
+  return { kind: "app", callee, positional, named };
+}
+
+describe("app (C2)", () => {
+  it("application of a function-typed callee infers the return type", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
+      { out: app(ref("f"), [lit(1)]) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toHaveLength(0);
+    expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("number");
+  });
+
+  it("callee that is not function-typed → app_callee_not_function", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram({}, { out: app(lit(5), [lit(1)]) });
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_callee_not_function")).toBe(true);
+  });
+
+  it("too many positional arguments → app_argument_mismatch", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }], ref("x")) },
+      { out: app(ref("f"), [lit(1), lit(2)]) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_argument_mismatch")).toBe(true);
+  });
+
+  it("missing argument → app_argument_mismatch", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }, { name: "y" }], ref("x")) },
+      { out: app(ref("f"), [lit(1)]) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_argument_mismatch")).toBe(true);
+  });
+
+  it("unknown named parameter → app_argument_mismatch", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }], ref("x")) },
+      { out: app(ref("f"), [], { y: lit(1) }) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_argument_mismatch")).toBe(true);
+  });
+
+  it("positional and named binding the same param → app_argument_mismatch", () => {
+    const lang = createCoreLanguage();
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }], ref("x")) },
+      { out: app(ref("f"), [lit(1)], { x: lit(2) }) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_argument_mismatch")).toBe(true);
+  });
+
+  it("argument incompatible with the param type → app_argument_type_mismatch", () => {
+    const lang = createCoreLanguage();
+    // f : (number) -> number; apply with a string
+    const prog = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
+      { out: app(ref("f"), [lit("hi")]) },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "app_argument_type_mismatch")).toBe(true);
+  });
+
+  it("self-application via a named binding → binding_cycle (recursion blocked)", () => {
+    const lang = createCoreLanguage();
+    // let f = (x) => f(x)  → f references itself → cycle
+    const prog = makeProgram(
+      { f: lambda([{ name: "x" }], app(ref("f"), [ref("x")])) },
+      { out: ref("f") },
+    );
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors.some((e) => e.kind === "binding_cycle")).toBe(true);
+  });
+});
