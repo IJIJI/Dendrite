@@ -63,6 +63,11 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
         for (const r of collectRefs(n.body, inner)) refs.add(r);
         break;
       }
+      case "app":
+        walk(n.callee);
+        for (const arg of n.positional) walk(arg);
+        for (const arg of Object.values(n.named)) walk(arg);
+        break;
     }
   }
   walk(node);
