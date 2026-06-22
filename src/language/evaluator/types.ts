@@ -7,7 +7,7 @@ export type EvalErrorKind =
   | "invalid_field_access" // field doesn't exist on struct value
   | "host_error" // host evaluator threw
   | "error_node_reached" // error node survived pruning — analyser or pruning bug
-  | "unsupported_node"; // node kind the evaluator can't handle in this build
+  | "not_a_function"; // application callee did not evaluate to a callable (analyser bug)
 
 // TODO: Also add parse and analyse errors?
 export class EvalError extends Error {
@@ -30,15 +30,21 @@ export class EvalError extends Error {
 //            Keyed by CNode object reference (WeakMap uses object identity).
 //            WeakMap allows GC when CoreProgram is unregistered.
 //
-// bodyScope: fresh per apply() call inside a HigherOrderNode body.
+// bodyScope: fresh per apply() call inside a HigherOrderNode body / lambda.
 //            Inline body nodes are cached here, not in nodeCache, to prevent
-//            stale results across items (item binding is not tracked in dependsOn
-//            since it is not a context input).
+//            stale results across items (scoped vars are not tracked in dependsOn
+//            since they are not context inputs).
 //            Named bindings referenced from the body still use nodeCache.
 //            undefined at the top level (outside any body scope).
+//
+// localBindings: the local lexical scope - lambda params and higher-order scoped
+//            vars → value. Copied-and-extended per scope (never mutated in place),
+//            so an inner scope shadows but never corrupts its parent. Looked up
+//            before global bindings (local-first). Empty at the top level.
 
 export interface EvalState {
   inputs: Map<string, unknown>;
   nodeCache: WeakMap<object, unknown>;
   bodyScope: WeakMap<object, unknown> | undefined;
+  localBindings: Map<string, unknown>;
 }
