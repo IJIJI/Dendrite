@@ -1,6 +1,6 @@
 import { CNode } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
-import { LanguageDescriptor } from "../infra/registry";
+import { type FnValue, LanguageDescriptor } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
 // Shared empty local scope for evaluating global bindings. Scope maps are never
@@ -153,7 +153,7 @@ export function evaluate(
       // scope map is never mutated, so the closure sees exactly what was in scope when
       // it was defined, including enclosing lambda params (nesting/currying).
       const captured = state;
-      return (...args: unknown[]): unknown => {
+      const closure: FnValue = (...args) => {
         const innerLocal = new Map(captured.localBindings);
         node.params.forEach((p, i) => innerLocal.set(p.name, args[i]));
         const innerState: EvalState = {
@@ -164,6 +164,7 @@ export function evaluate(
         };
         return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
       };
+      return closure;
     }
 
     case "app": {
@@ -180,7 +181,7 @@ export function evaluate(
       const args = node.args.map((a) =>
         evaluate(a, program, state, changedInputs, descriptor, hostContext),
       );
-      const result = (callee as (...a: unknown[]) => unknown)(...args);
+      const result = (callee as FnValue)(...args);
       cache.set(node, result);
       return result;
     }
