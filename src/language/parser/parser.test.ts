@@ -264,8 +264,18 @@ describe("call diagnostics", () => {
     expect(node).toMatchObject({ kind: "app", callee: { value: 1 }, positional: [{ value: 2 }] });
   });
 
-  it("higher-order ops are deferred to slice 3b", () => {
-    expect(parse("Filter([1, 2])").errors.some((e) => e.kind === "syntax_error")).toBe(true);
+  it("a higher-order op is an ordinary op call with a lambda arg", () => {
+    // Filter is now a normal op (function-typed `predicate` input).
+    const { node, errors } = parse("Filter([1, 2], item => item)");
+    expect(errors).toEqual([]);
+    expect(node).toMatchObject({
+      kind: "operation",
+      op: "Filter",
+      inputs: {
+        list: { kind: "array", items: [{ value: 1 }, { value: 2 }] },
+        predicate: { kind: "lambda", params: [{ name: "item" }] },
+      },
+    });
   });
 });
 
