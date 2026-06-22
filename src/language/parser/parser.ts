@@ -40,6 +40,7 @@ interface Led {
 // Binding-power tiers. Operators slot in here as the grammar API lands; for now
 // only member access (.) is an infix form.
 const BP = {
+  ARROW: 5,
   MEMBER: 90,
   CALL: 100,
 } as const;
