@@ -231,7 +231,7 @@ LEDS.set("=>", {
 // Array literal: [ a, b, c ] with an optional trailing comma. ArrayNode.type is
 // the ELEMENT type; left as "any" for the analyser to derive.
 NUDS.set("[", (p, t): ArrayNode => {
-  const items = p.parseDelimited("]");
+  const items = p.separated("]", () => p.parseExpr(0));
   return { kind: "array", items, type: Type.any, source: t.source };
 });
 
@@ -270,20 +270,16 @@ function parseArg(p: Parser): Arg {
 // Parse a (…)-delimited argument list, enforcing positional-before-named.
 // Consumes the closing ')'.
 function parseCallArgs(p: Parser): Arg[] {
-  const args: Arg[] = [];
   let sawNamed = false;
-  while (!p.check("punct", ")") && !p.atEnd()) {
+  return p.separated(")", () => {
     const start = p.peek();
     const arg = parseArg(p);
     if (arg.kind === "named") sawNamed = true;
     else if (sawNamed) {
       p.error("syntax_error", "Positional argument after a named argument", start.source);
     }
-    args.push(arg);
-    if (!p.match("punct", ",")) break;
-  }
-  p.expect("punct", ")");
-  return args;
+    return arg;
+  });
 }
 
 // callee(args) is one of two things: an OperationNode when the callee is a ref to a
@@ -372,8 +368,7 @@ function arrowParamsAhead(p: Parser): boolean {
 // already consumed; this consumes through the closing ')'.
 // TODO: This is a combination of a single type atom parse and a complete param crawler. Should this be split somehow?
 function parseLambdaParams(p: Parser): LambdaParam[] {
-  const params: LambdaParam[] = [];
-  while (!p.check("punct", ")") && !p.atEnd()) {
+  return p.separated(")", () => {
     const name = p.expect("ident");
     const param: LambdaParam = { name: name.value };
     if (p.match("punct", ":")) param.type = parseType(p);
