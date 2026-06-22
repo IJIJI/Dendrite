@@ -141,7 +141,7 @@ export class Parser {
   // Comma-separated items up to a closing punct, trailing comma allowed. The kernel
   // list primitive: arrays, call-args, lambda-params and type-lists all build on it,
   // each supplying its own per-item parser.
-  separated<T>(close: string, parseItem: () => T): T[] {
+  parseSeparated<T>(close: string, parseItem: () => T): T[] {
     const items: T[] = [];
     while (!this.check("punct", close) && !this.atEnd()) {
       items.push(parseItem());
@@ -231,7 +231,7 @@ LEDS.set("=>", {
 // Array literal: [ a, b, c ] with an optional trailing comma. ArrayNode.type is
 // the ELEMENT type; left as "any" for the analyser to derive.
 NUDS.set("[", (p, t): ArrayNode => {
-  const items = p.separated("]", () => p.parseExpr(0));
+  const items = p.parseSeparated("]", () => p.parseExpr(0));
   return { kind: "array", items, type: Type.any, source: t.source };
 });
 
@@ -271,7 +271,7 @@ function parseArg(p: Parser): Arg {
 // Consumes the closing ')'.
 function parseCallArgs(p: Parser): Arg[] {
   let sawNamed = false;
-  return p.separated(")", () => {
+  return p.parseSeparated(")", () => {
     const start = p.peek();
     const arg = parseArg(p);
     if (arg.kind === "named") sawNamed = true;
@@ -366,17 +366,13 @@ function arrowParamsAhead(p: Parser): boolean {
 
 // Param list of a parenthesised lambda: NAME (':' TYPE)? , … . The opening '(' is
 // already consumed; this consumes through the closing ')'.
-// TODO: This is a combination of a single type atom parse and a complete param crawler. Should this be split somehow?
 function parseLambdaParams(p: Parser): LambdaParam[] {
-  return p.separated(")", () => {
+  return p.parseSeparated(")", () => {
     const name = p.expect("ident");
     const param: LambdaParam = { name: name.value };
     if (p.match("punct", ":")) param.type = parseType(p);
-    params.push(param);
-    if (!p.match("punct", ",")) break;
-  }
-  p.expect("punct", ")");
-  return params;
+    return param;
+  });
 }
 
 // Type sub-grammar for annotations: NAME, T[], and (A, B) -> C function types
@@ -392,19 +388,11 @@ function parseType(p: Parser): Type {
   return t;
 }
 
-// TODO: This is a combination of a single type atom parse and a complete param crawler. Should this be split somehow?
 function parseTypeAtom(p: Parser): Type {
   if (p.check("punct", "(")) {
     p.advance(); // (
-    const types: Type[] = [];
-    while (!p.check("punct", ")") && !p.atEnd()) {
-      types.push(parseType(p));
-      if (!p.match("punct", ",")) break;
-    }
-    p.expect("punct", ")");
-    if (p.match("punct", "->")) {
-      return Type.fn(types, parseType(p));
-    }
+    const types = p.parseSeparated(")", () => parseType(p));
+    if (p.match("punct", "->")) return Type.fn(types, parseType(p));
     // No '->': a parenthesised grouping, valid only around a single type.
     if (types.length === 1) return types[0];
     p.error("syntax_error", "Expected '->' after a parenthesised type list", p.peek().source);
