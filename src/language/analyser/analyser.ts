@@ -45,13 +45,6 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
           else walk(val);
         }
         break;
-      case "higher_order":
-        for (const val of Object.values(n.inputs)) {
-          if (Array.isArray(val)) for (const v of val) walk(v);
-          else walk(val);
-        }
-        walk(n.body);
-        break;
       case "lambda": {
         // Lambda params shadow same-named bindings within the body. Recurse with
         // the params removed from the tracked set so they don't register as
@@ -94,8 +87,6 @@ export function getOutputType(node: CNode): Type {
     case "field":
       return node.type;
     case "operation":
-      return node.output;
-    case "higher_order":
       return node.output;
     case "lambda":
       return node.type;
@@ -329,15 +320,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         });
         return errorNode(undefined, node.source);
       }
-      if (opDef.higherOrder) {
-        ctx.errors.push({
-          kind: "wrong_node_kind_for_op",
-          name: node.op,
-          message: `Op '${node.op}' requires a higher_order node`,
-          source: node.source,
-        });
-        return errorNode(opDef.output, node.source);
-      }
       const { analysedInputs, inputTypes, inputDependsOn } = validateInputs(
         node.inputs,
         opDef,
@@ -346,71 +328,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const evaluator = ctx.descriptor.evaluators.get(node.op);
       const output = evaluator?.inferOutput?.(inputTypes) ?? opDef.output;
       return { ...node, inputs: analysedInputs, output, dependsOn: inputDependsOn };
-    }
-
-    case "higher_order": {
-      const opDef = ctx.descriptor.ops.get(node.op);
-      if (!opDef) {
-        ctx.errors.push({
-          kind: "unknown_op",
-          name: node.op,
-          message: `Op '${node.op}' is not registered in the descriptor`,
-          source: node.source,
-        });
-        return errorNode(undefined, node.source);
-      }
-      if (!opDef.higherOrder) {
-        ctx.errors.push({
-          kind: "wrong_node_kind_for_op",
-          name: node.op,
-          message: `Op '${node.op}' requires a standard operation node`,
-          source: node.source,
-        });
-        return errorNode(opDef.output, node.source);
-      }
-
-      const expectedBindings = opDef.bodyBindings?.length ?? 0;
-      if (node.bindings.length !== expectedBindings) {
-        ctx.errors.push({
-          kind: "body_binding_count_mismatch",
-          name: node.op,
-          message: `Op '${node.op}' expects ${expectedBindings} body binding(s) but the node provides ${node.bindings.length}`,
-          source: node.source,
-        });
-        return errorNode(opDef.output, node.source);
-      }
-
-      const { analysedInputs, inputTypes, inputDependsOn } = validateInputs(
-        node.inputs,
-        opDef,
-        ctx,
-      );
-
-      // Positional mapping: node.bindings[i] = user's chosen name for the i-th scoped variable.
-      // opBodyBindings[i] = op's conventional name (e.g. 'item', 'acc').
-      // inferBodyBindings returns op-conventional names as keys → map positionally to user names.
-      // Example: user writes Filter(list, s: ...) → node.bindings = ['s'],
-      //          opBodyBindings = ['item'], inferred = { item: 'Source' }
-      //          → userLocalBindings.set('s', 'Source')
-      // Todo: Check if the user... is the right naming.
-      const opBodyBindings = opDef.bodyBindings ?? [];
-      const evaluator = ctx.descriptor.evaluators.get(node.op);
-      const inferredByOpName = evaluator?.inferBodyBindings?.(inputTypes) ?? {};
-      const userLocalBindings = new Map(ctx.localBindings);
-      node.bindings.forEach((userName, i) => {
-        const opName = opBodyBindings[i];
-        userLocalBindings.set(
-          userName,
-          opName !== undefined ? (inferredByOpName[opName] ?? Type.any) : Type.any,
-        );
-      });
-      const bodyCtx = { ...ctx, localBindings: userLocalBindings };
-
-      const body = analyseNode(node.body, bodyCtx);
-      const bodyOutputType = getOutputType(body);
-      const output = evaluator?.inferOutput?.(inputTypes, bodyOutputType) ?? opDef.output;
-      const dependsOn = union(inputDependsOn, body.dependsOn);
-      return { ...node, inputs: analysedInputs, body, output, dependsOn };
     }
 
     case "lambda": {
