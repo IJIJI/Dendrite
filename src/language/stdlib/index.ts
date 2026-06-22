@@ -169,56 +169,64 @@ export function createCoreLanguage(): Language {
   // Higher-order list ops
   // -------------------------------------------------------------------------
 
+  // Higher-order list ops are ordinary ops with a function-typed input (declared
+  // last, so its generic element type is refined from the resolved `list`). The
+  // predicate/transform/reducer's element-type params are filled by inferInputTypes
+  // on the evaluator; the static fallback below is used only if that is absent.
   lang.registerOp({
     name: "Filter",
-    inputs: [{ name: "list", type: Type.any }],
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "predicate", type: Type.fn([Type.any], Type.boolean) },
+    ],
     output: Type.array(Type.any),
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Map",
-    inputs: [{ name: "list", type: Type.any }],
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "transform", type: Type.fn([Type.any], Type.any) },
+    ],
     output: Type.array(Type.any),
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Find",
-    inputs: [{ name: "list", type: Type.any }],
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "predicate", type: Type.fn([Type.any], Type.boolean) },
+    ],
     output: Type.any,
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Every",
-    inputs: [{ name: "list", type: Type.any }],
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "predicate", type: Type.fn([Type.any], Type.boolean) },
+    ],
     output: Type.boolean,
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Some",
-    inputs: [{ name: "list", type: Type.any }],
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "predicate", type: Type.fn([Type.any], Type.boolean) },
+    ],
     output: Type.boolean,
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["item"],
   });
   lang.registerOp({
     name: "Reduce",
     inputs: [
-      { name: "list", type: Type.any },
+      { name: "list", type: Type.array(Type.any) },
       { name: "initial", type: Type.any },
+      { name: "reducer", type: Type.fn([Type.any, Type.any], Type.any) },
     ],
     output: Type.any,
     category: "list",
-    higherOrder: true,
-    bodyBindings: ["acc", "item"],
   });
 
   // -------------------------------------------------------------------------
@@ -277,63 +285,76 @@ export function createCoreLanguage(): Language {
 
   // -------------------------------------------------------------------------
   // Evaluators - higher-order list ops
-  // apply! is safe - always defined when called from the higher_order case.
-  // inferOutput propagates concrete types through generic list operations.
+  // The function input arrives as a resolved closure; call it directly.
+  // inferInputTypes refines the function's element-type params from the list;
+  // inferOutput propagates concrete types through the generic list operation.
   // -------------------------------------------------------------------------
 
   lang.registerEvaluator({
     op: "Filter",
-    evaluate: ({ list }, apply) => (list as unknown[]).filter((item) => Boolean(apply!(item))),
+    evaluate: ({ list, predicate }) =>
+      (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
+    inferInputTypes: (inputTypes) => ({
+      predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
+    }),
     inferOutput: (inputTypes) => {
       const listType = inputTypes["list"];
       return listType?.kind === "array" ? listType : Type.array(Type.any);
     },
-    inferBodyBindings: (inputTypes) => ({ item: elementOf(inputTypes["list"]) }),
   });
 
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list }, apply) => (list as unknown[]).map((item) => apply!(item)),
-    inferOutput: (inputTypes, bodyOutputType) => {
-      if (bodyOutputType && !isAny(bodyOutputType)) return Type.array(bodyOutputType);
-      const listType = inputTypes["list"];
-      return listType?.kind === "array" ? listType : Type.array(Type.any);
+    evaluate: ({ list, transform }) => (list as unknown[]).map((item) => (transform as FnValue)(item)),
+    inferInputTypes: (inputTypes) => ({
+      transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
+    }),
+    inferOutput: (inputTypes) => {
+      const t = inputTypes["transform"];
+      return t?.kind === "function" ? Type.array(t.returns) : Type.array(Type.any);
     },
-    inferBodyBindings: (inputTypes) => ({ item: elementOf(inputTypes["list"]) }),
   });
 
   lang.registerEvaluator({
     op: "Find",
-    evaluate: ({ list }, apply) =>
-      (list as unknown[]).find((item) => Boolean(apply!(item))) ?? null,
+    evaluate: ({ list, predicate }) =>
+      (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
+    inferInputTypes: (inputTypes) => ({
+      predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
+    }),
     inferOutput: (inputTypes) => elementOf(inputTypes["list"]),
-    inferBodyBindings: (inputTypes) => ({ item: elementOf(inputTypes["list"]) }),
   });
 
   lang.registerEvaluator({
     op: "Every",
-    evaluate: ({ list }, apply) => (list as unknown[]).every((item) => Boolean(apply!(item))),
-    inferBodyBindings: (inputTypes) => ({ item: elementOf(inputTypes["list"]) }),
+    evaluate: ({ list, predicate }) =>
+      (list as unknown[]).every((item) => Boolean((predicate as FnValue)(item))),
+    inferInputTypes: (inputTypes) => ({
+      predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
+    }),
   });
 
   lang.registerEvaluator({
     op: "Some",
-    evaluate: ({ list }, apply) => (list as unknown[]).some((item) => Boolean(apply!(item))),
-    inferBodyBindings: (inputTypes) => ({ item: elementOf(inputTypes["list"]) }),
+    evaluate: ({ list, predicate }) =>
+      (list as unknown[]).some((item) => Boolean((predicate as FnValue)(item))),
+    inferInputTypes: (inputTypes) => ({
+      predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
+    }),
   });
 
   lang.registerEvaluator({
     op: "Reduce",
-    evaluate: ({ list, initial }, apply) =>
-      (list as unknown[]).reduce((acc, item) => apply!(acc, item), initial),
-    inferOutput: (inputTypes) => {
-      const initialType = inputTypes["initial"];
-      return initialType && !isAny(initialType) ? initialType : Type.any;
+    evaluate: ({ list, initial, reducer }) =>
+      (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
+    inferInputTypes: (inputTypes) => {
+      const acc = inputTypes["initial"] ?? Type.any;
+      return { reducer: Type.fn([acc, elementOf(inputTypes["list"])], acc) };
     },
-    inferBodyBindings: (inputTypes) => ({
-      acc: inputTypes["initial"] ?? Type.any,
-      item: elementOf(inputTypes["list"]),
-    }),
+    inferOutput: (inputTypes) => {
+      const r = inputTypes["reducer"];
+      return r?.kind === "function" ? r.returns : (inputTypes["initial"] ?? Type.any);
+    },
   });
 
   // -------------------------------------------------------------------------
