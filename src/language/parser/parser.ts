@@ -3,6 +3,7 @@ import {
   type ASTNode,
   type FieldAccessNode,
   type InputNode,
+  type LambdaParam,
   type LiteralNode,
   type OperationNode,
   type RefNode,
@@ -314,6 +315,77 @@ function mapArgsToInputs(
   }
   for (const [name, node] of named) inputs[name] = node;
   return inputs;
+}
+
+//? Lambda & type parsing (slice 3b)
+
+// Lookahead from just after a '(': is the matching ')' followed by '=>'? Pure - it
+// never advances the cursor. Tracks nesting so function-typed params like
+// (f: (number) -> boolean) are spanned correctly.
+function arrowParamsAhead(p: Parser): boolean {
+  let depth = 1; // the '(' that triggered this nud is already consumed
+  for (let i = 0; ; i++) {
+    const t = p.peek(i);
+    if (t.kind === "eof") return false;
+    if (t.kind === "punct" && t.value === "(") depth++;
+    else if (t.kind === "punct" && t.value === ")") {
+      if (--depth === 0) {
+        const after = p.peek(i + 1);
+        return after.kind === "punct" && after.value === "=>";
+      }
+    }
+  }
+}
+
+// Param list of a parenthesised lambda: NAME (':' TYPE)? , … . The opening '(' is
+// already consumed; this consumes through the closing ')'.
+// TODO: This is a combination of a single type atom parse and a complete param crawler. Should this be split somehow?
+function parseLambdaParams(p: Parser): LambdaParam[] {
+  const params: LambdaParam[] = [];
+  while (!p.check("punct", ")") && !p.atEnd()) {
+    const name = p.expect("ident");
+    const param: LambdaParam = { name: name.value };
+    if (p.match("punct", ":")) param.type = parseType(p);
+    params.push(param);
+    if (!p.match("punct", ",")) break;
+  }
+  p.expect("punct", ")");
+  return params;
+}
+
+// Type sub-grammar for annotations: NAME, T[], and (A, B) -> C function types
+// (with parenthesised grouping, so a function type can be a return or an element).
+function parseType(p: Parser): Type {
+  let t = parseTypeAtom(p);
+  // Array suffixes: T[], T[][], …
+  while (p.check("punct", "[") && p.peek(1).kind === "punct" && p.peek(1).value === "]") {
+    p.advance(); // [
+    p.advance(); // ]
+    t = Type.array(t);
+  }
+  return t;
+}
+
+// TODO: This is a combination of a single type atom parse and a complete param crawler. Should this be split somehow?
+function parseTypeAtom(p: Parser): Type {
+  if (p.check("punct", "(")) {
+    p.advance(); // (
+    const types: Type[] = [];
+    while (!p.check("punct", ")") && !p.atEnd()) {
+      types.push(parseType(p));
+      if (!p.match("punct", ",")) break;
+    }
+    p.expect("punct", ")");
+    if (p.match("punct", "->")) {
+      return Type.fn(types, parseType(p));
+    }
+    // No '->': a parenthesised grouping, valid only around a single type.
+    if (types.length === 1) return types[0];
+    p.error("syntax_error", "Expected '->' after a parenthesised type list", p.peek().source);
+    return types[0] ?? Type.any;
+  }
+  const name = p.expect("ident");
+  return Type.name(name.value);
 }
 
 // TODO: Make slice ordering linear
