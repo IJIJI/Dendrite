@@ -68,30 +68,26 @@ export type Apply = (...args: unknown[]) => unknown;
  */
 export interface EvaluatorDefinition {
   op: string;
-  evaluate: (
-    inputs: Record<string, unknown>,
-    apply: Apply | undefined,
-    hostContext?: unknown,
-  ) => unknown;
+  evaluate: (inputs: Record<string, unknown>, hostContext?: unknown) => unknown;
   /**
    * Analysis-time output type inference. Called by the analyser after resolving
-   * input types, with the body's output type for higher-order ops.
-   * Returns undefined to fall back to OpDefinition.output.
+   * input types. Returns undefined to fall back to OpDefinition.output.
    *
-   * inputTypes: Record of input name → output type string of the connected node.
-   *   For variadic inputs, the value is the element type (e.g. 'boolean', not 'boolean[]').
-   * bodyOutputType: the derived output type of the body node (higher-order ops only).
+   * inputTypes: Record of input name → resolved type of the connected node.
+   *   For variadic inputs, the value is the element type (e.g. boolean, not boolean[]).
+   *   For a function-typed input, the value is the resolved function Type, so an op can
+   *   read e.g. `inputTypes.transform.returns` to type its result.
    */
-  inferOutput?: (inputTypes: Record<string, Type>, bodyOutputType?: Type) => Type | undefined;
+  // TODO: Should the type of variadic inputs not be used as array?
+  inferOutput?: (inputTypes: Record<string, Type>) => Type | undefined;
   /**
-   * Analysis-time scoped binding type inference. Higher-order ops only.
-   * Called by the analyser before entering the body scope to populate localBindings.
-   * Returns binding name → type for each scoped variable (e.g. { item: 'Source' }).
-   * Absent bindings fall back to 'any'. Ignored for standard ops.
-   *
-   * inputTypes: same as inferOutput. Resolved input type strings.
+   * Analysis-time expected-input-type inference, for inputs whose type is generic in
+   * the other inputs (a function-typed input over a list's element type). Called after
+   * resolving the earlier inputs; returns input name → expected type, overriding the
+   * static OpInput.type. e.g. Filter → { predicate: (elementOf(list)) -> boolean }.
+   * The function-typed input must be declared AFTER the inputs it depends on.
    */
-  inferBodyBindings?: (inputTypes: Record<string, Type>) => Record<string, Type>;
+  inferInputTypes?: (inputTypes: Record<string, Type>) => Record<string, Type>;
 }
 
 //? Language descriptor - Single source of truth for the editor, analyser, evaluator.
