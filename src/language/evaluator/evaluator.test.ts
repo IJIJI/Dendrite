@@ -214,4 +214,20 @@ describe("source pipeline (lambdas)", () => {
     const { analysed } = runSource('let f = (x: number) => x\noutput out = f("hi")');
     expect(analysed.errors.some((e) => e.kind === "app_argument_type_mismatch")).toBe(true);
   });
+
+  it("Filter with a lambda predicate runs source → eval", () => {
+    const { analysed, value } = runSource(
+      "let scores = [4, 12, 8, 20]\noutput out = Filter(scores, item => GreaterThan(item, 10))",
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(value).toEqual([12, 20]);
+  });
+
+  it("Reduce with a two-param lambda runs source → eval", () => {
+    const { analysed, value } = runSource(
+      "let xs = [1, 2, 3]\noutput out = Reduce(xs, 0, (acc, item) => Add(acc, item))",
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(6);
+  });
 });
