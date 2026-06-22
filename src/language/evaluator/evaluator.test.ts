@@ -10,6 +10,8 @@ import {
 import { type RawProgram } from "../infra/program";
 import { Type } from "../infra/types";
 import { analyse } from "../analyser/analyser";
+import { tokenise } from "../parser/lexer";
+import { parse as parseProgram } from "../parser/parser";
 import { createCoreLanguage } from "../stdlib";
 import { createEvalState, evaluate, updateInput } from "./evaluator";
 
@@ -169,5 +171,47 @@ describe("application dependsOn", () => {
     // flag flips; the app depends on it (ride-along from f's body) → recompute, not cache.
     updateInput("flag", false, state);
     expect(evaluate(node, result.program, state, new Set(["flag"]), lang.descriptor)).toBe(false);
+  });
+});
+
+// ─── Source → parse → analyse → eval (Phase D integration) ───────────────────
+
+function runSource(src: string, output = "out") {
+  const lang = createCoreLanguage();
+  const { tokens } = tokenise(src);
+  const parsed = parseProgram(tokens, lang.descriptor);
+  if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+  const analysed = analyse(parsed.program, lang.descriptor);
+  const node = analysed.program.outputs.get(output);
+  const value = node
+    ? evaluate(node, analysed.program, createEvalState(), undefined, lang.descriptor)
+    : undefined;
+  return { analysed, value };
+}
+
+describe("source pipeline (lambdas)", () => {
+  it("defines and applies a lambda end-to-end", () => {
+    const { analysed, value } = runSource("let id = x => x\noutput out = id(5)");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(5);
+  });
+
+  it("curried application end-to-end", () => {
+    const { analysed, value } = runSource(
+      "let add = (a) => (b) => Add(a, b)\noutput out = add(2)(3)",
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(5);
+  });
+
+  it("an immediately-applied lambda literal", () => {
+    const { analysed, value } = runSource("output out = (x => Not(x))(true)");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(false);
+  });
+
+  it("a typed param rejects a wrong-typed argument at analysis", () => {
+    const { analysed } = runSource('let f = (x: number) => x\noutput out = f("hi")');
+    expect(analysed.errors.some((e) => e.kind === "app_argument_type_mismatch")).toBe(true);
   });
 });
