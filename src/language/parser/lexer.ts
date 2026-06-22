@@ -35,17 +35,22 @@ export interface LexResult {
 }
 
 //? Core syntax
-// Dendrite's core has NO operators: comparisons, arithmetic, and the arrow are
-// all stdlib grammar over ops. The operator vocabulary (single- AND multi-char)
-// is supplied by the assembled language via tokenise(source, operators).
+// Dendrite's core has only TWO operators, both arrows that are part of the base
+// language (not stdlib): the lambda arrow `=>` and the function-type arrow `->`.
+// Comparisons, arithmetic, etc. are stdlib grammar over ops, supplied (single- AND
+// multi-char) by the assembled language via tokenise(source, operators).
 //
-// Structural punctuation is the only thing the lexer hardcodes: the delimiters
+// Structural punctuation is the only other thing the lexer hardcodes: the delimiters
 // of core syntax, which exist independent of any registered op.
 //   ( ) grouping & calls   [ ] array literals   , separators
-//   .   field access        =   binding (let x = …)   :   named arg / body binding
+//   .   field access        =   binding (let x = …)   :   named arg / param type
 //   $   input sigil ($name → InputNode, resolved by the parser)
-// Operators (+ - < > ! == => …) are deliberately absent: they arrive via operators.
+// Other operators (+ - < > ! == …) are deliberately absent: they arrive via operators.
 const STRUCTURAL_PUNCT = new Set("()[],.=:$");
+
+// Core operators: always recognised, ahead of any language-supplied operators.
+// `=>` is the lambda arrow; `->` is the function-type arrow (type annotations).
+const CORE_OPERATORS = ["=>", "->"];
 
 // Only literal values are recognised at the lexer level (see the note above TokenKind).
 const LITERAL_WORDS: Record<string, TokenKind> = {
@@ -242,7 +247,9 @@ export function tokenise(
   operators: readonly string[] = [],
 ): LexResult {
   const s = new Scanner(source);
-  const ops = [...operators].sort((a, b) => b.length - a.length);
+  // Core operators first, then language-supplied; longest-first so multi-char ops
+  // beat their single-char prefixes (=> over =, -> over -).
+  const ops = [...CORE_OPERATORS, ...operators].sort((a, b) => b.length - a.length);
   const tokens: Token[] = [];
 
   while (!s.atEnd()) {
