@@ -55,16 +55,15 @@ export interface OutputDefinition {
 }
 
 /**
- * The apply callback passed to higher-order evaluators.
- * Extends the current scope with item bindings and evaluates the body.
+ * Runtime representation of a Dendrite function value: a lambda evaluates to one,
+ * and a function-typed op input arrives as one. Call it with positional args.
  */
-export type Apply = (...args: unknown[]) => unknown;
+export type FnValue = (...args: unknown[]) => unknown;
 
 /**
- * Unified evaluator definition. covers both standard and higher-order ops.
- *
- * apply is undefined for standard (OperationNode) ops, they should ignore it.
- * apply is always defined for higher-order (HigherOrderNode) ops, they require it.
+ * Evaluator definition for an op. Higher-order ops are ordinary ops with a
+ * function-typed input — the function arrives as a resolved FnValue in `inputs`
+ * and is called directly; there is no separate body/apply mechanism.
  */
 export interface EvaluatorDefinition {
   op: string;
