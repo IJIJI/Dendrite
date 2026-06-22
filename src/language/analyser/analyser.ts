@@ -146,6 +146,7 @@ function validateInputs(
     inputs: { name: string; type: Type; required?: boolean; variadic?: boolean }[];
   }, // TODO: Should this be a shared type?
   ctx: AnalysisContext,
+  nodeSource?: SourceRef, // the op node's source - for diagnostics with no arg node (absent/unknown inputs)
 ): {
   analysedInputs: Record<string, CNode | CNode[]>;
   inputTypes: Record<string, Type>;
@@ -172,6 +173,7 @@ function validateInputs(
           kind: "missing_op_input",
           name,
           message: `Required input '${name}' of op '${opDef.name}' is absent - using empty array`,
+          source: nodeSource,
         });
         continue;
       }
@@ -190,6 +192,7 @@ function validateInputs(
         kind: "missing_op_input",
         name,
         message: `Required input '${name}' of op '${opDef.name}' is absent - using type default`,
+        source: nodeSource,
       });
       // missing-input placeholder has empty dependsOn - nothing to add to dependsOnAcc
       continue;
@@ -228,10 +231,13 @@ function validateInputs(
   // Warn on keys not declared by the op
   for (const key of Object.keys(rawInputs)) {
     if (!opDef.inputs.some((i) => i.name === key)) {
+      const rawArg = rawInputs[key];
+      const argSource = Array.isArray(rawArg) ? rawArg[0]?.source : rawArg?.source;
       ctx.warnings.push({
         kind: "unknown_op_input_key",
         name: key,
         message: `Input key '${key}' is not declared by op '${opDef.name}'`,
+        source: argSource ?? nodeSource,
       });
     }
   }
@@ -350,6 +356,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         node.inputs,
         opDef,
         ctx,
+        node.source,
       );
       const evaluator = ctx.descriptor.evaluators.get(node.op);
       const output = evaluator?.inferOutput?.(inputTypes) ?? opDef.output;
@@ -546,6 +553,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
           kind: "binding_cycle",
           name: member,
           message: `'${member}' is part of a reference cycle`,
+          source: bindingSourceRefs.get(member),
         });
         failedBindings.add(member);
       }
@@ -634,6 +642,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
           kind: "unknown_program_output",
           name,
           message: `Output '${name}' is not in the descriptor and depends on a failed binding`,
+          source: rawNode.source,
         });
       }
       continue;
@@ -665,6 +674,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
           kind: "implicit_any_cast",
           name,
           message: `Output '${name}' is 'any' typed - '${typeToString(def.type)}' expected`,
+          source: rawNode.source,
         });
       }
       outputMap.set(name, cnode);
@@ -673,6 +683,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
         kind: "unknown_program_output",
         name,
         message: `Output '${name}' is not declared in the descriptor`,
+        source: rawNode.source,
       });
       outputMap.set(name, cnode); // included; caller is warned
     }
@@ -718,6 +729,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
         kind: "unused_binding",
         name,
         message: `Binding '${name}' is declared but never referenced by any output`,
+        source: bindingSourceRefs.get(name),
       });
     }
   }
