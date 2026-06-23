@@ -3,29 +3,29 @@ import { z } from "zod";
 import { tokenise } from "./lexer";
 import { parse as parseProgram, parseExpression } from "./parser";
 import { createCoreLanguage } from "../stdlib";
-import { createLanguage, type LanguageDescriptor } from "../infra/registry";
+import { createLanguage, type Language } from "../language";
 import { Type } from "../infra/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CORE = createCoreLanguage().descriptor;
+const CORE = createCoreLanguage();
 
-// A descriptor with one declared context input, for input-vs-ref classification.
-function withInput(name: string, type = "number"): LanguageDescriptor {
+// A language with one declared context input, for input-vs-ref classification.
+function withInput(name: string, type = "number"): Language {
   const lang = createLanguage();
   lang.registerType(type, z.unknown());
   lang.registerInput({ name, type: Type.name(type) });
-  return lang.descriptor;
+  return lang;
 }
 
-function parse(src: string, descriptor: LanguageDescriptor = CORE, operators: string[] = []) {
+function parse(src: string, lang: Language = CORE, operators: string[] = []) {
   const { tokens } = tokenise(src, operators);
-  return parseExpression(tokens, descriptor);
+  return parseExpression(tokens, lang.descriptor, lang.grammar);
 }
 
-function program(src: string, descriptor: LanguageDescriptor = CORE, operators: string[] = []) {
+function program(src: string, lang: Language = CORE, operators: string[] = []) {
   const { tokens } = tokenise(src, operators);
-  return parseProgram(tokens, descriptor);
+  return parseProgram(tokens, lang.descriptor, lang.grammar);
 }
 
 // ─── Literals ─────────────────────────────────────────────────────────────────
