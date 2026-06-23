@@ -29,7 +29,7 @@ const { tokens } = tokenise(source);
 const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
-const parsed = parse(tokens, lang.descriptor);
+const parsed = parse(tokens, lang.descriptor, lang.grammar);
 if (!parsed.ok) {
   for (const e of parsed.errors) console.log(`parse ${e.kind} @ ${loc(e.source)}: ${e.message}`);
   process.exit(1);

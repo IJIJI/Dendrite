@@ -29,7 +29,7 @@ lang.registerOutput({ name: "finalScore", type: Type.number });
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 const { tokens } = tokenise(source);
-const parsed = parse(tokens, lang.descriptor);
+const parsed = parse(tokens, lang.descriptor, lang.grammar);
 
 if (!parsed.ok) {
   console.log("=== Parse failed ===");
