@@ -182,7 +182,7 @@ describe("application dependsOn", () => {
 function runSource(src: string, output = "out") {
   const lang = createCoreLanguage();
   const { tokens } = tokenise(src);
-  const parsed = parseProgram(tokens, lang.descriptor);
+  const parsed = parseProgram(tokens, lang.descriptor, lang.grammar);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
   const analysed = analyse(parsed.program, lang.descriptor);
   const node = analysed.program.outputs.get(output);
