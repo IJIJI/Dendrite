@@ -78,3 +78,4 @@ src/language/
 - [ ] Work on lambda depends on and caching efficiency. How much does really need to be recomputed?
 - [ ] It would be really nice to be able to do definable generic type extensions. For example the higher order node could have for both the array input as the function input a generic type T extends any, but in this way they always match.
 - [ ] Move lambda functions into stdblib to keep core slim. Only bindings and outputs.
+- [ ] Also, core language might be better named kernel, if it is not all moved out to a subset of stdlib.
