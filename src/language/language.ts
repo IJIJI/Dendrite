@@ -134,11 +134,10 @@ export function extendLanguage(extension: Language, base: Language): Language {
   return extension;
 }
 
-//? compile: source → RawProgram in one call. Derives the lexer's operator vocabulary
-// from the language's grammar (single-sourced - adding an operator needs no lexer edit)
-// and merges lexer + parser diagnostics.
-// TODO: Is this the correct name?
-export function compile(source: string, language: Language): ParseResult {
+//? parseSource: source → RawProgram in one call (lex + parse, no analysis). Derives the
+// lexer's operator vocabulary from the language's grammar (single-sourced - adding an
+// operator needs no lexer edit) and merges lexer + parser diagnostics.
+export function parseSource(source: string, language: Language): ParseResult {
   const {
     tokens,
     errors: lexErrors,
