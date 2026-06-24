@@ -102,7 +102,7 @@ export interface Runtime {
   getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined;
 }
 
-export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unknown): Runtime {
+export function createRuntime(descriptor: LanguageDescriptor): Runtime {
   const programs = new Map<string, ProgramEntry>();
 
   // Global handler sets - fire for every program, include programId
@@ -168,13 +168,7 @@ export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unkn
     for (const id of affected) {
       const entry = programs.get(id)!;
       try {
-        const outputs = evaluateProgram(
-          entry.program,
-          entry.state,
-          descriptor,
-          changedInputs,
-          hostContext,
-        );
+        const outputs = evaluateProgram(entry.program, entry.state, descriptor, changedInputs);
         results.set(id, outputs);
         notifyOutput(id, outputs);
       } catch (e) {
@@ -216,13 +210,7 @@ export function createRuntime(descriptor: LanguageDescriptor, hostContext?: unkn
       }
 
       const changedInputs = new Set(descriptor.inputs.keys());
-      const initialOutputs = evaluateProgram(
-        program,
-        state,
-        descriptor,
-        changedInputs,
-        hostContext,
-      );
+      const initialOutputs = evaluateProgram(program, state, descriptor, changedInputs);
       notifyOutput(id, initialOutputs);
 
       return {

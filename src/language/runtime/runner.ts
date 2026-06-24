@@ -18,19 +18,18 @@ import { LanguageDescriptor } from "../infra/registry";
 //  changedInputs is not required since there is no prior state to diff against.
 //
 //  Example:
-//    const outputs = run(program, descriptor, { sourceBusNew: bus }, hostContext)
+//    const outputs = run(program, descriptor, { sourceBusNew: bus })
 //    expect(outputs.get('tally')).toBe('program')
 export function run(
   program: CoreProgram,
   descriptor: LanguageDescriptor,
   inputs: Record<string, unknown>,
-  hostContext?: unknown,
 ): Map<string, unknown> {
   const state = createEvalState();
   for (const [name, value] of Object.entries(inputs)) {
     updateInput(name, value, state);
   }
-  return evaluateProgram(program, state, descriptor, undefined, hostContext);
+  return evaluateProgram(program, state, descriptor, undefined);
 }
 
 //? ProgramRunner: stateful single-program evaluator without a full Runtime.
@@ -44,7 +43,7 @@ export function run(
 //  intersects changedInputs are recomputed.
 //
 //  Example:
-//   const runner = createProgramRunner(program, descriptor, hostContext)
+//   const runner = createProgramRunner(program, descriptor)
 //   runner.run({ sourceBusNew: bus1 })  // computes everything (fresh cache)
 //   runner.run({ sourceBusNew: bus2 })  // only recomputes affected nodes
 // ---------------------------------------------------------------------------
@@ -60,7 +59,6 @@ export interface ProgramRunner {
 export function createProgramRunner(
   program: CoreProgram,
   descriptor: LanguageDescriptor,
-  hostContext?: unknown,
 ): ProgramRunner {
   const state = createEvalState();
 
@@ -76,7 +74,7 @@ export function createProgramRunner(
       for (const [name, value] of Object.entries(changes)) {
         updateInput(name, value, state);
       }
-      return evaluateProgram(program, state, descriptor, changedInputs, hostContext);
+      return evaluateProgram(program, state, descriptor, changedInputs);
     },
   };
 }
