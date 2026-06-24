@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { type ASTNode, operationNode } from "../infra/nodes";
 import { type FnValue } from "../infra/registry";
-import { createLanguage, extendLanguage, type Language } from "../language";
+import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
 /**
@@ -383,6 +384,37 @@ export function createCoreLanguage(): Language {
     op: "Length",
     evaluate: ({ list }) => (list as unknown[]).length,
   });
+
+  // -------------------------------------------------------------------------
+  // Operators - surface sugar over the ops above (registered by the op's owner).
+  // `>=` / `<=` desugar to Not(LessThan/GreaterThan) - no dedicated ops needed.
+  // -------------------------------------------------------------------------
+  const bin =
+    (op: string) =>
+    (l: ASTNode, r: ASTNode): ASTNode =>
+      operationNode(op, { a: l, b: r });
+  const variadic =
+    (op: string) =>
+    (l: ASTNode, r: ASTNode): ASTNode =>
+      operationNode(op, { nodes: [l, r] });
+
+  lang.registerInfix("||", BP.OR, variadic("Or"));
+  lang.registerInfix("&&", BP.AND, variadic("And"));
+  lang.registerInfix("==", BP.EQUALITY, bin("Equals"));
+  lang.registerInfix("!=", BP.EQUALITY, bin("NotEquals"));
+  lang.registerInfix("<", BP.COMPARE, bin("LessThan"));
+  lang.registerInfix(">", BP.COMPARE, bin("GreaterThan"));
+  lang.registerInfix(">=", BP.COMPARE, (l, r) =>
+    operationNode("Not", { a: operationNode("LessThan", { a: l, b: r }) }),
+  );
+  lang.registerInfix("<=", BP.COMPARE, (l, r) =>
+    operationNode("Not", { a: operationNode("GreaterThan", { a: l, b: r }) }),
+  );
+  lang.registerInfix("+", BP.ADD, variadic("Add"));
+  lang.registerInfix("-", BP.ADD, bin("Subtract"));
+  lang.registerInfix("*", BP.MULTIPLY, variadic("Multiply"));
+  lang.registerInfix("/", BP.MULTIPLY, bin("Divide"));
+  lang.registerPrefix("!", BP.PREFIX, (operand) => operationNode("Not", { a: operand }));
 
   return lang;
 }
