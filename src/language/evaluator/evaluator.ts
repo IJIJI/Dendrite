@@ -108,7 +108,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
       // Local-first: a lambda param / scoped var shadows a same-named global binding.
       if (state.localBindings.has(node.name)) return state.localBindings.get(node.name);
 
-      const binding = program.bindings.get(node.name);
+      const binding = ctx.program.bindings.get(node.name);
       if (!binding) {
         const val = state.inputs.get(node.name);
         if (val !== undefined) return val;
@@ -117,7 +117,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           `Reference '${node.name}' not found in bindings or scope - possible analyser bug`,
         );
       }
-      if (isCached(binding, state.nodeCache, node.dependsOn, changedInputs)) {
+      if (isCached(binding, state.nodeCache, node.dependsOn, ctx.changedInputs)) {
         return state.nodeCache.get(binding);
       }
       // A global binding is lexically in the global scope: evaluate it WITHOUT the
@@ -133,51 +133,36 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
               bodyScope: undefined,
               localBindings: NO_LOCALS,
             };
-      const result = evaluate(
-        binding,
-        program,
-        globalState,
-        changedInputs,
-        descriptor,
-        hostContext,
-      );
+      const result = evalNode(binding, ctx, globalState);
       // Don't cache closures: they capture `changedInputs`, so re-create them each
       // pass to stay correct under incremental re-evaluation. (Cheap to rebuild.)
       if (typeof result !== "function") state.nodeCache.set(binding, result);
       return result;
     }
 
-    case "array": {
-      const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
-      const result = node.items.map((n) =>
-        evaluate(n, program, state, changedInputs, descriptor, hostContext),
+    case "array":
+      return memoise(node, ctx, state, () =>
+        node.items.map((n) => evalNode(n, ctx, state)),
       );
-      cache.set(node, result);
-      return result;
-    }
 
-    case "field": {
-      const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
-      const src = evaluate(node.struct, program, state, changedInputs, descriptor, hostContext);
-      if (src === null || src === undefined) {
-        throw new EvalError(
-          "invalid_field_access",
-          `Cannot access field '${node.field}' on null/undefined`,
-        );
-      }
-      const record = src as Record<string, unknown>;
-      if (!(node.field in record)) {
-        throw new EvalError(
-          "invalid_field_access",
-          `Field '${node.field}' does not exist on value`,
-        );
-      }
-      const result = record[node.field];
-      cache.set(node, result);
-      return result;
-    }
+    case "field":
+      return memoise(node, ctx, state, () => {
+        const src = evalNode(node.struct, ctx, state);
+        if (src === null || src === undefined) {
+          throw new EvalError(
+            "invalid_field_access",
+            `Cannot access field '${node.field}' on null/undefined`,
+          );
+        }
+        const record = src as Record<string, unknown>;
+        if (!(node.field in record)) {
+          throw new EvalError(
+            "invalid_field_access",
+            `Field '${node.field}' does not exist on value`,
+          );
+        }
+        return record[node.field];
+      });
 
     case "lambda": {
       // A lambda evaluates to a closure capturing its definition-site local scope.
@@ -194,52 +179,44 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           bodyScope: new WeakMap(),
           localBindings: innerLocal,
         };
-        return evaluate(node.body, program, innerState, changedInputs, descriptor, hostContext);
+        return evalNode(node.body, ctx, innerState);
       };
       return closure;
     }
 
-    case "app": {
-      const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
-      const callee = evaluate(node.callee, program, state, changedInputs, descriptor, hostContext);
-      if (typeof callee !== "function") {
-        throw new EvalError(
-          "not_a_function",
-          "Application callee did not evaluate to a function — analyser bug",
-        );
-      }
-      // args are already resolved to param order by the analyser. Call-by-value, L→R.
-      const args = node.args.map((a) =>
-        evaluate(a, program, state, changedInputs, descriptor, hostContext),
-      );
-      const result = (callee as FnValue)(...args);
-      cache.set(node, result);
-      return result;
-    }
+    case "app":
+      return memoise(node, ctx, state, () => {
+        const callee = evalNode(node.callee, ctx, state);
+        if (typeof callee !== "function") {
+          throw new EvalError(
+            "not_a_function",
+            "Application callee did not evaluate to a function — analyser bug",
+          );
+        }
+        // args are already resolved to param order by the analyser. Call-by-value, L→R.
+        const args = node.args.map((a) => evalNode(a, ctx, state));
+        return (callee as FnValue)(...args);
+      });
 
-    case "operation": {
-      const cache = state.bodyScope ?? state.nodeCache;
-      if (isCached(node, cache, node.dependsOn, changedInputs)) return cache.get(node);
-      const evaluator = descriptor.evaluators.get(node.op);
-      if (!evaluator) {
-        throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
-      }
-      const resolved: Record<string, unknown> = {};
-      for (const [key, input] of Object.entries(node.inputs)) {
-        resolved[key] = Array.isArray(input)
-          ? input.map((n) => evaluate(n, program, state, changedInputs, descriptor, hostContext))
-          : evaluate(input, program, state, changedInputs, descriptor, hostContext);
-      }
-      try {
-        const result = evaluator.evaluate(resolved, hostContext);
-        cache.set(node, result);
-        return result;
-      } catch (e) {
-        if (e instanceof EvalError) throw e;
-        throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
-      }
-    }
+    case "operation":
+      return memoise(node, ctx, state, () => {
+        const evaluator = ctx.descriptor.evaluators.get(node.op);
+        if (!evaluator) {
+          throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
+        }
+        const resolved: Record<string, unknown> = {};
+        for (const [key, input] of Object.entries(node.inputs)) {
+          resolved[key] = Array.isArray(input)
+            ? input.map((n) => evalNode(n, ctx, state))
+            : evalNode(input, ctx, state);
+        }
+        try {
+          return evaluator.evaluate(resolved, ctx.hostContext);
+        } catch (e) {
+          if (e instanceof EvalError) throw e;
+          throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
+        }
+      });
   }
 }
 
@@ -251,9 +228,10 @@ export function evaluateProgram(
   changedInputs?: Set<string>,
   hostContext?: unknown,
 ): Map<string, unknown> {
+  const ctx: EvalContext = { program, descriptor, changedInputs, hostContext };
   const results = new Map<string, unknown>();
   for (const [name, node] of program.outputs) {
-    results.set(name, evaluate(node, program, state, changedInputs, descriptor, hostContext));
+    results.set(name, evalNode(node, ctx, state));
   }
   return results;
 }
