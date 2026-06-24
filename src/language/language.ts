@@ -1,5 +1,6 @@
 import { type ZodType } from "zod";
 
+import { type ASTNode } from "./infra/nodes";
 import {
   type EvaluatorDefinition,
   type InputDefinition,
@@ -13,12 +14,20 @@ import {
   type Grammar,
   type Led,
   type Nud,
+  registerInfix,
   registerLed,
   registerNud,
+  registerPrefix,
   registerStatement,
   type StatementFn,
 } from "./parser/grammar";
 import { installCoreGrammar } from "./parser/core-grammar";
+import { tokenise } from "./parser/lexer";
+import { parse } from "./parser/parser";
+import { type ParseResult } from "./parser/types";
+
+// Re-export the binding-power tiers: registering operators is part of the Language API.
+export { BP } from "./parser/grammar";
 
 //? Language: the assembly that bundles the infra LanguageDescriptor (semantics) with a
 // parser-layer Grammar (syntax) behind one register API. Defining a language is one
@@ -37,10 +46,17 @@ export interface Language {
   registerInput(def: InputDefinition): void;
   registerOutput(def: OutputDefinition): void;
   registerEvaluator(def: EvaluatorDefinition): void;
-  // Syntax → grammar. Full handlers; operators (registerInfix/Prefix) are sugar (F1b).
+  // Syntax → grammar. Full handlers, with operator sugar on top.
   registerNud(key: string, nud: Nud): void;
   registerLed(key: string, led: Led): void;
   registerStatement(key: string, fn: StatementFn): void;
+  registerInfix(
+    token: string,
+    bp: number,
+    build: (left: ASTNode, right: ASTNode) => ASTNode,
+    rightAssoc?: boolean,
+  ): void;
+  registerPrefix(token: string, bp: number, build: (operand: ASTNode) => ASTNode): void;
 }
 
 // Every language has the core grammar installed (it is the always-present syntax);
@@ -71,6 +87,9 @@ export function createLanguage(): Language {
     registerNud: (key, nud) => registerNud(grammar, key, nud),
     registerLed: (key, led) => registerLed(grammar, key, led),
     registerStatement: (key, fn) => registerStatement(grammar, key, fn),
+    registerInfix: (token, bp, build, rightAssoc) =>
+      registerInfix(grammar, token, bp, build, rightAssoc),
+    registerPrefix: (token, bp, build) => registerPrefix(grammar, token, bp, build),
   };
 }
 
@@ -113,4 +132,22 @@ export function extendLanguage(extension: Language, base: Language): Language {
   base.grammar.operatorTokens.forEach((tok) => extension.grammar.operatorTokens.add(tok));
 
   return extension;
+}
+
+//? compile: source → RawProgram in one call. Derives the lexer's operator vocabulary
+// from the language's grammar (single-sourced - adding an operator needs no lexer edit)
+// and merges lexer + parser diagnostics.
+// TODO: Is this the correct name?
+export function compile(source: string, language: Language): ParseResult {
+  const {
+    tokens,
+    errors: lexErrors,
+    warnings: lexWarnings,
+  } = tokenise(source, [...language.grammar.operatorTokens]);
+  const result = parse(tokens, language.descriptor, language.grammar);
+  const warnings = [...lexWarnings, ...result.warnings];
+  if (lexErrors.length > 0 || !result.ok) {
+    return { ok: false, errors: [...lexErrors, ...(result.ok ? [] : result.errors)], warnings };
+  }
+  return { ok: true, program: result.program, warnings };
 }
