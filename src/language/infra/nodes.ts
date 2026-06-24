@@ -25,7 +25,6 @@ export type COpInputType = InputType<CNode>;
 // Primitive value definition
 export interface LiteralNode {
   kind: "literal";
-  type?: Type; // derived by analyser from typeof value - not meaningful on raw nodes
   value: LiteralValue;
   source?: SourceRef;
 }
@@ -50,7 +49,6 @@ export interface InputNode {
 export interface RefNode {
   kind: "ref";
   name: string;
-  type?: Type; // set by analyser to the referenced binding's output type - not meaningful on raw nodes
   source?: SourceRef;
 }
 
@@ -102,16 +100,14 @@ export interface LambdaParam {
  * The body is analysed/evaluated in a scope extended with the params (lexical) -
  * see localBindings in the analyser/evaluator.
  *
- * returnType - optional annotation, checked against the inferred body type.
- * type       - the inferred function Type (Type.fn), set by the analyser.
- *              Optional in raw, required on CLambdaNode.
+ * returnType - optional annotation, checked against the inferred body type. The inferred
+ * function Type lives only on the analysed CLambdaNode (raw nodes carry no type).
  */
 export interface LambdaNode {
   kind: "lambda";
   params: LambdaParam[];
   body: ASTNode;
   returnType?: Type;
-  type?: Type;
   source?: SourceRef;
 }
 
@@ -119,10 +115,8 @@ export interface LambdaNode {
  * Function application: callee(args). The callee is any expression of function
  * type (a lambda, a ref to one, …). Arguments may be positional and/or named -
  * named keys match the callee's param names. The analyser resolves them into a
- * single ordered arg list aligned to the params (see CAppNode.args).
- *
- * type is the application's result type (the function's return), set by the
- * analyser. Not meaningful on raw nodes.
+ * single ordered arg list aligned to the params (see CAppNode.args). The application's
+ * result type lives only on the analysed CAppNode (raw nodes carry no type).
  */
 // TODO: Should raw ASTNodes even have type?
 export interface AppNode {
@@ -130,7 +124,6 @@ export interface AppNode {
   callee: ASTNode;
   positional: ASTNode[];
   named: Record<string, ASTNode>;
-  type?: Type;
   source?: SourceRef;
 }
 
@@ -180,7 +173,7 @@ export interface CFieldAccessNode extends Omit<FieldAccessNode, "struct">, Analy
 // `type` is the single source of truth - `type.returns` already holds the annotation
 // (if one was given) or the inferred body type. The raw annotation lives only on the
 // unanalysed LambdaNode.
-export interface CLambdaNode extends Omit<LambdaNode, "body" | "type" | "returnType">, Analysed {
+export interface CLambdaNode extends Omit<LambdaNode, "body" | "returnType">, Analysed {
   readonly body: CNode;
   readonly type: Type; // required post-analysis: inferred function Type (Type.fn)
 }
