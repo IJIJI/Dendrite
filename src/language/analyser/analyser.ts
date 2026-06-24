@@ -5,6 +5,7 @@
 // object identity and rely on this; do NOT memoise or share analysed nodes.
 
 import {
+  type AppNode,
   type ASTNode,
   type CErrorNode,
   type CNode,
