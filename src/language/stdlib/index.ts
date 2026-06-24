@@ -134,7 +134,7 @@ export function createStdlib(): Language {
       { name: "nodes", type: Type.array(Type.array(Type.any)), required: true, variadic: true }
     ],
     output: Type.array(Type.any),
-  })
+  });
 
   lang.registerOp({
     name: "Flatten",
@@ -313,7 +313,7 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Concat",
-    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
+    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(2),
   });
 
   lang.registerEvaluator({
