@@ -41,15 +41,19 @@ function isCached(
   return true;
 }
 
-//? Evaluate
-//  Pull-based: each node checks its own dependsOn against changedInputs. (isCached)
-//  If a valid cache exists, it is used, else it is re-evaluated and cached.
-//
-//  Ops look up their evaluator from descriptor.evaluators. Higher-order ops are
-//  ordinary ops with a function-typed input: the lambda evaluates to a closure that
-//  arrives as a normal resolved input value, which the op evaluator calls directly.
+//? memoise: the shared cache dance for inline nodes (array/field/app/operation).
+//  Body nodes cache in bodyScope (scoped, fresh per application); top-level inline
+//  nodes cache in nodeCache. A valid cache hit short-circuits compute().
+function memoise(node: CNode, ctx: EvalContext, state: EvalState, compute: () => unknown): unknown {
+  const cache = state.bodyScope ?? state.nodeCache;
+  if (isCached(node, cache, node.dependsOn, ctx.changedInputs)) return cache.get(node);
+  const result = compute();
+  cache.set(node, result);
+  return result;
+}
 
-// TODO: Program is only used for bindings. Should this be handled differently?
+//? Evaluate (public entry). Bundles the traversal invariants into an EvalContext and
+//  delegates to evalNode. Kept as an explicit positional signature for direct callers.
 export function evaluate(
   node: CNode,
   program: CoreProgram,
