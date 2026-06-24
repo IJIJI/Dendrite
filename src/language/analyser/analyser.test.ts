@@ -277,6 +277,31 @@ describe("happy path", () => {
   });
 });
 
+// ─── Array element-type inference ────────────────────────────────────────────
+
+describe("array element-type inference", () => {
+  const arr = (items: ASTNode[]): ASTNode => ({ kind: "array", items, type: Type.any });
+  const elementOf = (out: string, prog: RawProgram, lang = createStdlib()) => {
+    const result = analyse(prog, lang.descriptor);
+    expect(result.ok).toBe(true);
+    return typeToString(getOutputType(result.program.outputs.get(out)!));
+  };
+
+  it("homogeneous items → T[]", () => {
+    expect(elementOf("out", makeProgram({}, { out: arr([lit(1), lit(2), lit(3)]) }))).toBe(
+      "number[]",
+    );
+  });
+
+  it("mixed items → any[]", () => {
+    expect(elementOf("out", makeProgram({}, { out: arr([lit(1), lit("a")]) }))).toBe("any[]");
+  });
+
+  it("empty array → any[]", () => {
+    expect(elementOf("out", makeProgram({}, { out: arr([]) }))).toBe("any[]");
+  });
+});
+
 // ─── Warnings ────────────────────────────────────────────────────────────────
 
 describe("warnings", () => {
