@@ -12,7 +12,7 @@ import {
   type SourceRef,
 } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
-import { isCompatible, type LanguageDescriptor } from "../infra/registry";
+import { isCompatible, type LanguageDescriptor, type OpDefinition } from "../infra/registry";
 import { Type, isAny, isAnyOrNull, typeToString } from "../infra/types";
 import {
   AnalysisContext,
@@ -141,10 +141,7 @@ function withExpectedParams(node: ASTNode, expected: Type): ASTNode {
 
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
-  opDef: {
-    name: string;
-    inputs: { name: string; type: Type; required?: boolean; variadic?: boolean }[];
-  }, // TODO: Should this be a shared type?
+  opDef: OpDefinition,
   ctx: AnalysisContext,
   nodeSource?: SourceRef, // the op node's source - for diagnostics with no arg node (absent/unknown inputs)
 ): {
