@@ -11,12 +11,12 @@ import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { analyse } from "../../src/language/analyser/analyser";
 import { createProgramRunner } from "../../src/language/runtime/runner";
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 import { Type } from "../../src/language/infra/types";
 import type { SourceRef } from "../../src/language/infra/nodes";
 
 // --- Language ---------------------------------------------------------------
-const lang = createCoreLanguage();
+const lang = createStdlib();
 lang.registerInput({ name: "score", type: Type.number });
 lang.registerInput({ name: "bonus", type: Type.number });
 lang.registerOutput({ name: "result", type: Type.string });

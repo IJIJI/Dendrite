@@ -1,10 +1,10 @@
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 import { createProgramRunner } from "../../src/language/runtime/runner";
 import type { CNode } from "../../src/language/infra/nodes";
 import { CoreProgram } from "../../src/language/infra/program";
 
 // --- Language ---------------------------------------------------------------
-const lang = createCoreLanguage();
+const lang = createStdlib();
 lang.registerInput({ name: "score", type: "number" });
 
 // --- Program ----------------------------------------------------------------

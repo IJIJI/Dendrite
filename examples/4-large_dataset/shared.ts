@@ -2,7 +2,7 @@
  * Shared definitions for the core large_dataset language examples.
  */
 
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 import { CoreProgram } from "../../src/language/program";
 import {
   CInputNode,
@@ -16,7 +16,7 @@ import {
 // Language
 // ---------------------------------------------------------------------------
 
-export const lang = createCoreLanguage();
+export const lang = createStdlib();
 lang.registerInput({ name: "values", type: "any", default: [] });
 lang.registerInput({ name: "threshold", type: "number", default: 50 });
 lang.registerOutput({ name: "passing", type: "any", mode: "required" });

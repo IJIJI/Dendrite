@@ -9,9 +9,9 @@
 
 import { readFileSync } from "fs";
 import { tokenise } from "../../src/language/parser/lexer";
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 
-const lang = createCoreLanguage();
+const lang = createStdlib();
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 
 const { tokens, errors, warnings } = tokenise(source, [...lang.grammar.operatorTokens]);

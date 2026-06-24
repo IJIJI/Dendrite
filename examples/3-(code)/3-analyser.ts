@@ -11,7 +11,7 @@ import { readFileSync } from "fs";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { analyse, getOutputType } from "../../src/language/analyser/analyser";
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 import { Type, typeToString } from "../../src/language/infra/types";
 import type { SourceRef } from "../../src/language/infra/nodes";
 
@@ -20,7 +20,7 @@ const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
 // --- Language ---------------------------------------------------------------
-const lang = createCoreLanguage();
+const lang = createStdlib();
 lang.registerInput({ name: "score", type: Type.number });
 lang.registerInput({ name: "bonus", type: Type.number });
 lang.registerOutput({ name: "result", type: Type.string });

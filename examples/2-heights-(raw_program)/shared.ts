@@ -9,7 +9,7 @@
  */
 
 import { analyse } from "../../src/language/analyser/analyser";
-import { extendCoreLanguage } from "../../src/language/stdlib";
+import { extendStdlib } from "../../src/language/stdlib";
 import { createLanguage } from "../../src/language/infra/registry";
 import type { ASTNode, OperationNode, HigherOrderNode } from "../../src/language/infra/nodes";
 import type { CoreProgram, RawProgram } from "../../src/language/program";
@@ -23,7 +23,7 @@ function createHeightsLang() {
   lang.registerInput({ name: "men", type: "number[]", default: [] });
   lang.registerInput({ name: "women", type: "number[]", default: [] });
   lang.registerInput({ name: "unknown", type: "number[]", default: [] });
-  return extendCoreLanguage(lang);
+  return extendStdlib(lang);
 }
 
 // Full language — all 8 outputs. Used by run() and ProgramRunner.

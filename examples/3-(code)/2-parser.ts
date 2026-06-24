@@ -10,7 +10,7 @@
 import { readFileSync } from "fs";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
-import { createCoreLanguage } from "../../src/language/stdlib";
+import { createStdlib } from "../../src/language/stdlib";
 import type { ASTNode, SourceRef } from "../../src/language/infra/nodes";
 import { Type } from "../../src/language/infra/types";
 
@@ -19,7 +19,7 @@ const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
 // --- Language ---------------------------------------------------------------
-const lang = createCoreLanguage();
+const lang = createStdlib();
 lang.registerInput({ name: "score", type: Type.number });
 lang.registerInput({ name: "bonus", type: Type.number });
 
