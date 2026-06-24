@@ -140,6 +140,55 @@ function withExpectedParams(node: ASTNode, expected: Type): ASTNode {
   };
 }
 
+type FunctionType = Extract<Type, { kind: "function" }>;
+
+// Resolve an application's positional + named args into one list aligned to the
+// callee's params (param order). Records app_argument_mismatch errors for arity
+// overflow, unknown or duplicate param names, and any param left unbound. Returns the
+// slot array and whether resolution failed - arg analysis/type-checking is the caller's.
+function resolveAppArgs(
+  node: AppNode,
+  calleeType: FunctionType,
+  ctx: AnalysisContext,
+): { slots: (ASTNode | undefined)[]; failed: boolean } {
+  const arity = calleeType.params.length;
+  const slots: (ASTNode | undefined)[] = new Array(arity).fill(undefined);
+  let failed = false;
+  const fail = (name: string, message: string) => {
+    ctx.errors.push({ kind: "app_argument_mismatch", name, message, source: node.source });
+    failed = true;
+  };
+
+  if (node.positional.length > arity) {
+    fail("(app)", `Too many positional arguments: ${node.positional.length} for ${arity} parameter(s)`);
+  }
+  node.positional.forEach((arg, i) => {
+    if (i < arity) slots[i] = arg;
+  });
+
+  for (const [argName, arg] of Object.entries(node.named)) {
+    const idx = calleeType.paramNames?.indexOf(argName) ?? -1;
+    if (!calleeType.paramNames) {
+      fail(argName, `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`);
+    } else if (idx === -1) {
+      fail(argName, `Unknown parameter name '${argName}'`);
+    } else if (slots[idx] !== undefined) {
+      fail(argName, `Parameter '${argName}' is bound by both a positional and a named argument`);
+    } else {
+      slots[idx] = arg;
+    }
+  }
+
+  for (let i = 0; i < arity; i++) {
+    if (slots[i] === undefined) {
+      const pname = calleeType.paramNames?.[i] ?? `#${i}`;
+      fail(pname, `Missing argument for parameter '${pname}'`);
+    }
+  }
+
+  return { slots, failed };
+}
+
 function validateInputs(
   rawInputs: Record<string, ASTNode | ASTNode[]>,
   opDef: OpDefinition,
@@ -438,68 +487,8 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       }
 
       // Resolve positional + named args into one list aligned to the params.
-      const arity = calleeType.params.length;
-      const slots: (ASTNode | undefined)[] = new Array(arity).fill(undefined);
-      let resolutionFailed = false;
-
-      if (node.positional.length > arity) {
-        ctx.errors.push({
-          kind: "app_argument_mismatch",
-          name: "(app)",
-          message: `Too many positional arguments: ${node.positional.length} for ${arity} parameter(s)`,
-          source: node.source,
-        });
-        resolutionFailed = true;
-      }
-      node.positional.forEach((arg, i) => {
-        if (i < arity) slots[i] = arg;
-      });
-
-      for (const [argName, arg] of Object.entries(node.named)) {
-        const idx = calleeType.paramNames?.indexOf(argName) ?? -1;
-        if (!calleeType.paramNames) {
-          ctx.errors.push({
-            kind: "app_argument_mismatch",
-            name: argName,
-            message: `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`,
-            source: node.source,
-          });
-          resolutionFailed = true;
-        } else if (idx === -1) {
-          ctx.errors.push({
-            kind: "app_argument_mismatch",
-            name: argName,
-            message: `Unknown parameter name '${argName}'`,
-            source: node.source,
-          });
-          resolutionFailed = true;
-        } else if (slots[idx] !== undefined) {
-          ctx.errors.push({
-            kind: "app_argument_mismatch",
-            name: argName,
-            message: `Parameter '${argName}' is bound by both a positional and a named argument`,
-            source: node.source,
-          });
-          resolutionFailed = true;
-        } else {
-          slots[idx] = arg;
-        }
-      }
-
-      for (let i = 0; i < arity; i++) {
-        if (slots[i] === undefined) {
-          const pname = calleeType.paramNames?.[i] ?? `#${i}`;
-          ctx.errors.push({
-            kind: "app_argument_mismatch",
-            name: pname,
-            message: `Missing argument for parameter '${pname}'`,
-            source: node.source,
-          });
-          resolutionFailed = true;
-        }
-      }
-
-      if (resolutionFailed) return errorNode(calleeType.returns, node.source);
+      const { slots, failed } = resolveAppArgs(node, calleeType, ctx);
+      if (failed) return errorNode(calleeType.returns, node.source);
 
       // All slots filled: analyse each arg and type-check it against its param.
       const args: CNode[] = [];
