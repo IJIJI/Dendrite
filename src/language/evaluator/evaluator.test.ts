@@ -10,8 +10,7 @@ import {
 import { type RawProgram } from "../infra/program";
 import { Type } from "../infra/types";
 import { analyse } from "../analyser/analyser";
-import { tokenise } from "../parser/lexer";
-import { parse as parseProgram } from "../parser/parser";
+import { compile } from "../language";
 import { createCoreLanguage } from "../stdlib";
 import { createEvalState, evaluate, updateInput } from "./evaluator";
 
@@ -181,8 +180,7 @@ describe("application dependsOn", () => {
 
 function runSource(src: string, output = "out") {
   const lang = createCoreLanguage();
-  const { tokens } = tokenise(src);
-  const parsed = parseProgram(tokens, lang.descriptor, lang.grammar);
+  const parsed = compile(src, lang);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
   const analysed = analyse(parsed.program, lang.descriptor);
   const node = analysed.program.outputs.get(output);
@@ -232,5 +230,25 @@ describe("source pipeline (lambdas)", () => {
     );
     expect(analysed.errors).toEqual([]);
     expect(value).toBe(6);
+  });
+
+  it("arithmetic operators evaluate with correct precedence (2 + 3 * 4 = 14)", () => {
+    const { analysed, value } = runSource("output out = 2 + 3 * 4");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(14);
+  });
+
+  it(">= desugars to Not(LessThan) and evaluates (10 >= 5 = true)", () => {
+    const { analysed, value } = runSource("output out = 10 >= 5");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(true);
+  });
+
+  it("operators inside a lambda body: Filter(xs, item => item > 10)", () => {
+    const { analysed, value } = runSource(
+      "let xs = [4, 12, 8, 20]\noutput out = Filter(xs, item => item > 10)",
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(value).toEqual([12, 20]);
   });
 });
