@@ -4,8 +4,11 @@ import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
 // Operator desugar builders (pure - reference only ASTNodes, no `lang`). Module-level so
-// they're defined once rather than rebuilt per createStdlib() call.
-// TODO: Should this be in core?
+// they're defined once rather than rebuilt per createStdlib() call. They stay in stdlib:
+// they encode stdlib's op-input naming convention (a/b for binary, nodes for variadic),
+// which the core has no opinion about. The shared primitive (operationNode) is core
+// (infra/nodes); the operator mechanism (registerInfix/Prefix) is the operator-agnostic
+// grammar layer - putting these here keeps that convention out of those layers.
 const bin =
   (op: string) =>
   (l: ASTNode, r: ASTNode): ASTNode =>
