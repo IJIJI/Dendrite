@@ -153,8 +153,8 @@ are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-
 - **Lambda param-type inference from body usage.** Collect the expected type at each use site of a
   param (each op input slot is typed) and meet them into the most specific common type; conflicting
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
-  higher-order ops already supply param types (`inferBodyBindings`) and explicit annotations cover
-  standalone lambdas; this only closes the standalone-unannotated gap.
+  higher-order ops already supply param types (`inferInputTypes` + contextual typing) and explicit
+  annotations cover standalone lambdas; this only closes the standalone-unannotated gap.
 - **Optional / default params.** `(x?: number)` declined for now (no use case yet — higher-order
   ops are fixed-arity). Deferred for lack of need, *not* difficulty. Three escalating options:
   1. **Unset default (preferred).** Trailing-only optional params; an absent arg binds to an
@@ -191,6 +191,6 @@ are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-
 
 ### Doc fixes
 
-- **Stale syntax in docs.** CLAUDE.md and analyser-spec use `Set name = …` (now `let`) and the
-  CLAUDE.md file-structure block predates the `infra/` / `parser/` split. Refresh once syntax is
-  settled.
+- _(Done)_ The `.docs/` set (CLAUDE.md, architecture.md, analyser-spec.md, decisions.md,
+  ops-reference.md) and `src/readme.md` were brought current with the structured-`Type`, first-class
+  function, parser/grammar-split, and `createStdlib`/`parseSource` reality.

@@ -1,6 +1,6 @@
 # Beacon Extension Reference
 
-Content in this file belongs to `@dendrite-lang/beacon`, a separate package that extends `@dendrite-lang/core`. It lives here for historical context from the initial design session.
+Content in this file belongs to `@dendrite-lang/beacon`, a separate (planned) package that extends `@dendrite-lang/core`. It lives here for historical context from the initial design session. Types are shown in shorthand (`Source[]`, `TallyState`) for readability, but are built with the structured `Type` constructors (`Type.array(Type.name('Source'))`, `Type.name('TallyState')`).
 
 ---
 
@@ -61,8 +61,8 @@ Content in this file belongs to `@dendrite-lang/beacon`, a separate package that
 
 ## Beacon-specific design decisions
 
-**SourceList removed, Source[] used throughout.**
-`SourceList` was a manually-registered alias for `z.array(SourceSchema)`. Now auto-generated as `'Source[]'` by registerType('Source', ...).
+**No SourceList alias — arrays are structural.**
+`SourceList` was a manually-registered alias for `z.array(SourceSchema)`. Arrays are now structural: only the named `Source` type is registered, and array-ness is expressed at the use site (`Type.array(Type.name('Source'))`) — no separate registration, no auto-generated `'Source[]'`.
 
 **TallyState default: 'idle'.**
 Safest fallback for a live broadcast context. Camera is assumed idle if tally state is unknown.
