@@ -5,8 +5,7 @@ import { EvalState, EvalError } from "./types";
 
 // Shared empty local scope for evaluating global bindings. Scope maps are never
 // mutated in place (each scope is a fresh `new Map(parent)`), so sharing is safe.
-// TODO: Naming
-const NO_LOCALS: Map<string, unknown> = new Map();
+const EMPTY_LOCAL_SCOPE: Map<string, unknown> = new Map();
 
 //? Empty evalstate initialisation
 export function createEvalState(): EvalState {
@@ -131,7 +130,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
               inputs: state.inputs,
               nodeCache: state.nodeCache,
               bodyScope: undefined,
-              localBindings: NO_LOCALS,
+              localBindings: EMPTY_LOCAL_SCOPE,
             };
       const result = evalNode(binding, ctx, globalState);
       // Don't cache closures: they capture `changedInputs`, so re-create them each
