@@ -9,7 +9,7 @@ Content in this file belongs to `@dendrite-lang/beacon`, a separate (planned) pa
 ### ATEM source ops
 | Op | Inputs | Output | Notes |
 |---|---|---|---|
-| `BusSources` | `busId: string` | `Source[]` | Gets sources on a bus from hostContext |
+| `BusSources` | `bus: SourceBus` | `Source[]` | Sources on a bus (the host feeds bus state as an input) |
 | `BusProgram` | `bus: SourceBus` | `Source` | Program source of a bus |
 | `BusPreview` | `bus: SourceBus` | `Source` | Preview source of a bus |
 | `ListIncludes` | `list: Source[], sourceId: string` | `boolean` | Source ID membership check |
@@ -17,7 +17,7 @@ Content in this file belongs to `@dendrite-lang/beacon`, a separate (planned) pa
 ### Tally ops
 | Op | Inputs | Output | Notes |
 |---|---|---|---|
-| `TallyCheck` | `source: Source` | `TallyState` | Gets tally from hostContext |
+| `TallyCheck` | `source: Source, tally: TallyMap` | `TallyState` | Tally for a source (host feeds tally state as an input) |
 | `IsProgram` | `state: TallyState` | `boolean` | |
 | `IsPreview` | `state: TallyState` | `boolean` | |
 | `IsIdle` | `state: TallyState` | `boolean` | |

@@ -36,7 +36,10 @@ Not "named vs unnamed" — it's "host-managed vs evaluator-computed". Host sets 
 ## Registration
 
 **Higher-order ops are ordinary ops with a function-typed input (no HigherOrderNode, no `apply`).**
-*Revised in Phase E.* Originally higher-order ops used a dedicated node kind plus an `apply` body-evaluation param on `EvaluatorDefinition`. Collapsed: the function input arrives as a resolved closure (`FnValue`) and the op calls it directly — `evaluate` is `(inputs, hostContext?)`. The `Apply` type, the `higher_order` node kind, and `bodyBindings` are gone.
+*Revised in Phase E.* Originally higher-order ops used a dedicated node kind plus an `apply` body-evaluation param on `EvaluatorDefinition`. Collapsed: the function input arrives as a resolved closure (`FnValue`) and the op calls it directly — `evaluate` is `(inputs)`. The `Apply` type, the `higher_order` node kind, and `bodyBindings` are gone.
+
+**Inputs-only — no `hostContext` channel.**
+*Settled when starting Beacon integration.* Ops are pure functions of their declared inputs; the host projects its state into typed context inputs (`updateInput`) rather than reaching into an ambient `hostContext`. Reason: `dependsOn` is computed statically from the AST, so any hidden channel (a `hostContext` arg, or an evaluator peeking at `state.inputs`) is invisible to the incremental cache and goes stale. It was also untyped and unused by core. Dendrite is side-effect-free, so no effect-capability needs such a channel. The param was removed from `evaluate` / `evaluateProgram` / `run` / `createProgramRunner` / `createRuntime` / `EvaluatorDefinition.evaluate`.
 
 **inferOutput + inferInputTypes on EvaluatorDefinition.**
 Analysis-time type inference is co-located with `evaluate`. `inferInputTypes(inputTypes)` refines a generic function input's type from already-resolved inputs (e.g. Filter → `{ predicate: (elementOf(list)) -> boolean }`); `inferOutput(inputTypes)` derives the concrete output type. Both fall back to declared types (`OpDefinition.output` / `OpInput.type`) when absent.
@@ -87,5 +90,5 @@ Never inline `actual === expected`. The function is in registry.ts and takes `de
 Not unified behind one API. The choice between them is contextual and meaningful. Callers know which they need.
 
 **Environment wrapper (planned, not built).**
-Will hold descriptor + hostContext to avoid threading them through every call. Will expose analyse, load, run, createRunner, runtime, and a convenience register(id, saved) that combines load + runtime.register. The analyser and parser it wraps now exist (`analyse`, `parseSource`); environment + serialise are the remaining glue.
+Will hold the descriptor (and, later, a shared prelude) to avoid threading it through every call. Will expose analyse, load, run, createRunner, runtime, and a convenience register(id, saved) that combines load + runtime.register. The analyser and parser it wraps now exist (`analyse`, `parseSource`); environment + serialise are the remaining glue.
 

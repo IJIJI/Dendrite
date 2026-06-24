@@ -85,7 +85,7 @@ Things deliberately postponed. Each entry notes why it was deferred and what imp
 These are architecturally specified but unbuilt. Listed here for completeness; see architecture.md and CLAUDE.md for design.
 
 - **`serialise.ts`** — `SavedProgram` type and `RawProgram ↔ SavedProgram` conversion. Maps → plain objects, strip `source?: SourceRef` (session-scoped, never persisted). Needed before any database persistence.
-- **`environment.ts`** — unified wrapper holding `descriptor` + `hostContext`, exposing `analyse`, `load` (deserialise+analyse), `run`, `createRunner`, `runtime`, and a convenience `register(id, saved)`. Build after the analyser is working, since it wraps the analyser.
+- **`environment.ts`** — unified wrapper holding the `descriptor` (and, later, a shared prelude — see below), exposing `analyse`, `load` (deserialise+analyse), `run`, `createRunner`, `runtime`, and a convenience `register(id, saved)`. Build after the analyser is working, since it wraps the analyser.
 - **Parser (DONE)** — `source → RawProgram` via `parseSource` (lex + parse) with `SourceRef { kind: 'code', … }`. A full `compile` (parse + analyse) belongs on the future `environment.ts`.
 - **Rete adapter** — `rete graph ↔ RawProgram` with `SourceRef { kind: 'rete', nodeId }`. Lives in `@dendrite-lang/editor`.
 

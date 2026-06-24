@@ -107,7 +107,7 @@ otherwise                                              →  recompute + cache
 ```
 
 `isCached()` iterates `changedInputs` (typically 1–3) not `dependsOn`. A single `EvalContext` bundles
-the traversal invariants (`program`, `descriptor`, `changedInputs`, `hostContext`); the recursion
+the traversal invariants (`program`, `descriptor`, `changedInputs`); the recursion
 threads only `(node, ctx, state)`. The shared `memoise()` helper applies the cache dance for inline
 nodes.
 
@@ -122,6 +122,18 @@ nodes.
 
 `bodyScope` is fresh per application because params aren't in `dependsOn` — the normal cache check
 can't see them change between iterations. Closures are not cached (they capture `changedInputs`).
+
+---
+
+## Host integration — inputs-only
+
+Ops are **pure functions of their declared inputs**; there is no `hostContext` side-channel. The host
+projects its world (e.g. an ATEM connection's source/tally state) into typed **context inputs** and
+`updateInput`s them on change. An evaluator reads host data only through op inputs the program wired a
+context input into — so every dependency is visible in the AST, captured in `dependsOn`, and correctly
+re-evaluated. (A hidden channel — `hostContext` or letting an evaluator peek at `state.inputs` — would
+be invisible to `dependsOn` and cache stale; rejected for exactly that reason. Dendrite is
+side-effect-free, so there's no effect-capability left for such a channel to carry.)
 
 ---
 
@@ -156,8 +168,8 @@ All accept a `CoreProgram`. `register()` returns a `ProgramHandle` with `onOutpu
 
 - **`serialise.ts`** — `SavedProgram` ↔ `RawProgram` (Maps → records, strip `source`). Needed before
   persistence.
-- **`environment.ts`** — wrapper holding `descriptor` + `hostContext`, exposing `analyse`, `load`
-  (deserialise + analyse), `run`, `createRunner`, `runtime`, and a `compile` (parse + analyse) on top
-  of `parseSource`.
+- **`environment.ts`** — wrapper holding the `descriptor` (and, later, a shared prelude), exposing
+  `analyse`, `load` (deserialise + analyse), `run`, `createRunner`, `runtime`, and a `compile`
+  (parse + analyse) on top of `parseSource`.
 - **Rete adapter** (`@dendrite-lang/editor`) — rete graph ↔ RawProgram, `SourceRef { kind: 'rete',
   nodeId }`, no lexical-order enforcement (no line numbers).
