@@ -11,6 +11,7 @@ import {
 import { isCompatible } from "../infra/registry";
 import { Type, typeToString } from "../infra/types";
 import { createStdlib } from "../stdlib";
+import { createLanguage } from "../language";
 import { CoreProgram, RawProgram } from "../infra/program";
 import { createEvalState, evaluate } from "../evaluator/evaluator";
 
@@ -143,6 +144,15 @@ describe("isCompatible", () => {
 });
 
 // ─── Happy path ──────────────────────────────────────────────────────────────
+
+describe("core language", () => {
+  it("a bare createLanguage() registers the primitive types (not just stdlib)", () => {
+    const { types } = createLanguage().descriptor;
+    expect([...types.keys()].sort()).toEqual(["any", "boolean", "number", "string"]);
+    expect(types.get("number")?.default).toBe(0);
+    expect(types.get("boolean")?.default).toBe(false);
+  });
+});
 
 describe("happy path", () => {
   it("literal → correct type, empty dependsOn", () => {
