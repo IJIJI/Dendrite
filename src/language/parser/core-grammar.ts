@@ -4,6 +4,7 @@ import {
   type LiteralNode,
   type LiteralValue,
   type OperationNode,
+  operationNode,
 } from "../infra/nodes";
 import { type OpDefinition } from "../infra/registry";
 import { Type } from "../infra/types";
@@ -74,7 +75,7 @@ function buildCall(p: Parser, callee: ASTNode, args: Arg[], token: Token): ASTNo
     const opDef = p.descriptor.ops.get(callee.name);
     if (opDef) {
       const inputs = mapArgsToInputs(p, opDef, positional, named, token);
-      return { kind: "operation", op: callee.name, inputs, output: opDef.output, source: callee.source };
+      return operationNode(callee.name, inputs, { output: opDef.output, source: callee.source });
     }
   }
 

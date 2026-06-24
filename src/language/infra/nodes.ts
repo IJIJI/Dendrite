@@ -1,4 +1,4 @@
-import { type Type } from "./types";
+import { Type } from "./types";
 
 //? SourceRef: Points back to the origin of a node in either editor.
 export type SourceRef =
@@ -59,6 +59,21 @@ export interface OperationNode {
   output: Type;
   source?: SourceRef;
 }
+
+// Constructor for an OperationNode. `output` defaults to `any` for callers that don't
+// know it yet (e.g. operator desugars - the analyser overrides `output` from the op
+// definition); the parser passes the declared output and a source span.
+export const operationNode = (
+  op: string,
+  inputs: OperationNode["inputs"],
+  opts: { output?: Type; source?: SourceRef } = {},
+): OperationNode => ({
+  kind: "operation",
+  op,
+  inputs,
+  output: opts.output ?? Type.any,
+  source: opts.source,
+});
 
 // Field access on a struct-typed node: bus.program
 // Used for ops that return a struct type.
