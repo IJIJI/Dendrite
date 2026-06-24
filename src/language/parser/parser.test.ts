@@ -18,13 +18,13 @@ function withInput(name: string, type = "number"): Language {
   return lang;
 }
 
-function parse(src: string, lang: Language = CORE, operators: string[] = []) {
-  const { tokens } = tokenise(src, operators);
+function parse(src: string, lang: Language = CORE) {
+  const { tokens } = tokenise(src, [...lang.grammar.operatorTokens]);
   return parseExpression(tokens, lang.descriptor, lang.grammar);
 }
 
-function program(src: string, lang: Language = CORE, operators: string[] = []) {
-  const { tokens } = tokenise(src, operators);
+function program(src: string, lang: Language = CORE) {
+  const { tokens } = tokenise(src, [...lang.grammar.operatorTokens]);
   return parseProgram(tokens, lang.descriptor, lang.grammar);
 }
 
@@ -393,6 +393,85 @@ describe("application", () => {
       kind: "app",
       callee: { kind: "app", callee: { kind: "ref", name: "f" }, positional: [{ value: 1 }] },
       positional: [{ value: 2 }],
+    });
+  });
+});
+
+// ─── Operators ────────────────────────────────────────────────────────────────
+
+describe("operators", () => {
+  it("infix desugars to its op: a < b → LessThan(a, b)", () => {
+    expect(parse("a < b").node).toMatchObject({
+      kind: "operation",
+      op: "LessThan",
+      inputs: { a: { kind: "ref", name: "a" }, b: { kind: "ref", name: "b" } },
+    });
+  });
+
+  it("precedence: 1 + 2 * 3 → Add(1, Multiply(2, 3))", () => {
+    expect(parse("1 + 2 * 3").node).toMatchObject({
+      kind: "operation",
+      op: "Add",
+      inputs: {
+        nodes: [
+          { value: 1 },
+          { kind: "operation", op: "Multiply", inputs: { nodes: [{ value: 2 }, { value: 3 }] } },
+        ],
+      },
+    });
+  });
+
+  it("left-associative: 1 - 2 - 3 → Subtract(Subtract(1, 2), 3)", () => {
+    expect(parse("1 - 2 - 3").node).toMatchObject({
+      kind: "operation",
+      op: "Subtract",
+      inputs: {
+        a: { kind: "operation", op: "Subtract", inputs: { a: { value: 1 }, b: { value: 2 } } },
+        b: { value: 3 },
+      },
+    });
+  });
+
+  it(">= desugars to Not(LessThan(...)) — no dedicated op", () => {
+    expect(parse("a >= b").node).toMatchObject({
+      kind: "operation",
+      op: "Not",
+      inputs: {
+        a: {
+          kind: "operation",
+          op: "LessThan",
+          inputs: { a: { kind: "ref", name: "a" }, b: { kind: "ref", name: "b" } },
+        },
+      },
+    });
+  });
+
+  it("prefix !: !a → Not(a), binding tighter than infix (!a && b)", () => {
+    expect(parse("!a").node).toMatchObject({
+      kind: "operation",
+      op: "Not",
+      inputs: { a: { kind: "ref", name: "a" } },
+    });
+    expect(parse("!a && b").node).toMatchObject({
+      kind: "operation",
+      op: "And",
+      inputs: {
+        nodes: [
+          { kind: "operation", op: "Not", inputs: { a: { kind: "ref", name: "a" } } },
+          { kind: "ref", name: "b" },
+        ],
+      },
+    });
+  });
+
+  it("comparison binds looser than arithmetic: 1 + 2 == 3 → Equals(Add(1, 2), 3)", () => {
+    expect(parse("1 + 2 == 3").node).toMatchObject({
+      kind: "operation",
+      op: "Equals",
+      inputs: {
+        a: { kind: "operation", op: "Add", inputs: { nodes: [{ value: 1 }, { value: 2 }] } },
+        b: { value: 3 },
+      },
     });
   });
 });
