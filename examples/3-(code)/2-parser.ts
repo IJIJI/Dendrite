@@ -12,7 +12,7 @@ import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createStdlib } from "../../src/language/stdlib";
 import type { ASTNode, SourceRef } from "../../src/language/infra/nodes";
-import { Type } from "../../src/language/infra/types";
+import { Type, typeToString } from "../../src/language/infra/types";
 
 // Format a source ref as line:column (or the rete node id), "?" when absent.
 const loc = (s?: SourceRef): string =>
@@ -47,6 +47,21 @@ function show(node: ASTNode): string {
       return `${node.op}(${Object.entries(node.inputs)
         .map(([k, v]) => `${k}: ${Array.isArray(v) ? `[${v.map(show).join(", ")}]` : show(v)}`)
         .join(", ")})`;
+    case "lambda": {
+      const params = node.params
+        .map((p) => (p.type ? `${p.name}: ${typeToString(p.type)}` : p.name))
+        .join(", ");
+      // Single untyped param needs no parens (x => …); otherwise parenthesise.
+      const head = node.params.length === 1 && !node.params[0].type ? params : `(${params})`;
+      return `${head} => ${show(node.body)}`;
+    }
+    case "app": {
+      const args = [
+        ...node.positional.map(show),
+        ...Object.entries(node.named).map(([k, v]) => `${k}: ${show(v)}`),
+      ].join(", ");
+      return `${show(node.callee)}(${args})`;
+    }
     default:
       return node.kind;
   }
