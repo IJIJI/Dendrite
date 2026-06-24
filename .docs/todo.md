@@ -86,68 +86,31 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
 
 - **`serialise.ts`** — `SavedProgram` type and `RawProgram ↔ SavedProgram` conversion. Maps → plain objects, strip `source?: SourceRef` (session-scoped, never persisted). Needed before any database persistence.
 - **`environment.ts`** — unified wrapper holding `descriptor` + `hostContext`, exposing `analyse`, `load` (deserialise+analyse), `run`, `createRunner`, `runtime`, and a convenience `register(id, saved)`. Build after the analyser is working, since it wraps the analyser.
-- **Parser** — `source string → RawProgram` with `SourceRef { kind: 'code', ... }`. Enables `parse` and `compile` (parse+analyse) on environment.
+- **Parser (DONE)** — `source → RawProgram` via `parseSource` (lex + parse) with `SourceRef { kind: 'code', … }`. A full `compile` (parse + analyse) belongs on the future `environment.ts`.
 - **Rete adapter** — `rete graph ↔ RawProgram` with `SourceRef { kind: 'rete', nodeId }`. Lives in `@dendrite-lang/editor`.
 
 ---
 
-## Parser & Lexer — build worklist
+## Parser & Lexer — DONE
 
-Active near-term work for `parser/lexer.ts` + `parser/parser.ts`. Lexer (slice 0) and the
-expression core (slice 1) are done and green; the rest is sequenced below.
+The entire parser/lexer worklist is implemented and green: lexer, expression core, `let`/`output`
+statements, calls, arrows + higher-order (since collapsed into ordinary ops with function-typed
+inputs), and the **grammar-registration API with operators**. The grammar lives in the parser layer
+(kernel `parser.ts` + `grammar.ts` registration API + `core-grammar.ts` + `precedence.ts`); operators
+are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-sourced from
+`grammar.operatorTokens` (no lexer↔parser desync). Source→RawProgram is `parseSource` (formerly
+`compile`).
 
-### Decided changes to apply
+### Review findings — remaining
 
-- **`parseDelimited` → `Parser` method.** It is reusable list-parsing machinery (arrays now,
-  call-args and arrow-params later), so it belongs with `peek/advance/expect/parseExpr`, not as a
-  free function.
-- **Input syntax = sigil `$name`.** Lexer: tokenise `$`. Parser: a `$` nud → `InputNode` (type
-  from `descriptor.inputs`; unknown name still emits the node and lets the analyser's existing
-  `unknown_program_input` fire). Side effect: the `ident` nud becomes trivial — a bare identifier
-  is now ALWAYS a `RefNode`, and the input-vs-ref collision problem disappears.
-- **Recovery = error-count delta (recommended) — OR throw-to-boundary (open).** Keep the
-  `placeholder` as inert sub-expression filler; the statement loop snapshots `errors.length`,
-  parses, and drops the binding if the count grew — mirroring `analyse()`
-  (analyser.ts:471). Throw-to-boundary is the alternative if statement-only granularity + no
-  placeholder is preferred over consistency + sub-expression recovery. **Confirm before slice 2.**
-- **Name the inline nud/led handlers** (`nudIdent`, `ledField`, …) once slice 3 adds bulk, for
-  greppability (avoids the analyser's Long-Function / Switch-Statement smell).
-
-### Slice roadmap
-
-- **Slice 2 — statements + program.** `let`/`output` statement layer → `parseProgram` →
-  `RawProgram`; `duplicate_binding` detection; `sync()` to the next `let`/`output` on error; drop
-  poisoned bindings (no terminator — keyword anchors). First end-to-end lex→parse→analyse run.
-- **Slice 3a — calls (DONE).** Call-led → `OperationNode`; positional-then-named args (variadic
-  input soaks remaining positionals); descriptor-driven arg→input mapping. Callee must be a ref to
-  a registered op (generalized-callee seam kept for lambdas). Higher-order ops error for now.
-- **Slice 3b — arrows + higher-order (next).** Body syntax decided: **arrow** `item => …`
-  (`(acc, item) => …` for Reduce). Requires adding `=>` as **core lexer syntax** (it's lambda
-  syntax, not a stdlib operator — a minimal core multi-char set, always recognized). Inline arrow
-  in a higher-order call → `HigherOrderNode` (arrow params → `bindings`, body → `body`). The arrow
-  is parsed by ONE shared routine so it generalizes to first-class lambdas later.
-- **Lambda reuse (future, with the lambda work).** Same `=>` syntax for standalone lambdas
-  (`let pred = item => …`), and allow passing a lambda *ref* into a higher-order op when its
-  param count matches the op's `bodyBindings`. Needs `LambdaNode` (the option-B error-node /
-  minimal-AST reversal) + analyser param-count checking. The shared arrow routine + generalized
-  call-led are the hooks.
-- **Slice 4 — grammar registration API.** `registerNud`/`registerLed` + `prefix`/`infixLeft`/
-  `infixRight` + `registerStatement` on `Language`; operators desugar to ops; **move core grammar
-  into the descriptor** so lexer + parser + core are single-sourced (the can't-desync fix, done
-  incrementally here rather than early). `infixRight` passes `bp - 1` (right-associativity —
-  needed for lambda currying `a => b => c` and `**`).
-
-### Review findings (simplify / expandability)
-
-- **Compound-node source spans.** Array / grouping / field-access nodes currently take a single
-  token's `source`, not the full start→end span. Compute the real span for correct editor
-  highlighting. (Quality; affects tooling, not correctness.)
-- **Literal nuds are near-duplicate.** `number/string/boolean/null` differ only by a value
-  conversion; an optional `literalNud(convert)` factory removes the repetition. (Minor DRY.)
-- **Formalize binding-power tiers.** Document the `BP` levels before operators land in slice 4 so
-  stdlib operators slot in consistently.
-- **Core-grammar consistency test.** Until slice 4 single-sources it, add a cheap test that every
-  structural punct the lexer can emit has a parser handler (and vice versa), catching drift.
+- **True source-span ranges.** Compound / operator nodes currently carry a single *representative*
+  token's `source` (operator nodes now get the operator token's ref). A real start→end span is
+  deferred: nothing consumes it yet (no code editor), Rete highlights whole nodes (`nodeId`, no
+  sub-range), and the `SourceRef` shape would need an absolute offset or end position. When the code
+  editor lands, decide the highlight model — representative token vs full range vs whole line. (See
+  the `SourceRef` note in `infra/nodes.ts`.)
+- **Core-grammar consistency test.** A cheap test that every structural punct the lexer can emit has
+  a parser handler (and vice versa), catching drift. (Quality; optional.)
 - **Lexer `\r` edge.** `advance` only increments `line` on `\n`; a lone `\r` (classic-Mac line
   ending) would not. Non-issue for `\n` / `\r\n`; normalize only if it ever matters.
 
@@ -182,15 +145,6 @@ expression core (slice 1) are done and green; the rest is sequenced below.
   *provided* function-position values are never `any`. Adding explicit `letrec` later is what would
   break totality — at which point a fuel/step limit (to avoid hanging the reactive eval cycle) must
   be decided.
-- **Full lexical closures (nested capture).** v1 lambdas capture nothing: program bindings and
-  inputs are global (no capture), and only lambda params are lexically scoped. The one case needing
-  real capture is a nested lambda referencing an *enclosing lambda's* param (e.g. inner `Map` using
-  the outer `row`). Deferred until nested-lambda power is wanted; v1 forbids it (free-variable
-  resolution finds only own params + globals). **Approach when added:** chain the enclosing params
-  into the inner lambda's scope (capture only those few names, not a whole env). The analyser likely
-  already handles it — the higher-order case copies-and-extends `boundNames` (`new Map(ctx.boundNames)`)
-  per body. The real work is the **evaluator**: make the per-apply scope chain to its parent so the
-  inner body resolves outer params (today it is flat). Localized, moderate.
 - **Relax functions-⊄-`any` + better recursion guards.** The functions-⊄-`any` rule is the
   totality guard for v1 — it cleanly blocks the Z combinator (`(number, any) => number` can't
   swallow a function), but it's blunt, not fully principled. When deliberate recursion (`letrec`)
@@ -216,6 +170,16 @@ expression core (slice 1) are done and green; the rest is sequenced below.
 
 ### Type system — deferred
 
+- **Heterogeneous array typing (generics + unions).** Array literals now infer a *homogeneous*
+  element type — all items the same → `T[]`, else `any[]` (the analyser's `array` case). Two larger
+  follow-ups for non-homogeneous cases:
+  - **Generic type parameters** (`T extends number` → use `T` and `T[]` so an op forces its array and
+    function inputs to share an element type). A *targeted* form already exists for ops via
+    `inferInputTypes` / `inferOutput` (Filter/Map thread the element type); user-facing generic
+    *parameters* are a separate, larger feature.
+  - **Union element types** (`[1, "a"]` → `(number | string)[]`) depend on the union-types work below.
+  Both deferred — homogeneous inference covers the common case; revisit when heterogeneous collections
+  or generic ops become a real need.
 - **Explicit nullability via union types.** Today `null` is compatible with every type (a bottom
   type), giving *implicit* nullability + an `implicit_any_cast` warning when it flows into a concrete
   type. The sound alternative is strict-null + unions (`T | null`): a new `{ kind: "union"; members }`
