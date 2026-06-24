@@ -493,7 +493,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // All slots filled: analyse each arg and type-check it against its param.
       const args: CNode[] = [];
       const deps = new Set<string>(callee.dependsOn);
-      for (let i = 0; i < arity; i++) {
+      for (let i = 0; i < slots.length; i++) {
         const ca = analyseNode(slots[i]!, ctx);
         if (ca.kind !== "error") {
           checkCompat(
