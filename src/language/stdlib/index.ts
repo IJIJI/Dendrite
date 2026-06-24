@@ -424,6 +424,7 @@ export function createStdlib(): Language {
   // Operators - surface sugar over the ops above (registered by the op's owner).
   // `>=` / `<=` desugar to Not(LessThan/GreaterThan) - no dedicated ops needed.
   // -------------------------------------------------------------------------
+// TODO: Is this the right place for these consts?
   const bin =
     (op: string) =>
     (l: ASTNode, r: ASTNode): ASTNode =>
