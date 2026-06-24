@@ -80,6 +80,66 @@ Things deliberately postponed. Each entry notes why it was deferred and what imp
 
 ---
 
+## Op-declared context-input dependencies (ambient inputs for node types)
+
+**What:** Let an op *definition* read a context input ambiently — without the program wiring it at
+every call site — while keeping the incremental cache sound.
+
+**Why deferred:** Not needed for the watched-sources MVP (ops take explicit inputs; once the prelude
+exists, a helper lambda can close over `$inputs`). Becomes worthwhile for host-specific ops (e.g.
+Beacon's `TallyCheck`) that depend on an ambient input (the tally map) intrinsically.
+
+**The soundness constraint:** `dependsOn` is computed statically from the AST (`collectRefs` over
+`InputNode`s). A prelude lambda using `$tallyMap` is AST-visible → sound. An op's TS evaluator is
+opaque → any input it reads must be **declared** so the analyser can fold it into the node's
+`dependsOn`. This is the disciplined, declared successor to the removed `hostContext` (declared =
+visible = sound) — *not* a reversal of inputs-only.
+
+**Recommended shape — auto-wired op input:**
+- `OpInput.defaultInput?: string` — the name of a context input.
+- Analyser `validateInputs`: a missing input with `defaultInput` set → synthesize an
+  `InputNode(defaultInput)` as the argument (instead of the type-default placeholder). It then flows
+  through normal analysis — type-checked against the op input's type, contributes the input name to
+  `dependsOn`, and arrives in the evaluator's `inputs` under the op-input name. Overridable (a program
+  may still wire it explicitly). No evaluator-signature change; `extendLanguage` already copies ops.
+
+**Alternative shape (strictly-ambient):** `OpDefinition.reads?: string[]` + a second evaluator arg
+`evaluate(inputs, reads)`; the analyser folds `reads` into `dependsOn`. Use only for ambient inputs
+that genuinely aren't arguments and must not be overridable — costs a re-introduced second channel.
+
+**Driving need:** Beacon ops combining a per-call argument with intrinsic host state (tally map, source
+registry). Until then, explicit op inputs + prelude wrappers cover it.
+
+---
+
+## Prelude / global helper bindings (shared across programs)
+
+**What:** A prelude — one or more `.den` files of (lambda) bindings — parsed + analysed once and made
+available to every program in an environment/runtime, so users (and Beacon) factor out repetitive
+logic without re-declaring it per program.
+
+**Why deferred:** Post-MVP. The watched-sources MVP needs no shared helpers, and Beacon's own helpers
+can ship as ops first. The prelude is specifically what lets *users* author global helpers in Dendrite.
+
+**What it requires:**
+- Parse (`parseSource`) + analyse a prelude once into named (analysed) bindings — mostly lambdas.
+  Attach to the environment / runtime, e.g. `createEnvironment(language, { prelude })`.
+- Ref resolution gains a third scope: `localBindings` (lambda params) → program `analysedBindings` →
+  **prelude** (ambient base). The prelude can't see program bindings; program names shadow prelude
+  names (decide: silent vs a `shadowed_binding` warning).
+- Analyse the prelude in its own context (language + earlier prelude bindings only); reuse the result
+  across all programs (it doesn't change).
+- Evaluator: prelude bindings live in a shared base scope, evaluated once and cached. A prelude lambda
+  referencing an input contributes that input to dependents' `dependsOn` (sound — the `$input` ref is
+  AST-visible).
+- Builds on the existing scope machinery (`localBindings` / `analysedBindings`); no architectural
+  upheaval.
+
+**Driving need:** Beacon ships a base prelude (`isLive`, `tallyColor`, …); users add their own `.den`
+globals. The TallyState→color map settles here as inputs + a `tallyColor` helper.
+
+---
+
 ## Other planned files (not yet implemented)
 
 These are architecturally specified but unbuilt. Listed here for completeness; see architecture.md and CLAUDE.md for design.
