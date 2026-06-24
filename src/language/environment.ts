@@ -14,7 +14,7 @@ import { createRuntime, type Runtime } from "./runtime/runtime";
 export type CompileResult =
   | { ok: true; program: CoreProgram; warnings: AnalysisWarning[] } // TODO: Also add parse warnings
   | { ok: false; stage: "parse"; errors: ParseError[]; warnings: ParseWarning[] } 
-  | { ok: false; stage: "analyse"; result: AnalysisResult }; // TODO: Also add parse warnings
+  | { ok: false; stage: "analyse"; result: AnalysisResult }; // TODO: Also add parse warnings. Besides, it is a weird split. Seperate parse errors and warnings, but one large analysis result.
 
 export interface Environment {
   /** The wrapped language; its descriptor is reachable as `language.descriptor`. */
