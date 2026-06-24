@@ -16,6 +16,7 @@ export function createStdlib(): Language {
   // Primitive types. Arrays are structural (Type.array), so nothing to register.
   // -------------------------------------------------------------------------
 
+  // TODO: For the grammar these are defined in the core. Check the split.
   lang.registerType("boolean", z.boolean(), { default: false });
   lang.registerType("number", z.number(), { default: 0 });
   lang.registerType("string", z.string(), { default: "" });
