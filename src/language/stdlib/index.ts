@@ -124,6 +124,28 @@ export function createStdlib(): Language {
   });
 
   // -------------------------------------------------------------------------
+  // Array ops
+  // -------------------------------------------------------------------------
+
+  lang.registerOp({
+    name: "Concat",
+    inputs: [
+      { name: "nodes", type: Type.array(Type.array(Type.any)), required: true, variadic: true }
+    ],
+    output: Type.array(Type.any),
+  })
+
+  lang.registerOp({
+    name: "Flatten",
+    inputs: [
+      { name: "array", type: Type.array(Type.array(Type.any)), required: true },
+      { name: "depth", type: Type.number, required: true },
+    ],
+    output: Type.array(Type.any),
+  })
+
+
+  // -------------------------------------------------------------------------
   // Arithmetic ops
   // -------------------------------------------------------------------------
 
@@ -282,6 +304,20 @@ export function createStdlib(): Language {
       const v = inputTypes["value"];
       return v && !isAny(v) ? v : (inputTypes["fallback"] ?? Type.any);
     },
+  });
+  
+  // -------------------------------------------------------------------------
+  // Evaluators - Arrays
+  // -------------------------------------------------------------------------
+
+  lang.registerEvaluator({
+    op: "Concat",
+    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
+  });
+
+  lang.registerEvaluator({
+    op: "Flatten",
+    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number), // TODO: Not sure if depth works correctly here.
   });
 
   // -------------------------------------------------------------------------
