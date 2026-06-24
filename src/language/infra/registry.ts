@@ -19,6 +19,7 @@ export interface TypeDefinition {
   extends?: string;
 }
 
+// Todo: Add default? Also makes it easier to access inputs.
 export interface OpInput {
   name: string;
   type: Type;
