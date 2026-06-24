@@ -252,3 +252,34 @@ describe("source pipeline (lambdas)", () => {
     expect(value).toEqual([12, 20]);
   });
 });
+
+describe("array ops", () => {
+  it("Length of an array", () => {
+    const { analysed, value } = runSource("output out = Length([1, 2, 3])");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toBe(3);
+  });
+
+  it("Concat joins arrays one level (variadic)", () => {
+    const { analysed, value } = runSource("output out = Concat([1, 2], [3, 4], [5])");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("Concat preserves array elements (only one level)", () => {
+    const { analysed, value } = runSource("output out = Concat([[1]], [[2]])");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toEqual([[1], [2]]);
+  });
+
+  it("Flatten by depth", () => {
+    const { analysed, value } = runSource("output out = Flatten([[1, 2], [3, 4]], 1)");
+    expect(analysed.errors).toEqual([]);
+    expect(value).toEqual([1, 2, 3, 4]);
+  });
+
+  it("Average of numbers (empty → 0)", () => {
+    expect(runSource("output out = Average([2, 4, 6])").value).toBe(4);
+    expect(runSource("output out = Average([])").value).toBe(0);
+  });
+});
