@@ -1,0 +1,9 @@
+
+// let heights_men = $heights.men
+// let heights_woman = $heights.woman
+// let heights_unknown = $heights.unknown
+
+let heights_all = Concat([$heights_men, $heights_woman, $heights_unknown])
+
+output pass_total = Length(Filter(heights_all, (input: number) => input >= $treshold))
+output avg_height_total = Average(heights_all)
