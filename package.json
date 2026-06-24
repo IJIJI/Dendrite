@@ -30,8 +30,7 @@
   },
   "scripts": {
     "format": "prettier --write .",
-    "lint": "eslint .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "eslint ."
   },
   "packageManager": "yarn@4.15.0",
   "dependencies": {
