@@ -1,6 +1,11 @@
 import { Type } from "./types";
 
-//? SourceRef: Points back to the origin of a node in either editor.
+//? SourceRef: Points back to the origin of a node in either editor. The code variant is
+// a single point (line/column) + the length of a representative token - NOT yet a full
+// start→end span. Compound / operator nodes carry their most representative token's ref.
+// TODO (when the code editor lands): decide the highlight model - true multi-token ranges
+// (would need an absolute offset or end position added here) vs representative-token vs
+// whole-line. Rete highlights the whole node (nodeId), so ranges are a code-editor concern.
 export type SourceRef =
   | { kind: "code"; line: number; column: number; length: number }
   | { kind: "rete"; nodeId: string };
