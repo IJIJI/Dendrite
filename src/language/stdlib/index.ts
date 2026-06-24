@@ -5,12 +5,11 @@ import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
 /**
- * Creates the base language with primitive types, logical ops,
- * and general-purpose higher-order list ops.
- * No host-specific knowledge - safe to use standalone.
+ * Creates the standard-library language: primitive types, logic / comparison / control
+ * / arithmetic ops, general-purpose higher-order list ops, and their operators. Built on
+ * the empty createLanguage() base. No host-specific knowledge - safe to use standalone.
  */
-// TODO: Rename to stdlib
-export function createCoreLanguage(): Language {
+export function createStdlib(): Language {
   const lang = createLanguage();
 
   // -------------------------------------------------------------------------
@@ -421,9 +420,9 @@ export function createCoreLanguage(): Language {
 
 /**
  * Extend a language with the core language as its base.
- * Shorthand for extendLanguage(extension, createCoreLanguage()).
+ * Shorthand for extendLanguage(extension, createStdlib()).
  * Extension definitions take precedence over core on key conflicts.
  */
-export function extendCoreLanguage(extension: Language): Language {
-  return extendLanguage(extension, createCoreLanguage());
+export function extendStdlib(extension: Language): Language {
+  return extendLanguage(extension, createStdlib());
 }
