@@ -10,8 +10,8 @@ import {
 import { type RawProgram } from "../infra/program";
 import { Type } from "../infra/types";
 import { analyse } from "../analyser/analyser";
-import { compile } from "../language";
-import { createCoreLanguage } from "../stdlib";
+import { parseSource } from "../language";
+import { createStdlib } from "../stdlib";
 import { createEvalState, evaluate, updateInput } from "./evaluator";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ const op = (name: string, inputs: OperationNode["inputs"]): OperationNode => ({
 
 // Analyse `{ ...bindings } + out = output`, then evaluate `out`.
 function run(bindings: Record<string, ASTNode>, output: ASTNode) {
-  const lang = createCoreLanguage();
+  const lang = createStdlib();
   const program: RawProgram = {
     bindings: new Map(Object.entries(bindings)),
     outputs: new Map([["out", output]]),
@@ -149,7 +149,7 @@ describe("lexical scoping", () => {
 
 describe("application dependsOn", () => {
   it("re-evaluates an application when an input its body reads changes", () => {
-    const lang = createCoreLanguage();
+    const lang = createStdlib();
     lang.registerInput({ name: "flag", type: Type.boolean });
     const program: RawProgram = {
       bindings: new Map<string, ASTNode>([
@@ -179,8 +179,8 @@ describe("application dependsOn", () => {
 // ─── Source → parse → analyse → eval (Phase D integration) ───────────────────
 
 function runSource(src: string, output = "out") {
-  const lang = createCoreLanguage();
-  const parsed = compile(src, lang);
+  const lang = createStdlib();
+  const parsed = parseSource(src, lang);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
   const analysed = analyse(parsed.program, lang.descriptor);
   const node = analysed.program.outputs.get(output);
