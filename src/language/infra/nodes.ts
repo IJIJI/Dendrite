@@ -118,7 +118,6 @@ export interface LambdaNode {
  * single ordered arg list aligned to the params (see CAppNode.args). The application's
  * result type lives only on the analysed CAppNode (raw nodes carry no type).
  */
-// TODO: Should raw ASTNodes even have type?
 export interface AppNode {
   kind: "app";
   callee: ASTNode;
