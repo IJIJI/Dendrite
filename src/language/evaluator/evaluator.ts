@@ -24,13 +24,12 @@ export function updateInput(name: string, value: unknown, state: EvalState): voi
 }
 
 //? EvalContext: the invariants of a single evaluation traversal (the program, the
-//  descriptor, the changed-input set, and the host context). Bundled so the recursion
-//  threads just (node, ctx, state) - only `node` and `state` vary as we descend.
+//  descriptor, and the changed-input set). Bundled so the recursion threads just
+//  (node, ctx, state) - only `node` and `state` vary as we descend.
 interface EvalContext {
   program: CoreProgram;
   descriptor: LanguageDescriptor;
   changedInputs: Set<string> | undefined;
-  hostContext?: unknown;
 }
 
 //? isCached
@@ -69,9 +68,8 @@ export function evaluate(
   state: EvalState,
   changedInputs: Set<string> | undefined,
   descriptor: LanguageDescriptor,
-  hostContext?: unknown,
 ): unknown {
-  return evalNode(node, { program, descriptor, changedInputs, hostContext }, state);
+  return evalNode(node, { program, descriptor, changedInputs }, state);
 }
 
 //? evalNode
@@ -210,7 +208,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
             : evalNode(input, ctx, state);
         }
         try {
-          return evaluator.evaluate(resolved, ctx.hostContext);
+          return evaluator.evaluate(resolved);
         } catch (e) {
           if (e instanceof EvalError) throw e;
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
@@ -225,9 +223,8 @@ export function evaluateProgram(
   state: EvalState,
   descriptor: LanguageDescriptor,
   changedInputs?: Set<string>,
-  hostContext?: unknown,
 ): Map<string, unknown> {
-  const ctx: EvalContext = { program, descriptor, changedInputs, hostContext };
+  const ctx: EvalContext = { program, descriptor, changedInputs };
   const results = new Map<string, unknown>();
   for (const [name, node] of program.outputs) {
     results.set(name, evalNode(node, ctx, state));

@@ -67,7 +67,7 @@ export type FnValue = (...args: unknown[]) => unknown;
  */
 export interface EvaluatorDefinition {
   op: string;
-  evaluate: (inputs: Record<string, unknown>, hostContext?: unknown) => unknown;
+  evaluate: (inputs: Record<string, unknown>) => unknown;
   /**
    * Analysis-time output type inference. Called by the analyser after resolving
    * input types. Returns undefined to fall back to OpDefinition.output.
