@@ -63,7 +63,13 @@ export const registerInfix = (
   rightAssoc = false,
 ): void => {
   g.operatorTokens.add(token);
-  registerLed(g, token, { bp, parse: (p, left) => build(left, p.parseExpr(rightAssoc ? bp - 1 : bp)) });
+  registerLed(g, token, {
+    bp,
+    parse: (p, left, tok) => {
+      const node = build(left, p.parseExpr(rightAssoc ? bp - 1 : bp));
+      return node.source ? node : { ...node, source: tok.source };
+    },
+  });
 };
 
 // Prefix: `OP operand`. bp governs how much of the operand it grabs.
@@ -74,5 +80,8 @@ export const registerPrefix = (
   build: (operand: ASTNode) => ASTNode,
 ): void => {
   g.operatorTokens.add(token);
-  registerNud(g, token, (p) => build(p.parseExpr(bp)));
+  registerNud(g, token, (p, tok) => {
+    const node = build(p.parseExpr(bp));
+    return node.source ? node : { ...node, source: tok.source };
+  });
 };
