@@ -9,7 +9,11 @@
 //
 // Higher binds tighter. The core forms own the ends (ARROW lowest, MEMBER/CALL
 // highest); registered operators fill the middle tiers.
-// TODO: This is currently defined to help future grammar additions, and doesn't necessarily need to be used. Should it be like this?
+//
+// This ladder is a soft convention, not enforced: registerInfix/registerPrefix accept
+// any `bp: number`. The named tiers exist so independent operator modules slot in
+// consistently relative to each other and the core forms - prefer them unless you have a
+// specific reason to pick a raw value.
 export const BP = {
   ARROW: 5, // x => body  (lowest: body grabs everything to the right)
   OR: 10, // ||
