@@ -47,6 +47,11 @@ export const registerStatement = (g: Grammar, key: string, fn: StatementFn): voi
 //? Operator sugar over registerLed / registerNud. An operator is pure surface: it
 // builds an AST node from its operands (`build` references only ASTNodes - no Parser -
 // so it stays infra-friendly). The token is added to operatorTokens for the lexer.
+//
+// The operator token's `source` is attached to the built node (unless `build` already
+// set one) so desugared operator nodes are not source-less. This is a single
+// representative token, NOT a computed start→end span - true ranges are deferred until a
+// code editor consumes them (see the SourceRef note in infra/nodes.ts).
 
 // Infix: `left OP right`. Left-associative by default; rightAssoc parses the RHS one
 // tier lower so same-level operators nest to the right (e.g. `**`).
