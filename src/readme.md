@@ -19,7 +19,7 @@ Each `CNode` carries `dependsOn` - the set of context input names it transitivel
 Caching uses two WeakMaps keyed on CNode object identity:
 
 - `nodeCache` - shared across the program, used for named bindings and top-level inline nodes
-- `bodyScope` - fresh per `apply()` call inside a higher-order body, prevents stale values when the scoped variable (`item`, `acc`) changes between iterations
+- `bodyScope` - fresh per closure application (a lambda body), prevents stale values when a param (`item`, `acc`) changes between iterations
 
 ## Execution levels
 
@@ -31,14 +31,37 @@ Caching uses two WeakMaps keyed on CNode object identity:
 
 ## File layout
 
+Layering DAG: **infra ← parser ← language.ts ← stdlib**; analyser / evaluator / runtime
+consume infra. Semantics (descriptor) and syntax (grammar) meet at the AST node.
+
 ```
 src/language/
-  nodes.ts     - ASTNode, CNode, SourceRef
-  registry.ts  - LanguageDescriptor, registration API, isCompatible
-  program.ts   - EvalState, evaluate, evaluateProgram, EvalError
-  runner.ts    - run(), createProgramRunner()
-  runtime.ts   - createRuntime(), ProgramHandle
-  core.ts      - createCoreLanguage() (logic, comparison, control, list ops)
+  infra/
+    nodes.ts        - ASTNode, CNode, SourceRef, node constructors (operationNode)
+    types.ts        - structured Type union + constructors, typeToString, type predicates
+    registry.ts     - LanguageDescriptor, descriptor types, isCompatible, FnValue
+    program.ts      - RawProgram, CoreProgram
+  parser/
+    lexer.ts        - tokenise()
+    parser.ts       - grammar-agnostic Pratt kernel (Parser, parse, parseExpression)
+    grammar.ts      - registration API (registerNud/Led/Statement, registerInfix/Prefix)
+    core-grammar.ts - Dendrite's core grammar (installCoreGrammar)
+    precedence.ts   - the BP binding-power ladder (shared convention)
+    types.ts        - parse error / warning / result types
+  analyser/
+    analyser.ts     - analyse() : RawProgram → CoreProgram (passes: ref graph, topo sort,
+                      bindings, outputs, prune, unused)
+    types.ts        - AnalysisError / Warning / Result, AnalysisContext
+  evaluator/
+    evaluator.ts    - evaluate, evaluateProgram, EvalContext, memoise
+    types.ts        - EvalState, EvalError
+  runtime/
+    runner.ts       - run(), createProgramRunner()
+    runtime.ts      - createRuntime(), ProgramHandle
+  stdlib/
+    index.ts        - createStdlib() (types + logic/comparison/control/arithmetic/list ops
+                      and their operators)
+  language.ts       - Language assembly: createLanguage / extendLanguage / parseSource
 ```
 
 # TODO
