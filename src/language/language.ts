@@ -27,7 +27,7 @@ import { parse } from "./parser/parser";
 import { type ParseResult } from "./parser/types";
 
 // Re-export the binding-power tiers: registering operators is part of the Language API.
-export { BP } from "./parser/grammar";
+export { BP } from "./parser/precedence";
 
 //? Language: the assembly that bundles the infra LanguageDescriptor (semantics) with a
 // parser-layer Grammar (syntax) behind one register API. Defining a language is one

@@ -10,8 +10,8 @@ import { type OpDefinition } from "../infra/registry";
 import { Type } from "../infra/types";
 import { type Token } from "./lexer";
 import { type Parser } from "./parser";
+import { BP } from "./precedence";
 import {
-  BP,
   createGrammar,
   type Grammar,
   type Nud,
