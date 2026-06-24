@@ -149,8 +149,13 @@ export function createStdlib(): Language {
       { name: "depth", type: Type.number, required: true },
     ],
     output: Type.array(Type.any),
-  })
+  });
 
+  lang.registerOp({
+    name: "Average",
+    inputs: [{ name: "list", type: Type.array(Type.number) }],
+    output: Type.number,
+  });
 
   // -------------------------------------------------------------------------
   // Arithmetic ops
@@ -330,6 +335,14 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Flatten",
     evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number), // TODO: Not sure if depth works correctly here.
+  });
+
+  lang.registerEvaluator({
+    op: "Average",
+    evaluate: ({ list }) => {
+      const numbers = list as number[];
+      return numbers.reduce((sum, n) => sum + n, 0) / numbers.length || 0;
+    },
   });
 
   // -------------------------------------------------------------------------
