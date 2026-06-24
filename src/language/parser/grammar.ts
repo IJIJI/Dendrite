@@ -25,12 +25,20 @@ export interface Statement {
 }
 export type StatementFn = (p: Parser) => Statement;
 
-// Binding-power tiers - the shared precedence ladder. Registered operators (F1b) slot
-// in here alongside the core forms so precedence stays consistent.
+// Binding-power tiers - the shared precedence ladder (low binds loosest). Registered
+// operators slot into the middle tiers; the core forms own the ends.
+// TODO: Should this be defined here?
 export const BP = {
-  ARROW: 5,
-  MEMBER: 90,
-  CALL: 100,
+  ARROW: 5, // x => body  (lowest: body grabs everything to the right)
+  OR: 10, // ||
+  AND: 20, // &&
+  EQUALITY: 30, // ==  !=
+  COMPARE: 40, // <  >  <=  >=
+  ADD: 50, // +  -
+  MULTIPLY: 60, // *  /
+  PREFIX: 70, // !  (unary)
+  MEMBER: 90, // .
+  CALL: 100, // f(…)  (highest)
 } as const;
 
 export interface Grammar {
@@ -51,3 +59,31 @@ export const registerNud = (g: Grammar, key: string, nud: Nud): void => void g.n
 export const registerLed = (g: Grammar, key: string, led: Led): void => void g.leds.set(key, led);
 export const registerStatement = (g: Grammar, key: string, fn: StatementFn): void =>
   void g.statements.set(key, fn);
+
+//? Operator sugar over registerLed / registerNud. An operator is pure surface: it
+// builds an AST node from its operands (`build` references only ASTNodes - no Parser -
+// so it stays infra-friendly). The token is added to operatorTokens for the lexer.
+
+// Infix: `left OP right`. Left-associative by default; rightAssoc parses the RHS one
+// tier lower so same-level operators nest to the right (e.g. `**`).
+export const registerInfix = (
+  g: Grammar,
+  token: string,
+  bp: number,
+  build: (left: ASTNode, right: ASTNode) => ASTNode,
+  rightAssoc = false,
+): void => {
+  g.operatorTokens.add(token);
+  registerLed(g, token, { bp, parse: (p, left) => build(left, p.parseExpr(rightAssoc ? bp - 1 : bp)) });
+};
+
+// Prefix: `OP operand`. bp governs how much of the operand it grabs.
+export const registerPrefix = (
+  g: Grammar,
+  token: string,
+  bp: number,
+  build: (operand: ASTNode) => ASTNode,
+): void => {
+  g.operatorTokens.add(token);
+  registerNud(g, token, (p) => build(p.parseExpr(bp)));
+};
