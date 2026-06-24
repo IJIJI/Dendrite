@@ -14,7 +14,7 @@ import {
 } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor, type OpDefinition } from "../infra/registry";
-import { Type, isAny, isAnyOrNull, typeToString } from "../infra/types";
+import { Type, isAny, isAnyOrNull, typeToString, typesEqual } from "../infra/types";
 import {
   AnalysisContext,
   AnalysisError,
@@ -376,19 +376,20 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
     case "array": {
       const cItems = node.items.map((item) => analyseNode(item, ctx));
-      // TODO: How is node.type set? Should it not be derived from the items? Maybe track a most strict and least strict type and set it to least, unless it's less strict or different then parent, then error or warning.
-      for (const ci of cItems) {
-        if (ci.kind !== "error")
-          checkCompat(
-            getOutputType(ci),
-            node.type,
-            "(array item)",
-            ctx,
-            "op_input_type_mismatch",
-            ci.source,
-          );
-      }
-      return { ...node, items: cItems, dependsOn: union(...cItems.map((n) => n.dependsOn)) };
+      // Element type is inferred from the items: homogeneous → that type, mixed or empty
+      // → any. (Heterogeneous arrays via union types / generics are deferred - see
+      // .docs/todo.md.) The parser's placeholder `node.type` (any) is overridden here.
+      const itemTypes = cItems.filter((ci) => ci.kind !== "error").map(getOutputType);
+      const elementType =
+        itemTypes.length > 0 && itemTypes.every((t) => typesEqual(t, itemTypes[0]))
+          ? itemTypes[0]
+          : Type.any;
+      return {
+        ...node,
+        type: elementType,
+        items: cItems,
+        dependsOn: union(...cItems.map((n) => n.dependsOn)),
+      };
     }
 
     case "field": {
