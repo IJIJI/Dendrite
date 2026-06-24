@@ -129,9 +129,15 @@ export function createStdlib(): Language {
   // -------------------------------------------------------------------------
 
   lang.registerOp({
+    name: "Length",
+    inputs: [{ name: "list", type: Type.array(Type.any) }],
+    output: Type.number,
+  });
+
+  lang.registerOp({
     name: "Concat",
     inputs: [
-      { name: "nodes", type: Type.array(Type.array(Type.any)), required: true, variadic: true }
+      { name: "arrays", type: Type.array(Type.array(Type.any)), required: true, variadic: true }
     ],
     output: Type.array(Type.any),
   });
@@ -310,6 +316,11 @@ export function createStdlib(): Language {
   // -------------------------------------------------------------------------
   // Evaluators - Arrays
   // -------------------------------------------------------------------------
+
+  lang.registerEvaluator({
+    op: "Length",
+    evaluate: ({ list }) => (list as unknown[]).length,
+  });
 
   lang.registerEvaluator({
     op: "Concat",
