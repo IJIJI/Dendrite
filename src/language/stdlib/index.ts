@@ -4,6 +4,18 @@ import { type FnValue } from "../infra/registry";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
+// Operator desugar builders (pure - reference only ASTNodes, no `lang`). Module-level so
+// they're defined once rather than rebuilt per createStdlib() call.
+// TODO: Should this be in core?
+const bin =
+  (op: string) =>
+  (l: ASTNode, r: ASTNode): ASTNode =>
+    operationNode(op, { a: l, b: r });
+const variadic =
+  (op: string) =>
+  (l: ASTNode, r: ASTNode): ASTNode =>
+    operationNode(op, { nodes: [l, r] });
+
 /**
  * Creates the standard-library language: primitive types, logic / comparison / control
  * / arithmetic ops, general-purpose higher-order list ops, and their operators. Built on
@@ -132,29 +144,33 @@ export function createStdlib(): Language {
     name: "Length",
     inputs: [{ name: "list", type: Type.array(Type.any) }],
     output: Type.number,
+    category: "array",
   });
 
+  // Variadic: each argument is ONE array (the per-arg type), collected into an
+  // array-of-arrays at eval time and joined one level.
   lang.registerOp({
     name: "Concat",
-    inputs: [
-      { name: "arrays", type: Type.array(Type.array(Type.any)), required: true, variadic: true }
-    ],
+    inputs: [{ name: "arrays", type: Type.array(Type.any), variadic: true }],
     output: Type.array(Type.any),
+    category: "array",
   });
 
   lang.registerOp({
     name: "Flatten",
     inputs: [
-      { name: "array", type: Type.array(Type.array(Type.any)), required: true },
-      { name: "depth", type: Type.number, required: true },
+      { name: "array", type: Type.array(Type.array(Type.any)) },
+      { name: "depth", type: Type.number },
     ],
     output: Type.array(Type.any),
+    category: "array",
   });
 
   lang.registerOp({
     name: "Average",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
+    category: "array",
   });
 
   // -------------------------------------------------------------------------
@@ -191,14 +207,8 @@ export function createStdlib(): Language {
     output: Type.number,
     category: "arithmetic",
   });
-  lang.registerOp({
-    name: "Length",
-    inputs: [{ name: "list", type: Type.any }],
-    output: Type.number,
-    category: "arithmetic",
-  });
 
-  //TODO: Add more math operations like min, max, average(?), etc.
+  //TODO: Add more math operations like Min, Max, etc.
 
   // -------------------------------------------------------------------------
   // Higher-order list ops
@@ -329,12 +339,12 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Concat",
-    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(2),
+    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
   });
 
   lang.registerEvaluator({
     op: "Flatten",
-    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number), // TODO: Not sure if depth works correctly here.
+    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
   });
 
   lang.registerEvaluator({
@@ -440,25 +450,12 @@ export function createStdlib(): Language {
     op: "Divide",
     evaluate: ({ a, b }) => ((b as number) === 0 ? 0 : (a as number) / (b as number)),
   });
-  lang.registerEvaluator({
-    op: "Length",
-    evaluate: ({ list }) => (list as unknown[]).length,
-  });
 
   // -------------------------------------------------------------------------
   // Operators - surface sugar over the ops above (registered by the op's owner).
   // `>=` / `<=` desugar to Not(LessThan/GreaterThan) - no dedicated ops needed.
+  // (bin / variadic builders are module-level, above.)
   // -------------------------------------------------------------------------
-// TODO: Is this the right place for these consts?
-  const bin =
-    (op: string) =>
-    (l: ASTNode, r: ASTNode): ASTNode =>
-      operationNode(op, { a: l, b: r });
-  const variadic =
-    (op: string) =>
-    (l: ASTNode, r: ASTNode): ASTNode =>
-      operationNode(op, { nodes: [l, r] });
-
   lang.registerInfix("||", BP.OR, variadic("Or"));
   lang.registerInfix("&&", BP.AND, variadic("And"));
   lang.registerInfix("==", BP.EQUALITY, bin("Equals"));
