@@ -1,4 +1,4 @@
-import { type ZodType } from "zod";
+import { z, type ZodType } from "zod";
 
 import { type ASTNode } from "./infra/nodes";
 import {
@@ -59,8 +59,9 @@ export interface Language {
   registerPrefix(token: string, bp: number, build: (operand: ASTNode) => ASTNode): void;
 }
 
-// Every language has the core grammar installed (it is the always-present syntax);
-// extensions add ops + operators/statements on top.
+// Every language has the core grammar AND the primitive types installed - the
+// always-present syntax plus the types the core literal forms produce - so a bare
+// language is self-consistent. Extensions add ops + operators/statements on top.
 export function createLanguage(): Language {
   const types = new Map<string, TypeDefinition>();
   const ops = new Map<string, OpDefinition>();
@@ -72,7 +73,7 @@ export function createLanguage(): Language {
   const grammar = createGrammar();
   installCoreGrammar(grammar);
 
-  return {
+  const lang: Language = {
     descriptor,
     grammar,
 
@@ -91,6 +92,20 @@ export function createLanguage(): Language {
       registerInfix(grammar, token, bp, build, rightAssoc),
     registerPrefix: (token, bp, build) => registerPrefix(grammar, token, bp, build),
   };
+
+  installCorePrimitives(lang);
+  return lang;
+}
+
+// The primitive types the core literal forms produce (number / string / boolean) plus
+// `any`. Registered by the core (not stdlib) so a bare language is self-consistent: the
+// grammar parses `42` / `"x"` / `true` AND the descriptor knows those types (for defaults,
+// schemas, extends). Arrays/functions stay structural (Type.array / Type.fn) - none to register.
+function installCorePrimitives(lang: Language): void {
+  lang.registerType("boolean", z.boolean(), { default: false });
+  lang.registerType("number", z.number(), { default: 0 });
+  lang.registerType("string", z.string(), { default: "" });
+  lang.registerType("any", z.unknown(), { default: null });
 }
 
 /**

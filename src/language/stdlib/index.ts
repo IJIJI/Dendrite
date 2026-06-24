@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { type ASTNode, operationNode } from "../infra/nodes";
 import { type FnValue } from "../infra/registry";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
@@ -17,22 +16,15 @@ const variadic =
     operationNode(op, { nodes: [l, r] });
 
 /**
- * Creates the standard-library language: primitive types, logic / comparison / control
- * / arithmetic ops, general-purpose higher-order list ops, and their operators. Built on
- * the empty createLanguage() base. No host-specific knowledge - safe to use standalone.
+ * Creates the standard-library language: logic / comparison / control / arithmetic /
+ * array ops, general-purpose higher-order list ops, and their operators. Built on the
+ * createLanguage() base (which provides the primitive types). No host-specific knowledge
+ * - safe to use standalone.
  */
 export function createStdlib(): Language {
   const lang = createLanguage();
 
-  // -------------------------------------------------------------------------
-  // Primitive types. Arrays are structural (Type.array), so nothing to register.
-  // -------------------------------------------------------------------------
-
-  // TODO: For the grammar these are defined in the core. Check the split.
-  lang.registerType("boolean", z.boolean(), { default: false });
-  lang.registerType("number", z.number(), { default: 0 });
-  lang.registerType("string", z.string(), { default: "" });
-  lang.registerType("any", z.unknown(), { default: null });
+  // Primitive types (boolean / number / string / any) are registered by createLanguage().
 
   // -------------------------------------------------------------------------
   // Logic ops
