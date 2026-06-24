@@ -4,10 +4,10 @@ import { LanguageDescriptor } from "../infra/registry";
 
 // runner.ts — single-program convenience API.
 //
-// Sits between the evaluation primitives in program.ts and the full reactive
+// Sits between the evaluation primitives in evaluator/ and the full reactive
 // multi-program system in runtime.ts:
 //
-//   program.ts  — evaluation primitives (evaluate, evaluateProgram, EvalState)
+//   evaluator/  — evaluation primitives (evaluate, evaluateProgram, EvalState)
 //   runner.ts   — single-program convenience API  ← you are here
 //   runtime.ts  — multi-program reactive system (createRuntime, ProgramHandle)
 
