@@ -25,22 +25,6 @@ export interface Statement {
 }
 export type StatementFn = (p: Parser) => Statement;
 
-// Binding-power tiers - the shared precedence ladder (low binds loosest). Registered
-// operators slot into the middle tiers; the core forms own the ends.
-// TODO: Should this be defined here?
-export const BP = {
-  ARROW: 5, // x => body  (lowest: body grabs everything to the right)
-  OR: 10, // ||
-  AND: 20, // &&
-  EQUALITY: 30, // ==  !=
-  COMPARE: 40, // <  >  <=  >=
-  ADD: 50, // +  -
-  MULTIPLY: 60, // *  /
-  PREFIX: 70, // !  (unary)
-  MEMBER: 90, // .
-  CALL: 100, // f(…)  (highest)
-} as const;
-
 export interface Grammar {
   nuds: Map<string, Nud>; // keyOf → prefix handler
   leds: Map<string, Led>; // keyOf → infix/postfix handler (+ binding power)
