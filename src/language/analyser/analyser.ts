@@ -525,7 +525,67 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 }
 
 export function analyse(program: RawProgram, descriptor: LanguageDescriptor): AnalysisResult {
-  // Pass 1 - Collect source refs + declaration index + reference graph (single iteration)
+  // Pass 1 - reference graph + declaration index + source refs.
+  const refGraph = buildReferenceGraph(program);
+  const errors: AnalysisError[] = [];
+  const warnings: AnalysisWarning[] = [];
+
+  // Pass 2 - topological order (deps first) + cycle detection, then per-output reachability.
+  const { order, failedBindings } = topoSort(
+    refGraph.bindingNames,
+    refGraph.graph,
+    refGraph.bindingSourceRefs,
+    errors,
+  );
+  const outputReachable = computeReachability(program, refGraph.graph, refGraph.bindingNames);
+  // globalReachable - union over ALL outputs. Used ONLY for unused_binding (Pass 5).
+  const globalReachable = new Set([...outputReachable.values()].flatMap((s) => [...s]));
+
+  const ctx: AnalysisContext = {
+    descriptor,
+    analysedBindings: new Map(),
+    failedBindings,
+    localBindings: new Map(),
+    declarationIndex: refGraph.declarationIndex,
+    bindingSourceRefs: refGraph.bindingSourceRefs,
+    currentBindingIndex: undefined,
+    enforceCodeOrder: refGraph.enforceCodeOrder,
+    errors,
+    warnings,
+  };
+
+  // Pass 3 - analyse bindings in topological order.
+  analyseBindings(program, order, ctx);
+
+  // Pass 4 - validate outputs (output-granular soundness).
+  const { outputMap, ok } = validateOutputs(program, descriptor, ctx, outputReachable);
+
+  // Pass 4.5 / 5 - prune unreachable bindings and warn on unused ones.
+  const prunedBindings = pruneBindings(ctx.analysedBindings, outputMap, outputReachable);
+  warnUnusedBindings(program, globalReachable, ctx);
+
+  return {
+    ok,
+    program: { bindings: prunedBindings, outputs: outputMap },
+    errors: ctx.errors,
+    warnings: ctx.warnings,
+  };
+}
+
+// ── analyse passes ─────────────────────────────────────────────────────────────
+
+interface ReferenceGraph {
+  bindingNames: Set<string>;
+  bindingSourceRefs: Map<string, SourceRef>;
+  declarationIndex: Map<string, number>;
+  graph: Map<string, Set<string>>; // binding → bindings it references
+  enforceCodeOrder: boolean; // false once any binding lacks a code source (rete/mixed)
+}
+
+// Pass 1 - one iteration over the bindings: collect names, each binding's source ref +
+// declaration index (for the lexical-order check), the reference graph, and whether
+// code-order should be enforced.
+function buildReferenceGraph(program: RawProgram): ReferenceGraph {
   const bindingNames = new Set(program.bindings.keys());
   const bindingSourceRefs = new Map<string, SourceRef>();
   const declarationIndex = new Map<string, number>();
@@ -543,10 +603,18 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     }
     graph.set(name, collectRefs(rawNode, bindingNames));
   }
+  return { bindingNames, bindingSourceRefs, declarationIndex, graph, enforceCodeOrder };
+}
 
-  // Pass 2 - Topological sort + cycle detection
-  const errors: AnalysisError[] = [];
-  const warnings: AnalysisWarning[] = [];
+// Pass 2 - DFS topological sort over the reference graph with cycle detection. Each
+// cycle member gets a binding_cycle error and is marked failed; the rest are returned
+// in dependency order (deps before dependents).
+function topoSort(
+  bindingNames: Set<string>,
+  graph: Map<string, Set<string>>,
+  bindingSourceRefs: ReadonlyMap<string, SourceRef>,
+  errors: AnalysisError[],
+): { order: string[]; failedBindings: Set<string> } {
   const failedBindings = new Set<string>();
   const order: string[] = [];
   const dfsStack: string[] = [];
@@ -579,8 +647,17 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     order.push(name);
   }
   for (const name of bindingNames) visit(name);
+  return { order, failedBindings };
+}
 
-  // Per-output reachability - used in Pass 4 (poison propagation) and Pass 4.5 (pruning)
+// Per-output reachability: the bindings each output transitively pulls in. collectRefs
+// runs the FULL output AST, so inline operations referencing deep bindings are captured.
+// Used for poison propagation (Pass 4) and pruning (Pass 4.5).
+function computeReachability(
+  program: RawProgram,
+  graph: Map<string, Set<string>>,
+  bindingNames: Set<string>,
+): Map<string, Set<string>> {
   const outputReachable = new Map<string, Set<string>>();
   for (const [outputName, outputNode] of program.outputs) {
     const reachable = new Set<string>();
@@ -589,44 +666,37 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
       reachable.add(n);
       for (const dep of graph.get(n) ?? []) markReachable(dep);
     };
-    // collectRefs runs the FULL output AST - inline operations referencing bindings
-    // deeper in the tree are captured correctly.
     for (const n of collectRefs(outputNode, bindingNames)) markReachable(n);
     outputReachable.set(outputName, reachable);
   }
+  return outputReachable;
+}
 
-  // globalReachable - union over ALL outputs. Used ONLY for unused_binding (Pass 5).
-  const globalReachable = new Set([...outputReachable.values()].flatMap((s) => [...s]));
-
-  // Pass 3 - Analyse bindings in topological order
-  const ctx: AnalysisContext = {
-    descriptor,
-    analysedBindings: new Map(),
-    failedBindings,
-    localBindings: new Map(),
-    declarationIndex,
-    bindingSourceRefs,
-    currentBindingIndex: undefined,
-    enforceCodeOrder,
-    errors,
-    warnings,
-  };
-
+// Pass 3 - analyse bindings in topological order (deps first). A binding that emits a
+// new error is marked failed; cascade suppression in the 'ref' case stops dependents
+// from double-reporting. Error-count-delta is reliable BECAUSE of the topo order.
+function analyseBindings(program: RawProgram, order: string[], ctx: AnalysisContext): void {
   for (const name of order) {
     if (ctx.failedBindings.has(name)) continue;
     const errorsBefore = ctx.errors.length;
     const cnode = analyseNode(program.bindings.get(name)!, {
       ...ctx,
-      currentBindingIndex: declarationIndex.get(name),
+      currentBindingIndex: ctx.declarationIndex.get(name),
     });
     ctx.analysedBindings.set(name, cnode);
     if (ctx.errors.length > errorsBefore) ctx.failedBindings.add(name);
-    // Error-count-delta is reliable: topo order ensures dependencies are analysed first.
-    // If A failed, it's in failedBindings before B is analysed; cascade suppression in
-    // the 'ref' case returns a placeholder for A without adding a new error.
   }
+}
 
-  // Pass 4 - Validate outputs (output-granular soundness)
+// Pass 4 - validate each declared output: drop those depending on a poisoned binding,
+// analyse the rest, type-check known outputs against the descriptor, and report
+// descriptor outputs the program omits. ok is false ONLY when a required output is lost.
+function validateOutputs(
+  program: RawProgram,
+  descriptor: LanguageDescriptor,
+  ctx: AnalysisContext,
+  outputReachable: Map<string, Set<string>>,
+): { outputMap: Map<string, CNode>; ok: boolean } {
   const outputMap = new Map<string, CNode>();
   let okFlag = true;
 
@@ -722,34 +792,39 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     }
   }
 
-  // Pass 4.5 - Prune bindings not reachable from surviving outputs.
-  // Error placeholders live in failed bindings, which are unreachable from surviving outputs.
-  // survivingReachable uses outputMap.keys() (SURVIVING outputs only).
+  return { outputMap, ok: okFlag };
+}
+
+// Pass 4.5 - keep only bindings reachable from a SURVIVING output. Error placeholders
+// live in failed bindings, which are unreachable from surviving outputs, so they fall
+// away here.
+function pruneBindings(
+  analysedBindings: ReadonlyMap<string, CNode>,
+  outputMap: Map<string, CNode>,
+  outputReachable: Map<string, Set<string>>,
+): Map<string, CNode> {
   const survivingReachable = new Set<string>();
   for (const name of outputMap.keys()) {
     for (const b of outputReachable.get(name) ?? []) survivingReachable.add(b);
   }
-  const prunedBindings = new Map(
-    [...ctx.analysedBindings].filter(([name]) => survivingReachable.has(name)),
-  );
+  return new Map([...analysedBindings].filter(([name]) => survivingReachable.has(name)));
+}
 
-  // Pass 5 - Unused bindings
-  // Uses globalReachable (ALL declared outputs) - binding used by a dropped output is not "unused".
+// Pass 5 - warn on bindings no output references. globalReachable spans ALL declared
+// outputs, so a binding used only by a dropped output is NOT reported as unused.
+function warnUnusedBindings(
+  program: RawProgram,
+  globalReachable: Set<string>,
+  ctx: AnalysisContext,
+): void {
   for (const name of program.bindings.keys()) {
     if (!globalReachable.has(name)) {
       ctx.warnings.push({
         kind: "unused_binding",
         name,
         message: `Binding '${name}' is declared but never referenced by any output`,
-        source: bindingSourceRefs.get(name),
+        source: ctx.bindingSourceRefs.get(name),
       });
     }
   }
-
-  return {
-    ok: okFlag,
-    program: { bindings: prunedBindings, outputs: outputMap },
-    errors: ctx.errors,
-    warnings: ctx.warnings,
-  };
 }
