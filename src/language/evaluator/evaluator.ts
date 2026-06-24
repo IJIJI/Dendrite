@@ -24,6 +24,16 @@ export function updateInput(name: string, value: unknown, state: EvalState): voi
   state.inputs.set(name, value);
 }
 
+//? EvalContext: the invariants of a single evaluation traversal (the program, the
+//  descriptor, the changed-input set, and the host context). Bundled so the recursion
+//  threads just (node, ctx, state) - only `node` and `state` vary as we descend.
+interface EvalContext {
+  program: CoreProgram;
+  descriptor: LanguageDescriptor;
+  changedInputs: Set<string> | undefined;
+  hostContext?: unknown;
+}
+
 //? isCached
 //  Checks if a node's value depends on changed inputs. If it does, the cached value is invalid.
 //  If it doesn't, it checks the cache and returns depending on that.
@@ -62,6 +72,17 @@ export function evaluate(
   descriptor: LanguageDescriptor,
   hostContext?: unknown,
 ): unknown {
+  return evalNode(node, { program, descriptor, changedInputs, hostContext }, state);
+}
+
+//? evalNode
+//  Pull-based: each node checks its own dependsOn against changedInputs. (isCached)
+//  If a valid cache exists, it is used, else it is re-evaluated and cached.
+//
+//  Ops look up their evaluator from descriptor.evaluators. Higher-order ops are
+//  ordinary ops with a function-typed input: the lambda evaluates to a closure that
+//  arrives as a normal resolved input value, which the op evaluator calls directly.
+function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
   switch (node.kind) {
     case "error":
       throw new EvalError(
