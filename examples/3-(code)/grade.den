@@ -4,17 +4,17 @@
 // slice 4 (the grammar API); until then, ops are written in function form
 // (GreaterThan(...) rather than $score >= 60).
 
-let passing  = GreaterThan($score, 60)
+let passing  = $score >= 60
 let grade    = If(passing, "Pass", "Fail")
 
 // Should be pruned by the analyser, as it is unused. There should also be an error for the incorrect type and a warning for the unused bind.
 let madagascar = And(true, "Country") 
 
-let adjust = (x: number) => Add(x, $bonus)
+let adjust = (x: number) => x + $bonus
 
 // let adjusted = Add($score, $bonus)
 let adjusted = adjust(x: $score)
-let topMark  = GreaterThan(adjusted, 100)
+let topMark  = adjusted > 100
 let label    = If(topMark, "Distinction", grade)
 
 output result     = label

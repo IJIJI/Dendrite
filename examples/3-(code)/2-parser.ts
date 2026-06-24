@@ -25,7 +25,9 @@ lang.registerInput({ name: "bonus", type: Type.number });
 
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
-const { tokens, errors: lexErrors, warnings: lexWarnings } = tokenise(source);
+const { tokens, errors: lexErrors, warnings: lexWarnings } = tokenise(source, [
+  ...lang.grammar.operatorTokens,
+]);
 const result = parse(tokens, lang.descriptor, lang.grammar);
 
 // --- Render an ASTNode back to readable, source-like text -------------------

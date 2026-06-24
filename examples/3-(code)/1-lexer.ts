@@ -1,18 +1,20 @@
 /**
  * Stage 1: Lexer. Tokenise grade.den and print the token stream.
  *
- * grade.den is written in function form, so it needs no operators beyond the
- * core structural punctuation the lexer always recognises (parentheses, commas,
- * the $ input sigil, …). When infix operators land (slice 4) they are passed in
- * here as the second argument to tokenise().
+ * The lexer's operator vocabulary is single-sourced from the language's grammar:
+ * the core arrows (=>, ->) are always recognised, and registered operators (+, >=,
+ * &&, …) come from `lang.grammar.operatorTokens`. Structural punctuation (parens,
+ * commas, the $ input sigil, …) is always recognised.
  */
 
 import { readFileSync } from "fs";
 import { tokenise } from "../../src/language/parser/lexer";
+import { createCoreLanguage } from "../../src/language/stdlib";
 
+const lang = createCoreLanguage();
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 
-const { tokens, errors, warnings } = tokenise(source);
+const { tokens, errors, warnings } = tokenise(source, [...lang.grammar.operatorTokens]);
 
 console.log("=== Tokens ===");
 function loc(source: import("../../src/language/infra/nodes").SourceRef): string {
