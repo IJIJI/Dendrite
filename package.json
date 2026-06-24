@@ -1,5 +1,5 @@
 {
-  "name": "@beacon-lang/dendrite",
+  "name": "@dendrite-lang/core",
   "version": "0.0.0",
   "description": "A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.",
   "keywords": [

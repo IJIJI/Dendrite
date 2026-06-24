@@ -5,9 +5,9 @@ __metadata:
   version: 10
   cacheKey: 10c0
 
-"@beacon-lang/dendrite@workspace:.":
+"@dendrite-lang/core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@beacon-lang/dendrite@workspace:."
+  resolution: "@dendrite-lang/core@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
     "@types/node": "npm:^25.9.3"
