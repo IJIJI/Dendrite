@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { tokenise } from "./lexer";
 import { parse as parseProgram, parseExpression } from "./parser";
-import { createCoreLanguage } from "../stdlib";
+import { createStdlib } from "../stdlib";
 import { createLanguage, type Language } from "../language";
 import { Type } from "../infra/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CORE = createCoreLanguage();
+const CORE = createStdlib();
 
 // A language with one declared context input, for input-vs-ref classification.
 function withInput(name: string, type = "number"): Language {
