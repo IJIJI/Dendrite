@@ -66,39 +66,22 @@ src/language/
 
 # TODO
 
-- [ ] Type extending
-- [ ] Auto type conversion. e.g. a numeric input into a boolean is true when not null?
+Deferred *design* work (with full rationale) lives in [`.docs/todo.md`](../../.docs/todo.md) — e.g.
+explicit conversion ops, struct field typing, union types / strict nullability, generic type
+parameters, array element-type generics, `letrec`/recursion, multiline lambda bodies, the open-AST
+node-kind registry, and true source-span ranges.
+
+Repo-level / near-term:
+- [ ] More stdlib levels (empty / skeleton / base / core / extended); make configuring a language easier.
+- [ ] More operators (e.g. array concatenation) and math ops (min, max, average).
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false.
 - [ ] Field typing (for structs)
-- [ ] Subtyping
-- [ ] Output dependance. If one of a group fails analysis, then drop all of said group. Maybe directional.
-- [ ] More levels of stdlinb? E.g. empty, skeleton, base, core and extended? Probably core as the top level default.
-  - [ ] Make it easier to configure a language.
-- [ ] Make sure stdlib is named correctly everywhere, core is still used in some places.
-- [ ] Add an operator to combine arrays
-- [ ] Add more operators in general
-- [ ] Remove normal and higher order node distinction?
-      -> Add a ArrowFunctionNode or ClosureNode, then take that as input?
-      -> Would mean higher order nodes can just be normal operations?
-      -> Would also mean operations should have the same extra functions higher order nodes do.
-      -> But, whould that mean that a user can define functions? Is that desirable? Do both or only allow as inputs?
-- [ ] Add Lambda / arow functions
-      -> Add LambdaNode/closure
-      -> Add CallNode/Application
-- [ ] Add some helper to convert noderef to loggable? Like in example 3-(code)/1-lexer.ts
-- [ ] Add code to manage analysis + run / runner / runtime
-- [ ] Also add code to manage editor(code/rete) parsing
-      -> Combine with analysis+running? -> Probably not, seperate things
-- [ ] Also add code to manage displaying editors
-      -> Combine with parsing?
-- [ ] Add some sort of validation of the registry?
-- [ ] Move tests to a seperate folder (structure)? It adds a lot of clutter now.
-- [ ] Decide between .den, .dndr, .dnr or something else.
-- [ ] Currently null is castable to any type. This means nullability. Do we want that?
-  - [ ] If not, do we at some point want to allow multiple types in operations and lambdas/ nodes?
-- [ ] Look deeper at lambda name shadowing. When a multiline lambda that has a binding, calls a lambda that rebinds that name, it might cause issues.
-      -> Better name shadowing.
-- [ ] Work on lambda depends on and caching efficiency. How much does really need to be recomputed?
-- [ ] It would be really nice to be able to do definable generic type extensions. For example the higher order node could have for both the array input as the function input a generic type T extends any, but in this way they always match.
-- [ ] Move lambda functions into stdblib to keep core slim. Only bindings and outputs.
-- [ ] Also, core language might be better named kernel, if it is not all moved out to a subset of stdlib.
+- [ ] Output dependance. If a binding fails analysis, don't drop the entire program, just the outputs that are affected.
+- [ ] Add more helpers to log results, like in the code example.
+- [ ] Entry-point glue: manage analyse + run/runner/runtime, and editor (code/rete) parsing + display.
+- [ ] Registry validation.
+- [ ] Move tests into a separate folder (reduce clutter).
+- [ ] Enable optional arguments. 
+  - [ ] Make it possible to make arguments have a default for if they are unset.
+- [ ] Decide the file extension (`.den`, `.dndr`, `.dnr`, …).
+- [ ] Consider renaming the empty `createLanguage` base to "kernel" (vs the `stdlib` batteries-included).
