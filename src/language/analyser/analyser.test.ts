@@ -312,6 +312,66 @@ describe("array element-type inference", () => {
   });
 });
 
+// ─── Struct field typing ─────────────────────────────────────────────────────
+
+describe("struct field typing", () => {
+  const field = (struct: ASTNode, name: string): ASTNode => ({
+    kind: "field",
+    struct,
+    field: name,
+    type: Type.any,
+  });
+  const input = (name: string, type: Type): ASTNode => ({ kind: "input", name, type });
+
+  it("infers a known field's type", () => {
+    const lang = createStdlib();
+    lang.registerType("Source", z.unknown(), { fields: { id: Type.string, name: Type.string } });
+    lang.registerInput({ name: "s", type: Type.name("Source") });
+    const result = analyse(
+      makeProgram({}, { out: field(input("s", Type.name("Source")), "id") }),
+      lang.descriptor,
+    );
+    expect(result.errors).toEqual([]);
+    expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("string");
+  });
+
+  it("errors on an unknown field", () => {
+    const lang = createStdlib();
+    lang.registerType("Source", z.unknown(), { fields: { id: Type.string } });
+    lang.registerInput({ name: "s", type: Type.name("Source") });
+    const result = analyse(
+      makeProgram({}, { out: field(input("s", Type.name("Source")), "bogus") }),
+      lang.descriptor,
+    );
+    expect(result.errors.some((e) => e.kind === "unknown_field")).toBe(true);
+  });
+
+  it("resolves nested struct fields (multilevel)", () => {
+    const lang = createStdlib();
+    lang.registerType("DisplayName", z.unknown(), { fields: { long: Type.string } });
+    lang.registerType("Bus", z.unknown(), {
+      fields: { state: Type.number, name: Type.name("DisplayName") },
+    });
+    lang.registerInput({ name: "bus", type: Type.name("Bus") });
+    const busName = field(input("bus", Type.name("Bus")), "name"); // : DisplayName
+    const result = analyse(makeProgram({}, { out: field(busName, "long") }), lang.descriptor);
+    expect(result.errors).toEqual([]);
+    expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("string");
+  });
+
+  it("leaves field access on a fields-less type as any (no error)", () => {
+    const lang = createStdlib();
+    lang.registerType("Opaque", z.unknown(), {});
+    lang.registerInput({ name: "o", type: Type.name("Opaque") });
+    const result = analyse(
+      makeProgram({}, { out: field(input("o", Type.name("Opaque")), "whatever") }),
+      lang.descriptor,
+    );
+    expect(result.errors).toEqual([]);
+    expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("any");
+  });
+});
+
 // ─── Warnings ────────────────────────────────────────────────────────────────
 
 describe("warnings", () => {
