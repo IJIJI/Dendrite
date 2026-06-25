@@ -12,6 +12,7 @@ export type AnalysisErrorKind =
   | "missing_required_program_output" // Required program output not declared
   | "undeclared_binding_reference" // Ref to a binding that was never declared
   | "forward_reference" // Binding used before its declaration line (code editor only)
+  | "unknown_field" // Field access on a struct type that has no such field
   | "op_input_type_mismatch" // Op node input port receives an incompatible type
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
