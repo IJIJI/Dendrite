@@ -1,6 +1,7 @@
 import { z, type ZodType } from "zod";
 
 import { type ASTNode } from "./infra/nodes";
+import { type Type } from "./infra/types";
 import {
   type EvaluatorDefinition,
   type InputDefinition,
@@ -40,7 +41,7 @@ export interface Language {
   registerType(
     name: string,
     schema: ZodType<unknown>,
-    config?: { default?: unknown; extends?: string },
+    config?: { default?: unknown; extends?: string; fields?: Record<string, Type> },
   ): void;
   registerOp(def: OpDefinition): void;
   registerInput(def: InputDefinition): void;
@@ -118,7 +119,11 @@ export function extendLanguage(extension: Language, base: Language): Language {
   const e = extension.descriptor;
   b.types.forEach((v) => {
     if (!e.types.has(v.name)) {
-      extension.registerType(v.name, v.schema, { default: v.default, extends: v.extends });
+      extension.registerType(v.name, v.schema, {
+        default: v.default,
+        extends: v.extends,
+        fields: v.fields,
+      });
     }
   });
   b.ops.forEach((v) => {
