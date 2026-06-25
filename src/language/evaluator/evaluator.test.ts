@@ -282,4 +282,24 @@ describe("array ops", () => {
     expect(runSource("output out = Average([2, 4, 6])").value).toBe(4);
     expect(runSource("output out = Average([])").value).toBe(0);
   });
+
+  it("Max of numbers (empty → 0)", () => {
+    expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
+    expect(runSource("output out = Max([])").value).toBe(0);
+  });
+
+  it("Max of numbers (empty → 0)", () => {
+    expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
+    expect(runSource("output out = Max([])").value).toBe(0);
+  });
+
+  it("Min of numbers (empty → 0)", () => {
+    expect(runSource("output out = Min([3, 20, 8])").value).toBe(3);
+    expect(runSource("output out = Min([])").value).toBe(0);
+  });
+
+  it("Includes membership", () => {
+    expect(runSource('output out = Includes(["a", "b", "c"], "b")').value).toBe(true);
+    expect(runSource('output out = Includes(["a", "b"], "z")').value).toBe(false);
+  });
 });
