@@ -21,7 +21,7 @@ export { createLanguage, extendLanguage, parseSource, BP, type Language } from "
 export { createStdlib, extendStdlib } from "./language/stdlib";
 
 // ── analysis ─────────────────────────────────────────────────────────────────
-export { analyse, getOutputType } from "./language/analyser/analyser";
+export { analyse, getOutputType, validateDescriptor } from "./language/analyser/analyser";
 export * from "./language/analyser/types"; // AnalysisResult / Error / Warning (+ kinds), AnalysisContext
 
 // ── evaluation ───────────────────────────────────────────────────────────────
