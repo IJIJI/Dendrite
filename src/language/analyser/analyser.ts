@@ -548,6 +548,63 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
   }
 }
 
+// Collect every named-type reference inside a Type (arrays/functions recurse; the
+// structural arms carry no name of their own).
+function collectTypeNames(t: Type, into: Set<string>): void {
+  switch (t.kind) {
+    case "name":
+      into.add(t.name);
+      break;
+    case "array":
+      collectTypeNames(t.element, into);
+      break;
+    case "function":
+      t.params.forEach((p) => collectTypeNames(p, into));
+      collectTypeNames(t.returns, into);
+      break;
+  }
+}
+
+//? validateDescriptor: referential integrity of a language definition. Every named-type
+// reference (op inputs/outputs, input/output types, struct `fields`, `extends`) must
+// resolve to a registered type - a dangling reference (typo, forgotten registerType) is
+// an `unknown_type` error. A registered-but-fieldless type is fine (an opaque handle);
+// only UNregistered names are flagged. Run once when the language is assembled.
+export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisError[] {
+  const errors: AnalysisError[] = [];
+  const report = (name: string, where: string) => {
+    if (!descriptor.types.has(name)) {
+      errors.push({
+        kind: "unknown_type",
+        name,
+        message: `Type '${name}' is referenced by ${where} but is not registered`,
+      });
+    }
+  };
+  const checkType = (t: Type, where: string) => {
+    const names = new Set<string>();
+    collectTypeNames(t, names);
+    for (const name of names) report(name, where);
+  };
+
+  for (const def of descriptor.types.values()) {
+    if (def.extends) report(def.extends, `type '${def.name}' (extends)`);
+    if (def.fields) {
+      for (const [field, t] of Object.entries(def.fields)) {
+        checkType(t, `type '${def.name}' field '${field}'`);
+      }
+    }
+  }
+  for (const op of descriptor.ops.values()) {
+    for (const input of op.inputs) checkType(input.type, `op '${op.name}' input '${input.name}'`);
+    checkType(op.output, `op '${op.name}' output`);
+  }
+  for (const input of descriptor.inputs.values()) checkType(input.type, `input '${input.name}'`);
+  for (const output of descriptor.outputs.values()) checkType(output.type, `output '${output.name}'`);
+
+  return errors;
+}
+
 export function analyse(program: RawProgram, descriptor: LanguageDescriptor): AnalysisResult {
   // Pass 1 - reference graph + declaration index + source refs.
   const refGraph = buildReferenceGraph(program);
