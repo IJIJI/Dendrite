@@ -22,38 +22,21 @@ Things deliberately postponed. Each entry notes why it was deferred and what imp
 
 ---
 
-## Static field typing for FieldAccessNode
+## Struct field typing — DONE
 
-**What:** Validate at analysis time that a field accessed via `FieldAccessNode` actually exists on the struct type, and infer the field's type from the struct type rather than trusting the node's declared `type`.
+Implemented: `TypeDefinition.fields?: Record<string, Type>` (field name → type, structured); `registerType`
+config + `extendLanguage` copy it; the analyser's `field` case resolves the struct type, infers a known
+field's type (recursing for nested struct fields → multilevel) and errors on an unknown one
+(`unknown_field`). Types without `fields` keep the permissive fallback (`any`; primitive → warning).
+`fields` duplicates the Zod schema deliberately — explicit is debuggable and version-stable (no Zod
+introspection). Verified end-to-end against the Beacon `Bus` struct (typed `bus.state`/`bus.sources`,
+zero `implicit_any_cast` warnings, `bus.staet` typo caught).
 
-**Why deferred:** Requires field→type metadata on `TypeDefinition` that does not exist yet. Extracting it from the Zod schema is fragile (Zod-version-dependent). The explicit alternative is cheap per-type but is work across every struct type. No present need — current behaviour (trust declared type, warn on primitive struct, defer field existence to runtime) is adequate.
-
-**Theoretical basis:** CPL tuple projection — `e[n]` requires `n` to be a static integer literal precisely so the checker can return the n-th element's type statically. Field access is the named equivalent: with a known struct type and known field, the field's type is statically determined.
-
-**What it requires:**
-- Add to `TypeDefinition` in `registry.ts`:
-  ```typescript
-  fields?: Record<string, string>   // field name → type name
-  ```
-- `registerType` config object gains `fields`. Example:
-  ```typescript
-  lang.registerType('Source', SourceSchema, {
-    fields: { id: 'string', name: 'string' }
-  })
-  lang.registerType('SourceBus', SourceBusSchema, {
-    fields: { me: 'string', program: 'Source', preview: 'Source' }
-  })
-  ```
-- `extendLanguage` must copy `fields` alongside `default` and `extends`.
-- Analyser `'field'` case becomes:
-  - Resolve struct type via `getOutputType(struct)`.
-  - If that type has a `fields` map:
-    - Field present → infer field type from the map; set `CFieldAccessNode.type` to it.
-    - Field absent → **error**, poison the binding (`unknown_field` — new AnalysisErrorKind). This is sound: accessing a non-existent field is a type error.
-  - If the type has no `fields` map → current fallback behaviour (trust declared type, warn on primitive).
-- Redundancy note: `fields` duplicates information already in the Zod schema. Accepted tradeoff — explicit is debuggable and version-stable. Do not attempt Zod introspection.
-
-**Driving need:** would catch field-name typos (`source.naem`) at analysis time and make `FieldAccessNode` fully sound. Worth doing once struct-heavy programs appear.
+**Still deferred — struct *literals* (constructing a struct in-language).** Reading host structs is
+done; *producing* one (`{ a: …, b: … }` in a program) is separate and larger — it wants a structural
+record arm in the `Type` union + structural compatibility, and raises the nominal-vs-structural fork.
+No consumer yet (Beacon structs arrive from the host as inputs). Trigger: something must return a
+struct in-language (e.g. multi-field lambda return).
 
 ---
 
