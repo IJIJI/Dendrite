@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { analyse, getOutputType } from "./analyser";
+import { analyse, getOutputType, validateDescriptor } from "./analyser";
 import {
   type ASTNode,
   type CErrorNode,
@@ -12,6 +12,7 @@ import { isCompatible } from "../infra/registry";
 import { Type, typeToString } from "../infra/types";
 import { createStdlib } from "../stdlib";
 import { createLanguage } from "../language";
+import { createEnvironment } from "../environment";
 import { CoreProgram, RawProgram } from "../infra/program";
 import { createEvalState, evaluate } from "../evaluator/evaluator";
 
@@ -369,6 +370,43 @@ describe("struct field typing", () => {
     );
     expect(result.errors).toEqual([]);
     expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("any");
+  });
+});
+
+// ─── Descriptor validation (referential integrity) ──────────────────────────
+
+describe("descriptor validation", () => {
+  it("a clean language has no dangling type references", () => {
+    expect(validateDescriptor(createStdlib().descriptor)).toEqual([]);
+  });
+
+  it("flags a struct field whose type is unregistered", () => {
+    const lang = createStdlib();
+    lang.registerType("Bus", z.unknown(), { fields: { name: Type.name("Ghost") } });
+    expect(
+      validateDescriptor(lang.descriptor).some(
+        (e) => e.kind === "unknown_type" && e.name === "Ghost",
+      ),
+    ).toBe(true);
+  });
+
+  it("flags an input declared with an unregistered type", () => {
+    const lang = createStdlib();
+    lang.registerInput({ name: "x", type: Type.name("Ghost") });
+    expect(validateDescriptor(lang.descriptor).some((e) => e.name === "Ghost")).toBe(true);
+  });
+
+  it("a registered fields-less type is a valid reference (opaque handle)", () => {
+    const lang = createStdlib();
+    lang.registerType("Source", z.unknown(), {});
+    lang.registerInput({ name: "s", type: Type.array(Type.name("Source")) });
+    expect(validateDescriptor(lang.descriptor)).toEqual([]);
+  });
+
+  it("createEnvironment throws on a dangling type reference", () => {
+    const lang = createStdlib();
+    lang.registerOutput({ name: "out", type: Type.name("Ghost") });
+    expect(() => createEnvironment(lang)).toThrow(/unresolved type references/);
   });
 });
 
