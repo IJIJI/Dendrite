@@ -395,8 +395,31 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     case "field": {
       const struct = analyseNode(node.struct, ctx);
       const structType = getOutputType(struct);
-      if (structType.kind === "name" && ["string", "number", "boolean"].includes(structType.name)) {
-        // TODO: Should this be an error?
+
+      // A struct type (named type with a `fields` map) gets checked field access: an
+      // unknown field errors, a known field's type is inferred - and since that type can
+      // itself be a named struct, getOutputType resolves the next `.field` the same way
+      // (multilevel). Types without `fields` keep the permissive fallback (type stays the
+      // parser's `any`; primitives get a likely-mistake warning).
+      let fieldType: Type = node.type;
+      const def = structType.kind === "name" ? ctx.descriptor.types.get(structType.name) : undefined;
+      if (def?.fields) {
+        const declared = def.fields[node.field];
+        if (declared) {
+          fieldType = declared;
+        } else if (struct.kind !== "error") {
+          ctx.errors.push({
+            kind: "unknown_field",
+            name: node.field,
+            message: `Type '${typeToString(structType)}' has no field '${node.field}'`,
+            source: node.source,
+          });
+          return errorNode(undefined, node.source);
+        }
+      } else if (
+        structType.kind === "name" &&
+        ["string", "number", "boolean"].includes(structType.name)
+      ) {
         ctx.warnings.push({
           kind: "field_access_on_primitive",
           name: node.field,
@@ -404,7 +427,7 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           source: node.source,
         });
       }
-      return { ...node, struct, dependsOn: struct.dependsOn };
+      return { ...node, type: fieldType, struct, dependsOn: struct.dependsOn };
     }
 
     case "operation": {
