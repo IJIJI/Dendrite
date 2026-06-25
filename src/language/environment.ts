@@ -1,4 +1,4 @@
-import { analyse } from "./analyser/analyser";
+import { analyse, validateDescriptor } from "./analyser/analyser";
 import { type AnalysisResult, type AnalysisWarning } from "./analyser/types";
 import { type CoreProgram, type RawProgram } from "./infra/program";
 import { type Language, parseSource } from "./language";
@@ -37,6 +37,17 @@ export interface Environment {
 
 export function createEnvironment(language: Language): Environment {
   const { descriptor } = language;
+
+  // Fail fast on a malformed language: a dangling type reference is a setup bug, and
+  // every program built on it would be silently wrong.
+  const typeErrors = validateDescriptor(descriptor);
+  if (typeErrors.length > 0) {
+    throw new Error(
+      "Language descriptor has unresolved type references:\n" +
+        typeErrors.map((e) => `  - ${e.message}`).join("\n"),
+    );
+  }
+
   return {
     language,
 
