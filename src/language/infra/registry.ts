@@ -7,9 +7,8 @@ export interface TypeDefinition {
   name: string;
   schema: ZodType<unknown>;
   /**
-   * The "zero" or "empty" value for this type. Used as a resilient fallback
-   * when a node produces null or is unset. Automatically set to [] for T[]
-   * types and auto-derived for primitives. Complex types should provide one.
+   * The "zero" or "empty" value for this type. Used as a resilient fallback when a node
+   * produces null or is unset. Auto-derived for primitives; complex types should provide one.
    */
   default?: unknown;
   /**
@@ -17,6 +16,12 @@ export interface TypeDefinition {
    * isCompatible walks this chain: a subtype is usable wherever its supertype is expected.
    */
   extends?: string;
+  /**
+   * Struct fields: field name → type. When present, the analyser type-checks field access
+   * (`x.field`) — an unknown field is an error, a known field's type is inferred (and
+   * recurses for nested struct fields → multilevel). Absent → field access stays `any`.
+   */
+  fields?: Record<string, Type>;
 }
 
 // Todo: Add default? Also makes it easier to access inputs.
