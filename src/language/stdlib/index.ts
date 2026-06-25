@@ -168,6 +168,30 @@ export function createStdlib(): Language {
     category: "array",
   });
 
+  lang.registerOp({
+    name: "Max",
+    inputs: [{ name: "list", type: Type.array(Type.number) }],
+    output: Type.number,
+    category: "array",
+  });
+
+  lang.registerOp({
+    name: "Min",
+    inputs: [{ name: "list", type: Type.array(Type.number) }],
+    output: Type.number,
+    category: "array",
+  });
+
+  lang.registerOp({
+    name: "Includes",
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "value", type: Type.any },
+    ],
+    output: Type.boolean,
+    category: "array",
+  });
+
   // -------------------------------------------------------------------------
   // Arithmetic ops
   // -------------------------------------------------------------------------
@@ -203,7 +227,7 @@ export function createStdlib(): Language {
     category: "arithmetic",
   });
 
-  //TODO: Add more math operations like Min, Max, etc.
+  //TODO: Add more math operations.
 
   // -------------------------------------------------------------------------
   // Higher-order list ops
@@ -348,6 +372,31 @@ export function createStdlib(): Language {
       const numbers = list as number[];
       return numbers.reduce((sum, n) => sum + n, 0) / numbers.length || 0;
     },
+  });
+
+  lang.registerEvaluator({
+    op: "Max",
+    // Empty → 0 (matches Average's convention; the natural "none" for non-negative
+    // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
+    evaluate: ({ list }) => {
+      const numbers = list as number[];
+      return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n > m ? n : m));
+    },
+  });
+
+  lang.registerEvaluator({
+    op: "Min",
+    // Empty → 0 (matches Average's convention; the natural "none" for non-negative
+    // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
+    evaluate: ({ list }) => {
+      const numbers = list as number[];
+      return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n < m ? n : m));
+    },
+  });
+
+  lang.registerEvaluator({
+    op: "Includes",
+    evaluate: ({ list, value }) => (list as unknown[]).includes(value),
   });
 
   // -------------------------------------------------------------------------
