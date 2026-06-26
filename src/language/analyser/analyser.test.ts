@@ -453,7 +453,26 @@ describe("descriptor validation", () => {
   it("createEnvironment throws on a dangling type reference", () => {
     const lang = createStdlib();
     lang.registerOutput({ name: "out", type: Type.name("Ghost") });
-    expect(() => createEnvironment(lang)).toThrow(/unresolved type references/);
+    expect(() => createEnvironment(lang)).toThrow(/descriptor validation failed/);
+  });
+
+  it("accepts a compatible field override (covariant narrowing) and new fields", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
+    lang.registerType("Derived", z.unknown(), {
+      extends: "Base",
+      fields: { a: Type.number, b: Type.string }, // a: any → number (narrow); b is new
+    });
+    expect(validateDescriptor(lang.descriptor)).toEqual([]);
+  });
+
+  it("flags an incompatible field override against the extends parent", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
+    expect(
+      validateDescriptor(lang.descriptor).some((e) => e.kind === "incompatible_field_override"),
+    ).toBe(true);
   });
 });
 
