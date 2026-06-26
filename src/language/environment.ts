@@ -38,12 +38,12 @@ export interface Environment {
 export function createEnvironment(language: Language): Environment {
   const { descriptor } = language;
 
-  // Fail fast on a malformed language: a dangling type reference is a setup bug, and
-  // every program built on it would be silently wrong.
+  // Fail fast on a malformed language: a dangling type reference or an unsound struct
+  // override is a setup bug, and every program built on it would be silently wrong.
   const typeErrors = validateDescriptor(descriptor);
   if (typeErrors.length > 0) {
     throw new Error(
-      "Language descriptor has unresolved type references:\n" +
+      "Language descriptor validation failed:\n" +
         typeErrors.map((e) => `  - ${e.message}`).join("\n"),
     );
   }
