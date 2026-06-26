@@ -626,6 +626,25 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
   for (const input of descriptor.inputs.values()) checkType(input.type, `input '${input.name}'`);
   for (const output of descriptor.outputs.values()) checkType(output.type, `output '${output.name}'`);
 
+  // Struct subtyping soundness: a field a type re-declares must be compatible with the
+  // same field inherited from its `extends` parent (covariant override, sound under
+  // read-only access). Width is automatic via inheritance, so only overrides can break
+  // it - this makes a declared `Derived extends Base` genuinely guarantee a Derived is
+  // usable as a Base. (A new field not present in the parent is fine.)
+  for (const def of descriptor.types.values()) {
+    if (!def.extends || !def.fields) continue;
+    for (const [field, ownType] of Object.entries(def.fields)) {
+      const inherited = resolveField(def.extends, field, descriptor).type;
+      if (inherited && !isCompatible(ownType, inherited, descriptor)) {
+        errors.push({
+          kind: "incompatible_field_override",
+          name: field,
+          message: `Field '${field}' of '${def.name}' has type '${typeToString(ownType)}', incompatible with '${typeToString(inherited)}' inherited from '${def.extends}'`,
+        });
+      }
+    }
+  }
+
   return errors;
 }
 
