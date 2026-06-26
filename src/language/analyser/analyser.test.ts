@@ -371,6 +371,53 @@ describe("struct field typing", () => {
     expect(result.errors).toEqual([]);
     expect(typeToString(getOutputType(result.program.outputs.get("out")!))).toBe("any");
   });
+
+  // --- inheritance via `extends` ---
+
+  const typed = (out: string, prog: RawProgram, lang = createStdlib()) => {
+    const r = analyse(prog, lang.descriptor);
+    expect(r.errors).toEqual([]);
+    return typeToString(getOutputType(r.program.outputs.get(out)!));
+  };
+
+  it("inherits a field from an extends parent", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
+    lang.registerInput({ name: "d", type: Type.name("Derived") });
+    const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
+    expect(typed("out", prog, lang)).toBe("number");
+  });
+
+  it("inherits even when the derived type declares no fields of its own", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    lang.registerType("Derived", z.unknown(), { extends: "Base" });
+    lang.registerInput({ name: "d", type: Type.name("Derived") });
+    const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
+    expect(typed("out", prog, lang)).toBe("number");
+  });
+
+  it("a more-derived field overrides the inherited one", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
+    lang.registerInput({ name: "d", type: Type.name("Derived") });
+    const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
+    expect(typed("out", prog, lang)).toBe("string");
+  });
+
+  it("errors on a field absent from the type and all its parents", () => {
+    const lang = createStdlib();
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
+    lang.registerInput({ name: "d", type: Type.name("Derived") });
+    const result = analyse(
+      makeProgram({}, { out: field(input("d", Type.name("Derived")), "nope") }),
+      lang.descriptor,
+    );
+    expect(result.errors.some((e) => e.kind === "unknown_field")).toBe(true);
+  });
 });
 
 // ─── Descriptor validation (referential integrity) ──────────────────────────
