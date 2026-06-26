@@ -30,7 +30,10 @@ field's type (recursing for nested struct fields → multilevel) and errors on a
 (`unknown_field`). Types without `fields` keep the permissive fallback (`any`; primitive → warning).
 `fields` duplicates the Zod schema deliberately — explicit is debuggable and version-stable (no Zod
 introspection). Verified end-to-end against the Beacon `Bus` struct (typed `bus.state`/`bus.sources`,
-zero `implicit_any_cast` warnings, `bus.staet` typo caught).
+zero `implicit_any_cast` warnings, `bus.staet` typo caught). Inheritance is wired too: field lookup
+follows the `extends` chain (inherited fields resolve; most-derived override wins), and
+`validateDescriptor` checks each override is compatible with the parent's field
+(`incompatible_field_override`) so a declared `Derived extends Base` is sound.
 
 **Still deferred — struct *literals* (constructing a struct in-language).** Reading host structs is
 done; *producing* one (`{ a: …, b: … }` in a program) is separate and larger — it wants a structural
