@@ -299,6 +299,32 @@ function validateInputs(
   return { analysedInputs, inputTypes, inputDependsOn: dependsOnAcc };
 }
 
+// Resolve a struct field by searching the type and its `extends` ancestors (most-derived
+// wins → an override shadows the inherited field). `hasFields` reports whether ANY type in
+// the chain declares fields - i.e. the value is a struct, so a miss is a real error rather
+// than the permissive fallback. The `seen` set guards malformed extends cycles.
+function resolveField(
+  typeName: string,
+  field: string,
+  descriptor: LanguageDescriptor,
+): { type: Type | undefined; hasFields: boolean } {
+  let current: string | undefined = typeName;
+  const seen = new Set<string>();
+  let hasFields = false;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const def = descriptor.types.get(current);
+    if (!def) break;
+    if (def.fields) {
+      hasFields = true;
+      const t = def.fields[field];
+      if (t) return { type: t, hasFields: true };
+    }
+    current = def.extends;
+  }
+  return { type: undefined, hasFields };
+}
+
 function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
   switch (node.kind) {
     case "literal": {
