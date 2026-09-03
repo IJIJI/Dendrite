@@ -126,6 +126,49 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 
 ---
 
+## Editor era — build out `@dendrite-lang/editor`
+
+**What:** The dual-mode editor package: a code editor (grown from the playground's framework-free
+`lang/` modules) + the Rete node editor, with graph↔code awareness.
+
+**Pulls in (tracked separately, land here):** the rete adapter (graph ↔ RawProgram) + the
+`SavedProgram` `rete`-form loader; true source-span ranges; non-gated parsing (error nodes) for
+editor-grade diagnostics; the lexical-order-for-rete decision; the **React decision** (user leans
+React — Rete v2 has a React render plugin; see memory `playground-editor-direction`).
+
+**Driving need:** visual authoring for Beacon; the playground's input/output UI work is a stepping
+stone.
+
+---
+
+## Web documentation site
+
+**What:** Public docs for the language: guide (syntax, types, lambdas, operators), op/stdlib
+reference (generatable from the descriptor — `category`, inputs, output types are all registered
+data), embedding guide (Environment/runtime API), and an embedded playground for live examples.
+
+**Notes:** Framework choice interacts with the playground-React decision below (a React-based docs
+stack like Docusaurus favors React-ifying the playground for embedding; Astro/Starlight or
+VitePress change that calculus). Deploys next to the playground on GitHub Pages.
+
+**Embedded live examples:** first via an **iframe embed mode** on the playground — a payload URL
+plus an `embed` flag that hides the chrome (framework-agnostic, tiny once document-payload URLs
+exist). Component-level embedding is the React-switch alternative.
+
+---
+
+## Playground — React switch decision (when its UI grows)
+
+**What:** Decide whether to move the playground shell from vanilla DOM to React once share links +
+user-settable inputs/outputs land (the shell is the throwaway layer by design; `lang/` modules are
+framework-free either way).
+
+**Decide based on:** how much shell complexity the input/output UI actually adds, the web-docs
+framework choice (embedding), and the editor-era React lean. Revisit after both playground features
+ship.
+
+---
+
 ## Playground — share links
 
 **What:** Encode the current example id + source into the URL fragment
