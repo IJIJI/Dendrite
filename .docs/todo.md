@@ -98,6 +98,30 @@ registry). Until then, explicit op inputs + prelude wrappers cover it.
 
 ---
 
+## Playground — share links
+
+**What:** Encode the current example id + source into the URL fragment
+(`#e=<id>&src=<base64/deflate>`) with a Share button; on boot, the fragment beats localStorage.
+
+**Why deferred:** User call (2026-09) — add when someone actually wants to share a snippet/repro.
+~40 lines in the shell (`playground/src/ui/main.ts`), no core changes. Pairs well with the Pages
+deployment (the public URL is what makes sharing meaningful).
+
+---
+
+## Playground — user-settable inputs and outputs
+
+**What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) instead
+of examples owning it via `setup()`. Feeds the existing descriptor-driven widget mapping
+(`playground/src/lang/input-widgets.ts`).
+
+**Why deferred:** User call (2026-09). Needs a type picker (name/array over registered types), a
+rebuild-language-and-recompile flow on every declaration change (the boot/dispose lifecycle already
+supports this), and persistence of declarations alongside the source. A concrete step toward the
+editor era — the same UI generalises to the Rete side's port configuration.
+
+---
+
 ## Prelude / global helper bindings (shared across programs)
 
 **What:** A prelude — one or more `.den` files of (lambda) bindings — parsed + analysed once and made
