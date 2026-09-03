@@ -193,6 +193,42 @@ describe("comments", () => {
     expect(tok.value).toBe("7");
     expect(tok.source).toEqual({ kind: "code", line: 2, column: 9, length: 1 });
   });
+
+  // Comments are trivia: collected on LexResult.comments (for editor highlighting),
+  // never in the main token stream.
+  it("line comment is collected on the comments channel with its span", () => {
+    const { comments } = tokenise("42 // trailing note");
+    expect(comments).toEqual([
+      {
+        kind: "comment",
+        value: "// trailing note",
+        source: { kind: "code", line: 1, column: 4, length: 16 },
+      },
+    ]);
+  });
+
+  it("block comment span includes the markers", () => {
+    const { comments } = tokenise("/* block */42");
+    expect(comments[0].value).toBe("/* block */");
+    expect(comments[0].source).toEqual({ kind: "code", line: 1, column: 1, length: 11 });
+  });
+
+  it("multi-line block comment spans across lines (offset length)", () => {
+    const { comments } = tokenise("/* multi\nline */ 7");
+    expect(comments[0].value).toBe("/* multi\nline */");
+    expect(comments[0].source).toEqual({ kind: "code", line: 1, column: 1, length: 16 });
+  });
+
+  it("unterminated block comment still yields a comment token to EOF", () => {
+    const { comments, warnings } = tokenise("1 /* runs off");
+    expect(warnings.some((w) => w.kind === "unterminated_comment")).toBe(true);
+    expect(comments[0].value).toBe("/* runs off");
+  });
+
+  it("comments never appear in the main token stream", () => {
+    const { tokens } = tokenise("// a\n1 /* b */ + 2", ["+"]);
+    expect(tokens.every((t) => t.kind !== "comment")).toBe(true);
+  });
 });
 
 // ─── Source positions ─────────────────────────────────────────────────────────

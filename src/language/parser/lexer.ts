@@ -18,6 +18,7 @@ export type TokenKind =
   | "boolean" // true, false
   | "null" // null
   | "punct" // ( ) [ ] { } , . : = => == != > >= < <= + - * / % !
+  | "comment" // // line and /* block */ - trivia, never in the main token stream
   | "eof";
 
 export interface Token {
@@ -28,8 +29,11 @@ export interface Token {
 
 // The lexer never throws. Like the analyser, it accumulates everything it can
 // find and recovers, returning best-effort tokens alongside the diagnostics.
+// Comments are trivia: collected on a separate channel (for editor highlighting),
+// never in `tokens`, so the parser and grammar remain comment-oblivious.
 export interface LexResult {
   readonly tokens: Token[];
+  readonly comments: Token[];
   readonly errors: ParseError[];
   readonly warnings: ParseWarning[];
 }
@@ -221,25 +225,34 @@ function scanPunct(s: Scanner, operators: readonly string[]): Token | null {
   return null;
 }
 
-// Discards the comment; never produces a token.
-function skipComment(s: Scanner): void {
-  if (s.peek(1) === "/") {
-    while (!s.atEnd() && s.peek() !== "\n") s.advance();
-    return;
-  }
-  // Block comment.
+// Scans a `//` line or `/* block */` comment into a trivia token (value = raw text
+// including the markers). Emitted on LexResult.comments, never the main stream.
+function scanComment(s: Scanner): Token {
   const start = s.mark();
   const startPos = s.pos;
-  s.advance();
-  s.advance(); // /*
-  while (!s.atEnd() && !(s.peek() === "*" && s.peek(1) === "/")) s.advance();
-  if (s.atEnd()) {
-    // Recovery: an unterminated block comment runs to EOF; warn, do not abort.
-    s.warn("unterminated_comment", "Unterminated block comment", s.ref(start, s.pos - startPos));
-    return;
+
+  if (s.peek(1) === "/") {
+    // Line comment: runs to (not including) the newline.
+    while (!s.atEnd() && s.peek() !== "\n") s.advance();
+  } else {
+    // Block comment.
+    s.advance();
+    s.advance(); // /*
+    while (!s.atEnd() && !(s.peek() === "*" && s.peek(1) === "/")) s.advance();
+    if (s.atEnd()) {
+      // Recovery: an unterminated block comment runs to EOF; warn, do not abort.
+      s.warn("unterminated_comment", "Unterminated block comment", s.ref(start, s.pos - startPos));
+    } else {
+      s.advance();
+      s.advance(); // */
+    }
   }
-  s.advance();
-  s.advance(); // */
+
+  return {
+    kind: "comment",
+    value: s.source.slice(startPos, s.pos),
+    source: s.ref(start, s.pos - startPos),
+  };
 }
 
 //? Driver
@@ -249,6 +262,7 @@ export function tokenise(source: string, operators: readonly string[] = []): Lex
   // beat their single-char prefixes (=> over =, -> over -).
   const ops = [...CORE_OPERATORS, ...operators].sort((a, b) => b.length - a.length);
   const tokens: Token[] = [];
+  const comments: Token[] = [];
 
   while (!s.atEnd()) {
     const ch = s.peek();
@@ -257,7 +271,7 @@ export function tokenise(source: string, operators: readonly string[] = []): Lex
       continue;
     }
     if (ch === "/" && (s.peek(1) === "/" || s.peek(1) === "*")) {
-      skipComment(s);
+      comments.push(scanComment(s));
       continue;
     }
     if (ch === '"' || ch === "'") {
@@ -281,5 +295,5 @@ export function tokenise(source: string, operators: readonly string[] = []): Lex
     value: "",
     source: { kind: "code", line: s.line, column: s.col, length: 0 },
   });
-  return { tokens, errors: s.errors, warnings: s.warnings };
+  return { tokens, comments, errors: s.errors, warnings: s.warnings };
 }
