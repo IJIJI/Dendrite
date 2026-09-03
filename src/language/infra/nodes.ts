@@ -136,6 +136,26 @@ export type ASTNode =
   | LambdaNode
   | AppNode;
 
+// Runtime value of the node kinds (types are erased, so runtime checks like the
+// serialise guard need a value). Compile-checked against the union in BOTH directions:
+// `satisfies` forbids strays, the AssertNever forbids omissions - adding a node kind
+// without updating this list is a compile error.
+export const AST_NODE_KINDS = [
+  "literal",
+  "array",
+  "input",
+  "ref",
+  "operation",
+  "field",
+  "lambda",
+  "app",
+] as const satisfies readonly ASTNode["kind"][];
+// TODO: Can this be derived from the ASTNode type somehow?
+// TODO: Or should the kind field be typed to this?
+
+type AssertNever<T extends never> = T;
+type _AllKindsListed = AssertNever<Exclude<ASTNode["kind"], (typeof AST_NODE_KINDS)[number]>>;
+
 //? Analysed: metadata added by the analyser to every node.
 //
 //  dependsOn: which context input names transitively affect this node.
