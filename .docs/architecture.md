@@ -164,12 +164,22 @@ All accept a `CoreProgram`. `register()` returns a `ProgramHandle` with `onOutpu
 
 ---
 
+## Persistence (`infra/serialise.ts` + `environment.load`)
+
+**The authoring artifact is canonical; the RawProgram is derived** — an AST loses comments,
+formatting, and the operator surface (desugaring is destructive). So `SavedProgram` is a tagged
+union of authoring forms: `code` (source text, re-parsed on load) | `rete` (opaque graph blob,
+reserved — schema + loader arrive with the editor package) | `ast` (plain-record RawProgram, for
+programmatic/headless use; SourceRefs kept verbatim). `env.load(saved)` dispatches on form and
+always **re-analyses** against the load-time language, so descriptor drift surfaces as errors.
+`LoadResult` = `CompileResult` + a `stage: "load"` arm (`unsupported_form` / `unsupported_version`
+/ `malformed_program`). Core owns the format `version` (+ `migrate()` seam); hosts wrap their own
+envelope (ids, names, timestamps).
+
+---
+
 ## Planned (not yet built)
 
-- **`serialise.ts`** — `SavedProgram` ↔ `RawProgram` (Maps → records, strip `source`). Needed before
-  persistence.
-- **`environment.ts`** — wrapper holding the `descriptor` (and, later, a shared prelude), exposing
-  `analyse`, `load` (deserialise + analyse), `run`, `createRunner`, `runtime`, and a `compile`
-  (parse + analyse) on top of `parseSource`.
 - **Rete adapter** (`@dendrite-lang/editor`) — rete graph ↔ RawProgram, `SourceRef { kind: 'rete',
-  nodeId }`, no lexical-order enforcement (no line numbers).
+  nodeId }`, no lexical-order enforcement (no line numbers). Also supplies the loader for
+  `SavedProgram`'s reserved `rete` form.

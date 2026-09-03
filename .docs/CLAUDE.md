@@ -108,7 +108,8 @@ See `architecture.md` for the layering DAG and full design.
   a lambda body. Lexical-order check is code-editor-only (skipped for rete / missing source).
 
 ### Storage
-- **Store RawProgram** (as `SavedProgram` — `serialise.ts`, not yet built). Re-analyse on load.
+- **Store the authoring form** (`SavedProgram` in `infra/serialise.ts`: `code` source | reserved
+  `rete` graph blob | `ast` records). `env.load` always re-analyses — descriptor drift surfaces on load.
 
 ---
 

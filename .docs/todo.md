@@ -154,10 +154,20 @@ globals. The TallyState→color map settles here as inputs + a `tallyColor` help
 
 These are architecturally specified but unbuilt. Listed here for completeness; see architecture.md and CLAUDE.md for design.
 
-- **`serialise.ts`** — `SavedProgram` type and `RawProgram ↔ SavedProgram` conversion. Maps → plain objects, strip `source?: SourceRef` (session-scoped, never persisted). Needed before any database persistence.
-- **`environment.ts`** — unified wrapper holding the `descriptor` (and, later, a shared prelude — see below), exposing `analyse`, `load` (deserialise+analyse), `run`, `createRunner`, `runtime`, and a convenience `register(id, saved)`. Build after the analyser is working, since it wraps the analyser.
+- **`serialise.ts` (DONE)** — `SavedProgram` is a tagged union of AUTHORING forms (`code` source
+  text | `rete` opaque graph blob, reserved for the editor package | `ast` plain-record RawProgram),
+  because the authoring artifact is canonical and the AST is lossy (comments, formatting, operator
+  desugar). SourceRefs are kept verbatim; core owns the format `version` + `migrate()` seam; hosts
+  wrap their own envelope. See `src/language/infra/serialise.ts`.
+- **`environment.ts` (DONE)** — `createEnvironment` with `parse`/`analyse`/`compile`/`load`/`run`/
+  `createRunner`/`createRuntime`. `load(saved)` dispatches on form and always re-analyses
+  (`LoadResult` = `CompileResult` + a `stage:"load"` arm). A `register(id, saved)` convenience was
+  deliberately omitted — Environment stays a stateless facade; hosts own their runtime. Still
+  future: the shared prelude (see below).
 - **Parser (DONE)** — `source → RawProgram` via `parseSource` (lex + parse) with `SourceRef { kind: 'code', … }`. A full `compile` (parse + analyse) belongs on the future `environment.ts`.
-- **Rete adapter** — `rete graph ↔ RawProgram` with `SourceRef { kind: 'rete', nodeId }`. Lives in `@dendrite-lang/editor`.
+- **Rete adapter** — `rete graph ↔ RawProgram` with `SourceRef { kind: 'rete', nodeId }`. Lives in
+  `@dendrite-lang/editor`. Also implements the loader for `SavedProgram`'s reserved `rete` form
+  (until then `env.load` fails it with `unsupported_form`).
 
 ---
 
