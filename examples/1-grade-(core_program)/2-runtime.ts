@@ -1,17 +1,19 @@
 import { createStdlib } from "../../src/language/stdlib";
 import { createRuntime } from "../../src/language/runtime/runtime";
+import { Type } from "../../src/language/infra/types";
 import type { CNode } from "../../src/language/infra/nodes";
 import { CoreProgram } from "../../src/language/infra/program";
 
 // --- Language ---------------------------------------------------------------
 const lang = createStdlib();
-lang.registerInput({ name: "score", type: "number" });
+lang.registerInput({ name: "score", type: Type.number });
 
 // --- Programs ----------------------------------------------------------------
 // Program A - "grader":
-//   Set isPassing = GreaterThan(score, 60)
-//   Set grade     = If(isPassing, "Pass", "Fail")
+//   let isPassing = $score > 60
+//   let grade     = If(isPassing, "Pass", "Fail")
 //   output result = grade
+// (Hand-built CNodes for demonstration - the analyser derives these in production.)
 
 const graderProgram: CoreProgram = {
   bindings: new Map<string, CNode>([
@@ -21,10 +23,10 @@ const graderProgram: CoreProgram = {
         kind: "operation",
         op: "GreaterThan",
         inputs: {
-          a: { kind: "input", name: "score", type: "number", dependsOn: new Set(["score"]) },
-          b: { kind: "literal", type: "number", value: 60, dependsOn: new Set() },
+          a: { kind: "input", name: "score", type: Type.number, dependsOn: new Set(["score"]) },
+          b: { kind: "literal", type: Type.number, value: 60, dependsOn: new Set() },
         },
-        output: "boolean",
+        output: Type.boolean,
         dependsOn: new Set(["score"]),
       },
     ],
@@ -37,24 +39,24 @@ const graderProgram: CoreProgram = {
           condition: {
             kind: "ref",
             name: "isPassing",
-            type: "boolean",
+            type: Type.boolean,
             dependsOn: new Set(["score"]),
           },
-          then: { kind: "literal", type: "string", value: "Pass", dependsOn: new Set() },
-          else: { kind: "literal", type: "string", value: "Fail", dependsOn: new Set() },
+          then: { kind: "literal", type: Type.string, value: "Pass", dependsOn: new Set() },
+          else: { kind: "literal", type: Type.string, value: "Fail", dependsOn: new Set() },
         },
-        output: "string",
+        output: Type.string,
         dependsOn: new Set(["score"]),
       },
     ],
   ]),
   outputs: new Map<string, CNode>([
-    ["result", { kind: "ref", name: "grade", type: "string", dependsOn: new Set(["score"]) }],
+    ["result", { kind: "ref", name: "grade", type: Type.string, dependsOn: new Set(["score"]) }],
   ]),
 };
 
 // Program B - "topTier":
-//   Set isTop = GreaterThan(score, 90)
+//   let isTop = $score > 90
 //   output topTier = isTop
 
 const topTierProgram: CoreProgram = {
@@ -65,16 +67,19 @@ const topTierProgram: CoreProgram = {
         kind: "operation",
         op: "GreaterThan",
         inputs: {
-          a: { kind: "input", name: "score", type: "number", dependsOn: new Set(["score"]) },
-          b: { kind: "literal", type: "number", value: 90, dependsOn: new Set() },
+          a: { kind: "input", name: "score", type: Type.number, dependsOn: new Set(["score"]) },
+          b: { kind: "literal", type: Type.number, value: 90, dependsOn: new Set() },
         },
-        output: "boolean",
+        output: Type.boolean,
         dependsOn: new Set(["score"]),
       },
     ],
   ]),
   outputs: new Map<string, CNode>([
-    ["topTier", { kind: "ref", name: "isTop", type: "boolean", dependsOn: new Set(["score"]) }],
+    [
+      "topTier",
+      { kind: "ref", name: "isTop", type: Type.boolean, dependsOn: new Set(["score"]) },
+    ],
   ]),
 };
 

@@ -1,28 +1,30 @@
 import { createStdlib } from "../../src/language/stdlib";
 import { createProgramRunner } from "../../src/language/runtime/runner";
+import { Type } from "../../src/language/infra/types";
 import type { CNode } from "../../src/language/infra/nodes";
 import { CoreProgram } from "../../src/language/infra/program";
 
 // --- Language ---------------------------------------------------------------
 const lang = createStdlib();
-lang.registerInput({ name: "score", type: "number" });
+lang.registerInput({ name: "score", type: Type.number });
 
 // --- Program ----------------------------------------------------------------
-// Set isPassing = GreaterThan(score, 60)
-// Set grade     = If(isPassing, "Pass", "Fail")
+// let isPassing = $score > 60
+// let grade     = If(isPassing, "Pass", "Fail")
 // output result = grade
 //
-// dependsOn is computed by the analyser in production — set manually here
-// since the analyser is not yet implemented.
+// This example hand-builds the analysed CoreProgram (CNodes) to show exactly what
+// the evaluator consumes. In production the analyser derives all of this - including
+// dependsOn - from a RawProgram (see examples/2 for that, and examples/3 for source).
 
 const isPassing: CNode = {
   kind: "operation",
   op: "GreaterThan",
   inputs: {
-    a: { kind: "input", name: "score", type: "number", dependsOn: new Set(["score"]) },
-    b: { kind: "literal", type: "number", value: 60, dependsOn: new Set() },
+    a: { kind: "input", name: "score", type: Type.number, dependsOn: new Set(["score"]) },
+    b: { kind: "literal", type: Type.number, value: 60, dependsOn: new Set() },
   },
-  output: "boolean",
+  output: Type.boolean,
   dependsOn: new Set(["score"]),
 };
 
@@ -31,12 +33,17 @@ const grade: CNode = {
   op: "If",
   inputs: {
     // RefNode.dependsOn === the referenced binding's dependsOn — analyser invariant
-    condition: { kind: "ref", name: "isPassing", type: "boolean", dependsOn: new Set(["score"]) },
-    then: { kind: "literal", type: "string", value: "Pass", dependsOn: new Set() },
-    else: { kind: "literal", type: "string", value: "Fail", dependsOn: new Set() },
+    condition: {
+      kind: "ref",
+      name: "isPassing",
+      type: Type.boolean,
+      dependsOn: new Set(["score"]),
+    },
+    then: { kind: "literal", type: Type.string, value: "Pass", dependsOn: new Set() },
+    else: { kind: "literal", type: Type.string, value: "Fail", dependsOn: new Set() },
   },
-  // inferOutput: both branches are "string" → analyser would infer "string" here
-  output: "string",
+  // inferOutput: both branches are string → the analyser would infer string here
+  output: Type.string,
   dependsOn: new Set(["score"]),
 };
 
@@ -47,7 +54,7 @@ const program: CoreProgram = {
   ]),
   outputs: new Map<string, CNode>([
     // RefNode to "grade" — dependsOn mirrors the grade binding's dependsOn
-    ["result", { kind: "ref", name: "grade", type: "string", dependsOn: new Set(["score"]) }],
+    ["result", { kind: "ref", name: "grade", type: Type.string, dependsOn: new Set(["score"]) }],
   ]),
 };
 
@@ -57,7 +64,7 @@ const program: CoreProgram = {
 // whose dependsOn does not intersect changedInputs.
 //
 // For a one-shot evaluation, use run(program, lang.descriptor, { score: 45 })
-// from "../../src/core/runner" instead.
+// from "../../src/language/runtime/runner" instead.
 const runner = createProgramRunner(program, lang.descriptor);
 
 const testCases = [45, 60, 85];
