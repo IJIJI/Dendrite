@@ -73,12 +73,12 @@ node-kind registry, and true source-span ranges.
 
 Repo-level / near-term:
 - [ ] More stdlib levels (empty / skeleton / base / core / extended); make configuring a language easier.
-- [ ] More operators (e.g. array concatenation) and math ops (min, max, average).
-- [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false.
-- [ ] Field typing (for structs)
-- [ ] Output dependance. If a binding fails analysis, don't drop the entire program, just the outputs that are affected.
+- [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed. More welcome (e.g. `Min`/`Max` over args, `Round`).
+- [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false. (Design in `.docs/todo.md`.)
+- [x] Field typing (for structs) — multilevel struct typing + inheritance + `unknown_field`.
+- [x] Output dependance — analysis is output-granular: only outputs reachable from a failed binding are dropped; the rest survive.
 - [ ] Add more helpers to log results, like in the code example.
-- [ ] Entry-point glue: manage analyse + run/runner/runtime, and editor (code/rete) parsing + display.
+- [x] Entry-point glue — `createEnvironment` (parse/analyse/compile/load/run/createRunner/createRuntime). Editor display glue comes with the editor era.
 - [x] Registry validation — `validateDescriptor` checks type references, struct-override
       compatibility, and op↔evaluator pairing; run by `createEnvironment` (fail-fast).
 - [ ] Move tests into a separate folder (reduce clutter). _Backlogged — decided to revisit later._
