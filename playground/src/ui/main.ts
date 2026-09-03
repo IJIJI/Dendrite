@@ -41,6 +41,9 @@ function boot(exampleId: string): BootHandle {
   let disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pendingSave = false; // an edit happened that hasn't hit localStorage yet
+  // Mutual reference: the session's callbacks capture `view`, and the view's extensions
+  // capture `session` - so one of the two must be declared first and assigned later.
+  // eslint-disable-next-line prefer-const
   let view: EditorView; // assigned below, before the first compile fires any callback
 
   const jumpTo = (line: number, column: number): void => {
