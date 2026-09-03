@@ -4,7 +4,16 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", ".yarn/**", ".pnp.cjs", ".pnp.loader.mjs"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      ".yarn/**",
+      ".pnp.cjs",
+      ".pnp.loader.mjs",
+      // The nested playground project's artifacts (its sources ARE linted).
+      "playground/dist/**",
+      "playground/.yarn/**",
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
