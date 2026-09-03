@@ -13,6 +13,7 @@ export * from "./language/infra/types"; // Type (value + type), typeToString, ty
 export * from "./language/infra/nodes"; // ASTNode/CNode + variants, SourceRef, LiteralValue, operationNode
 export * from "./language/infra/registry"; // LanguageDescriptor, Op/Input/Output/Type/Evaluator definitions, isCompatible, FnValue
 export * from "./language/infra/program"; // RawProgram, CoreProgram
+export * from "./language/infra/serialise"; // SavedProgram forms, serialise/deserialise/migrate
 
 // ── language assembly + source → RawProgram ──────────────────────────────────
 export { createLanguage, extendLanguage, parseSource, BP, type Language } from "./language/language";
@@ -45,7 +46,14 @@ export {
 } from "./language/runtime/runtime";
 
 // ── environment (descriptor-bound convenience wrapper) ───────────────────────
-export { createEnvironment, type Environment, type CompileResult } from "./language/environment";
+export {
+  createEnvironment,
+  type Environment,
+  type CompileResult,
+  type CompileWarning,
+  type LoadResult,
+  type LoadError,
+} from "./language/environment";
 
 // ── parsing surface (lower level; result types needed for parseSource) ───────
 export { tokenise, type Token, type TokenKind, type LexResult } from "./language/parser/lexer";

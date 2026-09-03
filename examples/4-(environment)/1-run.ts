@@ -21,34 +21,15 @@ const source = readFileSync(new URL("./heights.den", import.meta.url), "utf8");
 
 const compile_result = env.compile(source);
 
-// export type CompileResult =
-//   | { ok: true; program: CoreProgram; warnings: AnalysisWarning[] }
-//   | { ok: false; stage: "parse"; errors: ParseError[]; warnings: ParseWarning[] } 
-//   | { ok: false; stage: "analyse"; result: AnalysisResult }; 
-// export interface AnalysisResult {
-//   ok: boolean; // false ONLY when a required output was dropped or missing
-//   program: CoreProgram; // always present; outputs = only surviving outputs
-//   errors: AnalysisError[];
-//   warnings: AnalysisWarning[];
-// }
-
+// CompileResult carries errors + warnings uniformly on every failure arm (parse
+// warnings survive into the analyse stage), so one branch handles both stages.
 if (!compile_result.ok) {
-  // print all errors and warnings
-  console.error("Compilation failed:");
-  if (compile_result.stage === "parse") {
-    for (const error of compile_result.errors) {
-      console.error(` - ${error.message}`);
-    }
-    for (const warning of compile_result.warnings) {
-      console.warn(` - ${warning.message}`);
-    }
-  } else if (compile_result.stage === "analyse") {
-    for (const error of compile_result.result.errors) {
-      console.error(` - ${error.message}`);
-    }
-    for (const warning of compile_result.result.warnings) {
-      console.warn(` - ${warning.message}`);
-    }
+  console.error(`Compilation failed at ${compile_result.stage}:`);
+  for (const error of compile_result.errors) {
+    console.error(` - ${error.message}`);
+  }
+  for (const warning of compile_result.warnings) {
+    console.warn(` - ${warning.message}`);
   }
   process.exit(1);
 }
