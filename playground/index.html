@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dendrite Playground</title>
+  </head>
+  <body>
+    <header id="topbar">
+      <h1>Dendrite <span>playground</span></h1>
+      <label>
+        Example
+        <select id="example-select"></select>
+      </label>
+    </header>
+    <main id="layout">
+      <section id="editor-pane"></section>
+      <aside id="side-panes">
+        <section class="pane" id="inputs-pane">
+          <h2>Inputs</h2>
+          <div id="inputs"></div>
+        </section>
+        <section class="pane" id="outputs-pane">
+          <h2>Outputs</h2>
+          <div id="outputs"></div>
+        </section>
+        <section class="pane" id="diagnostics-pane">
+          <h2>Diagnostics</h2>
+          <ul id="diagnostics"></ul>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="/src/ui/main.ts"></script>
+  </body>
+</html>

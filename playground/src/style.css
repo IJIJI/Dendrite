@@ -1,0 +1,246 @@
+:root {
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --border: #dfe3e8;
+  --text: #1f2530;
+  --muted: #7a8494;
+  --accent: #3d6fd6;
+  --error: #c62828;
+  --warning: #b98300;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#topbar h1 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+#topbar h1 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+#topbar label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 1.4fr);
+  min-height: 0;
+}
+
+#editor-pane {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+
+#editor-pane .cm-editor {
+  height: 100%;
+  font-size: 13.5px;
+}
+
+#side-panes {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--panel);
+}
+
+.pane {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pane h2 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ── Inputs ── */
+.input-row {
+  margin-bottom: 0.6rem;
+}
+
+.input-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+}
+
+.input-name {
+  font-family: ui-monospace, Consolas, monospace;
+  color: #9c5d27;
+}
+
+.input-type {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.input-row input[type="number"],
+.input-row input[type="text"],
+.json-input {
+  width: 100%;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.json-input.invalid {
+  border-color: var(--error);
+}
+
+.json-error {
+  color: var(--error);
+  font-size: 0.75rem;
+  min-height: 0.9rem;
+}
+
+/* ── Outputs ── */
+.output-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  padding: 0.15rem 0;
+}
+
+.output-name {
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--accent);
+}
+
+.output-value {
+  font-family: ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.runtime-error {
+  color: var(--error);
+  font-size: 0.85rem;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* ── Diagnostics ── */
+#diagnostics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.diag {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  padding: 0.2rem 0;
+}
+
+.diag-loc {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+
+.diag-kind {
+  font-family: ui-monospace, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.diag-error .diag-kind {
+  color: var(--error);
+}
+
+.diag-warning .diag-kind {
+  color: var(--warning);
+}
+
+.diag-message {
+  color: var(--text);
+}
+
+/* ── Token colors (classes from lang/tokens.ts via cm.ts) ── */
+.tok-keyword {
+  color: #a626a4;
+  font-weight: 600;
+}
+
+.tok-op {
+  color: #4078f2;
+}
+
+.tok-ident {
+  color: #383a42;
+}
+
+.tok-input {
+  color: #9c5d27;
+}
+
+.tok-number {
+  color: #986801;
+}
+
+.tok-string {
+  color: #50a14f;
+}
+
+.tok-literal {
+  color: #b76b01;
+}
+
+.tok-operator {
+  color: #0184bc;
+}
+
+.tok-punct {
+  color: #7a8494;
+}
