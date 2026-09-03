@@ -1,4 +1,4 @@
-import { Type } from "@dendrite-lang/core";
+import { serialiseSource, Type } from "@dendrite-lang/core";
 
 import { DOCUMENT_VERSION, type PlaygroundDocument } from "./lang/document";
 import { type SurfaceSpec } from "./lang/surface";
@@ -16,7 +16,7 @@ export interface ExamplePreset {
 
 const doc = (source: string, surface: SurfaceSpec): PlaygroundDocument => ({
   v: DOCUMENT_VERSION,
-  source,
+  program: serialiseSource(source),
   surface,
   values: {},
 });
