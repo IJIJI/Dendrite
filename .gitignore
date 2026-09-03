@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # VSCODE
 .vscode/
 .claude/
+
+# Nested playground project internals
+playground/.yarn/
