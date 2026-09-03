@@ -29,6 +29,6 @@ yarn dev    # http://localhost:5173
 
 ## Known limitations (MVP)
 
-- Comments aren't highlighted (the lexer discards them; highlighting is token-driven).
 - Program source persists to localStorage per example; there's no save/load beyond that.
-- Input *declarations* come from the selected example, not the UI.
+- Input *declarations* come from the selected example, not the UI (backlogged in
+  `.docs/todo.md`, alongside share links).

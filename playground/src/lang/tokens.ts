@@ -14,7 +14,8 @@ export type TokenClass =
   | "string"
   | "literal" // true / false / null
   | "operator" // registered operators + the core arrows => ->
-  | "punct"; // structural punctuation ( ) [ ] , . : =
+  | "punct" // structural punctuation ( ) [ ] , . : =
+  | "comment"; // // line and /* block */ trivia (from LexResult.comments)
 
 export interface StyledRange {
   from: number;
@@ -37,7 +38,7 @@ export const toOffset = (starts: number[], line: number, column: number): number
 
 export function styledRanges(source: string, language: Language): StyledRange[] {
   const starts = lineStartOffsets(source);
-  const { tokens } = tokenise(source, [...language.grammar.operatorTokens]);
+  const { tokens, comments } = tokenise(source, [...language.grammar.operatorTokens]);
   const ranges: StyledRange[] = [];
   let afterSigil = false;
 
@@ -81,5 +82,14 @@ export function styledRanges(source: string, language: Language): StyledRange[] 
     afterSigil = token.kind === "punct" && token.value === "$";
     if (to > from) ranges.push({ from, to, cls });
   }
-  return ranges;
+
+  // Comments live on a separate lexer channel and interleave with the tokens, so the
+  // combined list must be re-sorted (CodeMirror's RangeSetBuilder requires ordered adds).
+  for (const comment of comments) {
+    if (comment.source.kind !== "code") continue;
+    const from = toOffset(starts, comment.source.line, comment.source.column);
+    const to = from + comment.source.length;
+    if (to > from) ranges.push({ from, to, cls: "comment" });
+  }
+  return ranges.sort((a, b) => a.from - b.from);
 }

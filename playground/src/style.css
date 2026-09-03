@@ -245,3 +245,8 @@ body {
 .tok-punct {
   color: #7a8494;
 }
+
+.tok-comment {
+  color: #a0a1a7;
+  font-style: italic;
+}
