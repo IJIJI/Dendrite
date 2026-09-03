@@ -1,236 +1,101 @@
 /**
- * Shared definitions for the core large_dataset language examples.
+ * Shared definitions for the large_dataset examples.
+ *
+ * The programs are defined as SOURCE and compiled via parseSource + analyse — the same
+ * pipeline the playground and code editor use. (Hand-building analysed CNodes, as this
+ * file once did, is an anti-pattern: the analyser derives dependsOn and output types.)
+ *
+ * Inputs:  values — number[] of scores; threshold — passing bar
+ * Outputs: passing (the filtered list), anyPassed, anyCumLaude (> 90)
  */
 
-import { createStdlib } from "../../src/language/stdlib";
-import { CoreProgram } from "../../src/language/program";
-import {
-  CInputNode,
-  CRefNode,
-  CLiteralNode,
-  COperationNode,
-  CHigherOrderNode,
-} from "../../src/language/infra/nodes";
+import { analyse } from "../../src/language/analyser/analyser";
+import { createLanguage, parseSource, type Language } from "../../src/language/language";
+import { extendStdlib } from "../../src/language/stdlib";
+import { Type } from "../../src/language/infra/types";
+import type { CoreProgram } from "../../src/language/infra/program";
 
 // ---------------------------------------------------------------------------
 // Language
 // ---------------------------------------------------------------------------
 
-export const lang = createStdlib();
-lang.registerInput({ name: "values", type: "any", default: [] });
-lang.registerInput({ name: "threshold", type: "number", default: 50 });
-lang.registerOutput({ name: "passing", type: "any", mode: "required" });
-lang.registerOutput({ name: "anyPassed", type: "boolean", mode: "required" });
-lang.registerOutput({ name: "anyCumLaude", type: "boolean", mode: "desired" });
+function createScoresLang(): Language {
+  const lang = createLanguage();
+  lang.registerInput({ name: "values", type: Type.array(Type.number), default: [] });
+  lang.registerInput({ name: "threshold", type: Type.number, default: 50 });
+  return extendStdlib(lang);
+}
+
+// Full language — all outputs. Used by run() and ProgramRunner.
+export const lang = createScoresLang();
+lang.registerOutput({ name: "passing", type: Type.array(Type.number), mode: "required" });
+lang.registerOutput({ name: "anyPassed", type: Type.boolean, mode: "required" });
+lang.registerOutput({ name: "anyCumLaude", type: Type.boolean, mode: "desired" });
 
 export const { descriptor } = lang;
 
 // ---------------------------------------------------------------------------
-// Shared nodes
+// Programs (source → parse → analyse)
 // ---------------------------------------------------------------------------
 
-const valuesInput: CInputNode = {
-  kind: "input",
-  name: "values",
-  type: "any",
-  dependsOn: new Set(["values"]),
-};
-const thresholdInput: CInputNode = {
-  kind: "input",
-  name: "threshold",
-  type: "number",
-  dependsOn: new Set(["threshold"]),
-};
-const itemRef: CRefNode = {
-  kind: "ref",
-  name: "n",
-  type: "number",
-  dependsOn: new Set(),
-};
-const ninety: CLiteralNode = {
-  kind: "literal",
-  type: "number",
-  value: 90,
-  dependsOn: new Set(),
-};
+function compileOrThrow(language: Language, source: string, label: string): CoreProgram {
+  const parsed = parseSource(source, language);
+  if (!parsed.ok) {
+    const msgs = parsed.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
+    throw new Error(`Parse failed for '${label}':\n${msgs}`);
+  }
+  const analysed = analyse(parsed.program, language.descriptor);
+  if (!analysed.ok) {
+    const msgs = analysed.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
+    throw new Error(`Analysis failed for '${label}':\n${msgs}`);
+  }
+  return analysed.program;
+}
 
-const filterBody: COperationNode = {
-  kind: "operation",
-  op: "GreaterThan",
-  inputs: { a: itemRef, b: thresholdInput },
-  output: "boolean",
-  dependsOn: new Set(["threshold"]),
-};
-const somePassBody: COperationNode = {
-  kind: "operation",
-  op: "GreaterThan",
-  inputs: { a: itemRef, b: thresholdInput },
-  output: "boolean",
-  dependsOn: new Set(["threshold"]),
-};
-const cumLaudeBody: COperationNode = {
-  kind: "operation",
-  op: "GreaterThan",
-  inputs: { a: itemRef, b: ninety },
-  output: "boolean",
-  dependsOn: new Set(),
-};
+// Single program for run() and ProgramRunner — all three outputs together.
+export const program = compileOrThrow(
+  lang,
+  `
+let passing     = Filter($values, n => n > $threshold)
+let anyPassed   = Some($values, n => n > $threshold)
+let anyCumLaude = Some($values, n => n > 90)
 
-// ---------------------------------------------------------------------------
-// Program — single program for run() and ProgramRunner
-//
-// Set passing     = Filter(values, n => GreaterThan(n, threshold))
-// Set anyPassed   = Some(values,   n => GreaterThan(n, threshold))
-// Set anyCumLaude = Some(values,   n => GreaterThan(n, 90))
-// ---------------------------------------------------------------------------
+output passing     = passing
+output anyPassed   = anyPassed
+output anyCumLaude = anyCumLaude
+`,
+  "full",
+);
 
-export const program: CoreProgram = {
-  bindings: new Map([
-    [
-      "passing",
-      {
-        kind: "higher_order",
-        op: "Filter",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: filterBody,
-        dependsOn: new Set(["values", "threshold"]),
-      } as CHigherOrderNode,
-    ],
-    [
-      "anyPassed",
-      {
-        kind: "higher_order",
-        op: "Some",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: somePassBody,
-        dependsOn: new Set(["values", "threshold"]),
-      } as CHigherOrderNode,
-    ],
-    [
-      "anyCumLaude",
-      {
-        kind: "higher_order",
-        op: "Some",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: cumLaudeBody,
-        dependsOn: new Set(["values"]),
-      } as CHigherOrderNode,
-    ],
-  ]),
-  outputs: new Map([
-    [
-      "passing",
-      {
-        kind: "ref",
-        name: "passing",
-        type: "any",
-        dependsOn: new Set(["values", "threshold"]),
-      } as CRefNode,
-    ],
-    [
-      "anyPassed",
-      {
-        kind: "ref",
-        name: "anyPassed",
-        type: "boolean",
-        dependsOn: new Set(["values", "threshold"]),
-      } as CRefNode,
-    ],
-    [
-      "anyCumLaude",
-      {
-        kind: "ref",
-        name: "anyCumLaude",
-        type: "boolean",
-        dependsOn: new Set(["values"]),
-      } as CRefNode,
-    ],
-  ]),
-};
+// Split by dependency boundary for the Runtime:
+//   'filtering' dependsOn values+threshold → passing, anyPassed
+//   'honors'    dependsOn values only      → anyCumLaude (skipped on threshold-only changes)
+const filteringLang = createScoresLang();
+filteringLang.registerOutput({ name: "passing", type: Type.array(Type.number), mode: "required" });
+filteringLang.registerOutput({ name: "anyPassed", type: Type.boolean, mode: "required" });
 
-// ---------------------------------------------------------------------------
-// Programs: split by dependency boundary for Runtime
-//
-// 'filtering'  dependsOn: values, threshold  →  passing, anyPassed
-// 'honors'     dependsOn: values only         →  anyCumLaude
-// ---------------------------------------------------------------------------
+export const filteringProgram = compileOrThrow(
+  filteringLang,
+  `
+let passing   = Filter($values, n => n > $threshold)
+let anyPassed = Some($values, n => n > $threshold)
 
-export const filteringProgram: CoreProgram = {
-  bindings: new Map([
-    [
-      "passing",
-      {
-        kind: "higher_order",
-        op: "Filter",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: filterBody,
-        dependsOn: new Set(["values", "threshold"]),
-      } as CHigherOrderNode,
-    ],
-    [
-      "anyPassed",
-      {
-        kind: "higher_order",
-        op: "Some",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: somePassBody,
-        dependsOn: new Set(["values", "threshold"]),
-      } as CHigherOrderNode,
-    ],
-  ]),
-  outputs: new Map([
-    [
-      "passing",
-      {
-        kind: "ref",
-        name: "passing",
-        type: "any",
-        dependsOn: new Set(["values", "threshold"]),
-      } as CRefNode,
-    ],
-    [
-      "anyPassed",
-      {
-        kind: "ref",
-        name: "anyPassed",
-        type: "boolean",
-        dependsOn: new Set(["values", "threshold"]),
-      } as CRefNode,
-    ],
-  ]),
-};
+output passing   = passing
+output anyPassed = anyPassed
+`,
+  "filtering",
+);
 
-export const honorsProgram: CoreProgram = {
-  bindings: new Map([
-    [
-      "anyCumLaude",
-      {
-        kind: "higher_order",
-        op: "Some",
-        inputs: { list: valuesInput },
-        bindings: ["n"],
-        body: cumLaudeBody,
-        dependsOn: new Set(["values"]),
-      } as CHigherOrderNode,
-    ],
-  ]),
-  outputs: new Map([
-    [
-      "anyCumLaude",
-      {
-        kind: "ref",
-        name: "anyCumLaude",
-        type: "boolean",
-        dependsOn: new Set(["values"]),
-      } as CRefNode,
-    ],
-  ]),
-};
+const honorsLang = createScoresLang();
+honorsLang.registerOutput({ name: "anyCumLaude", type: Type.boolean, mode: "required" });
+
+export const honorsProgram = compileOrThrow(
+  honorsLang,
+  `
+output anyCumLaude = Some($values, n => n > 90)
+`,
+  "honors",
+);
 
 // ---------------------------------------------------------------------------
 // Scenarios
