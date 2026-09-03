@@ -77,6 +77,94 @@ output tally = Max(Map(active, bus => bus.state))
     },
   },
   {
+    id: "closures",
+    name: "Closures & currying",
+    source: `// Lambdas are first-class values: bindings hold them, ops take them,
+// and closures capture what they see - including other functions.
+
+let add   = (a: number) => (b: number) => a + b
+let add10 = add(10)
+
+// A function-typed parameter: twice(f) applies f two times.
+let twice = (f: (number) -> number) => (x: number) => f(f(x))
+let add20 = twice(add10)
+
+output curried  = add(2)(3)
+output partial  = add10($n)
+output composed = add20($n)
+`,
+    setup(lang) {
+      lang.registerInput({ name: "n", type: Type.number, default: 5 });
+      lang.registerOutput({ name: "curried", type: Type.number });
+      lang.registerOutput({ name: "partial", type: Type.number });
+      lang.registerOutput({ name: "composed", type: Type.number });
+    },
+  },
+  {
+    id: "operators",
+    name: "Operators tour",
+    source: `// Operators are stdlib sugar that desugars to ops:
+//   a + b   ->  Add(a, b)          x >= y  ->  Not(LessThan(x, y))
+// Precedence follows the usual ladder (* binds tighter than +, && than ||).
+
+let sum     = $a + $b * 2
+let inRange = $a >= 0 && $a <= 100
+let notZero = !($a == 0)
+let winner  = If($a > $b, "a wins", If($b > $a, "b wins", "tie"))
+
+output sum     = sum
+output inRange = inRange
+output notZero = notZero
+output winner  = winner
+`,
+    setup(lang) {
+      lang.registerInput({ name: "a", type: Type.number, default: 7 });
+      lang.registerInput({ name: "b", type: Type.number, default: 3 });
+      lang.registerOutput({ name: "sum", type: Type.number });
+      lang.registerOutput({ name: "inRange", type: Type.boolean });
+      lang.registerOutput({ name: "notZero", type: Type.boolean });
+      lang.registerOutput({ name: "winner", type: Type.string });
+    },
+  },
+  {
+    id: "structs",
+    name: "Struct typing (nested)",
+    source: `// Struct types come from the language definition: field access is checked
+// and typed through nested structs. Try misspelling a field ($user.naem)
+// to see the unknown_field error.
+
+let name  = $user.name.first
+let adult = $user.age >= 18
+
+output label = If(adult, name, "minor")
+output adult = adult
+output city  = $user.address.city
+`,
+    setup(lang) {
+      lang.registerType("Name", z.unknown(), {
+        fields: { first: Type.string, last: Type.string },
+      });
+      lang.registerType("Address", z.unknown(), {
+        fields: { city: Type.string, zip: Type.string },
+      });
+      lang.registerType("User", z.unknown(), {
+        fields: { name: Type.name("Name"), age: Type.number, address: Type.name("Address") },
+      });
+      lang.registerInput({
+        name: "user",
+        type: Type.name("User"),
+        default: {
+          name: { first: "Ada", last: "Lovelace" },
+          age: 36,
+          address: { city: "London", zip: "N1" },
+        },
+      });
+      lang.registerOutput({ name: "label", type: Type.string });
+      lang.registerOutput({ name: "adult", type: Type.boolean });
+      lang.registerOutput({ name: "city", type: Type.string });
+    },
+  },
+  {
     id: "scratch",
     name: "Scratchpad",
     source: `// A blank slate with two number inputs ($a, $b).
