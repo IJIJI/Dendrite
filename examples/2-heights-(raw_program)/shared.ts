@@ -1,8 +1,10 @@
 /**
  * Shared definitions for the heights raw_program examples.
  *
- * Demonstrates the analyser: programs are written as RawPrograms (ASTNode trees)
- * and compiled to CorePrograms via analyse() before evaluation.
+ * Demonstrates the analyser: programs are built PROGRAMMATICALLY as RawPrograms
+ * (ASTNode trees - the same path a visual-editor adapter takes) and compiled to
+ * CorePrograms via analyse() before evaluation. For the source-text path, see
+ * examples/3-(code).
  *
  * Inputs:  men, women, unknown — number[] of individual height measurements (cm)
  * Outputs: avgX / countX — average height and count above 185 cm, per category and total
@@ -10,9 +12,10 @@
 
 import { analyse } from "../../src/language/analyser/analyser";
 import { extendStdlib } from "../../src/language/stdlib";
-import { createLanguage } from "../../src/language/infra/registry";
-import type { ASTNode, OperationNode, HigherOrderNode } from "../../src/language/infra/nodes";
-import type { CoreProgram, RawProgram } from "../../src/language/program";
+import { createLanguage } from "../../src/language/language";
+import { Type } from "../../src/language/infra/types";
+import type { ASTNode, LambdaNode, OperationNode } from "../../src/language/infra/nodes";
+import type { CoreProgram, RawProgram } from "../../src/language/infra/program";
 
 // ---------------------------------------------------------------------------
 // Language
@@ -20,22 +23,22 @@ import type { CoreProgram, RawProgram } from "../../src/language/program";
 
 function createHeightsLang() {
   const lang = createLanguage();
-  lang.registerInput({ name: "men", type: "number[]", default: [] });
-  lang.registerInput({ name: "women", type: "number[]", default: [] });
-  lang.registerInput({ name: "unknown", type: "number[]", default: [] });
+  lang.registerInput({ name: "men", type: Type.array(Type.number), default: [] });
+  lang.registerInput({ name: "women", type: Type.array(Type.number), default: [] });
+  lang.registerInput({ name: "unknown", type: Type.array(Type.number), default: [] });
   return extendStdlib(lang);
 }
 
 // Full language — all 8 outputs. Used by run() and ProgramRunner.
 export const fullLang = createHeightsLang();
-fullLang.registerOutput({ name: "avgMen", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "avgWomen", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "avgUnknown", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "avgTotal", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "countMen", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "countWomen", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "countUnknown", type: "number", mode: "required" });
-fullLang.registerOutput({ name: "countTotal", type: "number", mode: "required" });
+fullLang.registerOutput({ name: "avgMen", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "avgWomen", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "avgUnknown", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "avgTotal", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "countMen", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "countWomen", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "countUnknown", type: Type.number, mode: "required" });
+fullLang.registerOutput({ name: "countTotal", type: Type.number, mode: "required" });
 
 // Runtime language — inputs only, used for input routing in the 4-way split.
 export const runtimeLang = createHeightsLang();
@@ -43,9 +46,12 @@ export const runtimeLang = createHeightsLang();
 // ---------------------------------------------------------------------------
 // AST helpers
 // ---------------------------------------------------------------------------
+// Higher-order ops are ordinary ops with a function-typed input: the lambda's untyped
+// params are contextually typed by the analyser from the resolved list (via the
+// evaluator's inferInputTypes), exactly as in source programs.
 
 function inp(name: string): ASTNode {
-  return { kind: "input", name, type: "number[]" };
+  return { kind: "input", name, type: Type.array(Type.number) };
 }
 function lit(value: number): ASTNode {
   return { kind: "literal", value };
@@ -53,36 +59,49 @@ function lit(value: number): ASTNode {
 function ref(name: string): ASTNode {
   return { kind: "ref", name };
 }
+function lambda(params: string[], body: ASTNode): LambdaNode {
+  return { kind: "lambda", params: params.map((name) => ({ name })), body };
+}
 function add(...nodes: ASTNode[]): OperationNode {
-  return { kind: "operation", op: "Add", inputs: { nodes }, output: "number" };
+  return { kind: "operation", op: "Add", inputs: { nodes }, output: Type.number };
 }
 function divide(a: ASTNode, b: ASTNode): OperationNode {
-  return { kind: "operation", op: "Divide", inputs: { a, b }, output: "number" };
+  return { kind: "operation", op: "Divide", inputs: { a, b }, output: Type.number };
 }
 function length(list: ASTNode): OperationNode {
-  return { kind: "operation", op: "Length", inputs: { list }, output: "number" };
+  return { kind: "operation", op: "Length", inputs: { list }, output: Type.number };
 }
-function sumList(list: ASTNode): HigherOrderNode {
+// Reduce(list, 0, (acc, item) => acc + item)
+function sumList(list: ASTNode): OperationNode {
   return {
-    kind: "higher_order",
+    kind: "operation",
     op: "Reduce",
-    inputs: { list, initial: lit(0) },
-    bindings: ["acc", "item"],
-    body: add(ref("acc"), ref("item")),
+    inputs: {
+      list,
+      initial: lit(0),
+      reducer: lambda(["acc", "item"], add(ref("acc"), ref("item"))),
+    },
+    output: Type.number,
   };
 }
-function filterAbove(list: ASTNode, threshold: number): HigherOrderNode {
+// Filter(list, item => item > threshold)
+function filterAbove(list: ASTNode, threshold: number): OperationNode {
   return {
-    kind: "higher_order",
+    kind: "operation",
     op: "Filter",
-    inputs: { list },
-    bindings: ["item"],
-    body: {
-      kind: "operation",
-      op: "GreaterThan",
-      inputs: { a: ref("item"), b: lit(threshold) },
-      output: "boolean",
+    inputs: {
+      list,
+      predicate: lambda(
+        ["item"],
+        {
+          kind: "operation",
+          op: "GreaterThan",
+          inputs: { a: ref("item"), b: lit(threshold) },
+          output: Type.boolean,
+        },
+      ),
     },
+    output: Type.array(Type.number),
   };
 }
 
@@ -92,22 +111,22 @@ function filterAbove(list: ASTNode, threshold: number): HigherOrderNode {
 
 // Full program — all 8 outputs in one program, used by run() and ProgramRunner.
 //
-// Set sumMen     = Reduce(men,     0, (acc, item) => acc + item)
-// Set sumWomen   = Reduce(women,   0, (acc, item) => acc + item)
-// Set sumUnknown = Reduce(unknown, 0, (acc, item) => acc + item)
-// Set avgMen     = Divide(sumMen,    Length(men))
-// Set avgWomen   = Divide(sumWomen,  Length(women))
-// Set avgUnknown = Divide(sumUnknown, Length(unknown))
-// Set totalSum   = Add(sumMen, sumWomen, sumUnknown)
-// Set totalLen   = Add(Length(men), Length(women), Length(unknown))
-// Set avgTotal   = Divide(totalSum, totalLen)
-// Set menAbove     = Filter(men,     item => item > 185)
-// Set womenAbove   = Filter(women,   item => item > 185)
-// Set unknownAbove = Filter(unknown, item => item > 185)
-// Set countMen     = Length(menAbove)
-// Set countWomen   = Length(womenAbove)
-// Set countUnknown = Length(unknownAbove)
-// Set countTotal   = Add(countMen, countWomen, countUnknown)
+// let sumMen     = Reduce($men,     0, (acc, item) => acc + item)
+// let sumWomen   = Reduce($women,   0, (acc, item) => acc + item)
+// let sumUnknown = Reduce($unknown, 0, (acc, item) => acc + item)
+// let avgMen     = sumMen / Length($men)
+// let avgWomen   = sumWomen / Length($women)
+// let avgUnknown = sumUnknown / Length($unknown)
+// let totalSum   = sumMen + sumWomen + sumUnknown
+// let totalLen   = Length($men) + Length($women) + Length($unknown)
+// let avgTotal   = totalSum / totalLen
+// let menAbove     = Filter($men,     item => item > 185)
+// let womenAbove   = Filter($women,   item => item > 185)
+// let unknownAbove = Filter($unknown, item => item > 185)
+// let countMen     = Length(menAbove)
+// let countWomen   = Length(womenAbove)
+// let countUnknown = Length(unknownAbove)
+// let countTotal   = countMen + countWomen + countUnknown
 
 const fullRaw: RawProgram = {
   bindings: new Map<string, ASTNode>([
@@ -147,10 +166,10 @@ const fullRaw: RawProgram = {
 // Per-category programs — each depends only on its own input.
 // Used by Runtime so that changing one category skips the other two.
 
-// Set sumMen   = Reduce(men, 0, (acc, item) => acc + item)
-// Set avgMen   = Divide(sumMen, Length(men))
-// Set menAbove = Filter(men, item => item > 185)
-// Set countMen = Length(menAbove)
+// let sumMen   = Reduce($men, 0, (acc, item) => acc + item)
+// let avgMen   = sumMen / Length($men)
+// let menAbove = Filter($men, item => item > 185)
+// let countMen = Length(menAbove)
 const menRaw: RawProgram = {
   bindings: new Map<string, ASTNode>([
     ["sumMen", sumList(inp("men"))],
@@ -164,10 +183,6 @@ const menRaw: RawProgram = {
   ]),
 };
 
-// Set sumWomen   = Reduce(women, 0, (acc, item) => acc + item)
-// Set avgWomen   = Divide(sumWomen, Length(women))
-// Set womenAbove = Filter(women, item => item > 185)
-// Set countWomen = Length(womenAbove)
 const womenRaw: RawProgram = {
   bindings: new Map<string, ASTNode>([
     ["sumWomen", sumList(inp("women"))],
@@ -181,10 +196,6 @@ const womenRaw: RawProgram = {
   ]),
 };
 
-// Set sumUnknown   = Reduce(unknown, 0, (acc, item) => acc + item)
-// Set avgUnknown   = Divide(sumUnknown, Length(unknown))
-// Set unknownAbove = Filter(unknown, item => item > 185)
-// Set countUnknown = Length(unknownAbove)
 const unknownRaw: RawProgram = {
   bindings: new Map<string, ASTNode>([
     ["sumUnknown", sumList(inp("unknown"))],
@@ -199,17 +210,6 @@ const unknownRaw: RawProgram = {
 };
 
 // Totals program — depends on all three inputs, re-derives sums independently.
-//
-// Set tSumMen     = Reduce(men,     0, (acc, item) => acc + item)
-// Set tSumWomen   = Reduce(women,   0, (acc, item) => acc + item)
-// Set tSumUnknown = Reduce(unknown, 0, (acc, item) => acc + item)
-// Set totalSum    = Add(tSumMen, tSumWomen, tSumUnknown)
-// Set totalLen    = Add(Length(men), Length(women), Length(unknown))
-// Set avgTotal    = Divide(totalSum, totalLen)
-// Set tMenAbove   = Filter(men,     item => item > 185)
-// Set tWomenAbove = Filter(women,   item => item > 185)
-// Set tUnkAbove   = Filter(unknown, item => item > 185)
-// Set countTotal  = Add(Length(tMenAbove), Length(tWomenAbove), Length(tUnkAbove))
 const totalsRaw: RawProgram = {
   bindings: new Map<string, ASTNode>([
     ["tSumMen", sumList(inp("men"))],
@@ -248,20 +248,20 @@ export const fullProgram = assertOk(analyse(fullRaw, fullLang.descriptor), "full
 
 // Scoped languages for the 4-way runtime split — each holds only its two outputs.
 const menLang = createHeightsLang();
-menLang.registerOutput({ name: "avgMen", type: "number", mode: "required" });
-menLang.registerOutput({ name: "countMen", type: "number", mode: "required" });
+menLang.registerOutput({ name: "avgMen", type: Type.number, mode: "required" });
+menLang.registerOutput({ name: "countMen", type: Type.number, mode: "required" });
 
 const womenLang = createHeightsLang();
-womenLang.registerOutput({ name: "avgWomen", type: "number", mode: "required" });
-womenLang.registerOutput({ name: "countWomen", type: "number", mode: "required" });
+womenLang.registerOutput({ name: "avgWomen", type: Type.number, mode: "required" });
+womenLang.registerOutput({ name: "countWomen", type: Type.number, mode: "required" });
 
 const unknownLang = createHeightsLang();
-unknownLang.registerOutput({ name: "avgUnknown", type: "number", mode: "required" });
-unknownLang.registerOutput({ name: "countUnknown", type: "number", mode: "required" });
+unknownLang.registerOutput({ name: "avgUnknown", type: Type.number, mode: "required" });
+unknownLang.registerOutput({ name: "countUnknown", type: Type.number, mode: "required" });
 
 const totalsLang = createHeightsLang();
-totalsLang.registerOutput({ name: "avgTotal", type: "number", mode: "required" });
-totalsLang.registerOutput({ name: "countTotal", type: "number", mode: "required" });
+totalsLang.registerOutput({ name: "avgTotal", type: Type.number, mode: "required" });
+totalsLang.registerOutput({ name: "countTotal", type: Type.number, mode: "required" });
 
 export const menProgram = assertOk(analyse(menRaw, menLang.descriptor), "men");
 export const womenProgram = assertOk(analyse(womenRaw, womenLang.descriptor), "women");
