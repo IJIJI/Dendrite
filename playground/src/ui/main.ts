@@ -1,6 +1,6 @@
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorView } from "@codemirror/view";
-import { createStdlib } from "@dendrite-lang/core";
+import { createStdlib, serialiseSource } from "@dendrite-lang/core";
 import { basicSetup } from "codemirror";
 
 import { dendriteHighlighting, toLintDiagnostics } from "../lang/cm";
@@ -45,6 +45,13 @@ interface BootHandle {
 // Boot the playground for one document: language from its surface, session, editor.
 // Everything is scoped to this call; dispose() tears it down and guards async paths.
 function boot(docState: PlaygroundDocument): BootHandle {
+  // The playground edits TEXT - only code-form programs are editable here. (rete-form
+  // documents arrive with the editor era; ast-form ones have no text to edit.)
+  if (docState.program.form !== "code") {
+    throw new Error(`The playground cannot edit '${docState.program.form}'-form programs yet`);
+  }
+  const initialSource = docState.program.source;
+
   const language = createStdlib();
   applySurface(language, docState.surface);
 
@@ -80,7 +87,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
 
   const currentDocument = (): PlaygroundDocument => ({
     v: DOCUMENT_VERSION,
-    source: view.state.doc.toString(),
+    program: serialiseSource(view.state.doc.toString()),
     surface: docState.surface,
     values: session.getValues(),
   });
@@ -116,7 +123,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
   });
 
   view = new EditorView({
-    doc: docState.source,
+    doc: initialSource,
     parent: editorPane,
     extensions: [basicSetup, lintGutter(), dendriteHighlighting(language), compileListener],
   });
@@ -131,7 +138,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
     },
   );
 
-  session.compile(docState.source);
+  session.compile(initialSource);
 
   return {
     dispose() {
