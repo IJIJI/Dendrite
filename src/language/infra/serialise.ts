@@ -8,7 +8,7 @@ import { type RawProgram } from "./program";
 // So SavedProgram is a tagged union of authoring forms (names mirror SourceRef kinds):
 //   code - text-authored; the source string IS the program (re-parsed on load)
 //   rete - graph-authored; an OPAQUE blob whose schema + loader belong to the future
-//          editor package // TODO
+//          editor package (until then env.load fails it with unsupported_form)
 //   ast  - programmatic / exported-for-headless; plain-record RawProgram
 // Loading always RE-ANALYSES against the load-time language, so descriptor drift
 // surfaces as errors instead of silent staleness. SourceRefs are kept verbatim in the
@@ -18,8 +18,9 @@ import { type RawProgram } from "./program";
 // Core owns the FORMAT version (+ migrate seam below); hosts wrap their own envelope
 // (ids, names, timestamps, revisions) around SavedProgram.
 
-// TODO: Is there a better way to do this?
-// -> Derive from package version, or some sort of constant with possibly migrations?
+// Deliberately DECOUPLED from the package version: the package bumps constantly, the
+// format rarely. When v2 ever exists, migrate() becomes a chain of per-version upgrade
+// functions keyed off this constant.
 export const SAVED_PROGRAM_VERSION = 1;
 
 export interface SavedCodeProgram {

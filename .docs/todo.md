@@ -98,6 +98,34 @@ registry). Until then, explicit op inputs + prelude wrappers cover it.
 
 ---
 
+## Code-TODO roundup (2026-09 repo sweep)
+
+Small tracked items promoted from inline `// TODO`s. Each names its source location.
+
+- **Missing-input defaults for structural types** ([analyser.ts](../src/language/analyser/analyser.ts) `validateInputs`):
+  the type-default placeholder only consults the registry for NAMED types — a missing array-typed
+  input gets a `null` literal (typed `T[]`), so `Length(null)` throws at runtime. Should derive `[]`
+  structurally for arrays; decide behaviour for function-typed inputs (probably an error).
+- **Output-mode semantics review** (analyser `validateOutputs`): should a program with a missing/
+  failed REQUIRED output still produce the partial CoreProgram it does today (ok:false + program)?
+  And should `desired`/`optional` get more feedback on poisoned deps? One coherent decision pass.
+- **Lexical order for rete programs** (analyser `buildReferenceGraph`): today any non-code source
+  disables the forward-reference check. Should the rete adapter emit declaration order so all
+  editors get the same rule?
+- **collectRefs lambda shadow tests** (analyser `collectRefs`): the param-stripping recursion works,
+  but edge coverage is thin (nested shadowing, param shadowing a binding used elsewhere in the same
+  expression).
+- **Variadic input types in inferOutput** ([registry.ts](../src/language/infra/registry.ts)
+  `EvaluatorDefinition`): variadic inputs are excluded from `inputTypes` entirely — should they be
+  passed as the element type, the array type, or stay excluded? Decide + document.
+- **Eval error surface review** ([evaluator/types.ts](../src/language/evaluator/types.ts)):
+  `input_not_set` only fires at eval; runner/runtime seed defaults so it mostly can't happen — decide
+  whether bare `evaluate`/`run` should pre-check inputs against the descriptor instead.
+- **Result-logging helpers** (from src/readme.md): small utilities to pretty-print outputs /
+  diagnostics like the examples hand-roll.
+
+---
+
 ## Playground — share links
 
 **What:** Encode the current example id + source into the URL fragment

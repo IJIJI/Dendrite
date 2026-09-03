@@ -150,8 +150,11 @@ export const AST_NODE_KINDS = [
   "lambda",
   "app",
 ] as const satisfies readonly ASTNode["kind"][];
-// TODO: Can this be derived from the ASTNode type somehow?
-// TODO: Or should the kind field be typed to this?
+// (Can't be derived FROM the type - types are erased at runtime; that's why this value
+// exists. The reverse direction - typing each node's `kind` off this list - would work
+// but adds indirection: each interface pins its own literal kind, and the union already
+// derives ASTNode["kind"] automatically. The two-way compile check below keeps them
+// in sync without either indirection.)
 
 type AssertNever<T extends never> = T;
 type _AllKindsListed = AssertNever<Exclude<ASTNode["kind"], (typeof AST_NODE_KINDS)[number]>>;
