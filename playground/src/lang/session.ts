@@ -63,6 +63,11 @@ export class PlaygroundSession {
     return this.values.get(name);
   }
 
+  /** Snapshot of all current input values (for document/URL sync). */
+  getValues(): Record<string, unknown> {
+    return Object.fromEntries(this.values);
+  }
+
   /** Parse + analyse `source`; on success start a fresh runner and evaluate. */
   compile(source: string): void {
     const diagnostics: Diagnostic[] = [];
