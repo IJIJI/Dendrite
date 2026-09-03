@@ -27,8 +27,17 @@ yarn dev    # http://localhost:5173
 - `src/ui/` — throwaway vanilla-DOM shell (replaced by React when the editor era starts)
 - `src/examples.ts` — presets; each registers its own inputs/outputs/types via `setup()`
 
+## Documents & share URLs
+
+The session state is a **document** — `{ source, surface, values }`, where `surface` is the
+language's inputs/outputs/types as data (`lang/surface.ts`). The URL fragment always holds the
+current document (deflate + base64url, live-updated on every debounced edit), so **copying the
+address bar — or the Share button — shares the exact program, surface, and inputs**. Examples are
+just preset documents; `…/#<exampleId>` (e.g. `#tally`) works as a one-shot entry link that loads
+the preset and converts to a payload URL. Loading a preset pushes a history entry, so Back restores
+your previous document. localStorage keeps a single fallback slot for hash-less visits.
+
 ## Known limitations (MVP)
 
-- Program source persists to localStorage per example; there's no save/load beyond that.
-- Input *declarations* come from the selected example, not the UI (backlogged in
-  `.docs/todo.md`, alongside share links).
+- Input *declarations* come from the document's surface (presets), not yet from the UI
+  (backlogged in `.docs/todo.md` — the surface-as-data structure is ready for it).
