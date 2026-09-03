@@ -62,8 +62,8 @@ function show(node: ASTNode): string {
       ].join(", ");
       return `${show(node.callee)}(${args})`;
     }
-    default:
-      return node.kind;
+    // No default: the switch is exhaustive over ASTNode, so a future node kind
+    // becomes a compile error here, prompting a render case for it.
   }
 }
 
