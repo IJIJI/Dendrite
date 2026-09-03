@@ -49,6 +49,26 @@ body {
   align-items: center;
 }
 
+#topbar-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+#share-button {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+#share-button:hover {
+  border-color: var(--accent);
+}
+
 #layout {
   flex: 1;
   display: grid;
