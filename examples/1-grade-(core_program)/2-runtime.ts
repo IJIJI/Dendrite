@@ -95,7 +95,7 @@ console.log('--- register "grader" ---');
 const graderHandle = runtime.register("grader", graderProgram);
 
 console.log('\n--- register "topTier" ---');
-const topTierHandle = runtime.register("topTier", topTierProgram);
+const _topTierHandle = runtime.register("topTier", topTierProgram);
 
 const scores = [45, 85, 95];
 for (const score of scores) {
