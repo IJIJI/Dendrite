@@ -169,27 +169,28 @@ ship.
 
 ---
 
-## Playground — share links
+## Playground — share links — DONE (document model)
 
-**What:** Encode the current example id + source into the URL fragment
-(`#e=<id>&src=<base64/deflate>`) with a Share button; on boot, the fragment beats localStorage.
-
-**Why deferred:** User call (2026-09) — add when someone actually wants to share a snippet/repro.
-~40 lines in the shell (`playground/src/ui/main.ts`), no core changes. Pairs well with the Pages
-deployment (the public URL is what makes sharing meaningful).
+Implemented beyond the original sketch: the session state is a self-contained **document**
+(`{source, surface, values}` with the surface as JSON-safe data), the URL fragment live-holds the
+deflate+base64url payload (Share = copy URL), preset ids (`#tally`) are one-shot entry links that
+convert to payload URLs, and preset loads push history entries (Back restores the previous
+document). See `playground/src/lang/{surface,document,permalink}.ts`.
 
 ---
 
 ## Playground — user-settable inputs and outputs
 
-**What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) instead
-of examples owning it via `setup()`. Feeds the existing descriptor-driven widget mapping
-(`playground/src/lang/input-widgets.ts`).
+**What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) from
+the playground itself. **The data structure already exists** — documents carry a `SurfaceSpec`
+(`playground/src/lang/surface.ts`); this feature is "edit `document.surface` → rebuild language →
+recompile", machinery the boot/dispose lifecycle already supports. Declarations travel in share
+URLs automatically.
 
-**Why deferred:** User call (2026-09). Needs a type picker (name/array over registered types), a
-rebuild-language-and-recompile flow on every declaration change (the boot/dispose lifecycle already
-supports this), and persistence of declarations alongside the source. A concrete step toward the
-editor era — the same UI generalises to the Rete side's port configuration.
+**Still needs:** a type picker (named/array types over the registered set), add/remove/edit rows
+for inputs+outputs, and validation UX for dangling type references (createEnvironment fail-fast →
+boot_failed rendering exists). A concrete step toward the editor era — the same UI generalises to
+the Rete side's port configuration.
 
 ---
 
