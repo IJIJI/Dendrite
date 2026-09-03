@@ -4,6 +4,7 @@ import { analyse, getOutputType, validateDescriptor } from "./analyser";
 import {
   type ASTNode,
   type CErrorNode,
+  type CNode,
   type LambdaNode,
   type LiteralNode,
   type RefNode,
@@ -36,6 +37,17 @@ function makeProgram(
   };
 }
 
+// Narrowing accessor for an analysed operation's single (non-variadic) input - lets
+// assertions read input nodes without `as any` casts.
+function opInput(node: CNode | undefined, name: string): CNode {
+  if (node?.kind !== "operation") throw new Error("expected an operation node");
+  const input = node.inputs[name];
+  if (input === undefined || Array.isArray(input)) {
+    throw new Error(`expected single input '${name}'`);
+  }
+  return input;
+}
+
 // ─── isCompatible (isolated) ─────────────────────────────────────────────────
 
 describe("isCompatible", () => {
@@ -64,8 +76,8 @@ describe("isCompatible", () => {
 
   it("B extends A: B compat with A, not reverse", () => {
     const lang = createStdlib();
-    lang.registerType("A", (lang as any).descriptor.types.get("any")!.schema, {});
-    lang.registerType("B", (lang as any).descriptor.types.get("any")!.schema, { extends: "A" });
+    lang.registerType("A", z.unknown(), {});
+    lang.registerType("B", z.unknown(), { extends: "A" });
     expect(isCompatible(Type.name("B"), Type.name("A"), lang.descriptor)).toBe(true);
     expect(isCompatible(Type.name("A"), Type.name("B"), lang.descriptor)).toBe(false);
   });
@@ -164,7 +176,7 @@ describe("happy path", () => {
     expect(result.errors).toHaveLength(0);
     const node = result.program.outputs.get("out")!;
     expect(node.kind).toBe("literal");
-    expect(typeToString((node as any).type)).toBe("number");
+    expect(typeToString(getOutputType(node))).toBe("number");
     expect(node.dependsOn.size).toBe(0);
   });
 
@@ -175,7 +187,7 @@ describe("happy path", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out")!;
-    expect(typeToString((node as any).type)).toBe("number");
+    expect(typeToString(getOutputType(node))).toBe("number");
     expect([...node.dependsOn]).toEqual(["score"]);
   });
 
@@ -219,7 +231,7 @@ describe("happy path", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out")!;
-    expect(typeToString((node as any).output)).toBe("boolean");
+    expect(typeToString(getOutputType(node))).toBe("boolean");
     expect([...node.dependsOn]).toContain("p");
     expect([...node.dependsOn]).toContain("q");
   });
@@ -246,9 +258,9 @@ describe("happy path", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
-    const node = result.program.outputs.get("out")! as any;
-    expect(typeToString(node.output)).toBe("Source[]");
-    expect(typeToString(node.inputs.predicate.type)).toBe("(Source) -> boolean");
+    const node = result.program.outputs.get("out")!;
+    expect(typeToString(getOutputType(node))).toBe("Source[]");
+    expect(typeToString(getOutputType(opInput(node, "predicate")))).toBe("(Source) -> boolean");
   });
 
   it("a differently-named predicate param still gets the element type (contextual typing)", () => {
@@ -282,9 +294,9 @@ describe("happy path", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
-    expect(typeToString((result.program.outputs.get("out") as any).inputs.predicate.type)).toBe(
-      "(Source) -> boolean",
-    );
+    expect(
+      typeToString(getOutputType(opInput(result.program.outputs.get("out"), "predicate"))),
+    ).toBe("(Source) -> boolean");
   });
 });
 
@@ -456,6 +468,26 @@ describe("descriptor validation", () => {
     expect(() => createEnvironment(lang)).toThrow(/descriptor validation failed/);
   });
 
+  it("flags an op registered without an evaluator", () => {
+    const lang = createStdlib();
+    lang.registerOp({ name: "Mystery", inputs: [{ name: "a", type: Type.any }], output: Type.any });
+    expect(
+      validateDescriptor(lang.descriptor).some(
+        (e) => e.kind === "missing_evaluator" && e.name === "Mystery",
+      ),
+    ).toBe(true);
+  });
+
+  it("flags an evaluator registered for an unknown op", () => {
+    const lang = createStdlib();
+    lang.registerEvaluator({ op: "Nowhere", evaluate: () => null });
+    expect(
+      validateDescriptor(lang.descriptor).some(
+        (e) => e.kind === "orphan_evaluator" && e.name === "Nowhere",
+      ),
+    ).toBe(true);
+  });
+
   it("accepts a compatible field override (covariant narrowing) and new fields", () => {
     const lang = createStdlib();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
@@ -576,8 +608,8 @@ describe("warnings", () => {
     // Binding survives (not pruned)
     expect(result.program.bindings.has("b")).toBe(true);
     // Placeholder carries the declared type (boolean), not 'any'/null
-    const inputNode = (result.program.bindings.get("b") as any).inputs.a;
-    expect(typeToString(inputNode.type)).toBe("boolean");
+    const inputNode = opInput(result.program.bindings.get("b"), "a");
+    expect(typeToString(getOutputType(inputNode))).toBe("boolean");
   });
 
   it("implicit_any_cast: any-typed value into narrow op input → warning, binding not poisoned", () => {
@@ -924,9 +956,10 @@ describe("pruning", () => {
     expect(result.warnings.some((w) => w.kind === "missing_op_input")).toBe(true);
     expect(result.program.bindings.has("b")).toBe(true);
     // Placeholder should carry declared boolean type, not 'any'/null from error placeholder
-    const bNode = result.program.bindings.get("b") as any;
-    expect(typeToString(bNode.inputs.a.type)).toBe("boolean");
-    expect(bNode.inputs.a.value).toBe(false); // boolean default
+    const aInput = opInput(result.program.bindings.get("b"), "a");
+    expect(typeToString(getOutputType(aInput))).toBe("boolean");
+    if (aInput.kind !== "literal") throw new Error("expected a literal placeholder");
+    expect(aInput.value).toBe(false); // boolean default
   });
 
   it("no error node in program.bindings", () => {
@@ -1035,9 +1068,9 @@ describe("inferOutput / inferInputTypes", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
-    const node = result.program.outputs.get("out") as any;
-    expect(typeToString(node.output)).toBe("Source[]");
-    expect(typeToString(node.inputs.predicate.type)).toBe("(Source) -> boolean");
+    const node = result.program.outputs.get("out")!;
+    expect(typeToString(getOutputType(node))).toBe("Source[]");
+    expect(typeToString(getOutputType(opInput(node, "predicate")))).toBe("(Source) -> boolean");
   });
 
   it("Map with a boolean-returning transform → output boolean[]", () => {
@@ -1059,8 +1092,8 @@ describe("inferOutput / inferInputTypes", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
-    const node = result.program.outputs.get("out") as any;
-    expect(typeToString(node.output)).toBe("boolean[]");
+    const node = result.program.outputs.get("out")!;
+    expect(typeToString(getOutputType(node))).toBe("boolean[]");
   });
 
   it("If with matching branch types → concrete output type", () => {
@@ -1082,8 +1115,8 @@ describe("inferOutput / inferInputTypes", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
-    const node = result.program.outputs.get("out") as any;
-    expect(typeToString(node.output)).toBe("number");
+    const node = result.program.outputs.get("out")!;
+    expect(typeToString(getOutputType(node))).toBe("number");
   });
 });
 

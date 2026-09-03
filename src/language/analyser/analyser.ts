@@ -626,6 +626,28 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
   for (const input of descriptor.inputs.values()) checkType(input.type, `input '${input.name}'`);
   for (const output of descriptor.outputs.values()) checkType(output.type, `output '${output.name}'`);
 
+  // Op ↔ evaluator pairing: an op without an evaluator only fails at RUNTIME
+  // (evaluator_not_found), and an evaluator without an op is dead code or a typo.
+  // Both are language-definition bugs, caught here at assembly instead.
+  for (const op of descriptor.ops.values()) {
+    if (!descriptor.evaluators.has(op.name)) {
+      errors.push({
+        kind: "missing_evaluator",
+        name: op.name,
+        message: `Op '${op.name}' has no registered evaluator`,
+      });
+    }
+  }
+  for (const evaluator of descriptor.evaluators.values()) {
+    if (!descriptor.ops.has(evaluator.op)) {
+      errors.push({
+        kind: "orphan_evaluator",
+        name: evaluator.op,
+        message: `Evaluator registered for unknown op '${evaluator.op}'`,
+      });
+    }
+  }
+
   // Struct subtyping soundness: a field a type re-declares must be compatible with the
   // same field inherited from its `extends` parent (covariant override, sound under
   // read-only access). Width is automatic via inheritance, so only overrides can break

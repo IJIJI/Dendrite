@@ -79,8 +79,9 @@ Repo-level / near-term:
 - [ ] Output dependance. If a binding fails analysis, don't drop the entire program, just the outputs that are affected.
 - [ ] Add more helpers to log results, like in the code example.
 - [ ] Entry-point glue: manage analyse + run/runner/runtime, and editor (code/rete) parsing + display.
-- [ ] Registry validation.
-- [ ] Move tests into a separate folder (reduce clutter).
+- [x] Registry validation — `validateDescriptor` checks type references, struct-override
+      compatibility, and op↔evaluator pairing; run by `createEnvironment` (fail-fast).
+- [ ] Move tests into a separate folder (reduce clutter). _Backlogged — decided to revisit later._
 - [ ] Enable optional arguments. 
   - [ ] Make it possible to make arguments have a default for if they are unset.
 - [ ] Decide the file extension (`.den`, `.dndr`, `.dnr`, …).
