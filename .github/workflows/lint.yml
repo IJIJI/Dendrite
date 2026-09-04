@@ -4,14 +4,10 @@
 # these are ever made REQUIRED checks, use a filter-free trigger instead.
 name: Lint
 
+# Push-only (no `pull_request`): a PR surfaces these same runs - checks attach to the
+# commit SHA, not the event - so both triggers would simply double every check.
 on:
   push:
-    branches: [main, dev]
-    paths-ignore:
-      - "playground/**"
-      - "**/*.md"
-  pull_request:
-    branches: [main, dev]
     paths-ignore:
       - "playground/**"
       - "**/*.md"

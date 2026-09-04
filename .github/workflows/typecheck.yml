@@ -2,14 +2,9 @@
 # tsconfig and is checked by playground-check.yml.
 name: Typecheck
 
+# Push-only - see lint.yml.
 on:
   push:
-    branches: [main, dev]
-    paths-ignore:
-      - "playground/**"
-      - "**/*.md"
-  pull_request:
-    branches: [main, dev]
     paths-ignore:
       - "playground/**"
       - "**/*.md"
