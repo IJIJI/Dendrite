@@ -5,16 +5,10 @@
 # to its own repo, and this file should travel with it unchanged.
 name: Playground
 
+# Push-only, on every branch: a PR surfaces these same runs (checks attach to the commit
+# SHA, not the event), so a `pull_request` trigger would only double them.
 on:
   push:
-    branches: [main, dev]
-    # (Repeated per trigger: GitHub Actions does not support YAML anchors.)
-    paths:
-      - "playground/**"
-      - "src/**"
-      - ".github/workflows/playground-check.yml"
-  pull_request:
-    branches: [main, dev]
     paths:
       - "playground/**"
       - "src/**"

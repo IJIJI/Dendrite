@@ -3,14 +3,9 @@
 # the same way. It has broken on toolchain bumps before, so it gates on its own.
 name: Build
 
+# Push-only - see lint.yml.
 on:
   push:
-    branches: [main, dev]
-    paths-ignore:
-      - "playground/**"
-      - "**/*.md"
-  pull_request:
-    branches: [main, dev]
     paths-ignore:
       - "playground/**"
       - "**/*.md"
