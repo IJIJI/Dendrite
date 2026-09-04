@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { createEnvironment, createStdlib, Environment, Language, Type } from '../../src/index'
+import { createEnvironment, createStdlib, Environment, Language, Type } from "../../src/index";
 
 const lang: Language = createStdlib();
 lang.registerInput({ name: "heights_men", type: Type.array(Type.number) });
@@ -9,11 +9,11 @@ lang.registerInput({ name: "treshold", type: Type.number });
 lang.registerOutput({ name: "pass_men", type: Type.number });
 lang.registerOutput({ name: "pass_woman", type: Type.number });
 lang.registerOutput({ name: "pass_unknown", type: Type.number });
-lang.registerOutput({ name: "pass_total", type: Type.number, mode: 'required' });
+lang.registerOutput({ name: "pass_total", type: Type.number, mode: "required" });
 lang.registerOutput({ name: "avg_height_men", type: Type.number });
 lang.registerOutput({ name: "avg_height_woman", type: Type.number });
 lang.registerOutput({ name: "avg_height_unknown", type: Type.number });
-lang.registerOutput({ name: "avg_height_total", type: Type.number, mode: 'required' });
+lang.registerOutput({ name: "avg_height_total", type: Type.number, mode: "required" });
 
 const env: Environment = createEnvironment(lang);
 
@@ -38,7 +38,7 @@ const outputs: Map<string, unknown> = env.run(compile_result.program, {
   heights_men: [180, 175, 190],
   heights_woman: [165, 170, 160],
   heights_unknown: [170, 175, 180],
-  treshold: 170
+  treshold: 170,
 });
 
 for (const [name, value] of outputs) {

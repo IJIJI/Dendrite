@@ -76,10 +76,7 @@ const topTierProgram: CoreProgram = {
     ],
   ]),
   outputs: new Map<string, CNode>([
-    [
-      "topTier",
-      { kind: "ref", name: "isTop", type: Type.boolean, dependsOn: new Set(["score"]) },
-    ],
+    ["topTier", { kind: "ref", name: "isTop", type: Type.boolean, dependsOn: new Set(["score"]) }],
   ]),
 };
 

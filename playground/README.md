@@ -40,5 +40,5 @@ your previous document. localStorage keeps a single fallback slot for hash-less 
 
 ## Known limitations (MVP)
 
-- Input *declarations* come from the document's surface (presets), not yet from the UI
+- Input _declarations_ come from the document's surface (presets), not yet from the UI
   (backlogged in `.docs/todo.md` — the surface-as-data structure is ready for it).

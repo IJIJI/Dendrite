@@ -66,12 +66,13 @@ src/language/
 
 # TODO
 
-Deferred *design* work (with full rationale) lives in [`.docs/todo.md`](../../.docs/todo.md) — e.g.
+Deferred _design_ work (with full rationale) lives in [`.docs/todo.md`](../../.docs/todo.md) — e.g.
 explicit conversion ops, struct field typing, union types / strict nullability, generic type
 parameters, array element-type generics, `letrec`/recursion, multiline lambda bodies, the open-AST
 node-kind registry, and true source-span ranges.
 
 Repo-level / near-term:
+
 - [ ] More stdlib levels (empty / skeleton / base / core / extended); make configuring a language easier.
 - [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed. More welcome (e.g. `Min`/`Max` over args, `Round`).
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false. (Design in `.docs/todo.md`.)
@@ -82,7 +83,7 @@ Repo-level / near-term:
 - [x] Registry validation — `validateDescriptor` checks type references, struct-override
       compatibility, and op↔evaluator pairing; run by `createEnvironment` (fail-fast).
 - [ ] Move tests into a separate folder (reduce clutter). _Backlogged — decided to revisit later._
-- [ ] Enable optional arguments. 
+- [ ] Enable optional arguments.
   - [ ] Make it possible to make arguments have a default for if they are unset.
 - [ ] Decide the file extension (`.den`, `.dndr`, `.dnr`, …).
 - [ ] Consider renaming the empty `createLanguage` base to "kernel" (vs the `stdlib` batteries-included).

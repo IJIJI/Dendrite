@@ -79,7 +79,13 @@ function buildCall(p: Parser, callee: ASTNode, args: Arg[], token: Token): ASTNo
     }
   }
 
-  return { kind: "app", callee, positional, named: Object.fromEntries(named), source: token.source };
+  return {
+    kind: "app",
+    callee,
+    positional,
+    named: Object.fromEntries(named),
+    source: token.source,
+  };
 }
 
 // Positional args fill the op's declared inputs in order (a variadic input soaks all
@@ -181,9 +187,21 @@ function parseBinding(p: Parser, target: "binding" | "output"): Statement {
 export function installCoreGrammar(g: Grammar): void {
   // Literals
   registerNud(g, "number", literalNud(Number));
-  registerNud(g, "string", literalNud((v) => v));
-  registerNud(g, "boolean", literalNud((v) => v === "true"));
-  registerNud(g, "null", literalNud(() => null));
+  registerNud(
+    g,
+    "string",
+    literalNud((v) => v),
+  );
+  registerNud(
+    g,
+    "boolean",
+    literalNud((v) => v === "true"),
+  );
+  registerNud(
+    g,
+    "null",
+    literalNud(() => null),
+  );
 
   // Identifier → always a binding reference. Context inputs use the $ sigil, so a bare
   // name is never an input: no descriptor lookup, no shadowing.
@@ -239,7 +257,13 @@ export function installCoreGrammar(g: Grammar): void {
     bp: BP.MEMBER,
     parse: (p, left) => {
       const name = p.expect("ident");
-      return { kind: "field", struct: left, field: name.value, type: Type.any, source: name.source };
+      return {
+        kind: "field",
+        struct: left,
+        field: name.value,
+        type: Type.any,
+        source: name.source,
+      };
     },
   });
 

@@ -87,7 +87,13 @@ export function createEnvironment(language: Language): Environment {
     const result = analyse(raw, descriptor);
     const warnings: CompileWarning[] = [...parseWarnings, ...result.warnings];
     if (!result.ok) {
-      return { ok: false, stage: "analyse", errors: result.errors, warnings, program: result.program };
+      return {
+        ok: false,
+        stage: "analyse",
+        errors: result.errors,
+        warnings,
+        program: result.program,
+      };
     }
     return { ok: true, program: result.program, warnings };
   }

@@ -32,7 +32,10 @@ export function renderInputs(
   for (const widget of widgets) {
     const row = el("div", "input-row");
     const label = el("label", "input-label");
-    label.append(el("span", "input-name", `$${widget.name}`), el("code", "input-type", widget.typeLabel));
+    label.append(
+      el("span", "input-name", `$${widget.name}`),
+      el("code", "input-type", widget.typeLabel),
+    );
     row.append(label);
 
     // The session owns the values (seeded with the same initialValueFor derivation the
