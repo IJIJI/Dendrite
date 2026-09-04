@@ -1,7 +1,7 @@
 import { serialiseSource, Type } from "@dendrite-lang/core";
-import { DOCUMENT_VERSION, type PlaygroundDocument, type SurfaceSpec } from "@dendrite-lang/editor";
+import { DOCUMENT_VERSION, type EditorDocument, type SurfaceSpec } from "@dendrite-lang/editor";
 
-//? Preset documents. An example is just a PlaygroundDocument you can load into the
+//? Preset documents. An example is just an EditorDocument you can load into the
 // session - its surface is DATA (SurfaceSpec), so presets, share URLs, and the future
 // input/output UI all speak the same structure. Input values are seeded from the
 // surface defaults at boot; presets only override them when they need to.
@@ -9,14 +9,14 @@ import { DOCUMENT_VERSION, type PlaygroundDocument, type SurfaceSpec } from "@de
 export interface ExamplePreset {
   id: string;
   name: string;
-  document: PlaygroundDocument;
+  document: EditorDocument;
 }
 
-const doc = (source: string, surface: SurfaceSpec): PlaygroundDocument => ({
+const doc = (source: string, surface: SurfaceSpec): EditorDocument => ({
   v: DOCUMENT_VERSION,
   program: serialiseSource(source),
   surface,
-  values: {},
+  inputValues: {},
 });
 
 export const examples: ExamplePreset[] = [

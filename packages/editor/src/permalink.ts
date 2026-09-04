@@ -1,9 +1,9 @@
-import { isDocument, type PlaygroundDocument } from "./document";
+import { type EditorDocument, migrateDocument } from "./document";
 
-//? Permalink codec: PlaygroundDocument ↔ URL-fragment payload. Deflate-compressed
-// base64url via the native Compression/DecompressionStream APIs - no dependency, async.
-// Framework-free; the future editor reuses it. main.ts owns the preset-id-vs-payload
-// dispatch; this module only codes documents.
+//? Permalink codec: EditorDocument ↔ URL-fragment payload. Deflate-compressed base64url via
+// the native Compression/DecompressionStream APIs - no dependency, async. Decoding migrates
+// older envelopes, so share links survive document-format changes. The host owns the
+// preset-id-vs-payload dispatch; this module only codes documents.
 
 async function pipe(
   bytes: Uint8Array,
@@ -30,17 +30,17 @@ function fromBase64Url(payload: string): Uint8Array {
 }
 
 /** Document → fragment payload (the part after `#`). */
-export async function encodeDocument(doc: PlaygroundDocument): Promise<string> {
+export async function encodeDocument(doc: EditorDocument): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(doc));
   return toBase64Url(await pipe(bytes, new CompressionStream("deflate-raw")));
 }
 
-/** Fragment payload → document, or null on any malformed input (fail soft). */
-export async function decodePayload(payload: string): Promise<PlaygroundDocument | null> {
+/** Fragment payload → current document (migrating older envelopes), or null on any malformed input. */
+export async function decodePayload(payload: string): Promise<EditorDocument | null> {
   try {
     const bytes = await pipe(fromBase64Url(payload), new DecompressionStream("deflate-raw"));
     const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    return isDocument(parsed) ? parsed : null;
+    return migrateDocument(parsed);
   } catch {
     return null;
   }

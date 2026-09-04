@@ -10,5 +10,5 @@ export * from "./tokens"; // styledRanges, lineStartOffsets, toOffset, TokenClas
 export * from "./cm"; // dendriteHighlighting, toLintDiagnostics (the only CodeMirror-aware module)
 export * from "./input-widgets"; // widgetsFor, initialValueFor, WidgetSpec, Control
 export * from "./surface"; // SurfaceSpec (+ parts), applySurface
-export * from "./document"; // PlaygroundDocument, DOCUMENT_VERSION, isDocument, cloneDocument
+export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload

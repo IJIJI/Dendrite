@@ -9,9 +9,9 @@ import {
   DOCUMENT_VERSION,
   EditorSession,
   encodeDocument,
-  isDocument,
   lineStartOffsets,
-  type PlaygroundDocument,
+  migrateDocument,
+  type EditorDocument,
   toLintDiagnostics,
   toOffset,
   widgetsFor,
@@ -47,7 +47,7 @@ interface BootHandle {
 
 // Boot the playground for one document: language from its surface, session, editor.
 // Everything is scoped to this call; dispose() tears it down and guards async paths.
-function boot(docState: PlaygroundDocument): BootHandle {
+function boot(docState: EditorDocument): BootHandle {
   // The playground edits TEXT - only code-form programs are editable here. (rete-form
   // documents arrive with the editor era; ast-form ones have no text to edit.)
   if (docState.program.form !== "code") {
@@ -64,13 +64,15 @@ function boot(docState: PlaygroundDocument): BootHandle {
 
   const session = new EditorSession(language);
   // Overlay the document's stored input values onto the surface defaults.
-  for (const [name, value] of Object.entries(docState.values)) session.setInput(name, value);
+  for (const [name, value] of Object.entries(docState.inputValues)) {
+    session.setInput(name, value);
+  }
 
-  const currentDocument = (): PlaygroundDocument => ({
+  const currentDocument = (): EditorDocument => ({
     v: DOCUMENT_VERSION,
     program: serialiseSource(view.state.doc.toString()),
     surface: docState.surface,
-    values: session.inputs.get(),
+    inputValues: session.inputs.get(),
   });
 
   // Live URL sync: the address bar always holds the current document (replaceState, so
@@ -174,7 +176,7 @@ function renderBootFailure(error: unknown): void {
 
 let current: BootHandle | null = null;
 
-function switchToDocument(doc: PlaygroundDocument, presetId?: string): void {
+function switchToDocument(doc: EditorDocument, presetId?: string): void {
   current?.dispose();
   current = null;
   try {
@@ -189,7 +191,7 @@ function switchToDocument(doc: PlaygroundDocument, presetId?: string): void {
 // payload URL), a document payload, or nothing.
 async function resolveHash(
   hash: string,
-): Promise<{ doc: PlaygroundDocument; presetId?: string; convert?: boolean } | null> {
+): Promise<{ doc: EditorDocument; presetId?: string; convert?: boolean } | null> {
   const fragment = hash.replace(/^#/, "");
   if (!fragment) return null;
   const preset = examples.find((e) => e.id === fragment);
@@ -198,12 +200,12 @@ async function resolveHash(
   return doc ? { doc } : null;
 }
 
-function fallbackDocument(): PlaygroundDocument | null {
+function fallbackDocument(): EditorDocument | null {
   try {
     const stored = localStorage.getItem(FALLBACK_KEY);
     if (!stored) return null;
-    const parsed: unknown = JSON.parse(stored);
-    return isDocument(parsed) ? parsed : null;
+    // The slot may predate the current envelope version - migrate like a share link.
+    return migrateDocument(JSON.parse(stored));
   } catch {
     return null;
   }
@@ -262,7 +264,7 @@ async function init(): Promise<void> {
 
   // Initial document: URL (payload or preset alias) → localStorage fallback → first preset.
   const resolved = await resolveHash(location.hash);
-  let doc: PlaygroundDocument;
+  let doc: EditorDocument;
   let presetId: string | undefined;
   if (resolved) {
     ({ doc, presetId } = resolved);
