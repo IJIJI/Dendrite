@@ -94,6 +94,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@dendrite-lang/editor@workspace:^, @dendrite-lang/editor@workspace:packages/editor":
+  version: 0.0.0-use.local
+  resolution: "@dendrite-lang/editor@workspace:packages/editor"
+  dependencies:
+    "@codemirror/lint": "npm:^6.8.5"
+    "@codemirror/state": "npm:^6.5.2"
+    "@codemirror/view": "npm:^6.38.0"
+    "@dendrite-lang/core": "workspace:^"
+    codemirror: "npm:^6.0.2"
+    zod: "npm:^4.4.3"
+  peerDependencies:
+    "@dendrite-lang/core": ^0.1.0
+  languageName: unknown
+  linkType: soft
+
 "@emnapi/core@npm:1.10.0":
   version: 1.10.0
   resolution: "@emnapi/core@npm:1.10.0"
@@ -1646,6 +1661,7 @@ __metadata:
     "@codemirror/state": "npm:^6.5.2"
     "@codemirror/view": "npm:^6.38.0"
     "@dendrite-lang/core": "workspace:^"
+    "@dendrite-lang/editor": "workspace:^"
     codemirror: "npm:^6.0.2"
     vite: "npm:^7.1.0"
     zod: "npm:^4.4.3"
