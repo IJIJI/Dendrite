@@ -1,8 +1,4 @@
-# Dendrite
-
-<img width="1057" height="233" alt="dendrite-wordmark-BG" src="https://github.com/user-attachments/assets/c75eb08a-761f-413a-b364-ac8ae6bb9679" />
-
-<br/>
+#<img width="1057" height="233" alt="dendrite-wordmark-BG" src="https://github.com/user-attachments/assets/c75eb08a-761f-413a-b364-ac8ae6bb9679" />
 
 
 > A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
