@@ -6,7 +6,8 @@
     "noEmit": true,
     "types": ["node"],
     "paths": {
-      "@dendrite-lang/core": ["../../packages/core/src/index.ts"]
+      "@dendrite-lang/core": ["../../packages/core/src/index.ts"],
+      "@dendrite-lang/editor": ["../../packages/editor/src/index.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

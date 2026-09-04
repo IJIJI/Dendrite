@@ -6,12 +6,14 @@ export default defineConfig({
   // deploy path. Local dev/build stays at the default root.
   base: process.env.PLAYGROUND_BASE ?? "/",
   resolve: {
-    // Consume the language SOURCE (not the workspace-linked dist) so edits to
-    // packages/core/src HMR straight into the playground - it doubles as the language's
-    // dev harness.
+    // Consume the language AND editor SOURCE (not the workspace-linked dist) so edits to
+    // either package HMR straight into the playground - it doubles as their dev harness.
     alias: {
       "@dendrite-lang/core": fileURLToPath(
         new URL("../../packages/core/src/index.ts", import.meta.url),
+      ),
+      "@dendrite-lang/editor": fileURLToPath(
+        new URL("../../packages/editor/src/index.ts", import.meta.url),
       ),
     },
   },
