@@ -25,7 +25,7 @@ output result  = status
 | Package | Description | Status |
 |---|---|---|
 | `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | In development |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | Planned |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | In development — framework-free core landed (`packages/editor`: `createEditor`, observable session, document + stores); React UI and Rete to come (`editor-plan.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 
 ---

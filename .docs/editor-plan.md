@@ -78,6 +78,16 @@ redirect.
 
 ## Phase 1 — Extract `@dendrite-lang/editor` (framework-free only)
 
+**Landed 2026-09-04** (seven commits plus a tooling fix). Notes from doing it:
+`extendLanguage(createLanguage(), base)` is the non-mutating copy, so a document's surface never
+touches a host's language; `subscribe` is changes-only, so vanilla hosts paint with `watch`
+(get + subscribe) — the editor has already compiled when they attach; the observables live on
+the session (separate model factories would have been Middle Men); `UrlStore` sequences async
+writes last-write-wins (the old `disposed` guard, generalised and tested); the envelope shipped
+as v1 `{ version, program, surface, inputValues }` with an empty migration chain because nothing
+had been deployed; `editor.ts` is deliberately untested (DOM composition — the playground is its
+harness); the playground host ended at 165 lines with zero CodeMirror or core imports.
+
 No React, and **no vanilla panes** (writing panes here only to delete them in Phase 2 is
 Speculative Generality). The playground keeps its vanilla shell through this phase.
 
