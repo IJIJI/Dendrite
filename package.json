@@ -43,6 +43,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint ."
   },
   "packageManager": "yarn@4.15.0",

@@ -1,0 +1,24 @@
+# Prettier, in check mode. Deliberately unfiltered by path (unlike the other core
+# workflows): formatting is dependency-free, so this is the one gate that can cover the
+# whole repo, playground included.
+name: Format
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: yarn format:check
