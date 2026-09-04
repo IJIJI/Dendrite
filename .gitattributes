@@ -1,3 +1,8 @@
+# LF everywhere, on every platform. prettier.config.mjs sets endOfLine: "lf", so a
+# working tree checked out with CRLF (Windows' core.autocrlf=true) would fail
+# `yarn format:check` locally while CI - which checks out LF - passes.
+* text=auto eol=lf
+
 /.yarn/**            linguist-vendored
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary
