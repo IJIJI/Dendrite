@@ -1,5 +1,6 @@
 # Dendrite
-<img width="1057" height="233" alt="dendrite-wordmark" src="https://github.com/user-attachments/assets/d1f992c0-acae-4ecc-9c86-dcd703aa5f51" />
+
+<img width="1057" height="233" alt="dendrite-wordmark-BG" src="https://github.com/user-attachments/assets/c75eb08a-761f-413a-b364-ac8ae6bb9679" />
 
 <br/>
 
