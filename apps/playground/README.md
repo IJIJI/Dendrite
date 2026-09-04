@@ -29,9 +29,11 @@ yarn workspace dendrite-playground dev  # http://localhost:5173
 
 ## Documents & share URLs
 
-The session state is a **document** — `{ program, surface, values }`: a core `SavedProgram`
-(the host-envelope pattern from `.docs/architecture.md`; today always code-form) plus the
-language's inputs/outputs/types as data (`lang/surface.ts`) and the current input values. The URL fragment always holds the
+The session state is a **document** — `{ program, surface, inputValues }` (`EditorDocument` in
+`@dendrite-lang/editor`): a core `SavedProgram` (the host-envelope pattern from
+`.docs/architecture.md`; today always code-form) plus the language's inputs/outputs/types as data
+(`SurfaceSpec`) and the values the program is evaluated against. Older share links (the v1
+envelope) are migrated on decode. The URL fragment always holds the
 current document (deflate + base64url, live-updated on every debounced edit), so **copying the
 address bar — or the Share button — shares the exact program, surface, and inputs**. Examples are
 just preset documents; `…/#<exampleId>` (e.g. `#tally`) works as a one-shot entry link that loads
