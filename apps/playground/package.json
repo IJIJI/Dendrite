@@ -10,13 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@codemirror/lint": "^6.8.5",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/view": "^6.38.0",
     "@dendrite-lang/core": "workspace:^",
-    "@dendrite-lang/editor": "workspace:^",
-    "codemirror": "^6.0.2",
-    "zod": "^4.4.3"
+    "@dendrite-lang/editor": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",

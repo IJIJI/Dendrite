@@ -13,3 +13,4 @@ export * from "./surface"; // SurfaceSpec (+ parts), applySurface
 export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload
 export * from "./store"; // DocumentStore + MemoryStore, LocalStorageStore, UrlStore
+export * from "./editor"; // createEditor, EditorConfig, EditorHandle - the host entry point

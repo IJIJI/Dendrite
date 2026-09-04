@@ -1665,16 +1665,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dendrite-playground@workspace:apps/playground"
   dependencies:
-    "@codemirror/lint": "npm:^6.8.5"
-    "@codemirror/state": "npm:^6.5.2"
-    "@codemirror/view": "npm:^6.38.0"
     "@dendrite-lang/core": "workspace:^"
     "@dendrite-lang/editor": "workspace:^"
     "@types/node": "npm:^25.9.3"
-    codemirror: "npm:^6.0.2"
     typescript: "npm:^6.0.3"
     vite: "npm:^7.1.0"
-    zod: "npm:^4.4.3"
   languageName: unknown
   linkType: soft
 
