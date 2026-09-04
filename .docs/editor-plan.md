@@ -49,6 +49,13 @@ language *and* editor edits HMR into the playground.
 
 ## Phase 0 — Workspace conversion (pure mechanics, zero behaviour change)
 
+**Landed 2026-09-04.** Notes from doing it: git recorded the moves as 54 100%-similarity renames;
+root-installed bins resolve inside workspaces (so shared tooling lives only in root devDeps);
+`workspaces foreach --all` does not recurse into the root; the playground's first-ever lint pass
+had zero findings, so the planned separate lint commit folded into the move; the Pages redirect
+was verified against a local `/Dendrite/`-prefixed server with both an alias link and an
+existing payload link.
+
 Commits contain relocation + the config lines required to stay green — **no source content
 changes**. Anything spotted en route is listed for a later commit, not fixed in the move.
 
