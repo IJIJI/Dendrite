@@ -21,7 +21,7 @@ embed, and Beacon. Supersedes the "Editor era", "React switch", "user-settable i
 | **Saving / history** | Editor emits `onChange(doc)`; optional `save` config renders button + status; store adapters are a convenience export; history = Memento, later | Host owns persistence. Capability by presence (ISP). |
 | **Publish** | `@dendrite-lang/core@0.1.0` after Phase 3 ("editor + some polishes") | The extraction is the first real external consumer of core's API — publish after it, not before. |
 | **Pages** | Playground moves to `/Dendrite/playground/` in Phase 0; a root `index.html` forwards `location.hash` | Docs take the root in Phase 4 without breaking share links. |
-| **Envelope** | `values` → `inputValues` under `v: 2` + `migrateDocument`; `id`/`meta` added later as *optional* fields (no bump needed) | Only renames force a version bump; optional additions are backward-compatible. `inputValues` names what they are, not how a host uses them. |
+| **Envelope** | v1 = `{ version, program, surface, inputValues }`; `migrateDocument` chains per-retired-version steps (`applyMigrations`, table empty until v1 is retired) and delegates the program to core's `migrate()`; `id`/`meta` added later as *optional* fields (no bump needed) | Only renames force a version bump; optional additions are backward-compatible. `inputValues` names what they are, not how a host uses them; `version` matches core's `SavedProgram.version`. The playground's earlier `{ v, values }` shape was never deployed, so both renames folded into v1 with no migration. |
 
 ---
 
@@ -109,7 +109,8 @@ interface EditorConfig {
 - **Store adapters** (Adapter + DIP): one interface; `UrlStore`, `LocalStorageStore`, `MemoryStore`
   (IndexedDb later). The playground's inlined URL + localStorage logic in `main.ts` *is* these
   adapters, just extracted.
-- **Envelope `v: 2`**: `values` → `inputValues`, `migrateDocument(v1 → v2)`, old share URLs verified.
+- **Envelope**: `v`/`values` → `version`/`inputValues` folded into v1 (nothing had shipped);
+  `migrateDocument` = `applyMigrations` chain (empty table, loop-guarded) + core `migrate()`.
 - **Boundary**: ESLint `no-restricted-imports` bans `react`/`react-dom` outside `src/react/`.
 - **Tests**: models + adapters + migration unit-tested; the playground stays the integration harness.
 
