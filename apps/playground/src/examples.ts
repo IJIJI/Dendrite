@@ -1,7 +1,5 @@
 import { serialiseSource, Type } from "@dendrite-lang/core";
-
-import { DOCUMENT_VERSION, type PlaygroundDocument } from "./lang/document";
-import { type SurfaceSpec } from "./lang/surface";
+import { DOCUMENT_VERSION, type PlaygroundDocument, type SurfaceSpec } from "@dendrite-lang/editor";
 
 //? Preset documents. An example is just a PlaygroundDocument you can load into the
 // session - its surface is DATA (SurfaceSpec), so presets, share URLs, and the future

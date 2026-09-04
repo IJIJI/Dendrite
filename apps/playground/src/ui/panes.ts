@@ -1,8 +1,7 @@
-import { type WidgetSpec } from "../lang/input-widgets";
-import { type Diagnostic } from "../lang/session";
+import { type Diagnostic, type WidgetSpec } from "@dendrite-lang/editor";
 
 //? Vanilla-DOM pane renderers. Deliberately throwaway (the framework-free logic lives in
-// ../lang); a future React shell replaces this file only.
+// @dendrite-lang/editor); a future React shell replaces this file only.
 
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,

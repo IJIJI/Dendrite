@@ -1,20 +1,23 @@
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorView } from "@codemirror/view";
 import { createStdlib, serialiseSource } from "@dendrite-lang/core";
+import {
+  applySurface,
+  cloneDocument,
+  decodePayload,
+  dendriteHighlighting,
+  DOCUMENT_VERSION,
+  encodeDocument,
+  isDocument,
+  lineStartOffsets,
+  type PlaygroundDocument,
+  PlaygroundSession,
+  toLintDiagnostics,
+  toOffset,
+  widgetsFor,
+} from "@dendrite-lang/editor";
 import { basicSetup } from "codemirror";
 
-import { dendriteHighlighting, toLintDiagnostics } from "../lang/cm";
-import {
-  cloneDocument,
-  DOCUMENT_VERSION,
-  isDocument,
-  type PlaygroundDocument,
-} from "../lang/document";
-import { widgetsFor } from "../lang/input-widgets";
-import { decodePayload, encodeDocument } from "../lang/permalink";
-import { PlaygroundSession } from "../lang/session";
-import { applySurface } from "../lang/surface";
-import { lineStartOffsets, toOffset } from "../lang/tokens";
 import { examples } from "../examples";
 import { renderDiagnostics, renderInputs, renderOutputs } from "./panes";
 import "../style.css";
