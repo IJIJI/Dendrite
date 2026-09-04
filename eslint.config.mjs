@@ -5,15 +5,10 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
-      "dist/**",
-      "node_modules/**",
+      // Build output and installs at any depth - every workspace has its own dist/.
+      "**/dist/**",
+      "**/node_modules/**",
       ".yarn/**",
-      ".pnp.cjs",
-      ".pnp.loader.mjs",
-      // The playground is a standalone nested project (own lockfile, own deps, own
-      // CI) heading for its own repo. Linting it from here would type-resolve
-      // against dependencies this project never installs.
-      "playground/**",
     ],
   },
   js.configs.recommended,
