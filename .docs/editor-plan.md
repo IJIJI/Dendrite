@@ -21,7 +21,7 @@ embed, and Beacon. Supersedes the "Editor era", "React switch", "user-settable i
 | **Saving / history** | Editor emits `onChange(doc)`; optional `save` config renders button + status; store adapters are a convenience export; history = Memento, later | Host owns persistence. Capability by presence (ISP). |
 | **Publish** | `@dendrite-lang/core@0.1.0` after Phase 3 ("editor + some polishes") | The extraction is the first real external consumer of core's API — publish after it, not before. |
 | **Pages** | Playground moves to `/Dendrite/playground/` in Phase 0; a root `index.html` forwards `location.hash` | Docs take the root in Phase 4 without breaking share links. |
-| **Envelope** | `values` → `inputValues` under `v: 2` + `migrateDocument`; `id`/`meta` added later as *optional* fields (no bump needed) | Only renames force a version bump; optional additions are backward-compatible. `inputValues` names what they are, not how a host uses them. |
+| **Envelope** | v1 = `{ version, program, surface, inputValues }`; `migrateDocument` chains per-retired-version steps (`applyMigrations`, table empty until v1 is retired) and delegates the program to core's `migrate()`; `id`/`meta` added later as *optional* fields (no bump needed) | Only renames force a version bump; optional additions are backward-compatible. `inputValues` names what they are, not how a host uses them; `version` matches core's `SavedProgram.version`. The playground's earlier `{ v, values }` shape was never deployed, so both renames folded into v1 with no migration. |
 
 ---
 
@@ -49,6 +49,16 @@ language *and* editor edits HMR into the playground.
 
 ## Phase 0 — Workspace conversion (pure mechanics, zero behaviour change)
 
+**Landed 2026-09-04.** Notes from doing it: git recorded the moves as 54 100%-similarity renames;
+root-only tooling bins reach workspace scripts ONLY by PATH inheritance from a root script
+(`foreach`) — `yarn workspace <x> run typecheck` fails cold — so each package declares its own
+build/test tooling (`typescript`, `tsup`, `vitest`…) and the root keeps just repo-wide
+lint/format (found + fixed in Phase 1);
+`workspaces foreach --all` does not recurse into the root; the playground's first-ever lint pass
+had zero findings, so the planned separate lint commit folded into the move; the Pages redirect
+was verified against a local `/Dendrite/`-prefixed server with both an alias link and an
+existing payload link.
+
 Commits contain relocation + the config lines required to stay green — **no source content
 changes**. Anything spotted en route is listed for a later commit, not fixed in the move.
 
@@ -67,6 +77,16 @@ redirect.
 ---
 
 ## Phase 1 — Extract `@dendrite-lang/editor` (framework-free only)
+
+**Landed 2026-09-04** (seven commits plus a tooling fix). Notes from doing it:
+`extendLanguage(createLanguage(), base)` is the non-mutating copy, so a document's surface never
+touches a host's language; `subscribe` is changes-only, so vanilla hosts paint with `watch`
+(get + subscribe) — the editor has already compiled when they attach; the observables live on
+the session (separate model factories would have been Middle Men); `UrlStore` sequences async
+writes last-write-wins (the old `disposed` guard, generalised and tested); the envelope shipped
+as v1 `{ version, program, surface, inputValues }` with an empty migration chain because nothing
+had been deployed; `editor.ts` is deliberately untested (DOM composition — the playground is its
+harness); the playground host ended at 165 lines with zero CodeMirror or core imports.
 
 No React, and **no vanilla panes** (writing panes here only to delete them in Phase 2 is
 Speculative Generality). The playground keeps its vanilla shell through this phase.
@@ -99,7 +119,8 @@ interface EditorConfig {
 - **Store adapters** (Adapter + DIP): one interface; `UrlStore`, `LocalStorageStore`, `MemoryStore`
   (IndexedDb later). The playground's inlined URL + localStorage logic in `main.ts` *is* these
   adapters, just extracted.
-- **Envelope `v: 2`**: `values` → `inputValues`, `migrateDocument(v1 → v2)`, old share URLs verified.
+- **Envelope**: `v`/`values` → `version`/`inputValues` folded into v1 (nothing had shipped);
+  `migrateDocument` = `applyMigrations` chain (empty table, loop-guarded) + core `migrate()`.
 - **Boundary**: ESLint `no-restricted-imports` bans `react`/`react-dom` outside `src/react/`.
 - **Tests**: models + adapters + migration unit-tested; the playground stays the integration harness.
 

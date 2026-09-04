@@ -25,7 +25,7 @@ output result  = status
 | Package | Description | Status |
 |---|---|---|
 | `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | In development |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | Planned |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | In development — framework-free core landed (`packages/editor`: `createEditor`, observable session, document + stores); React UI and Rete to come (`editor-plan.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 
 ---
@@ -33,7 +33,10 @@ output result  = status
 ## Build tooling
 
 - **Build:** `tsup` (CJS + ESM + d.ts). **Tests:** `vitest`. **License:** MPL-2.0.
-- **Yarn PnP** — prefix tooling commands with `yarn` (`yarn tsc`, `yarn vitest run`, `yarn tsx …`).
+- **Yarn 4 workspaces** (`nodeLinker: node-modules`; one root lockfile): `packages/core`,
+  `packages/editor`, `apps/*`. Prefix tooling commands with `yarn` (`yarn tsc`, `yarn vitest run`,
+  `yarn tsx …`); root `yarn typecheck` / `test` / `build` fan out over every workspace,
+  `yarn lint` / `format` run once from the root. See `editor-plan.md` for the layout rationale.
 
 ---
 
@@ -53,7 +56,7 @@ source ──parseSource──▶ RawProgram ──analyse──▶ CoreProgram 
 ## File structure
 
 ```
-src/language/
+packages/core/src/language/
   infra/      types.ts (Type union + constructors), nodes.ts (ASTNode/CNode, node constructors),
               registry.ts (LanguageDescriptor, isCompatible, FnValue), program.ts (Raw/CoreProgram)
   parser/     lexer.ts, parser.ts (Pratt kernel), grammar.ts (registration API),

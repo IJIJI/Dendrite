@@ -1,10 +1,9 @@
-# Prettier, in check mode. Deliberately unfiltered by path (unlike the other core
-# workflows): formatting is dependency-free, so this is the one gate that can cover the
-# whole repo, playground included.
+# Prettier, in check mode, over the whole repo. Deliberately unfiltered by path (the other
+# gates skip Markdown-only pushes): formatting covers docs too.
 name: Format
 
 on:
-  push:
+  pull_request:
   workflow_dispatch:
 
 permissions:

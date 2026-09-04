@@ -1,0 +1,57 @@
+{
+  "name": "@dendrite-lang/core",
+  "version": "0.1.0",
+  "description": "A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.",
+  "keywords": [
+    "dataflow",
+    "declarative",
+    "reactive",
+    "typescript",
+    "dsl",
+    "programming-language",
+    "logic",
+    "node-editor"
+  ],
+  "homepage": "https://github.com/IJIJI/Dendrite#readme",
+  "bugs": {
+    "url": "https://github.com/IJIJI/Dendrite/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IJIJI/Dendrite.git",
+    "directory": "packages/core"
+  },
+  "license": "MPL-2.0",
+  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

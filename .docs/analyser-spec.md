@@ -1,6 +1,6 @@
 # Analyser
 
-`src/language/analyser/analyser.ts` — `analyse(program: RawProgram, descriptor): AnalysisResult`.
+`packages/core/src/language/analyser/analyser.ts` — `analyse(program: RawProgram, descriptor): AnalysisResult`.
 Transforms a RawProgram (`ASTNode`) into a CoreProgram (`CNode`, every node carrying `dependsOn`),
 collecting all errors/warnings rather than failing fast.
 

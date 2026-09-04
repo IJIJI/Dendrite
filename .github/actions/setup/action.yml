@@ -1,15 +1,7 @@
-# Shared preamble for the core (root project) workflows: Node + Yarn 4 + a warm cache
-# + an immutable install. One place to fix, four workflows fixed.
-#
-# The playground workflows do not use this.
+# Shared preamble for every workflow: Node + Yarn 4 + a warm cache + an immutable install
+# of the whole workspace (the one root lockfile covers every package and app).
 name: Setup
-description: Node 22 and Yarn 4 (via corepack) with a warm cache, then an immutable install.
-
-inputs:
-  working-directory:
-    description: Project root to install in - nested projects carry their own lockfile.
-    required: false
-    default: "."
+description: Node 22 and Yarn 4 (via corepack) with a warm cache, then an immutable workspace install.
 
 runs:
   using: composite
@@ -30,18 +22,16 @@ runs:
     - name: Locate the Yarn cache
       id: yarn-cache
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
       run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
 
     - uses: actions/cache@v4
       with:
         path: ${{ steps.yarn-cache.outputs.path }}
-        key: yarn-${{ runner.os }}-${{ hashFiles(format('{0}/yarn.lock', inputs.working-directory)) }}
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
         # Partial hit: one dependency bump still reuses every other package already
         # downloaded, instead of falling back to a cold install.
         restore-keys: yarn-${{ runner.os }}-
 
     - name: Install dependencies
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
       run: yarn install --immutable

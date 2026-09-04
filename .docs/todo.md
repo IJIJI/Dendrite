@@ -102,7 +102,7 @@ registry). Until then, explicit op inputs + prelude wrappers cover it.
 
 Small tracked items promoted from inline `// TODO`s. Each names its source location.
 
-- **Missing-input defaults for structural types** ([analyser.ts](../src/language/analyser/analyser.ts) `validateInputs`):
+- **Missing-input defaults for structural types** ([analyser.ts](../packages/core/src/language/analyser/analyser.ts) `validateInputs`):
   the type-default placeholder only consults the registry for NAMED types — a missing array-typed
   input gets a `null` literal (typed `T[]`), so `Length(null)` throws at runtime. Should derive `[]`
   structurally for arrays; decide behaviour for function-typed inputs (probably an error).
@@ -115,10 +115,10 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 - **collectRefs lambda shadow tests** (analyser `collectRefs`): the param-stripping recursion works,
   but edge coverage is thin (nested shadowing, param shadowing a binding used elsewhere in the same
   expression).
-- **Variadic input types in inferOutput** ([registry.ts](../src/language/infra/registry.ts)
+- **Variadic input types in inferOutput** ([registry.ts](../packages/core/src/language/infra/registry.ts)
   `EvaluatorDefinition`): variadic inputs are excluded from `inputTypes` entirely — should they be
   passed as the element type, the array type, or stay excluded? Decide + document.
-- **Eval error surface review** ([evaluator/types.ts](../src/language/evaluator/types.ts)):
+- **Eval error surface review** ([evaluator/types.ts](../packages/core/src/language/evaluator/types.ts)):
   `input_not_set` only fires at eval; runner/runtime seed defaults so it mostly can't happen — decide
   whether bare `evaluate`/`run` should pre-check inputs against the descriptor instead.
 - **Result-logging helpers** (from src/readme.md): small utilities to pretty-print outputs /
@@ -228,7 +228,7 @@ Implemented beyond the original sketch: the session state is a self-contained **
 (`{source, surface, values}` with the surface as JSON-safe data), the URL fragment live-holds the
 deflate+base64url payload (Share = copy URL), preset ids (`#tally`) are one-shot entry links that
 convert to payload URLs, and preset loads push history entries (Back restores the previous
-document). See `playground/src/lang/{surface,document,permalink}.ts`.
+document). See `apps/playground/src/lang/{surface,document,permalink}.ts`.
 
 ---
 
@@ -239,7 +239,7 @@ models, gated by `surface.userInputs`). Kept here for the requirements.
 
 **What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) from
 the playground itself. **The data structure already exists** — documents carry a `SurfaceSpec`
-(`playground/src/lang/surface.ts`); this feature is "edit `document.surface` → rebuild language →
+(`apps/playground/src/lang/surface.ts`); this feature is "edit `document.surface` → rebuild language →
 recompile", machinery the boot/dispose lifecycle already supports. Declarations travel in share
 URLs automatically.
 
@@ -306,7 +306,10 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
   text | `rete` opaque graph blob, reserved for the editor package | `ast` plain-record RawProgram),
   because the authoring artifact is canonical and the AST is lossy (comments, formatting, operator
   desugar). SourceRefs are kept verbatim; core owns the format `version` + `migrate()` seam; hosts
-  wrap their own envelope. See `src/language/infra/serialise.ts`.
+  wrap their own envelope. See `packages/core/src/language/infra/serialise.ts`.
+  **Follow-up:** when a second format version lands, shape `migrate()` as a stepwise chain (one
+  entry per retired version, never edited again) like the editor's `applyMigrations` in
+  `packages/editor/src/document.ts` — or move that helper into core and share it.
 - **`environment.ts` (DONE)** — `createEnvironment` with `parse`/`analyse`/`compile`/`load`/`run`/
   `createRunner`/`createRuntime`. `load(saved)` dispatches on form and always re-analyses
   (`LoadResult` = `CompileResult` + a `stage:"load"` arm). A `register(id, saved)` convenience was
@@ -420,5 +423,5 @@ are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-
 ### Doc fixes
 
 - _(Done)_ The `.docs/` set (CLAUDE.md, architecture.md, analyser-spec.md, decisions.md,
-  ops-reference.md) and `src/readme.md` were brought current with the structured-`Type`, first-class
+  ops-reference.md) and `packages/core/src/readme.md` were brought current with the structured-`Type`, first-class
   function, parser/grammar-split, and `createStdlib`/`parseSource` reality.
