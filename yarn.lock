@@ -90,6 +90,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@dendrite-lang/core@workspace:packages/core"
   dependencies:
+    "@types/node": "npm:^25.9.3"
+    tsup: "npm:^8.5.1"
+    tsx: "npm:^4.22.4"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.9"
     zod: "npm:^4.4.3"
   languageName: unknown
   linkType: soft
@@ -103,6 +108,9 @@ __metadata:
     "@codemirror/view": "npm:^6.38.0"
     "@dendrite-lang/core": "workspace:^"
     codemirror: "npm:^6.0.2"
+    tsup: "npm:^8.5.1"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.9"
     zod: "npm:^4.4.3"
   peerDependencies:
     "@dendrite-lang/core": ^0.1.0
@@ -1662,7 +1670,9 @@ __metadata:
     "@codemirror/view": "npm:^6.38.0"
     "@dendrite-lang/core": "workspace:^"
     "@dendrite-lang/editor": "workspace:^"
+    "@types/node": "npm:^25.9.3"
     codemirror: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
     vite: "npm:^7.1.0"
     zod: "npm:^4.4.3"
   languageName: unknown
@@ -1673,14 +1683,10 @@ __metadata:
   resolution: "dendrite@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@types/node": "npm:^25.9.3"
     eslint: "npm:^10.4.1"
     prettier: "npm:^3.8.3"
-    tsup: "npm:^8.5.1"
-    tsx: "npm:^4.22.4"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.60.1"
-    vitest: "npm:^4.1.9"
   languageName: unknown
   linkType: soft
 
