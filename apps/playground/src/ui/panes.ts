@@ -1,7 +1,8 @@
-import { type Diagnostic, type WidgetSpec } from "@dendrite-lang/editor";
+import { type Diagnostic, type RunResult, type WidgetSpec } from "@dendrite-lang/editor";
 
-//? Vanilla-DOM pane renderers. Deliberately throwaway (the framework-free logic lives in
-// @dendrite-lang/editor); a future React shell replaces this file only.
+//? Vanilla-DOM pane renderers: data in, DOM out. Deliberately throwaway (the framework-free
+// logic lives in @dendrite-lang/editor); a future React shell replaces this file only.
+// They know nothing about the session - the host subscribes and calls them.
 
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -19,7 +20,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(
 export function renderInputs(
   container: HTMLElement,
   widgets: WidgetSpec[],
-  getValue: (name: string) => unknown,
+  values: Readonly<Record<string, unknown>>,
   onChange: (name: string, value: unknown) => void,
 ): void {
   container.replaceChildren();
@@ -37,9 +38,9 @@ export function renderInputs(
     );
     row.append(label);
 
-    // The session owns the values (seeded with the same initialValueFor derivation the
-    // widget shapes come from) - render its truth, never a local fallback.
-    const current = getValue(widget.name);
+    // `values` is the session's truth (seeded with the same initialValueFor derivation the
+    // widget shapes come from) - render it, never a local fallback.
+    const current = values[widget.name];
     switch (widget.control) {
       case "number": {
         const field = el("input");
@@ -96,14 +97,10 @@ export function renderInputs(
 
 // ── Outputs ──────────────────────────────────────────────────────────────────
 
-export function renderOutputs(
-  container: HTMLElement,
-  outputs: ReadonlyMap<string, unknown> | null,
-  runtimeError: string | null,
-): void {
+export function renderOutputs(container: HTMLElement, { outputs, error }: RunResult): void {
   container.replaceChildren();
-  if (runtimeError) {
-    container.append(el("p", "runtime-error", runtimeError));
+  if (error) {
+    container.append(el("p", "runtime-error", error));
     return;
   }
   if (!outputs) {

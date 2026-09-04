@@ -7,11 +7,11 @@ import {
   decodePayload,
   dendriteHighlighting,
   DOCUMENT_VERSION,
+  EditorSession,
   encodeDocument,
   isDocument,
   lineStartOffsets,
   type PlaygroundDocument,
-  PlaygroundSession,
   toLintDiagnostics,
   toOffset,
   widgetsFor,
@@ -61,30 +61,8 @@ function boot(docState: PlaygroundDocument): BootHandle {
   let disposed = false;
   let compileTimer: ReturnType<typeof setTimeout> | undefined;
   let syncTimer: ReturnType<typeof setTimeout> | undefined;
-  // Mutual reference: the session's callbacks capture `view`, and the view's extensions
-  // capture `session` - so one of the two must be declared first and assigned later.
-  // eslint-disable-next-line prefer-const
-  let view: EditorView; // assigned below, before the first compile fires any callback
 
-  const jumpTo = (line: number, column: number): void => {
-    const source = view.state.doc.toString();
-    const offset = Math.min(toOffset(lineStartOffsets(source), line, column), source.length);
-    view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
-    view.focus();
-  };
-
-  const session = new PlaygroundSession(language, {
-    onDiagnostics(diagnostics) {
-      if (disposed) return;
-      const source = view.state.doc.toString();
-      view.dispatch(setDiagnostics(view.state, toLintDiagnostics(source, diagnostics)));
-      renderDiagnostics(diagnosticsPane, diagnostics, jumpTo);
-    },
-    onRun({ outputs, error }) {
-      if (disposed) return;
-      renderOutputs(outputsPane, outputs, error);
-    },
-  });
+  const session = new EditorSession(language);
   // Overlay the document's stored input values onto the surface defaults.
   for (const [name, value] of Object.entries(docState.values)) session.setInput(name, value);
 
@@ -92,19 +70,8 @@ function boot(docState: PlaygroundDocument): BootHandle {
     v: DOCUMENT_VERSION,
     program: serialiseSource(view.state.doc.toString()),
     surface: docState.surface,
-    values: session.getValues(),
+    values: session.inputs.get(),
   });
-
-  // The fallback slot is a nicety, never a reason to fail: localStorage throws on quota
-  // overrun, in private mode, and wherever storage is disabled outright. The URL carries
-  // the document regardless.
-  const rememberFallback = (doc: PlaygroundDocument): void => {
-    try {
-      localStorage.setItem(FALLBACK_KEY, JSON.stringify(doc));
-    } catch {
-      // no fallback slot this session
-    }
-  };
 
   // Live URL sync: the address bar always holds the current document (replaceState, so
   // no history spam). Failures (Safari history throttle, encode hiccups) skip a tick -
@@ -112,7 +79,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
   const sync = async (): Promise<void> => {
     if (disposed) return;
     const doc = currentDocument();
-    rememberFallback(doc);
+    localStorage.setItem(FALLBACK_KEY, JSON.stringify(doc));
     try {
       const payload = await encodeDocument(doc);
       if (!disposed) history.replaceState(null, "", `#${payload}`);
@@ -136,21 +103,37 @@ function boot(docState: PlaygroundDocument): BootHandle {
     }, DEBOUNCE_MS);
   });
 
-  view = new EditorView({
+  const view = new EditorView({
     doc: initialSource,
     parent: editorPane,
     extensions: [basicSetup, lintGutter(), dendriteHighlighting(language), compileListener],
   });
 
-  renderInputs(
-    inputsPane,
-    widgetsFor(language.descriptor),
-    (name) => session.getValue(name),
-    (name, value) => {
-      session.setInput(name, value);
-      scheduleSync();
-    },
-  );
+  const jumpTo = (line: number, column: number): void => {
+    const source = view.state.doc.toString();
+    const offset = Math.min(toOffset(lineStartOffsets(source), line, column), source.length);
+    view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+    view.focus();
+  };
+
+  // Everything that reacts to the session subscribes here; the session never learns who
+  // is listening. Lint squiggles and the diagnostics pane are two consumers of one stream.
+  const subscriptions = [
+    session.diagnostics.subscribe((diagnostics) =>
+      view.dispatch(
+        setDiagnostics(view.state, toLintDiagnostics(view.state.doc.toString(), diagnostics)),
+      ),
+    ),
+    session.diagnostics.subscribe((diagnostics) =>
+      renderDiagnostics(diagnosticsPane, diagnostics, jumpTo),
+    ),
+    session.outputs.subscribe((result) => renderOutputs(outputsPane, result)),
+  ];
+
+  renderInputs(inputsPane, widgetsFor(language.descriptor), session.inputs.get(), (name, value) => {
+    session.setInput(name, value);
+    scheduleSync();
+  });
 
   session.compile(initialSource);
 
@@ -159,8 +142,9 @@ function boot(docState: PlaygroundDocument): BootHandle {
       disposed = true;
       clearTimeout(compileTimer);
       clearTimeout(syncTimer);
+      for (const unsubscribe of subscriptions) unsubscribe();
       // Keep the fallback slot fresh; the URL for this document lives in history already.
-      rememberFallback(currentDocument());
+      localStorage.setItem(FALLBACK_KEY, JSON.stringify(currentDocument()));
       view.destroy();
     },
     async syncNow() {
@@ -174,7 +158,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
 // not white-screen: show the error where diagnostics normally live.
 function renderBootFailure(error: unknown): void {
   inputsPane.replaceChildren();
-  renderOutputs(outputsPane, null, null);
+  renderOutputs(outputsPane, { outputs: null, error: null });
   renderDiagnostics(
     diagnosticsPane,
     [
