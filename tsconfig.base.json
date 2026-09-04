@@ -1,0 +1,16 @@
+{
+  // Shared compiler options; every workspace's tsconfig extends this and adds only what
+  // differs (lib/target for browser apps, emit settings for publishable packages).
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    // tsup's dts build injects a deprecated `baseUrl`; TypeScript 6 refuses without this.
+    "ignoreDeprecations": "6.0"
+  }
+}

@@ -5,17 +5,17 @@ lexer-driven syntax highlighting and inline diagnostics, an inputs panel generat
 the language descriptor, and live (incrementally re-evaluated) outputs.
 
 ```sh
-cd playground
-yarn        # own install - this is a standalone nested project (node_modules linker)
-yarn dev    # http://localhost:5173
+yarn                                    # once, at the repo root (one workspace install)
+yarn workspace dendrite-playground dev  # http://localhost:5173
 ```
 
 ## How it's wired
 
-- Consumes the language **source** (`../src/index.ts` via a Vite/TS alias), so editing the
-  language hot-reloads the playground — it doubles as Dendrite's dev harness.
-- The repo root is Yarn PnP; this project deliberately has its own `.yarnrc.yml`
-  (`nodeLinker: node-modules`) + lockfile so Vite gets a plain dependency tree.
+- A workspace member of the Dendrite monorepo (`apps/playground`); `@dendrite-lang/core` is
+  a `workspace:^` dependency.
+- Consumes the language **source** (`packages/core/src/index.ts` via a Vite/TS alias that
+  overrides the workspace link), so editing the language hot-reloads the playground — it
+  doubles as Dendrite's dev harness.
 
 ## Layout (the layering matters)
 
