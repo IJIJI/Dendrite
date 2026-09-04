@@ -4,16 +4,15 @@ import { createStdlib, serialiseSource } from "@dendrite-lang/core";
 import {
   applySurface,
   cloneDocument,
-  decodePayload,
   dendriteHighlighting,
   DOCUMENT_VERSION,
-  EditorSession,
-  encodeDocument,
-  lineStartOffsets,
-  migrateDocument,
   type EditorDocument,
+  EditorSession,
+  lineStartOffsets,
+  LocalStorageStore,
   toLintDiagnostics,
   toOffset,
+  UrlStore,
   widgetsFor,
 } from "@dendrite-lang/editor";
 import { basicSetup } from "codemirror";
@@ -36,7 +35,8 @@ const exampleSelect = $("example-select") as HTMLSelectElement;
 const shareButton = $("share-button") as HTMLButtonElement;
 
 // The URL is the source of truth; localStorage is a single-slot fallback for hash-less visits.
-const FALLBACK_KEY = "dendrite-playground:document";
+const urlStore = new UrlStore();
+const fallbackStore = new LocalStorageStore("dendrite-playground:document");
 const DEBOUNCE_MS = 300;
 
 interface BootHandle {
@@ -75,19 +75,13 @@ function boot(docState: EditorDocument): BootHandle {
     inputValues: session.inputs.get(),
   });
 
-  // Live URL sync: the address bar always holds the current document (replaceState, so
-  // no history spam). Failures (Safari history throttle, encode hiccups) skip a tick -
-  // the next edit re-syncs.
+  // Live sync: the address bar always holds the current document (replaceState - no history
+  // spam) and the fallback slot mirrors it. Stores never throw; a failed write is simply
+  // retried by the next edit.
   const sync = async (): Promise<void> => {
     if (disposed) return;
     const doc = currentDocument();
-    localStorage.setItem(FALLBACK_KEY, JSON.stringify(doc));
-    try {
-      const payload = await encodeDocument(doc);
-      if (!disposed) history.replaceState(null, "", `#${payload}`);
-    } catch {
-      // next sync retries
-    }
+    await Promise.all([fallbackStore.save(doc), urlStore.save(doc)]);
   };
   const scheduleSync = (): void => {
     clearTimeout(syncTimer);
@@ -146,7 +140,7 @@ function boot(docState: EditorDocument): BootHandle {
       clearTimeout(syncTimer);
       for (const unsubscribe of subscriptions) unsubscribe();
       // Keep the fallback slot fresh; the URL for this document lives in history already.
-      localStorage.setItem(FALLBACK_KEY, JSON.stringify(currentDocument()));
+      void fallbackStore.save(currentDocument());
       view.destroy();
     },
     async syncNow() {
@@ -187,28 +181,19 @@ function switchToDocument(doc: EditorDocument, presetId?: string): void {
   exampleSelect.value = presetId ?? "";
 }
 
-// Resolve a location hash: a known preset id (one-shot entry point that converts to a
+// Resolve the current location: a known preset id (one-shot entry point that converts to a
 // payload URL), a document payload, or nothing.
-async function resolveHash(
-  hash: string,
-): Promise<{ doc: EditorDocument; presetId?: string; convert?: boolean } | null> {
-  const fragment = hash.replace(/^#/, "");
+async function resolveLocation(): Promise<{
+  doc: EditorDocument;
+  presetId?: string;
+  convert?: boolean;
+} | null> {
+  const fragment = location.hash.replace(/^#/, "");
   if (!fragment) return null;
   const preset = examples.find((e) => e.id === fragment);
   if (preset) return { doc: cloneDocument(preset.document), presetId: preset.id, convert: true };
-  const doc = await decodePayload(fragment);
+  const doc = await urlStore.load();
   return doc ? { doc } : null;
-}
-
-function fallbackDocument(): EditorDocument | null {
-  try {
-    const stored = localStorage.getItem(FALLBACK_KEY);
-    if (!stored) return null;
-    // The slot may predate the current envelope version - migrate like a share link.
-    return migrateDocument(JSON.parse(stored));
-  } catch {
-    return null;
-  }
 }
 
 async function init(): Promise<void> {
@@ -230,16 +215,14 @@ async function init(): Promise<void> {
     if (!preset) return;
     const doc = cloneDocument(preset.document);
     // New history entry per loaded preset: Back restores the previous document.
-    void encodeDocument(doc)
-      .then((payload) => history.pushState(null, "", `#${payload}`))
-      .catch(() => {});
+    void urlStore.push(doc);
     switchToDocument(doc, preset.id);
   });
 
   // Back/Forward AND direct hash navigations land here (hash changes are same-document
   // navigations, so they fire popstate too). Alias fragments still convert to payloads.
   window.addEventListener("popstate", () => {
-    void resolveHash(location.hash).then((resolved) => {
+    void resolveLocation().then((resolved) => {
       if (!resolved) return;
       switchToDocument(resolved.doc, resolved.presetId);
       if (resolved.convert) void current?.syncNow();
@@ -263,13 +246,13 @@ async function init(): Promise<void> {
   });
 
   // Initial document: URL (payload or preset alias) → localStorage fallback → first preset.
-  const resolved = await resolveHash(location.hash);
+  const resolved = await resolveLocation();
   let doc: EditorDocument;
   let presetId: string | undefined;
   if (resolved) {
     ({ doc, presetId } = resolved);
   } else {
-    const fallback = fallbackDocument();
+    const fallback = await fallbackStore.load();
     doc = fallback ?? cloneDocument(examples[0].document);
     presetId = fallback ? undefined : examples[0].id;
   }

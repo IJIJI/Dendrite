@@ -12,3 +12,4 @@ export * from "./input-widgets"; // widgetsFor, initialValueFor, WidgetSpec, Con
 export * from "./surface"; // SurfaceSpec (+ parts), applySurface
 export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload
+export * from "./store"; // DocumentStore + MemoryStore, LocalStorageStore, UrlStore
