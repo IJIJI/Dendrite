@@ -1,12 +1,11 @@
-# tsc --noEmit over the core project (src + examples). The playground has its own
-# tsconfig and is checked by playground-check.yml.
+# tsc --noEmit in every workspace, via the root fan-out script (core: src + examples;
+# playground: its sources + Vite config, against the language source it aliases in).
 name: Typecheck
 
 # Push-only - see lint.yml.
 on:
   push:
     paths-ignore:
-      - "playground/**"
       - "**/*.md"
   workflow_dispatch:
 

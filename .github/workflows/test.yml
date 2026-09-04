@@ -1,11 +1,10 @@
-# The vitest suite (src/**/*.test.ts).
+# The vitest suites (packages/*/src/**/*.test.ts), via the root fan-out script.
 name: Test
 
 # Push-only - see lint.yml.
 on:
   push:
     paths-ignore:
-      - "playground/**"
       - "**/*.md"
   workflow_dispatch:
 

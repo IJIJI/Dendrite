@@ -1,13 +1,13 @@
-# The publishable artifact: tsup bundles cjs+esm AND emits the .d.ts rollup. The dts
-# step type-checks the PUBLIC surface, which plain `tsc --noEmit` does not exercise
-# the same way. It has broken on toolchain bumps before, so it gates on its own.
+# Every workspace's build, via the root fan-out script: core's tsup bundle (cjs+esm AND the
+# .d.ts rollup - the dts step type-checks the PUBLIC surface, which plain `tsc --noEmit`
+# does not exercise the same way, and it has broken on toolchain bumps before) and the
+# playground's Vite production build (bundling, asset resolution, the Vite config).
 name: Build
 
 # Push-only - see lint.yml.
 on:
   push:
     paths-ignore:
-      - "playground/**"
       - "**/*.md"
   workflow_dispatch:
 

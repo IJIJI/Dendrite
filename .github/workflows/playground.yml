@@ -1,16 +1,18 @@
 # Build the playground and deploy it to GitHub Pages.
 #
-# The playground consumes the language SOURCE (../src via its Vite alias), so no root
-# install/build is needed - only the playground's own dependencies. One-time repo setup:
-# Settings → Pages → Source = "GitHub Actions".
+# Site layout: the root is a hash-forwarding redirect (.github/pages/index.html) and the
+# playground lives under /playground/, so the docs site can take the root later without
+# breaking share links (which encode the whole document in the #fragment).
+# One-time repo setup: Settings → Pages → Source = "GitHub Actions".
 name: Deploy playground
 
 on:
   push:
     branches: [main]
     paths:
-      - "playground/**"
-      - "src/**"
+      - "apps/playground/**"
+      - "packages/core/**"
+      - ".github/pages/**"
       - ".github/workflows/playground.yml"
   workflow_dispatch:
 
@@ -30,41 +32,25 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Enable corepack (Yarn 4 via packageManager field)
-        run: corepack enable
-
-      # Yarn 4 caches globally (~/.yarn/berry/cache), so ask it for the real path.
-      - name: Locate the Yarn cache
-        id: yarn-cache
-        working-directory: playground
-        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache.outputs.path }}
-          key: yarn-playground-${{ runner.os }}-${{ hashFiles('playground/yarn.lock') }}
-          restore-keys: yarn-playground-${{ runner.os }}-
-
-      - name: Install playground dependencies
-        working-directory: playground
-        run: yarn install --immutable
-
+      # The playground bundles the language SOURCE via its Vite alias - no core build needed.
       - name: Build playground
-        working-directory: playground
-        run: yarn build
+        run: yarn workspace dendrite-playground run build
         env:
-          PLAYGROUND_BASE: /Dendrite/
+          PLAYGROUND_BASE: /Dendrite/playground/
+
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          cp -r apps/playground/dist site/playground
+          cp .github/pages/index.html site/index.html
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: playground/dist
+          path: site
 
   deploy:
     needs: build
