@@ -128,13 +128,17 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 
 ## Editor era — build out `@dendrite-lang/editor`
 
+**→ Planned in [editor-plan.md](editor-plan.md)** (settled 2026-09-04: monorepo, node-modules
+linker, ONE package with a `/react` subpath, headless core + React UI, config presets instead of
+deployment tiers). Phases 0–4 there cover extraction through the docs embed.
+
 **What:** The dual-mode editor package: a code editor (grown from the playground's framework-free
 `lang/` modules) + the Rete node editor, with graph↔code awareness.
 
 **Pulls in (tracked separately, land here):** the rete adapter (graph ↔ RawProgram) + the
 `SavedProgram` `rete`-form loader; true source-span ranges; non-gated parsing (error nodes) for
-editor-grade diagnostics; the lexical-order-for-rete decision; the **React decision** (user leans
-React — Rete v2 has a React render plugin; see memory `playground-editor-direction`).
+editor-grade diagnostics; the lexical-order-for-rete decision. The React decision is **made**
+(React; Rete v2 has a React render plugin).
 
 **Driving need:** visual authoring for Beacon; the playground's input/output UI work is a stepping
 stone.
@@ -209,15 +213,12 @@ exist). Component-level embedding is the React-switch alternative.
 
 ---
 
-## Playground — React switch decision (when its UI grows)
+## Playground — React switch decision — DECIDED
 
-**What:** Decide whether to move the playground shell from vanilla DOM to React once share links +
-user-settable inputs/outputs land (the shell is the throwaway layer by design; `lang/` modules are
-framework-free either way).
-
-**Decide based on:** how much shell complexity the input/output UI actually adds, the web-docs
-framework choice (embedding), and the editor-era React lean. Revisit after both playground features
-ship.
+React, via `@dendrite-lang/editor/react` (see [editor-plan.md](editor-plan.md), Phase 2). The
+playground stops having a shell of its own and becomes a thin host around the editor component.
+Deciding factor: Beacon is React, and the chrome (panes, type pickers, top bar) is exactly the
+stateful list/form UI where the vanilla shell already hurts.
 
 ---
 
@@ -233,6 +234,9 @@ document). See `playground/src/lang/{surface,document,permalink}.ts`.
 
 ## Playground — user-settable inputs and outputs
 
+**→ Scheduled as [editor-plan.md](editor-plan.md) Phase 3** (built in React against the Phase 1
+models, gated by `surface.userInputs`). Kept here for the requirements.
+
 **What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) from
 the playground itself. **The data structure already exists** — documents carry a `SurfaceSpec`
 (`playground/src/lang/surface.ts`); this feature is "edit `document.surface` → rebuild language →
@@ -247,6 +251,10 @@ the Rete side's port configuration.
 ---
 
 ## Playground — its own lint setup (it left the root's coverage)
+
+**→ Absorbed by [editor-plan.md](editor-plan.md) Phase 0:** the workspace conversion (one lockfile,
+node-modules linker) lets the root ESLint config cover every package again, so the playground
+needs no setup of its own. The requirements below become moot once Phase 0 lands.
 
 **What:** ESLint *inside* the playground project — own `eslint.config.mjs`, own devDeps, own `lint`
 script — plus a `yarn lint` step in `playground-check.yml`.
