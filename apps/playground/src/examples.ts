@@ -13,7 +13,7 @@ export interface ExamplePreset {
 }
 
 const doc = (source: string, surface: SurfaceSpec): EditorDocument => ({
-  v: DOCUMENT_VERSION,
+  version: DOCUMENT_VERSION,
   program: serialiseSource(source),
   surface,
   inputValues: {},

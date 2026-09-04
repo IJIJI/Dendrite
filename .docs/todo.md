@@ -307,6 +307,9 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
   because the authoring artifact is canonical and the AST is lossy (comments, formatting, operator
   desugar). SourceRefs are kept verbatim; core owns the format `version` + `migrate()` seam; hosts
   wrap their own envelope. See `packages/core/src/language/infra/serialise.ts`.
+  **Follow-up:** when a second format version lands, shape `migrate()` as a stepwise chain (one
+  entry per retired version, never edited again) like the editor's `applyMigrations` in
+  `packages/editor/src/document.ts` — or move that helper into core and share it.
 - **`environment.ts` (DONE)** — `createEnvironment` with `parse`/`analyse`/`compile`/`load`/`run`/
   `createRunner`/`createRuntime`. `load(saved)` dispatches on form and always re-analyses
   (`LoadResult` = `CompileResult` + a `stage:"load"` arm). A `register(id, saved)` convenience was

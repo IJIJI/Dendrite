@@ -8,16 +8,16 @@ import { type SurfaceSpec } from "./surface";
 // Self-contained: a document round-trips through a URL or a store with no dependence on a
 // host's presets (presets are just documents you can load in).
 //
-// Two version axes on purpose: `v` is THIS envelope's version; `program.version` is core's
-// format version (core's migrate() owns that part; migrateDocument delegates to it). Only
-// renames/removals bump `v` - optional additions (a future `id`/`meta`) do not. Today the
-// editor only edits code-form programs; rete-form documents slot in with the editor era,
-// with no change to this shape.
+// Two version axes on purpose: `version` is THIS envelope's version; `program.version` is
+// core's format version (core's migrate() owns that part; migrateDocument delegates to it).
+// Only renames/removals bump `version` - optional additions (a future `id`/`meta`) do not.
+// Today the editor only edits code-form programs; rete-form documents slot in with the
+// editor era, with no change to this shape.
 
-export const DOCUMENT_VERSION = 2;
+export const DOCUMENT_VERSION = 1;
 
 export interface EditorDocument {
-  v: typeof DOCUMENT_VERSION;
+  version: typeof DOCUMENT_VERSION;
   program: SavedProgram;
   surface: SurfaceSpec;
   /**
@@ -27,19 +27,12 @@ export interface EditorDocument {
   inputValues: Record<string, unknown>;
 }
 
-// v1 (2026-09-04): the same envelope with `values` instead of `inputValues`.
-interface DocumentV1 {
-  v: 1;
-  program: SavedProgram;
-  surface: SurfaceSpec;
-  values: Record<string, unknown>;
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// Shared by every envelope version so far.
-const hasProgramAndSurface = (value: Record<string, unknown>): boolean => {
+/** Lite structural check for a CURRENT-version document - enough to boot safely, not a schema. */
+export function isDocument(value: unknown): value is EditorDocument {
+  if (!isRecord(value) || value["version"] !== DOCUMENT_VERSION) return false;
   const program = value["program"];
   const surface = value["surface"];
   return (
@@ -47,37 +40,56 @@ const hasProgramAndSurface = (value: Record<string, unknown>): boolean => {
     typeof program["form"] === "string" &&
     isRecord(surface) &&
     Array.isArray(surface["inputs"]) &&
-    Array.isArray(surface["outputs"])
-  );
-};
-
-/** Lite structural check for a CURRENT-version document - enough to boot safely, not a schema. */
-export function isDocument(value: unknown): value is EditorDocument {
-  return (
-    isRecord(value) &&
-    value["v"] === DOCUMENT_VERSION &&
-    hasProgramAndSurface(value) &&
+    Array.isArray(surface["outputs"]) &&
     isRecord(value["inputValues"])
   );
 }
 
-const isV1 = (value: unknown): value is DocumentV1 =>
-  isRecord(value) && value["v"] === 1 && hasProgramAndSurface(value) && isRecord(value["values"]);
+// ── Migrations ───────────────────────────────────────────────────────────────
+// One entry per RETIRED envelope version: how to lift a document at that version to the
+// next. Written when the version is retired and never edited again - migrateDocument chains
+// the steps, so a fixture from any old version keeps proving the whole path as versions
+// accrue. Empty until version 1 is retired.
 
-const fromV1 = ({ values, ...rest }: DocumentV1): EditorDocument => ({
-  ...rest,
-  v: DOCUMENT_VERSION,
-  inputValues: values,
-});
+/** Lifts a document at one version to the next, or rejects it (null). */
+export type Migration = (doc: Record<string, unknown>) => Record<string, unknown> | null;
+
+const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+
+const versionOf = (doc: Record<string, unknown>): number | undefined =>
+  typeof doc["version"] === "number" ? doc["version"] : undefined;
 
 /**
- * Any envelope version (or garbage) → a current document, or null. The inner program goes
- * through core's migrate(), so a document older on EITHER axis comes back current; one newer
- * than this build understands comes back null (fail soft - the caller falls back).
+ * Step `doc` through `migrations` from its `version` up to `target`. Null when a version has
+ * no migration, a step rejects its input, or a step fails to advance the version (loop
+ * guard). Generic on purpose: a host wrapping EditorDocument in its own envelope chains its
+ * versions the same way.
+ */
+export function applyMigrations(
+  doc: Record<string, unknown>,
+  migrations: Readonly<Record<number, Migration>>,
+  target: number,
+): Record<string, unknown> | null {
+  let current = doc;
+  for (;;) {
+    const from = versionOf(current);
+    if (from === undefined || from >= target) return current;
+    const next = migrations[from]?.(current);
+    const to = next ? versionOf(next) : undefined;
+    if (!next || to === undefined || to <= from) return null;
+    current = next;
+  }
+}
+
+/**
+ * Any envelope version (or garbage) → a current document, or null. The envelope is chained
+ * up through MIGRATIONS and the inner program goes through core's migrate(), so a document
+ * older on EITHER axis comes back current; one newer than this build understands comes back
+ * null (fail soft - the caller falls back).
  */
 export function migrateDocument(value: unknown): EditorDocument | null {
-  const envelope = isDocument(value) ? value : isV1(value) ? fromV1(value) : null;
-  if (!envelope) return null;
+  const envelope = isRecord(value) ? applyMigrations(value, MIGRATIONS, DOCUMENT_VERSION) : null;
+  if (!isDocument(envelope)) return null;
   try {
     const program = migrate(envelope.program);
     return program === envelope.program ? envelope : { ...envelope, program };

@@ -69,7 +69,7 @@ function boot(docState: EditorDocument): BootHandle {
   }
 
   const currentDocument = (): EditorDocument => ({
-    v: DOCUMENT_VERSION,
+    version: DOCUMENT_VERSION,
     program: serialiseSource(view.state.doc.toString()),
     surface: docState.surface,
     inputValues: session.inputs.get(),
