@@ -14,6 +14,14 @@ export interface Subject<T> extends Observable<T> {
   set(value: T): void;
 }
 
+/**
+ * Render the current value now and again on every change; returns the unsubscribe.
+ */
+export function watch<T>(observable: Observable<T>, render: (value: T) => void): () => void {
+  render(observable.get());
+  return observable.subscribe(render);
+}
+
 export function createSubject<T>(initial: T): Subject<T> {
   let current = initial;
   const listeners = new Set<(value: T) => void>();

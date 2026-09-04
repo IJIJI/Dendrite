@@ -1,6 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createSubject } from "./observable";
+import { createSubject, watch } from "./observable";
+
+describe("watch", () => {
+  it("renders the current value immediately, then every change, until unsubscribed", () => {
+    const subject = createSubject("a");
+    const seen: string[] = [];
+    const stop = watch(subject, (v) => seen.push(v));
+    subject.set("b");
+    stop();
+    subject.set("c");
+    expect(seen).toEqual(["a", "b"]);
+  });
+});
 
 describe("createSubject", () => {
   it("holds the initial value and reports changes to subscribers", () => {

@@ -1,25 +1,21 @@
-import { lintGutter, setDiagnostics } from "@codemirror/lint";
-import { EditorView } from "@codemirror/view";
-import { createStdlib, serialiseSource } from "@dendrite-lang/core";
 import {
-  applySurface,
   cloneDocument,
-  dendriteHighlighting,
-  DOCUMENT_VERSION,
+  createEditor,
   type EditorDocument,
-  EditorSession,
-  lineStartOffsets,
+  type EditorHandle,
   LocalStorageStore,
-  toLintDiagnostics,
-  toOffset,
   UrlStore,
+  watch,
   widgetsFor,
 } from "@dendrite-lang/editor";
-import { basicSetup } from "codemirror";
 
 import { examples } from "../examples";
 import { renderDiagnostics, renderInputs, renderOutputs } from "./panes";
 import "../style.css";
+
+//? The playground host: mounts the editor for one document at a time, renders the panes
+// from its session, and owns persistence + routing policy (URL as the source of truth,
+// localStorage as a single-slot fallback, preset ids as one-shot entry links).
 
 const $ = (id: string): HTMLElement => {
   const node = document.getElementById(id);
@@ -34,123 +30,39 @@ const diagnosticsPane = $("diagnostics");
 const exampleSelect = $("example-select") as HTMLSelectElement;
 const shareButton = $("share-button") as HTMLButtonElement;
 
-// The URL is the source of truth; localStorage is a single-slot fallback for hash-less visits.
 const urlStore = new UrlStore();
 const fallbackStore = new LocalStorageStore("dendrite-playground:document");
-const DEBOUNCE_MS = 300;
 
-interface BootHandle {
+const save = (doc: EditorDocument): Promise<void> =>
+  Promise.all([fallbackStore.save(doc), urlStore.save(doc)]).then(() => undefined);
+
+interface Mounted {
+  editor: EditorHandle;
   dispose(): void;
-  /** Write the current document to the URL + fallback slot right now (used by Share). */
-  syncNow(): Promise<void>;
 }
 
-// Boot the playground for one document: language from its surface, session, editor.
-// Everything is scoped to this call; dispose() tears it down and guards async paths.
-function boot(docState: EditorDocument): BootHandle {
-  // The playground edits TEXT - only code-form programs are editable here. (rete-form
-  // documents arrive with the editor era; ast-form ones have no text to edit.)
-  if (docState.program.form !== "code") {
-    throw new Error(`The playground cannot edit '${docState.program.form}'-form programs yet`);
-  }
-  const initialSource = docState.program.source;
-
-  const language = createStdlib();
-  applySurface(language, docState.surface);
-
-  let disposed = false;
-  let compileTimer: ReturnType<typeof setTimeout> | undefined;
-  let syncTimer: ReturnType<typeof setTimeout> | undefined;
-
-  const session = new EditorSession(language);
-  // Overlay the document's stored input values onto the surface defaults.
-  for (const [name, value] of Object.entries(docState.inputValues)) {
-    session.setInput(name, value);
-  }
-
-  const currentDocument = (): EditorDocument => ({
-    version: DOCUMENT_VERSION,
-    program: serialiseSource(view.state.doc.toString()),
-    surface: docState.surface,
-    inputValues: session.inputs.get(),
-  });
-
-  // Live sync: the address bar always holds the current document (replaceState - no history
-  // spam) and the fallback slot mirrors it. Stores never throw; a failed write is simply
-  // retried by the next edit.
-  const sync = async (): Promise<void> => {
-    if (disposed) return;
-    const doc = currentDocument();
-    await Promise.all([fallbackStore.save(doc), urlStore.save(doc)]);
-  };
-  const scheduleSync = (): void => {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => void sync(), DEBOUNCE_MS);
-  };
-
-  // Debounced compile (+ sync) on every source edit.
-  const compileListener = EditorView.updateListener.of((update) => {
-    if (!update.docChanged) return;
-    clearTimeout(compileTimer);
-    compileTimer = setTimeout(() => {
-      if (disposed) return;
-      session.compile(update.state.doc.toString());
-      void sync();
-    }, DEBOUNCE_MS);
-  });
-
-  const view = new EditorView({
-    doc: initialSource,
-    parent: editorPane,
-    extensions: [basicSetup, lintGutter(), dendriteHighlighting(language), compileListener],
-  });
-
-  const jumpTo = (line: number, column: number): void => {
-    const source = view.state.doc.toString();
-    const offset = Math.min(toOffset(lineStartOffsets(source), line, column), source.length);
-    view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
-    view.focus();
-  };
-
-  // Everything that reacts to the session subscribes here; the session never learns who
-  // is listening. Lint squiggles and the diagnostics pane are two consumers of one stream.
-  const subscriptions = [
-    session.diagnostics.subscribe((diagnostics) =>
-      view.dispatch(
-        setDiagnostics(view.state, toLintDiagnostics(view.state.doc.toString(), diagnostics)),
-      ),
-    ),
-    session.diagnostics.subscribe((diagnostics) =>
-      renderDiagnostics(diagnosticsPane, diagnostics, jumpTo),
-    ),
-    session.outputs.subscribe((result) => renderOutputs(outputsPane, result)),
+// Mount the editor for one document and wire the panes to its session. `watch` paints the
+// current state first - the editor has already compiled by the time we subscribe.
+function mount(doc: EditorDocument): Mounted {
+  const editor = createEditor(editorPane, { document: doc, onChange: (d) => void save(d) });
+  const { session } = editor;
+  const unwatch = [
+    watch(session.diagnostics, (d) => renderDiagnostics(diagnosticsPane, d, editor.jumpTo)),
+    watch(session.outputs, (r) => renderOutputs(outputsPane, r)),
   ];
-
-  renderInputs(inputsPane, widgetsFor(language.descriptor), session.inputs.get(), (name, value) => {
-    session.setInput(name, value);
-    scheduleSync();
-  });
-
-  session.compile(initialSource);
-
+  renderInputs(inputsPane, widgetsFor(session.language.descriptor), session.inputs.get(), (n, v) =>
+    session.setInput(n, v),
+  );
   return {
+    editor,
     dispose() {
-      disposed = true;
-      clearTimeout(compileTimer);
-      clearTimeout(syncTimer);
-      for (const unsubscribe of subscriptions) unsubscribe();
-      // Keep the fallback slot fresh; the URL for this document lives in history already.
-      void fallbackStore.save(currentDocument());
-      view.destroy();
-    },
-    async syncNow() {
-      clearTimeout(syncTimer);
-      await sync();
+      for (const stop of unwatch) stop();
+      editor.dispose();
     },
   };
 }
 
-// A failed boot (e.g. a document declaring a dangling type reference) must surface,
+// A failed mount (e.g. a document declaring a dangling type reference) must surface,
 // not white-screen: show the error where diagnostics normally live.
 function renderBootFailure(error: unknown): void {
   inputsPane.replaceChildren();
@@ -168,18 +80,26 @@ function renderBootFailure(error: unknown): void {
   );
 }
 
-let current: BootHandle | null = null;
+let current: Mounted | null = null;
 
 function switchToDocument(doc: EditorDocument, presetId?: string): void {
-  current?.dispose();
-  current = null;
+  if (current) {
+    // Keep the fallback slot fresh; the URL for the outgoing document lives in history.
+    void fallbackStore.save(current.editor.getDocument());
+    current.dispose();
+    current = null;
+  }
   try {
-    current = boot(doc);
+    current = mount(doc);
   } catch (error) {
     renderBootFailure(error);
   }
   exampleSelect.value = presetId ?? "";
 }
+
+/** Write the current document to the URL + fallback slot right now (Share, alias conversion). */
+const syncNow = (): Promise<void> =>
+  current ? save(current.editor.getDocument()) : Promise.resolve();
 
 // Resolve the current location: a known preset id (one-shot entry point that converts to a
 // payload URL), a document payload, or nothing.
@@ -225,13 +145,13 @@ async function init(): Promise<void> {
     void resolveLocation().then((resolved) => {
       if (!resolved) return;
       switchToDocument(resolved.doc, resolved.presetId);
-      if (resolved.convert) void current?.syncNow();
+      if (resolved.convert) void syncNow();
     });
   });
 
   shareButton.addEventListener("click", () => {
     void (async () => {
-      await current?.syncNow();
+      await syncNow();
       const label = shareButton.textContent;
       try {
         await navigator.clipboard.writeText(location.href);
@@ -258,7 +178,7 @@ async function init(): Promise<void> {
   }
   switchToDocument(doc, presetId);
   // Convert alias / hash-less entries to the canonical payload URL.
-  if (!resolved || resolved.convert) await current?.syncNow();
+  if (!resolved || resolved.convert) await syncNow();
 }
 
 void init();
