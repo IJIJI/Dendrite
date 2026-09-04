@@ -27,6 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +37,18 @@ jobs:
 
       - name: Enable corepack (Yarn 4 via packageManager field)
         run: corepack enable
+
+      # Yarn 4 caches globally (~/.yarn/berry/cache), so ask it for the real path.
+      - name: Locate the Yarn cache
+        id: yarn-cache
+        working-directory: playground
+        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache.outputs.path }}
+          key: yarn-playground-${{ runner.os }}-${{ hashFiles('playground/yarn.lock') }}
+          restore-keys: yarn-playground-${{ runner.os }}-
 
       - name: Install playground dependencies
         working-directory: playground
@@ -56,6 +69,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

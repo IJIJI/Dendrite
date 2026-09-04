@@ -194,6 +194,22 @@ the Rete side's port configuration.
 
 ---
 
+## Playground — its own lint setup (it left the root's coverage)
+
+**What:** ESLint *inside* the playground project — own `eslint.config.mjs`, own devDeps, own `lint`
+script — plus a `yarn lint` step in `playground-check.yml`.
+
+**Why it came up:** CI now treats the playground as the standalone project it already is (own
+lockfile, own node_modules linker, own workflow, own repo later), so the root ESLint config ignores
+`playground/**`. Linting it from the root would type-resolve its sources against dependencies the
+core project never installs — green locally, fragile in CI. The trade left the playground unlinted.
+
+**What it requires:** `eslint` + `typescript-eslint` in `playground/package.json`, a config mirroring
+the root's rules (`no-unused-vars` with `^_`, `no-explicit-any` warn, `projectService`), a
+`"lint": "eslint ."` script, and one more step in the playground workflow.
+
+---
+
 ## Prelude / global helper bindings (shared across programs)
 
 **What:** A prelude — one or more `.den` files of (lambda) bindings — parsed + analysed once and made

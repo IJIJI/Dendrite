@@ -1,0 +1,32 @@
+# tsc --noEmit over the core project (src + examples). The playground has its own
+# tsconfig and is checked by playground-check.yml.
+name: Typecheck
+
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: yarn typecheck
