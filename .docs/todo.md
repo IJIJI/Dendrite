@@ -141,6 +141,58 @@ stone.
 
 ---
 
+## Language service (editor intelligence) — the big one
+
+**What:** A **transport-free, DOM-free** query API over `Language` + a document position:
+diagnostics, completions, hover types, signature help, go-to-definition, rename. One module, many
+clients — the web editor calls it directly (in-process or in a worker); a VS Code extension wraps it
+in LSP; a future CLI can lint with it.
+
+**Why it's the big one:** it is the bulk of "usable by developers", it is the *only* piece a VS Code
+extension actually needs from this repo (activation + a TextMate grammar are small), and it is the
+first module that must answer questions *about* a program rather than run it.
+
+**Prerequisites (already tracked above):**
+- **True source-span ranges** (Parser → review findings) — position→node lookup needs real
+  start/end spans, not a representative token.
+- **Non-gated parsing via error nodes** (Parser → deferred, option B) — completions must work in a
+  syntactically broken document, which today produces no program at all.
+
+Both are shared with the web editor, so neither is duplicated cost.
+
+**Shape:**
+- `createLanguageService(language)` → `{ diagnostics(doc), completionsAt(doc, offset),
+  hoverAt(doc, offset), signatureAt(doc, offset), definitionAt(doc, offset), rename(doc, offset, name) }`.
+- Answers come from data that already exists: `descriptor.ops` (name, inputs, output type,
+  `category`) for op completions, `grammar` for operator/keyword completions, the analysed
+  `CoreProgram` for binding/ref/type answers, `SourceRef` for definitions.
+- Incremental reuse: the analyser already runs per keystroke in the playground; the service should
+  cache the last good `CoreProgram` so a broken edit still answers from the previous tree.
+- **No `vscode-languageserver` dependency in this module** — the LSP adapter lives in the extension.
+
+**Driving need:** developer-grade editing in `@dendrite-lang/editor`; a VS Code extension for `.den`
+files (including this repo's own `examples/*.den`).
+
+---
+
+## Multi-document / workspace editing
+
+**What:** More than one program open at once — a document list, tabs, and cross-document concerns
+(name collisions, "which document is this ref from").
+
+**Why deferred:** Not needed at first. Beacon's MVP is one logic field per editor mount, and the
+playground is a single-document scratchpad by design.
+
+**Decide now, build later — document identity.** Even single-document hosts need to know *which*
+document they are saving. Add an optional `id` (and host `meta`) to the document envelope when the
+`DocumentStore` seam lands, because the store keys on it; retrofitting an id into already-shared
+payload URLs is the expensive version of this.
+
+**Also pulls in:** the prelude (shared helper bindings across documents) becomes much more valuable
+once several documents exist.
+
+---
+
 ## Web documentation site
 
 **What:** Public docs for the language: guide (syntax, types, lambdas, operators), op/stdlib
