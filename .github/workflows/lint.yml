@@ -1,0 +1,35 @@
+# ESLint over the core project. The playground lints/builds itself (playground-check.yml).
+#
+# Note on paths-ignore: a run skipped by a path filter never reports a status, so if
+# these are ever made REQUIRED checks, use a filter-free trigger instead.
+name: Lint
+
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: yarn lint

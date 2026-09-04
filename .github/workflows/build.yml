@@ -1,0 +1,33 @@
+# The publishable artifact: tsup bundles cjs+esm AND emits the .d.ts rollup. The dts
+# step type-checks the PUBLIC surface, which plain `tsc --noEmit` does not exercise
+# the same way. It has broken on toolchain bumps before, so it gates on its own.
+name: Build
+
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main, dev]
+    paths-ignore:
+      - "playground/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: yarn build

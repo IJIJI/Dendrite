@@ -10,9 +10,10 @@ export default tseslint.config(
       ".yarn/**",
       ".pnp.cjs",
       ".pnp.loader.mjs",
-      // The nested playground project's artifacts (its sources ARE linted).
-      "playground/dist/**",
-      "playground/.yarn/**",
+      // The playground is a standalone nested project (own lockfile, own deps, own
+      // CI) heading for its own repo. Linting it from here would type-resolve
+      // against dependencies this project never installs.
+      "playground/**",
     ],
   },
   js.configs.recommended,
