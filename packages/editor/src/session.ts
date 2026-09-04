@@ -8,11 +8,13 @@ import {
 } from "@dendrite-lang/core";
 
 import { initialValueFor } from "./input-widgets";
+import { createSubject, type Observable } from "./observable";
 
-//? PlaygroundSession: framework-free compile/run loop for one Language.
-// Owns the Environment, the current runner, and the live input values. The shell decides
-// WHEN to compile (debounce) and how to render; this module only reports through plain
-// callbacks. This is the piece that graduates into the editor package later.
+//? EditorSession: framework-free compile/run loop for one Language.
+// Owns the Environment, the current runner, and the live input values, and PUBLISHES its
+// state through three observables (diagnostics, outputs, inputs). Hosts decide WHEN to
+// compile (debounce) and how to render; any number of consumers - panes, lint squiggles,
+// URL sync - subscribe without the session knowing they exist.
 
 // Editor-agnostic diagnostic: parse + analysis errors/warnings on one shape.
 // line/column are 1-based (absent for diagnostics without a code source).
@@ -32,40 +34,37 @@ export interface RunResult {
   error: string | null; // runtime (eval) failure message
 }
 
-export interface SessionCallbacks {
-  onDiagnostics(diagnostics: Diagnostic[]): void;
-  onRun(result: RunResult): void;
-}
+export type InputValues = Readonly<Record<string, unknown>>;
 
 const at = (source?: SourceRef) =>
   source?.kind === "code"
     ? { line: source.line, column: source.column, length: source.length }
     : {};
 
-export class PlaygroundSession {
+export class EditorSession {
   private readonly env: Environment;
   private runner: ProgramRunner | null = null;
-  private readonly values = new Map<string, unknown>();
 
-  constructor(
-    readonly language: Language,
-    private readonly callbacks: SessionCallbacks,
-  ) {
+  private readonly diagnostics$ = createSubject<Diagnostic[]>([]);
+  private readonly outputs$ = createSubject<RunResult>({ outputs: null, error: null });
+  private readonly inputs$ = createSubject<InputValues>({});
+
+  /** Parse + analysis diagnostics of the last compile. */
+  readonly diagnostics: Observable<Diagnostic[]> = this.diagnostics$;
+  /** Result of the last evaluation. */
+  readonly outputs: Observable<RunResult> = this.outputs$;
+  /** Current input values - the single source of truth, seeded from the descriptor. */
+  readonly inputs: Observable<InputValues> = this.inputs$;
+
+  constructor(readonly language: Language) {
     this.env = createEnvironment(language);
     // Same derivation the widgets use (initialValueFor), so the UI and the evaluator
     // can never disagree about an input's starting value.
+    const seeded: Record<string, unknown> = {};
     for (const [name, def] of language.descriptor.inputs) {
-      this.values.set(name, initialValueFor(def, language.descriptor));
+      seeded[name] = initialValueFor(def, language.descriptor);
     }
-  }
-
-  getValue(name: string): unknown {
-    return this.values.get(name);
-  }
-
-  /** Snapshot of all current input values (for document/URL sync). */
-  getValues(): Record<string, unknown> {
-    return Object.fromEntries(this.values);
+    this.inputs$.set(seeded);
   }
 
   /** Parse + analyse `source`; on success start a fresh runner and evaluate. */
@@ -94,25 +93,25 @@ export class PlaygroundSession {
       return;
     }
 
-    this.callbacks.onDiagnostics(diagnostics);
+    this.diagnostics$.set(diagnostics);
     this.runner = this.env.createRunner(analysed.program);
-    this.run(Object.fromEntries(this.values));
+    this.run(this.inputs$.get());
   }
 
   /** Update one input value and (incrementally) re-evaluate. */
   setInput(name: string, value: unknown): void {
-    this.values.set(name, value);
+    this.inputs$.set({ ...this.inputs$.get(), [name]: value });
     if (this.runner) this.run({ [name]: value });
   }
 
-  private run(changes: Record<string, unknown>): void {
+  private run(changes: InputValues): void {
     if (!this.runner) return;
     try {
-      this.callbacks.onRun({ outputs: this.runner.run(changes), error: null });
+      this.outputs$.set({ outputs: this.runner.run(changes), error: null });
     } catch (e) {
       // NOTE: this must be the Dendrite EvalError import, not the JS global of the same
       // name - the import above is load-bearing for the instanceof check.
-      this.callbacks.onRun({
+      this.outputs$.set({
         outputs: null,
         error: e instanceof EvalError ? `${e.kind}: ${e.message}` : String(e),
       });
@@ -121,7 +120,7 @@ export class PlaygroundSession {
 
   private fail(diagnostics: Diagnostic[]): void {
     this.runner = null;
-    this.callbacks.onDiagnostics(diagnostics);
-    this.callbacks.onRun({ outputs: null, error: null });
+    this.diagnostics$.set(diagnostics);
+    this.outputs$.set({ outputs: null, error: null });
   }
 }
