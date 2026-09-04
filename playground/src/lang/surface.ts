@@ -2,7 +2,7 @@ import { type Language, type OutputMode, type Type } from "@dendrite-lang/core";
 import { z } from "zod";
 
 //? SurfaceSpec: a language surface as JSON-safe DATA - the types/inputs/outputs a
-// playground document declares on top of the stdlib. 
+// playground document declares on top of the stdlib.
 
 export interface SurfaceTypeSpec {
   name: string;

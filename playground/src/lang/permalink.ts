@@ -5,7 +5,10 @@ import { isDocument, type PlaygroundDocument } from "./document";
 // Framework-free; the future editor reuses it. main.ts owns the preset-id-vs-payload
 // dispatch; this module only codes documents.
 
-async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
+async function pipe(
+  bytes: Uint8Array,
+  stream: CompressionStream | DecompressionStream,
+): Promise<Uint8Array> {
   const piped = new Blob([bytes as BlobPart]).stream().pipeThrough(stream);
   return new Uint8Array(await new Response(piped).arrayBuffer());
 }

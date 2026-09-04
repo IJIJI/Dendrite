@@ -160,7 +160,10 @@ function resolveAppArgs(
   };
 
   if (node.positional.length > arity) {
-    fail("(app)", `Too many positional arguments: ${node.positional.length} for ${arity} parameter(s)`);
+    fail(
+      "(app)",
+      `Too many positional arguments: ${node.positional.length} for ${arity} parameter(s)`,
+    );
   }
   node.positional.forEach((arg, i) => {
     if (i < arity) slots[i] = arg;
@@ -169,7 +172,10 @@ function resolveAppArgs(
   for (const [argName, arg] of Object.entries(node.named)) {
     const idx = calleeType.paramNames?.indexOf(argName) ?? -1;
     if (!calleeType.paramNames) {
-      fail(argName, `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`);
+      fail(
+        argName,
+        `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`,
+      );
     } else if (idx === -1) {
       fail(argName, `Unknown parameter name '${argName}'`);
     } else if (slots[idx] !== undefined) {
@@ -624,7 +630,8 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
     checkType(op.output, `op '${op.name}' output`);
   }
   for (const input of descriptor.inputs.values()) checkType(input.type, `input '${input.name}'`);
-  for (const output of descriptor.outputs.values()) checkType(output.type, `output '${output.name}'`);
+  for (const output of descriptor.outputs.values())
+    checkType(output.type, `output '${output.name}'`);
 
   // Op ↔ evaluator pairing: an op without an evaluator only fails at RUNTIME
   // (evaluator_not_found), and an evaluator without an op is dead code or a typo.

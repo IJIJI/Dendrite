@@ -138,9 +138,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
     }
 
     case "array":
-      return memoise(node, ctx, state, () =>
-        node.items.map((n) => evalNode(n, ctx, state)),
-      );
+      return memoise(node, ctx, state, () => node.items.map((n) => evalNode(n, ctx, state)));
 
     case "field":
       return memoise(node, ctx, state, () => {

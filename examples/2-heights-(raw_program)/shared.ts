@@ -91,15 +91,12 @@ function filterAbove(list: ASTNode, threshold: number): OperationNode {
     op: "Filter",
     inputs: {
       list,
-      predicate: lambda(
-        ["item"],
-        {
-          kind: "operation",
-          op: "GreaterThan",
-          inputs: { a: ref("item"), b: lit(threshold) },
-          output: Type.boolean,
-        },
-      ),
+      predicate: lambda(["item"], {
+        kind: "operation",
+        op: "GreaterThan",
+        inputs: { a: ref("item"), b: lit(threshold) },
+        output: Type.boolean,
+      }),
     },
     output: Type.array(Type.number),
   };

@@ -346,7 +346,7 @@ export function createStdlib(): Language {
       return v && !isAny(v) ? v : (inputTypes["fallback"] ?? Type.any);
     },
   });
-  
+
   // -------------------------------------------------------------------------
   // Evaluators - Arrays
   // -------------------------------------------------------------------------

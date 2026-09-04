@@ -16,7 +16,13 @@ export * from "./language/infra/program"; // RawProgram, CoreProgram
 export * from "./language/infra/serialise"; // SavedProgram forms, serialise/deserialise/migrate
 
 // ── language assembly + source → RawProgram ──────────────────────────────────
-export { createLanguage, extendLanguage, parseSource, BP, type Language } from "./language/language";
+export {
+  createLanguage,
+  extendLanguage,
+  parseSource,
+  BP,
+  type Language,
+} from "./language/language";
 
 // ── standard library ─────────────────────────────────────────────────────────
 export { createStdlib, extendStdlib } from "./language/stdlib";

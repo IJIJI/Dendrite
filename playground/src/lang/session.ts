@@ -71,7 +71,8 @@ export class PlaygroundSession {
   /** Parse + analyse `source`; on success start a fresh runner and evaluate. */
   compile(source: string): void {
     const diagnostics: Diagnostic[] = [];
-    const push = (severity: Diagnostic["severity"]) =>
+    const push =
+      (severity: Diagnostic["severity"]) =>
       (d: { kind: string; message: string; source?: SourceRef }) =>
         diagnostics.push({ severity, kind: d.kind, message: d.message, ...at(d.source) });
 
