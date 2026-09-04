@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dendrite</title>
+    <!--
+      Pages site root. Forward to the playground, keeping the #fragment: share links encode
+      the whole document there. Resolved relative to this page, so it works under any
+      /<repo>/ base. The meta refresh is the no-script fallback (it cannot carry the hash).
+    -->
+    <script>
+      location.replace(new URL("playground/", location.href).href + location.hash);
+    </script>
+    <meta http-equiv="refresh" content="0; url=playground/" />
+  </head>
+  <body>
+    <a href="playground/">Dendrite playground</a>
+  </body>
+</html>

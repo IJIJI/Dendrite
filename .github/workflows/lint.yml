@@ -1,4 +1,4 @@
-# ESLint over the core project. The playground lints/builds itself (playground-check.yml).
+# ESLint over every workspace (one root config, one install).
 #
 # Note on paths-ignore: a run skipped by a path filter never reports a status, so if
 # these are ever made REQUIRED checks, use a filter-free trigger instead.
@@ -9,7 +9,6 @@ name: Lint
 on:
   push:
     paths-ignore:
-      - "playground/**"
       - "**/*.md"
   workflow_dispatch:
 
