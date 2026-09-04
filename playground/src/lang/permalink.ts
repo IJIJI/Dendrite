@@ -19,7 +19,10 @@ function toBase64Url(bytes: Uint8Array): string {
 }
 
 function fromBase64Url(payload: string): Uint8Array {
-  const binary = atob(payload.replaceAll("-", "+").replaceAll("_", "/"));
+  const base64 = payload.replaceAll("-", "+").replaceAll("_", "/");
+  // toBase64Url strips the "=" padding (URL hygiene). atob's forgiving-base64 decode
+  // accepts unpadded input, but restoring it costs one line and removes the doubt.
+  const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
 

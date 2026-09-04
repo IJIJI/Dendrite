@@ -92,13 +92,24 @@ function boot(docState: PlaygroundDocument): BootHandle {
     values: session.getValues(),
   });
 
+  // The fallback slot is a nicety, never a reason to fail: localStorage throws on quota
+  // overrun, in private mode, and wherever storage is disabled outright. The URL carries
+  // the document regardless.
+  const rememberFallback = (doc: PlaygroundDocument): void => {
+    try {
+      localStorage.setItem(FALLBACK_KEY, JSON.stringify(doc));
+    } catch {
+      // no fallback slot this session
+    }
+  };
+
   // Live URL sync: the address bar always holds the current document (replaceState, so
   // no history spam). Failures (Safari history throttle, encode hiccups) skip a tick -
   // the next edit re-syncs.
   const sync = async (): Promise<void> => {
     if (disposed) return;
     const doc = currentDocument();
-    localStorage.setItem(FALLBACK_KEY, JSON.stringify(doc));
+    rememberFallback(doc);
     try {
       const payload = await encodeDocument(doc);
       if (!disposed) history.replaceState(null, "", `#${payload}`);
@@ -146,7 +157,7 @@ function boot(docState: PlaygroundDocument): BootHandle {
       clearTimeout(compileTimer);
       clearTimeout(syncTimer);
       // Keep the fallback slot fresh; the URL for this document lives in history already.
-      localStorage.setItem(FALLBACK_KEY, JSON.stringify(currentDocument()));
+      rememberFallback(currentDocument());
       view.destroy();
     },
     async syncNow() {
