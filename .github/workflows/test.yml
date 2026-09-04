@@ -3,7 +3,7 @@ name: Test
 
 # Push-only - see lint.yml.
 on:
-  push:
+  pull_request:
     paths-ignore:
       - "**/*.md"
   workflow_dispatch:

@@ -7,7 +7,7 @@ name: Lint
 # Push-only (no `pull_request`): a PR surfaces these same runs - checks attach to the
 # commit SHA, not the event - so both triggers would simply double every check.
 on:
-  push:
+  pull_request:
     paths-ignore:
       - "**/*.md"
   workflow_dispatch:
