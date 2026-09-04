@@ -2,7 +2,7 @@
   "name": "@dendrite-lang/editor",
   "version": "0.0.0",
   "private": true,
-  "description": "Dendrite editor: framework-free session, CodeMirror adapter, document model and stores. React UI arrives under ./react.",
+  "description": "Dendrite editor: framework-free session, CodeMirror adapter, document model and stores; React compound components under ./react.",
   "license": "MPL-2.0",
   "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
   "repository": {
@@ -15,6 +15,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
     }
   },
   "files": [
@@ -28,7 +32,13 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@dendrite-lang/core": "^0.1.0"
+    "@dendrite-lang/core": "^0.1.0",
+    "react": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@codemirror/lint": "^6.8.5",
@@ -39,6 +49,8 @@
   },
   "devDependencies": {
     "@dendrite-lang/core": "workspace:^",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
