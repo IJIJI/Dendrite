@@ -38,6 +38,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@dendrite-lang/core": "workspace:^"
+    "@dendrite-lang/core": "workspace:^",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }
