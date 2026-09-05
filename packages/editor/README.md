@@ -47,7 +47,7 @@ import { Editor } from "@dendrite-lang/editor/react";
 
 **Styling:** `style.css` lives in the `dendrite` cascade layer (a host's plain rules win without
 specificity fights) and is themed through `--dendrite-*` custom properties on `:root`: surfaces
-(`bg`, `panel`, `well`, `hover`), ink (`text`, `muted`, `faint`), `border` / `border-strong`,
+(`bg`, `panel`, `well`, `hover`), ink (`text`, `muted`, `faint`), `border`,
 `accent` (+ `-text`, `-hover`, `-soft`), `error` / `warning` (+ `-soft`), `input`, radii, fonts
 (`font`, `mono`, `mono-ui`), motion, and one `--dendrite-syntax-<class>` per lexer class. The
 values are the Dendrite brand (`brand/dendrite-tokens.css`). Colours are `light-dark()` pairs: the

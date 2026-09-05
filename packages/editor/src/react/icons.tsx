@@ -5,7 +5,15 @@ import { type ReactNode } from "react";
 // controls, 16px / 1.5 inline (style.css). Kept in-package deliberately: an icon library is a
 // dependency the handful does not yet justify.
 
-export type IconName = "share" | "history" | "code" | "graph" | "chevron" | "undo" | "redo";
+export type IconName =
+  | "share"
+  | "history"
+  | "code"
+  | "graph"
+  | "chevron"
+  | "chevron-down"
+  | "undo"
+  | "redo";
 
 const glyphs: Record<IconName, ReactNode> = {
   // undo-2 / redo-2
@@ -52,6 +60,7 @@ const glyphs: Record<IconName, ReactNode> = {
     </>
   ),
   chevron: <path d="m9 18 6-6-6-6" />,
+  "chevron-down": <path d="m6 9 6 6 6-6" />,
 };
 
 export function Icon({ name }: { name: IconName }) {

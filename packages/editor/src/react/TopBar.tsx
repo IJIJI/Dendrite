@@ -56,7 +56,12 @@ export function TopBar({
     <header className={cx("dendrite-topbar", className)} style={style}>
       <div className="dendrite-topbar-left">
         <span className="dendrite-brand">{brand}</span>
-        {menus.length > 0 ? <MenuBar menus={menus} /> : null}
+        {menus.length > 0 ? (
+          <>
+            <span className="dendrite-topbar-sep" />
+            <MenuBar menus={menus} />
+          </>
+        ) : null}
       </div>
       <div className="dendrite-topbar-title" title={title}>
         {title}
@@ -158,6 +163,7 @@ function MenuBar({ menus }: { menus: Menu[] }) {
             }}
           >
             {menu.label}
+            <Icon name="chevron-down" />
           </button>
           {open === i ? <MenuList items={menu.items} onClose={() => setOpen(null)} /> : null}
         </div>
