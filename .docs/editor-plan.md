@@ -128,6 +128,21 @@ interface EditorConfig {
 
 ## Phase 2 — React UI (`@dendrite-lang/editor/react`)
 
+**Landed 2026-09-05** (five commits). What differs from the sketch below, and why:
+**compound components** (`<Editor>` provider + `Canvas` / `Inputs` / `Outputs` / `Diagnostics` /
+`TopBar` / `Row` / `Column` / `DefaultLayout`) replaced the `panes` config — layout is JSX, presets
+are compositions, so the config shrank instead of growing; the **top bar is data-driven** (menus
+with one submenu level, actions as `{icon,label,onClick}` or `{element}`) rather than a slot, so
+every host gets one look and keyboard model; panes take `title?: string | null`; **per-input
+read-only** shipped as host policy on the pane (`readOnly` boolean or predicate), not on the
+document; there is **no error boundary** (effects are invisible to them) — a failing mount becomes
+`error` in context and a `boot_failed` diagnostic; `useSyncExternalStore` binds the session's
+subjects directly (their contract already matched). Tooling notes: `@vitejs/plugin-react@6` targets
+Vite 8 — the playground pins `^5`; Vite aliases for bare package names must match **exactly**
+(regex) or they rewrite subpaths like `./style.css`. The playground host is `App.tsx` (141 lines);
+the vanilla shell is deleted. Verified in-browser: boot, input edit, `File ▸ Load example`, Back,
+reload-from-URL, Share; menu Escape/outside-click via dispatched events.
+
 | Ships | Notes |
 |---|---|
 | `<DendriteEditor config />` | ~50-line wrapper over `createEditor` (`useRef` + `useEffect` + prop sync) |
