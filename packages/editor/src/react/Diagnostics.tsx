@@ -61,6 +61,7 @@ function DiagnosticItem({
 }) {
   return (
     <li className={cx("dendrite-diag", `dendrite-diag-${d.severity}`)}>
+      <span className={cx("dendrite-tag", `dendrite-tag-${d.severity}`)}>{d.severity}</span>
       {d.line !== undefined && onJump ? (
         <button
           type="button"

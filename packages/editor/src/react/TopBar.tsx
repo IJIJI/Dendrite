@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
 import { type EditorHandle } from "../editor";
+import { Wordmark } from "./brand";
 import { useOptionalEditor } from "./context";
 import { cx } from "./cx";
 import { useObservable } from "./hooks";
@@ -32,7 +33,7 @@ export type TopBarAction =
 export interface TopBarProps {
   /** Centred document title. */
   title?: string;
-  /** Replaces the "Dendrite" wordmark (a logo, later). */
+  /** Replaces the Dendrite wordmark. */
   brand?: ReactNode;
   menus?: Menu[];
   actions?: TopBarAction[];
@@ -40,9 +41,11 @@ export interface TopBarProps {
   style?: CSSProperties;
 }
 
+const defaultBrand = <Wordmark />;
+
 export function TopBar({
   title,
-  brand = "Dendrite",
+  brand = defaultBrand,
   menus = [],
   actions = [],
   className,

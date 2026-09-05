@@ -15,7 +15,7 @@ body,
 body {
   font-family: var(--dendrite-font);
   color: var(--dendrite-text);
-  background: var(--dendrite-bg);
+  background: var(--dendrite-panel);
 }
 
 #root {

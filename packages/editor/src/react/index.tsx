@@ -24,6 +24,7 @@ export const Editor = Object.assign(EditorRoot, {
 });
 
 export { useEditor } from "./context";
+export { Wordmark } from "./brand";
 export type { EditorProps } from "./Editor";
 export type { CanvasProps } from "./Canvas";
 export type { PaneProps } from "./Pane";

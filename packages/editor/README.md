@@ -41,11 +41,20 @@ import { Editor } from "@dendrite-lang/editor/react";
 | `<Editor.Outputs/>` `<Editor.Diagnostics/>` | Last evaluation / diagnostics with click-to-jump. A failed mount surfaces as a `boot_failed` diagnostic instead of a white screen                                                                                                             |
 | every pane                                  | `title?: string \| null` (retitle / hide), `className`, `style`                                                                                                                                                                               |
 | `<Editor.TopBar/>`                          | `brand`, centred `title`, `menus` (data, one submenu level), `actions` (`{ icon, label, onClick }` or `{ element }` for custom UI). Inside `<Editor>` it also carries the editor's own Undo/Redo (source history) ahead of the host's actions |
+| `<Wordmark/>`                               | The outlined brand wordmark: letters in the text colour, fork in the accent. `<Editor.TopBar/>`'s default `brand`                                                                                                                             |
 | `<Editor.Row/>` `<Editor.Column/>`          | Flex primitives: `grow`, `size`                                                                                                                                                                                                               |
 | `useEditor()`                               | `{ editor, error }` for host components rendered inside `<Editor>` (e.g. to read `editor.getDocument()` on Share)                                                                                                                             |
 
 **Styling:** `style.css` lives in the `dendrite` cascade layer (a host's plain rules win without
-specificity fights) and is themed through `--dendrite-*` custom properties on `:root`.
+specificity fights) and is themed through `--dendrite-*` custom properties on `:root`: surfaces
+(`bg`, `panel`, `well`, `hover`), ink (`text`, `muted`, `faint`), `border` / `border-strong`,
+`accent` (+ `-text`, `-hover`, `-soft`), `error` / `warning` (+ `-soft`), `input`, radii, fonts
+(`font`, `mono`, `mono-ui`), motion, and one `--dendrite-syntax-<class>` per lexer class. The
+values are the Dendrite brand (`brand/dendrite-tokens.css`). Colours are `light-dark()` pairs: the
+theme follows the system, and `data-dendrite-theme="light" | "dark"` on `<html>` forces one. The
+package loads no fonts - the host loads Archivo, IBM Plex Mono and Kode Mono, or the fallbacks
+apply. CodeMirror's own chrome is themed from the same variables in `cm.ts`, because its base
+theme is injected un-layered and a layered sheet cannot override it.
 **React** is an optional peer (`^18 || ^19`); the headless entry pulls no React at all — the
 boundary is lint-enforced.
 
@@ -76,7 +85,7 @@ editor.dispose();
 | `surface.ts`         | `SurfaceSpec` - types/inputs/outputs as JSON data; `applySurface`                                                             |
 | `store.ts`           | `DocumentStore` + `MemoryStore` / `LocalStorageStore` / `UrlStore` (adapters never reject)                                    |
 | `permalink.ts`       | document ↔ URL payload (deflate + base64url, native streams)                                                                  |
-| `tokens.ts`, `cm.ts` | lexer-driven highlighting; `cm.ts` + `editor.ts` are the only CodeMirror-aware modules                                        |
+| `tokens.ts`, `cm.ts` | lexer-driven highlighting and the editor chrome theme; `cm.ts` + `editor.ts` are the only CodeMirror-aware modules            |
 | `input-widgets.ts`   | descriptor inputs → widget shapes, plus the one shared initial-value rule                                                     |
 | `format.ts`          | `formatValue` - the one value→text rule every pane shares                                                                     |
 | `react/`             | the compound components above - the only place React is allowed                                                               |

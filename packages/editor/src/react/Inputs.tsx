@@ -71,7 +71,7 @@ function InputRow({ widget, value, readOnly, onChange }: FieldProps & { readOnly
     <div className="dendrite-input-row">
       <label className="dendrite-input-label" htmlFor={id}>
         <span className="dendrite-input-name">${widget.name}</span>
-        <code className="dendrite-input-type">{widget.typeLabel}</code>
+        <code className="dendrite-tag dendrite-input-type">{widget.typeLabel}</code>
       </label>
       {readOnly ? (
         <pre id={id} className="dendrite-input-value">
