@@ -4,9 +4,11 @@
 // Styles: import "@dendrite-lang/editor/style.css" once; theme via --dendrite-* variables.
 
 import { Canvas } from "./Canvas";
+import { DefaultLayout } from "./DefaultLayout";
 import { Diagnostics } from "./Diagnostics";
 import { Editor as EditorRoot } from "./Editor";
 import { Inputs } from "./Inputs";
+import { Column, Row } from "./Layout";
 import { Outputs } from "./Outputs";
 import { TopBar } from "./TopBar";
 
@@ -16,6 +18,9 @@ export const Editor = Object.assign(EditorRoot, {
   Inputs,
   Outputs,
   Diagnostics,
+  Row,
+  Column,
+  DefaultLayout,
 });
 
 export { useEditor } from "./context";
@@ -25,3 +30,5 @@ export type { PaneProps } from "./Pane";
 export type { InputsProps, ReadOnly } from "./Inputs";
 export type { TopBarProps, TopBarAction, Menu, MenuItem } from "./TopBar";
 export type { IconName } from "./icons";
+export type { LayoutProps } from "./Layout";
+export type { DefaultLayoutProps } from "./DefaultLayout";

@@ -18,9 +18,39 @@
     --dendrite-mono: ui-monospace, Consolas, monospace;
   }
 
+  /* ── Layout primitives ── */
+  .dendrite-row,
+  .dendrite-column {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .dendrite-row {
+    flex-direction: row;
+  }
+
+  .dendrite-column {
+    flex-direction: column;
+  }
+
+  .dendrite-grow {
+    flex: 1 1 0;
+  }
+
+  /* DefaultLayout's side column */
+  .dendrite-side {
+    flex: 0 0 22rem;
+    overflow-y: auto;
+    background: var(--dendrite-panel);
+    border-left: 1px solid var(--dendrite-border);
+  }
+
   /* ── Canvas ── */
   .dendrite-canvas {
+    flex: 1 1 0; /* fills a Column/Row parent; inert elsewhere */
     min-width: 0;
+    min-height: 0;
     overflow: auto;
   }
 
