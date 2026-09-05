@@ -58,7 +58,8 @@ export function toLintDiagnostics(source: string, diagnostics: Diagnostic[]): Li
 // The editor's chrome in the brand's variables. CodeMirror injects its base theme un-layered,
 // so style.css (in @layer dendrite) cannot override it; EditorView.theme is the supported
 // override point, and every value stays a CSS variable so light/dark and host themes apply.
-const ACTIVE_LINE = "color-mix(in oklab, var(--dendrite-bg), var(--dendrite-text) 5%)";
+// Translucent on purpose: it tints the gutter and the selection layer instead of covering them.
+const ACTIVE_LINE = "color-mix(in oklab, var(--dendrite-text) 6%, transparent)";
 const ACCENT_TINT = "color-mix(in oklab, var(--dendrite-accent) 15%, transparent)";
 const GUTTER = "color-mix(in oklab, var(--dendrite-bg), var(--dendrite-panel) 60%)"; // a shade off the canvas
 
