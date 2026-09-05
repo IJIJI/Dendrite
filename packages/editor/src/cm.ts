@@ -166,6 +166,13 @@ export const dendriteTheme = EditorView.theme({
     borderLeft: "2px solid var(--dendrite-warning)",
     backgroundColor: "var(--dendrite-warning-soft)",
   },
+  // The gutter cell centres its dot (the base theme pads a 1em SVG marker instead)
+  ".cm-gutter-lint .cm-gutterElement": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0",
+  },
   ".cm-lint-marker-error, .cm-lint-marker-warning": {
     content: "none", // drops the base theme's inline SVG so the dot below shows
     width: "8px",
