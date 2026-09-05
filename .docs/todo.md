@@ -162,6 +162,10 @@ by eye against the playground; the tokens file still carries the first draft.
   below AA by its own contrast table).
 - Dark values the tokens file lacks: the selection (iris-900) and the status soft fills.
 - The top bar rule is 1px `--dn-border`; `--dn-border-strong` has no editor use.
+- Dark surfaces sit one step up the ramp (page dark-1, raised dark-2, wells dark-3, hover a
+  derived `#4a4644`): dark-0 under a full screen of near-white text read as harsh.
+- The top bar has its own level (`--dendrite-bar`: ground-2 on light, dark-0 on dark), one step
+  off the panel away from the canvas, so bar, side column and canvas read as three levels.
 
 **What it requires:** edit the tokens file, regenerate the sheet, re-copy both into `brand/`
 (keeping the README's licence line), then re-check `packages/editor/style.css` against it.

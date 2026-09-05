@@ -60,6 +60,7 @@ export function toLintDiagnostics(source: string, diagnostics: Diagnostic[]): Li
 // override point, and every value stays a CSS variable so light/dark and host themes apply.
 const ACTIVE_LINE = "color-mix(in oklab, var(--dendrite-bg), var(--dendrite-text) 5%)";
 const ACCENT_TINT = "color-mix(in oklab, var(--dendrite-accent) 15%, transparent)";
+const GUTTER = "color-mix(in oklab, var(--dendrite-bg), var(--dendrite-panel) 60%)"; // a shade off the canvas
 
 export const dendriteTheme = EditorView.theme({
   "&": { color: "var(--dendrite-text)", backgroundColor: "var(--dendrite-bg)" },
@@ -72,7 +73,7 @@ export const dendriteTheme = EditorView.theme({
     { backgroundColor: "var(--dendrite-accent-soft)" },
   ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: ACTIVE_LINE },
   ".cm-gutters": {
-    backgroundColor: "var(--dendrite-bg)",
+    backgroundColor: GUTTER,
     color: "var(--dendrite-muted)",
     borderRight: "none",
   },
