@@ -213,12 +213,12 @@ exist). Component-level embedding is the React-switch alternative.
 
 ---
 
-## Playground — React switch decision — DECIDED
+## Playground — React switch — DONE
 
-React, via `@dendrite-lang/editor/react` (see [editor-plan.md](editor-plan.md), Phase 2). The
-playground stops having a shell of its own and becomes a thin host around the editor component.
-Deciding factor: Beacon is React, and the chrome (panes, type pickers, top bar) is exactly the
-stateful list/form UI where the vanilla shell already hurts.
+The playground is a React host (`apps/playground/src/App.tsx`) of `@dendrite-lang/editor/react`
+(editor-plan Phase 2, landed 2026-09-05); the vanilla shell is deleted. Deciding factor: Beacon is
+React, and the chrome (panes, type pickers, top bar) is exactly the stateful list/form UI where a
+vanilla shell hurts.
 
 ---
 
