@@ -52,8 +52,8 @@ specificity fights) and is themed through `--dendrite-*` custom properties on `:
 (`font`, `mono`, `mono-ui`), motion, and one `--dendrite-syntax-<class>` per lexer class. The
 values are the Dendrite brand (`brand/dendrite-tokens.css`). Colours are `light-dark()` pairs: the
 theme follows the system, and `data-dendrite-theme="light" | "dark"` on `<html>` forces one. The
-package loads no fonts - the host loads Archivo, IBM Plex Mono and Kode Mono, or the fallbacks
-apply. CodeMirror's own chrome is themed from the same variables in `cm.ts`, because its base
+package loads no fonts - the host loads Archivo (400, 600), IBM Plex Mono (400, 400 italic, 600) and Kode Mono
+(500), or the fallbacks apply. CodeMirror's own chrome is themed from the same variables in `cm.ts`, because its base
 theme is injected un-layered and a layered sheet cannot override it.
 **React** is an optional peer (`^18 || ^19`); the headless entry pulls no React at all — the
 boundary is lint-enforced.
