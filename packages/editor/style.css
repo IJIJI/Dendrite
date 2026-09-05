@@ -15,11 +15,18 @@
   :root {
     color-scheme: light dark;
 
-    /* Surfaces: page level (panel) < raised (bg); sunken (well); pressed / selected (hover) */
-    --dendrite-bg: light-dark(#ffffff, #201e1d);
-    --dendrite-panel: light-dark(#f3f2f2, #141312);
-    --dendrite-well: light-dark(#e6e4e3, #2c2a29);
-    --dendrite-hover: light-dark(#d9d6d5, #3a3735);
+    /* Surfaces: bar (top bar) < page level (panel) < raised (bg); sunken (well); pressed /
+       selected (hover).
+       Dark sits one step up the brand ramp (dark-1 page, dark-2 raised): dark-0 under a full
+       screen of near-white text reads harsh; hover is the next step, derived. */
+    --dendrite-bg: light-dark(#ffffff, #2c2a29);
+    --dendrite-panel: light-dark(#f3f2f2, #201e1d);
+    --dendrite-well: light-dark(#e6e4e3, #3a3735);
+    --dendrite-hover: light-dark(#d9d6d5, #4a4644);
+    --dendrite-bar: light-dark(
+      #e6e4e3,
+      #141312
+    ); /* the top bar: one step off the panel, away from the canvas */
 
     /* Ink: text, secondary text, and ink-3 for placeholders / disabled only - never information */
     --dendrite-text: light-dark(#201e1d, #f3f2f2);
@@ -393,7 +400,7 @@
     height: 44px;
     padding: 0 12px;
     border-bottom: 1px solid var(--dendrite-border);
-    background: var(--dendrite-panel);
+    background: var(--dendrite-bar);
     font: 400 13px/1 var(--dendrite-font);
     color: var(--dendrite-text);
   }
