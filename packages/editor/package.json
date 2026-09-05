@@ -19,10 +19,12 @@
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js"
-    }
+    },
+    "./style.css": "./style.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "style.css"
   ],
   "sideEffects": false,
   "scripts": {

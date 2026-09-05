@@ -1,0 +1,218 @@
+/* @dendrite-lang/editor - default styles for the compound components and the code canvas.
+   Everything lives in the `dendrite` cascade layer, so a host's un-layered rules win without
+   specificity fights. Theme by overriding the --dendrite-* custom properties. */
+
+@layer dendrite {
+  :root {
+    --dendrite-bg: #ffffff;
+    --dendrite-panel: #f6f7f9;
+    --dendrite-border: #dfe3e8;
+    --dendrite-text: #1f2530;
+    --dendrite-muted: #7a8494;
+    --dendrite-accent: #3d6fd6;
+    --dendrite-error: #c62828;
+    --dendrite-warning: #b98300;
+    --dendrite-input: #9c5d27;
+    --dendrite-radius: 4px;
+    --dendrite-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --dendrite-mono: ui-monospace, Consolas, monospace;
+  }
+
+  /* ── Canvas ── */
+  .dendrite-canvas {
+    min-width: 0;
+    overflow: auto;
+  }
+
+  .dendrite-canvas .cm-editor {
+    height: 100%;
+    font-size: 13.5px;
+  }
+
+  /* ── Panes ── */
+  .dendrite-pane {
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--dendrite-border);
+    font-family: var(--dendrite-font);
+    color: var(--dendrite-text);
+  }
+
+  .dendrite-pane-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--dendrite-muted);
+    margin: 0 0 0.5rem;
+  }
+
+  .dendrite-empty {
+    color: var(--dendrite-muted);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  /* ── Inputs ── */
+  .dendrite-input-row {
+    margin-bottom: 0.6rem;
+  }
+
+  .dendrite-input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .dendrite-input-name {
+    font-family: var(--dendrite-mono);
+    color: var(--dendrite-input);
+  }
+
+  .dendrite-input-type {
+    color: var(--dendrite-muted);
+    font-size: 0.75rem;
+  }
+
+  .dendrite-input-row input[type="number"],
+  .dendrite-input-row input[type="text"],
+  .dendrite-json-input {
+    width: 100%;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid var(--dendrite-border);
+    border-radius: var(--dendrite-radius);
+    font-family: var(--dendrite-mono);
+    font-size: 0.85rem;
+    background: var(--dendrite-bg);
+    color: var(--dendrite-text);
+    resize: vertical;
+  }
+
+  .dendrite-json-input.invalid {
+    border-color: var(--dendrite-error);
+  }
+
+  .dendrite-json-error {
+    color: var(--dendrite-error);
+    font-size: 0.75rem;
+    min-height: 0.9rem;
+  }
+
+  .dendrite-input-value {
+    margin: 0;
+    font-family: var(--dendrite-mono);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Outputs ── */
+  .dendrite-output-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    padding: 0.15rem 0;
+  }
+
+  .dendrite-output-name {
+    font-family: var(--dendrite-mono);
+    color: var(--dendrite-accent);
+  }
+
+  .dendrite-output-value {
+    font-family: var(--dendrite-mono);
+    overflow-wrap: anywhere;
+  }
+
+  .dendrite-runtime-error {
+    color: var(--dendrite-error);
+    font-size: 0.85rem;
+    font-family: var(--dendrite-mono);
+  }
+
+  /* ── Diagnostics ── */
+  .dendrite-diagnostics {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dendrite-diag {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.82rem;
+    padding: 0.2rem 0;
+  }
+
+  .dendrite-diag-loc {
+    border: 1px solid var(--dendrite-border);
+    background: var(--dendrite-bg);
+    border-radius: var(--dendrite-radius);
+    font-family: var(--dendrite-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0 0.3rem;
+  }
+
+  .dendrite-diag-kind {
+    font-family: var(--dendrite-mono);
+    white-space: nowrap;
+  }
+
+  .dendrite-diag-error .dendrite-diag-kind {
+    color: var(--dendrite-error);
+  }
+
+  .dendrite-diag-warning .dendrite-diag-kind {
+    color: var(--dendrite-warning);
+  }
+
+  .dendrite-diag-message {
+    color: var(--dendrite-text);
+  }
+
+  /* ── Token colors (classes from tokens.ts via cm.ts) ── */
+  .tok-keyword {
+    color: #a626a4;
+    font-weight: 600;
+  }
+
+  .tok-op {
+    color: #4078f2;
+  }
+
+  .tok-ident {
+    color: #383a42;
+  }
+
+  .tok-input {
+    color: var(--dendrite-input);
+  }
+
+  .tok-number {
+    color: #986801;
+  }
+
+  .tok-string {
+    color: #50a14f;
+  }
+
+  .tok-literal {
+    color: #b76b01;
+  }
+
+  .tok-operator {
+    color: #0184bc;
+  }
+
+  .tok-punct {
+    color: var(--dendrite-muted);
+  }
+
+  .tok-comment {
+    color: #a0a1a7;
+    font-style: italic;
+  }
+}

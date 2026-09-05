@@ -148,10 +148,10 @@ Add/remove/edit input + output declarations; type picker over registered named t
 arrays; validation UX for dangling type references (`boot_failed` rendering exists). Gated by
 `surface.userInputs`; outputs stay host-owned when `surface.provided` exists.
 
-**Also here (deferred from Phase 2, user request): per-input read-only**, configurable by the
-host developer — some inputs live/host-fed and displayed, others user-settable — so Beacon can
-mix live tally state with user overrides. Phase 2 ships pane-level `<Editor.Inputs readOnly/>`;
-the per-input flag belongs with surface ownership, where it can live on the provided surface.
+**Per-input read-only shipped in Phase 2** as host policy on the pane
+(`<Editor.Inputs readOnly={(name) => …}/>`) — deliberately NOT on the surface, because the same
+surface is host-fed in Beacon and user-editable in the playground. What remains for this phase:
+should inputs that come from `surface.provided` *default* to read-only? Decide with ownership.
 
 **→ Publish `@dendrite-lang/core@0.1.0`.** Checklist: `repository.directory`, LICENSE + README
 inside `packages/core` (npm packs from there), `publishConfig.access: public`, `files`/`exports`/
