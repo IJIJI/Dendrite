@@ -60,9 +60,13 @@ white      #ffffff
 Surface levels (light → dark): ground `#f3f2f2`, ground-1 `#ffffff`, ground-2 `#e6e4e3`; dark-0 `#141312`, dark-1 `#201e1d`, dark-2 `#2c2a29`.
 Text: ink `#201e1d`, ink-2 `#5c5856`, ink-3 `#8a8583` (placeholders/disabled only); dark-ink `#f3f2f2`, dark-ink-2 `#a8a4a2`, dark-ink-3 `#7d7977`.
 Borders: `#cfcccb` light, `#3a3735` dark.
-Iris ramp 100–900, statuses (ok / warn / error / info / cached / stale, each with a `-soft` fill), and the 10 syntax tokens are in `dendrite-tokens.css` (OKLCH). Dark-theme values sit under `@media (prefers-color-scheme: dark)`.
+Iris ramp 100–900, statuses (ok / warn / error / info / cached / stale, each with a `-soft` fill, light and dark), and the syntax tokens are in `dendrite-tokens.css` (OKLCH). Dark-theme values sit under `@media (prefers-color-scheme: dark)`.
 
-Contrast: ink/ground 14.6:1; iris/ground 4.4:1 (UI and ≥20 px text; use `--dn-iris-ink` for paragraph-size accent text); white/iris 4.5:1; periwinkle/dark-0 6.9:1. Status is never conveyed by colour alone — always a glyph (✓ ✗ · ◌) or a word.
+**Editor surfaces** (`--dn-editor-*`, tokens 1.1): three levels with 1px rules — bar ground-2, page ground, canvas ground-1; on dark one step up the ramp, dark-0 / dark-1 / dark-2, because dark-0 under a full screen of near-white text read as harsh. Selection is iris-200 (iris-900 on dark); the active line is a 6 % ink veil.
+
+**Syntax** (tokens 1.1, as the editor ships it): keywords magenta at weight 600, ops (`Filter`, `Map`) iris, declared names ink, `$inputs` and `true / false / null` orange, strings green, numbers amber, operators (`=> = >=`) blue, punctuation ink-3, comments ink-2 italic. Every hue sits at text-level contrast on both canvases.
+
+Contrast: ink/ground 14.6:1; iris/ground 4.4:1 (UI and ≥20 px text; use `--dn-iris-ink` for paragraph-size accent text); white/iris 4.5:1; periwinkle/dark-0 6.9:1. Status is never conveyed by colour alone — always a glyph (✓ ✗ · ◌) or a word. Status tags set their word in ink on the soft fill with a 6px dot in the base colour: the sheet's base-on-soft text is below AA by its own table.
 
 ## 4. Type
 - **Display**: Chakra Petch 600 — wordmark, Display/H1/H2 only. Stops at H2.
@@ -111,4 +115,4 @@ dendrite-brand/
   README-header.md           repo README banner + badges
   assets/                    16 SVGs (mark ×6, wordmark ×2, stacked ×2, avatar ×2, sticker, banner, og ×2)
 ```
-Sheet version 1.0 · September 2026.
+Tokens 1.1 · September 2026 (editor sync, see the changelog in `dendrite-tokens.css`). The sheet was patched to 1.1 by script (palette, contrast rows, status tags, code samples, syntax cards, version); the Claude Design canvas it was exported from still holds 1.0, so apply the tokens there before the next export.

@@ -145,30 +145,33 @@ stone.
 
 ---
 
-## Brand tokens and sheet — sync with the editor
+## Brand canvas — bring the Claude Design source to tokens 1.1
 
-**What:** Bring `brand/dendrite-tokens.css` (and the sheet regenerated from it) in line with what
-the editor actually ships, so the brand stays the source of truth.
+**What:** `brand/brand-sheet.html` was patched to tokens 1.1 by script on 2026-09-05 (palette
+dark-4 card, contrast rows for the syntax colours, status-tag text, every code sample, the
+syntax cards, the version line). The `Dendrite Brand.dc.html` canvas it was exported from (in
+Downloads, not in git) still holds 1.0, so the next export would regress the sheet.
 
-**Why deferred:** The editor's stylesheet was derived from the tokens (2026-09-05) and then tuned
-by eye against the playground; the tokens file still carries the first draft.
+**Why deferred:** the canvas is edited in Claude Design, not in this repo.
 
-**What diverged:**
-- Syntax palette (`--dn-code-*`): the editor uses magenta keywords (600), iris ops, text-colour
-  names, blue operators, orange `$inputs` + literals, amber numbers, green strings, ink-2 italic
-  comments and ink-3 punctuation, all at text-level contrast (`packages/editor/style.css`,
-  `--dendrite-syntax-*`).
-- Status tags: ink text with a coloured dot on the soft fill (the sheet's base-on-soft text is
-  below AA by its own contrast table).
-- Dark values the tokens file lacks: the selection (iris-900) and the status soft fills.
-- The top bar rule is 1px `--dn-border`; `--dn-border-strong` has no editor use.
-- Dark surfaces sit one step up the ramp (page dark-1, raised dark-2, wells dark-3, hover a
-  derived `#4a4644`): dark-0 under a full screen of near-white text read as harsh.
-- The top bar has its own level (`--dendrite-bar`: ground-2 on light, dark-0 on dark), one step
-  off the panel away from the canvas, so bar, side column and canvas read as three levels.
+**What it requires:** apply `brand/dendrite-tokens.css` 1.1 to the canvas (sections 4, 5, 6, 8,
+12 and 20), re-export, re-copy into `brand/` keeping the README's licence line, and diff the
+export against the patched sheet before replacing it.
 
-**What it requires:** edit the tokens file, regenerate the sheet, re-copy both into `brand/`
-(keeping the README's licence line), then re-check `packages/editor/style.css` against it.
+---
+
+## Editor — tune the highlight colours
+
+**What:** The editor's highlight colours were chosen by formula, not by eye: the active line
+(6 % ink veil), selection (`--dendrite-accent-soft`: iris-200 / a derived iris-900), selection
+and search matches (15 % accent tint, warning-soft), matching bracket (accent-soft) and the lint
+hover range. Tune them in the playground and settle them.
+
+**Why deferred:** they are usable; the palette and surfaces came first.
+
+**What it requires:** trial values via DevTools on the variables and the constants in
+`packages/editor/src/cm.ts`, then mirror the result in `brand/dendrite-tokens.css`
+(`--dn-selection`, `--dn-editor-active-line`).
 
 ---
 
