@@ -172,6 +172,41 @@ by eye against the playground; the tokens file still carries the first draft.
 
 ---
 
+## Editor — pane resizing
+
+**What:** Drag handles between the canvas and the side column (and between stacked panes), so a
+host or user can trade code width for pane width.
+
+**Why deferred:** `Row` / `Column` were built so splitters can be layered on without changing
+their API (`packages/editor/src/react/Layout.tsx`); nothing needs them yet.
+
+**What it requires:** a `Splitter` element (or a `resizable` prop on `Row` / `Column`) with
+pointer-event dragging, min sizes, an ARIA `separator` with arrow-key resizing, the resulting size
+written to a variable such as `--dendrite-side-width`, and a decision on persistence (host
+`onChange`-style, or browser storage like the theme).
+
+**Driving need:** wide programs on narrow screens; Beacon embedding the editor beside its own UI.
+
+---
+
+## Editor — style the search and go-to-line panels
+
+**What:** Brand the CodeMirror panels the keymap already opens: search / replace (`Ctrl+F`,
+`.cm-panel.cm-search`) and go-to-line (`Ctrl+Alt+G`, `.cm-panel.cm-gotoLine`), plus the lint
+hover tooltip.
+
+**Why deferred:** `dendriteTheme` (`packages/editor/src/cm.ts`) only recolours their surfaces,
+buttons and fields; the layout (inline labels, checkboxes, spacing, close button) is still
+CodeMirror's default.
+
+**What it requires:** `EditorView.theme` rules for the panel layout (4px grid spacing, Archivo
+labels, accent checkboxes, a proper close button), or, if the default markup resists styling, a
+custom panel via `search({ createPanel })` from `@codemirror/search` (then a direct dependency).
+
+**Driving need:** `Ctrl+F` is used constantly; today it is the one unbranded surface.
+
+---
+
 ## Language service (editor intelligence) — the big one
 
 **What:** A **transport-free, DOM-free** query API over `Language` + a document position:
