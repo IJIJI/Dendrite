@@ -30,7 +30,7 @@ export const examples: ExamplePreset[] = [
 let passing  = $score >= 60
 let grade    = If(passing, "Pass", "Fail")
 
-// Deliberate type error (And expects booleans) - see the diagnostics pane.
+// Deliberate type error, see the diagnostics pane.
 // It only poisons this unused binding; the outputs still run.
 let madagascar = And(true, "Country")
 
@@ -58,8 +58,8 @@ output finalScore = adjusted
     id: "tally",
     name: "Bus tally (structs + list ops)",
     document: doc(
-      `// Beacon-style tally: which watched source is live, at what priority?
-// $busses is a typed struct array - try editing the JSON on the right,
+      `// Styled in the way Dendrite will be used in Beacon: which watched source is live, at what priority?
+// $busses is a typed struct array. Try editing the JSON on the right,
 // or misspell a field (bus.staet) to see struct typing catch it.
 
 let active = Filter($busses, bus => And(bus.enabled, Some(bus.sources, s => Includes($watched, s))))
@@ -98,7 +98,7 @@ output tally = Max(Map(active, bus => bus.state))
     name: "Closures & currying",
     document: doc(
       `// Lambdas are first-class values: bindings hold them, ops take them,
-// and closures capture what they see - including other functions.
+// and closures capture what they see, including other functions.
 
 let add   = (a: number) => (b: number) => a + b
 let add10 = add(10)
@@ -126,7 +126,8 @@ output composed = add20($n)
     name: "Operators tour",
     document: doc(
       `// Operators are stdlib sugar that desugars to ops:
-//   a + b   ->  Add(a, b)          x >= y  ->  Not(LessThan(x, y))
+//  a + b   ->  Add(a, b)          
+//  x >= y  ->  Not(LessThan(x, y))
 // Precedence follows the usual ladder (* binds tighter than +, && than ||).
 
 let sum     = $a + $b * 2
