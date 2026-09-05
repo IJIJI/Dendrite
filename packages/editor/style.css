@@ -44,8 +44,8 @@
     --dendrite-warning: light-dark(oklch(0.72 0.16 75), oklch(0.8 0.14 75));
     --dendrite-warning-soft: light-dark(oklch(0.95 0.06 75), oklch(0.28 0.05 75));
     --dendrite-input: light-dark(
-      oklch(0.585 0.16 240),
-      oklch(0.75 0.12 240)
+      oklch(0.55 0.15 55),
+      oklch(0.8 0.13 55)
     ); /* $inputs, code and panes alike */
 
     --dendrite-radius: 0; /* containers: panes, menus */
@@ -60,18 +60,19 @@
     --dendrite-motion-base: 200ms; /* open, close */
     --dendrite-ease: cubic-bezier(0.2, 0, 0, 1);
 
-    /* Syntax: one variable per lexer class (src/tokens.ts). The brand's ten code tokens mapped
-       onto them as a placeholder - the palette itself is still to be decided. */
-    --dendrite-syntax-keyword: light-dark(#6366f1, #7c83f5);
-    --dendrite-syntax-op: light-dark(#201e1d, #f3f2f2);
-    --dendrite-syntax-ident: light-dark(oklch(0.44 0.19 277), oklch(0.84 0.11 277));
+    /* Syntax: one variable per lexer class (src/tokens.ts). Keywords magenta (600), ops iris,
+       names in the text colour, operators blue, $inputs and literals orange, strings green, numbers
+       amber - every hue at text-level contrast on both canvases; punctuation is ink-3 on purpose. */
+    --dendrite-syntax-keyword: light-dark(oklch(0.55 0.2 335), oklch(0.78 0.15 335));
+    --dendrite-syntax-op: var(--dendrite-accent);
+    --dendrite-syntax-ident: var(--dendrite-text);
     --dendrite-syntax-input: var(--dendrite-input);
-    --dendrite-syntax-number: light-dark(oklch(0.72 0.16 75), oklch(0.8 0.14 75));
-    --dendrite-syntax-string: light-dark(oklch(0.585 0.16 160), oklch(0.75 0.13 160));
-    --dendrite-syntax-literal: var(--dendrite-syntax-number);
-    --dendrite-syntax-operator: light-dark(#5c5856, #a8a4a2);
-    --dendrite-syntax-punct: light-dark(#8a8583, #7d7977);
-    --dendrite-syntax-comment: light-dark(#8a8583, #7d7977);
+    --dendrite-syntax-number: light-dark(oklch(0.55 0.13 75), oklch(0.8 0.14 75));
+    --dendrite-syntax-string: light-dark(oklch(0.5 0.14 160), oklch(0.8 0.12 160));
+    --dendrite-syntax-literal: var(--dendrite-input); /* the same orange, by choice */
+    --dendrite-syntax-operator: light-dark(oklch(0.5 0.15 240), oklch(0.78 0.11 240));
+    --dendrite-syntax-punct: var(--dendrite-faint);
+    --dendrite-syntax-comment: var(--dendrite-muted);
   }
 
   :root[data-dendrite-theme="light"] {
@@ -573,6 +574,7 @@
   /* ── Token colours (classes from tokens.ts via cm.ts; values are the --dendrite-syntax-* set) ── */
   .tok-keyword {
     color: var(--dendrite-syntax-keyword);
+    font-weight: 600;
   }
 
   .tok-op {
@@ -609,5 +611,6 @@
 
   .tok-comment {
     color: var(--dendrite-syntax-comment);
+    font-style: italic;
   }
 }
