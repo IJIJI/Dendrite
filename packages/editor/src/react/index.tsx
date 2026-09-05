@@ -8,11 +8,20 @@ import { Diagnostics } from "./Diagnostics";
 import { Editor as EditorRoot } from "./Editor";
 import { Inputs } from "./Inputs";
 import { Outputs } from "./Outputs";
+import { TopBar } from "./TopBar";
 
-export const Editor = Object.assign(EditorRoot, { Canvas, Inputs, Outputs, Diagnostics });
+export const Editor = Object.assign(EditorRoot, {
+  TopBar,
+  Canvas,
+  Inputs,
+  Outputs,
+  Diagnostics,
+});
 
 export { useEditor } from "./context";
 export type { EditorProps } from "./Editor";
 export type { CanvasProps } from "./Canvas";
 export type { PaneProps } from "./Pane";
 export type { InputsProps, ReadOnly } from "./Inputs";
+export type { TopBarProps, TopBarAction, Menu, MenuItem } from "./TopBar";
+export type { IconName } from "./icons";
