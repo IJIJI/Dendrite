@@ -221,7 +221,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codemirror/commands@npm:^6.0.0":
+"@codemirror/commands@npm:^6.0.0, @codemirror/commands@npm:^6.11.0":
   version: 6.11.0
   resolution: "@codemirror/commands@npm:6.11.0"
   dependencies:
@@ -307,6 +307,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@dendrite-lang/editor@workspace:packages/editor"
   dependencies:
+    "@codemirror/commands": "npm:^6.11.0"
     "@codemirror/lint": "npm:^6.8.5"
     "@codemirror/state": "npm:^6.5.2"
     "@codemirror/view": "npm:^6.38.0"

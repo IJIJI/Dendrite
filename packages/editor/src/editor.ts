@@ -1,3 +1,4 @@
+import { redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorView } from "@codemirror/view";
 import {
@@ -11,6 +12,7 @@ import { basicSetup } from "codemirror";
 
 import { dendriteHighlighting, toLintDiagnostics } from "./cm";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
+import { createSubject, type Observable } from "./observable";
 import { EditorSession } from "./session";
 import { applySurface } from "./surface";
 import { lineStartOffsets, toOffset } from "./tokens";
@@ -18,8 +20,8 @@ import { lineStartOffsets, toOffset } from "./tokens";
 //? createEditor: the host entry point (Facade). Mounts a code editor for one document into
 // an element and owns its lifecycle - the language (the host's or the stdlib, plus the
 // document's surface), the session, the CodeMirror view, debounced compile, lint squiggles,
-// and change notification. Panes are the host's: it renders them from the session's
-// observables. No storage, no routing, no presets - those are host policy.
+// undo/redo, and change notification. Panes are the host's: it renders them from the
+// session's observables. No storage, no routing, no presets - those are host policy.
 
 const DEBOUNCE_MS = 300;
 
@@ -31,13 +33,23 @@ export interface EditorConfig {
   onChange?(doc: EditorDocument): void;
 }
 
+/** How many source edits can be undone / redone (CodeMirror's history; text only). */
+export interface HistoryDepth {
+  undo: number;
+  redo: number;
+}
+
 export interface EditorHandle {
   /** Compile/run state as observables (diagnostics, outputs, inputs) - render panes from these. */
   readonly session: EditorSession;
+  /** Undo/redo depths of the SOURCE history (input-value edits are not part of it). */
+  readonly history: Observable<HistoryDepth>;
   /** The document as it is right now: source, surface, input values. */
   getDocument(): EditorDocument;
   /** Move the cursor to a 1-based line/column (diagnostics click-through). */
   jumpTo(line: number, column: number): void;
+  undo(): void;
+  redo(): void;
   dispose(): void;
 }
 
@@ -85,10 +97,24 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     }, DEBOUNCE_MS);
   });
 
+  // Undo/redo depths, published only when they actually change (not on every selection move).
+  const history$ = createSubject<HistoryDepth>({ undo: 0, redo: 0 });
+  const trackHistory = EditorView.updateListener.of((update) => {
+    const next = { undo: undoDepth(update.state), redo: redoDepth(update.state) };
+    const current = history$.get();
+    if (next.undo !== current.undo || next.redo !== current.redo) history$.set(next);
+  });
+
   const view = new EditorView({
     doc: initialSource,
     parent,
-    extensions: [basicSetup, lintGutter(), dendriteHighlighting(language), compileOnEdit],
+    extensions: [
+      basicSetup,
+      lintGutter(),
+      dendriteHighlighting(language),
+      compileOnEdit,
+      trackHistory,
+    ],
   });
 
   const subscriptions = [
@@ -103,11 +129,21 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
 
   return {
     session,
+    history: history$,
     getDocument,
     jumpTo(line, column) {
       const source = currentSource();
       const offset = Math.min(toOffset(lineStartOffsets(source), line, column), source.length);
       view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+      view.focus();
+    },
+    // Toolbar buttons steal focus; hand it back so the user keeps typing.
+    undo() {
+      undo(view);
+      view.focus();
+    },
+    redo() {
+      redo(view);
       view.focus();
     },
     dispose() {

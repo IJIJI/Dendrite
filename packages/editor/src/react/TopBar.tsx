@@ -1,12 +1,16 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
+import { type EditorHandle } from "../editor";
+import { useOptionalEditor } from "./context";
 import { cx } from "./cx";
+import { useObservable } from "./hooks";
 import { Icon, type IconName } from "./icons";
 
 //? <Editor.TopBar/>: brand · menus · centred title · actions. Menus and actions are DATA a
 // host supplies, so every host gets the same look and keyboard behaviour (Command pattern
-// in its simplest form); anything with its own UI drops in as an `element`. The editor
-// appends its own items (editor switch, history) as those features arrive.
+// in its simplest form); anything with its own UI drops in as an `element`. Inside <Editor>
+// the bar also carries the editor's OWN actions (undo/redo today; editor switch, history
+// later) ahead of the host's - outside one it simply renders what it is given.
 
 export interface MenuItem {
   label: string;
@@ -44,6 +48,7 @@ export function TopBar({
   className,
   style,
 }: TopBarProps) {
+  const editor = useOptionalEditor();
   return (
     <header className={cx("dendrite-topbar", className)} style={style}>
       <div className="dendrite-topbar-left">
@@ -54,6 +59,8 @@ export function TopBar({
         {title}
       </div>
       <div className="dendrite-topbar-actions">
+        {editor ? <HistoryActions editor={editor} /> : null}
+        {editor && actions.length > 0 ? <span className="dendrite-topbar-sep" /> : null}
         {actions.map((action, i) =>
           "element" in action ? (
             <span key={i} className="dendrite-topbar-action">
@@ -75,6 +82,38 @@ export function TopBar({
         )}
       </div>
     </header>
+  );
+}
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const shortcut = { undo: isMac ? "⌘Z" : "Ctrl+Z", redo: isMac ? "⇧⌘Z" : "Ctrl+Y" };
+
+// The editor's own actions: undo/redo over the source history, disabled at depth 0.
+function HistoryActions({ editor }: { editor: EditorHandle }) {
+  const depth = useObservable(editor.history);
+  return (
+    <>
+      <button
+        type="button"
+        className="dendrite-icon-button"
+        title={`Undo (${shortcut.undo})`}
+        aria-label="Undo"
+        disabled={depth.undo === 0}
+        onClick={editor.undo}
+      >
+        <Icon name="undo" />
+      </button>
+      <button
+        type="button"
+        className="dendrite-icon-button"
+        title={`Redo (${shortcut.redo})`}
+        aria-label="Redo"
+        disabled={depth.redo === 0}
+        onClick={editor.redo}
+      >
+        <Icon name="redo" />
+      </button>
+    </>
   );
 }
 

@@ -3,9 +3,21 @@ import { type ReactNode } from "react";
 //? A handful of inline SVG icons (stroke = currentColor). Kept in-package deliberately: an
 // icon library is a dependency the handful does not yet justify.
 
-export type IconName = "share" | "history" | "code" | "graph" | "chevron";
+export type IconName = "share" | "history" | "code" | "graph" | "chevron" | "undo" | "redo";
 
 const glyphs: Record<IconName, ReactNode> = {
+  undo: (
+    <>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+    </>
+  ),
+  redo: (
+    <>
+      <path d="m15 14 5-5-5-5" />
+      <path d="M20 9H10a6 6 0 0 0 0 12h3" />
+    </>
+  ),
   share: (
     <>
       <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
