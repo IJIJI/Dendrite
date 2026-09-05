@@ -19,15 +19,17 @@ yarn workspace dendrite-playground dev  # http://localhost:5173
 
 ## Layout
 
-The playground is a **host** of `@dendrite-lang/editor` (see that package's README): it mounts
-`createEditor`, renders panes from the session's observables, and owns persistence and routing
-policy. Nothing here knows CodeMirror or the language internals.
+The playground is a React **host** of `@dendrite-lang/editor` (see that package's README): it
+renders `<Editor>` with the `DefaultLayout` preset and owns persistence and routing policy.
+Nothing here knows CodeMirror or the language internals.
 
-- `src/ui/main.ts` — the host: mount/dispose per document, stores (URL as the source of truth,
-  localStorage as a single-slot fallback), preset entry links, Back/Forward, Share.
-- `src/ui/panes.ts` — vanilla-DOM pane renderers (data in, DOM out); the React UI replaces this
-  file in the next phase.
+- `src/App.tsx` — the host: one document at a time (URL as the source of truth, localStorage as
+  a single-slot fallback, preset ids as one-shot entry links), Back/Forward, and the top bar's
+  content: `File ▸ Load example ▸ …`, the Share icon, the document title.
+- `src/main.tsx` — `createRoot`; imports the editor stylesheet.
 - `src/examples.ts` — presets as documents: `doc(source, surface)`.
+- `src/style.css` — page layout only; everything inside the editor is themed through the
+  package's `--dendrite-*` variables.
 
 ## Documents & share URLs
 
