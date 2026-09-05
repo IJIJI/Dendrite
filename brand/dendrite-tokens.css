@@ -1,0 +1,146 @@
+/* Dendrite brand tokens — v2. Every token here appears on the brand sheet (Dendrite Brand.dc.html). */
+:root {
+  /* Ink */
+  --dn-ink: #201e1d;  /* primary text, strong rules */
+  --dn-ink-2: #5c5856;  /* secondary text */
+  --dn-ink-3: #8a8583;  /* muted text, placeholders */
+  --dn-ink-inverse: #f3f2f2;  /* text on dark surfaces */
+
+  /* Ground, light surfaces */
+  --dn-ground: #f3f2f2;  /* page, level 0 */
+  --dn-ground-1: #ffffff;  /* raised: cards, popovers */
+  --dn-ground-2: #e6e4e3;  /* sunken: code blocks, wells */
+  --dn-ground-3: #d9d6d5;  /* hover, selected rows */
+
+  /* Dark surfaces */
+  --dn-dark-0: #141312;  /* dark page */
+  --dn-dark-1: #201e1d;  /* dark surface */
+  --dn-dark-2: #2c2a29;  /* dark raised */
+  --dn-dark-3: #3a3735;  /* dark hover, borders */
+  --dn-dark-ink: #f3f2f2;  /* text on dark */
+  --dn-dark-ink-2: #a8a4a2;  /* secondary on dark */
+  --dn-dark-ink-3: #7d7977;  /* muted on dark */
+
+  /* Borders */
+  --dn-border: #cfcccb;  /* 1px default border */
+  --dn-border-strong: #201e1d;  /* 2px section rules, emphasis */
+  --dn-dark-border: #3a3735;  /* 1px border on dark */
+
+  /* Accent */
+  --dn-iris: #6366f1;  /* accent on light */
+  --dn-periwinkle: #7c83f5;  /* accent on dark */
+  --dn-iris-ink: oklch(0.44 0.19 277);  /* accent text at paragraph size (= iris-700) */
+
+  /* Iris ramp (OKLCH, hue 277) */
+  --dn-iris-100: oklch(0.96 0.03 277);
+  --dn-iris-200: oklch(0.92 0.06 277);
+  --dn-iris-300: oklch(0.84 0.11 277);
+  --dn-iris-400: oklch(0.72 0.17 277);
+  --dn-iris-500: oklch(0.585 0.233 277);
+  --dn-iris-600: oklch(0.51 0.22 277);
+  --dn-iris-700: oklch(0.44 0.19 277);
+  --dn-iris-800: oklch(0.37 0.15 277);
+  --dn-iris-900: oklch(0.29 0.10 277);
+
+  /* Status — same lightness and chroma as Iris */
+  --dn-ok: oklch(0.585 0.16 160);  /* fresh, passing */
+  --dn-ok-soft: oklch(0.94 0.05 160);
+  --dn-warn: oklch(0.72 0.16 75);  /* stale, degraded */
+  --dn-warn-soft: oklch(0.95 0.06 75);
+  --dn-error: oklch(0.585 0.21 25);  /* failed, type error */
+  --dn-error-soft: oklch(0.94 0.05 25);
+  --dn-info: oklch(0.585 0.16 240);  /* note, hint */
+  --dn-info-soft: oklch(0.94 0.05 240);
+  --dn-pending: oklch(0.585 0.05 277);  /* computing, queued */
+  --dn-pending-soft: oklch(0.94 0.02 277);
+  --dn-cached: oklch(0.585 0.16 300);  /* served from cache */
+  --dn-cached-soft: oklch(0.94 0.05 300);
+
+  /* Radius */
+  --dn-radius-0: 0;  /* cards, panels, tables, the mark */
+  --dn-radius-1: 2px;  /* buttons, inputs, tags, code */
+  --dn-radius-2: 4px;  /* tooltips, small avatars */
+  --dn-radius-pill: 999px;  /* status dots, counters */
+
+  /* Border widths */
+  --dn-border-w-1: 1px;  /* default */
+  --dn-border-w-2: 2px;  /* strong rules, focus ring, primary outline */
+
+  /* Spacing */
+  --dn-space-1: 4px;
+  --dn-space-2: 8px;
+  --dn-space-3: 12px;
+  --dn-space-4: 16px;
+  --dn-space-5: 24px;
+  --dn-space-6: 32px;
+  --dn-space-7: 48px;
+  --dn-space-8: 64px;
+
+  /* Type */
+  --dn-font-display: "Chakra Petch", sans-serif;  /* wordmark, H1–H2 only */
+  --dn-font-body: "Archivo", sans-serif;  /* UI and prose */
+  --dn-font-mono: "IBM Plex Mono", ui-monospace, monospace;  /* code blocks, editor */
+  --dn-font-mono-ui: "Kode Mono", ui-monospace, monospace;  /* CLI output, labels, badges */
+  --dn-font-display-weight: 600;
+  --dn-text-xs: 12px;
+  --dn-text-sm: 13px;
+  --dn-text-md: 14px;
+  --dn-text-lg: 16px;
+  --dn-text-xl: 20px;
+  --dn-text-2xl: 28px;
+  --dn-text-3xl: 40px;
+  --dn-text-4xl: 56px;
+
+  /* Motion */
+  --dn-motion-fast: 120ms;  /* hover, focus */
+  --dn-motion-base: 200ms;  /* open, close */
+  --dn-ease: cubic-bezier(.2,0,0,1);  /* all transitions */
+
+  /* Code · syntax */
+  --dn-code-keyword: #6366f1;  /* let, output, if */
+  --dn-code-decl: oklch(0.44 0.19 277);  /* declared names */
+  --dn-code-input: oklch(0.585 0.16 240);  /* $inputs */
+  --dn-code-fn: #201e1d;  /* Filter, Map, Max */
+  --dn-code-string: oklch(0.585 0.16 160);  /* "text" */
+  --dn-code-number: oklch(0.72 0.16 75);  /* 3.14, true */
+  --dn-code-type: oklch(0.585 0.16 300);  /* Bus, struct fields */
+  --dn-code-comment: #8a8583;  /* // notes */
+  --dn-code-op: #5c5856;  /* => , ( ) */
+  --dn-code-error: oklch(0.585 0.21 25);  /* squiggle, message */
+
+  /* Focus */
+  --dn-focus-ring: 0 0 0 2px var(--dn-ground), 0 0 0 4px var(--dn-iris);
+
+  /* Mark */
+  --dn-mark-clearspace: 1;  /* × stem width */
+  --dn-mark-min-size: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dn-ground: var(--dn-dark-0);
+    --dn-ground-1: var(--dn-dark-1);
+    --dn-ground-2: var(--dn-dark-2);
+    --dn-ground-3: var(--dn-dark-3);
+    --dn-ink: var(--dn-dark-ink);
+    --dn-ink-2: var(--dn-dark-ink-2);
+    --dn-ink-3: var(--dn-dark-ink-3);
+    --dn-border: var(--dn-dark-border);
+    --dn-border-strong: var(--dn-dark-ink);
+    --dn-iris: var(--dn-periwinkle);
+    --dn-code-keyword: #7c83f5;
+    --dn-code-decl: oklch(0.84 0.11 277);
+    --dn-code-input: oklch(0.75 0.12 240);
+    --dn-code-fn: #f3f2f2;
+    --dn-code-string: oklch(0.75 0.13 160);
+    --dn-code-number: oklch(0.8 0.14 75);
+    --dn-code-type: oklch(0.75 0.13 300);
+    --dn-code-comment: #7d7977;
+    --dn-code-op: #a8a4a2;
+    --dn-code-error: oklch(0.7 0.18 25);
+  }
+}
+
+/* Changelog
+   1.0 · 2026-09 · initial: ink/ground levels, iris ramp, six statuses, code tokens, two monos, radius 0/2, motion.
+*/
