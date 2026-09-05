@@ -173,6 +173,173 @@
     color: var(--dendrite-text);
   }
 
+  /* ── Top bar ── */
+  .dendrite-topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; /* title stays centred whatever the sides weigh */
+    align-items: center;
+    height: 2.5rem;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid var(--dendrite-border);
+    background: var(--dendrite-bg);
+    font-family: var(--dendrite-font);
+    font-size: 0.85rem;
+    color: var(--dendrite-text);
+  }
+
+  .dendrite-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .dendrite-brand {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--dendrite-accent);
+    margin-right: 0.6rem;
+    white-space: nowrap;
+  }
+
+  .dendrite-topbar-title {
+    text-align: center;
+    color: var(--dendrite-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 1rem;
+  }
+
+  .dendrite-topbar-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .dendrite-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: var(--dendrite-radius);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .dendrite-icon-button:hover,
+  .dendrite-icon-button:focus-visible {
+    background: var(--dendrite-panel);
+    color: var(--dendrite-accent);
+  }
+
+  .dendrite-icon-button:disabled {
+    color: var(--dendrite-muted);
+    cursor: default;
+    background: transparent;
+  }
+
+  .dendrite-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  /* Menus */
+  .dendrite-menubar {
+    display: flex;
+  }
+
+  .dendrite-menu {
+    position: relative;
+  }
+
+  .dendrite-menu-button {
+    border: 0;
+    border-radius: var(--dendrite-radius);
+    background: transparent;
+    padding: 0.3rem 0.55rem;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .dendrite-menu-button:hover,
+  .dendrite-menu-button:focus-visible,
+  .dendrite-menu-button[aria-expanded="true"] {
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-menu-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    min-width: 12rem;
+    margin: 0.2rem 0 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: var(--dendrite-bg);
+    border: 1px solid var(--dendrite-border);
+    border-radius: calc(var(--dendrite-radius) * 1.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .dendrite-menu-item {
+    position: relative;
+  }
+
+  .dendrite-menu-item > button {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border: 0;
+    border-radius: var(--dendrite-radius);
+    background: transparent;
+    padding: 0.35rem 0.6rem;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .dendrite-menu-item > button:hover,
+  .dendrite-menu-item > button:focus-visible,
+  .dendrite-menu-item:focus-within > button {
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-menu-item > button:disabled {
+    color: var(--dendrite-muted);
+    cursor: default;
+    background: transparent;
+  }
+
+  .dendrite-menu-item > button .dendrite-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+    color: var(--dendrite-muted);
+  }
+
+  /* Submenus open on hover / keyboard focus - no state needed. */
+  .dendrite-submenu {
+    display: none;
+    top: -0.25rem;
+    left: 100%;
+  }
+
+  .dendrite-menu-item:hover > .dendrite-submenu,
+  .dendrite-menu-item:focus-within > .dendrite-submenu {
+    display: block;
+  }
+
   /* ── Token colors (classes from tokens.ts via cm.ts) ── */
   .tok-keyword {
     color: #a626a4;
