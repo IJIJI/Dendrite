@@ -116,8 +116,9 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     parent,
     extensions: [
       basicSetup,
-      // Tab / Shift-Tab indent and dedent (Escape then Tab leaves the editor, per CodeMirror).
-      keymap.of([indentWithTab]),
+      // Tab / Shift-Tab indent and dedent (Escape then Tab leaves the editor, per CodeMirror);
+      // Ctrl-Shift-Z redoes everywhere (the default keymap binds it on macOS only).
+      keymap.of([indentWithTab, { key: "Mod-Shift-z", run: redo }]),
       languageData,
       dendriteTheme,
       lintGutter(),
