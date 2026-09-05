@@ -145,6 +145,29 @@ stone.
 
 ---
 
+## Brand tokens and sheet — sync with the editor
+
+**What:** Bring `brand/dendrite-tokens.css` (and the sheet regenerated from it) in line with what
+the editor actually ships, so the brand stays the source of truth.
+
+**Why deferred:** The editor's stylesheet was derived from the tokens (2026-09-05) and then tuned
+by eye against the playground; the tokens file still carries the first draft.
+
+**What diverged:**
+- Syntax palette (`--dn-code-*`): the editor uses magenta keywords (600), iris ops, text-colour
+  names, blue operators, orange `$inputs` + literals, amber numbers, green strings, ink-2 italic
+  comments and ink-3 punctuation, all at text-level contrast (`packages/editor/style.css`,
+  `--dendrite-syntax-*`).
+- Status tags: ink text with a coloured dot on the soft fill (the sheet's base-on-soft text is
+  below AA by its own contrast table).
+- Dark values the tokens file lacks: the selection (iris-900) and the status soft fills.
+- The top bar rule is 1px `--dn-border`; `--dn-border-strong` has no editor use.
+
+**What it requires:** edit the tokens file, regenerate the sheet, re-copy both into `brand/`
+(keeping the README's licence line), then re-check `packages/editor/style.css` against it.
+
+---
+
 ## Language service (editor intelligence) — the big one
 
 **What:** A **transport-free, DOM-free** query API over `Language` + a document position:

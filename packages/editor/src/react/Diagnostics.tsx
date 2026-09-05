@@ -20,7 +20,7 @@ export function Diagnostics({ title, className, style }: PaneProps) {
       className={className}
       style={style}
     >
-      <ul className="dendrite-diagnostics">
+      <ul className="dendrite-diag-list">
         {editor ? (
           <DiagnosticItems editor={editor} />
         ) : error !== undefined ? (

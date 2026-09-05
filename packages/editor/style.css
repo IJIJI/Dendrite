@@ -27,7 +27,6 @@
     --dendrite-faint: light-dark(#8a8583, #7d7977);
 
     --dendrite-border: light-dark(#cfcccb, #3a3735);
-    --dendrite-border-strong: light-dark(#201e1d, #f3f2f2); /* 2px rules between major sections */
 
     /* Accent: iris on light, periwinkle on dark. -text is the readable one at paragraph size. */
     --dendrite-accent: light-dark(#6366f1, #7c83f5);
@@ -338,7 +337,7 @@
   }
 
   /* ── Diagnostics ── */
-  .dendrite-diagnostics {
+  .dendrite-diag-list {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -385,13 +384,15 @@
   /* ── Top bar ── */
   .dendrite-topbar {
     display: grid;
-    grid-template-columns: 1fr auto 1fr; /* title stays centred whatever the sides weigh */
+    /* Title centred while both sides fit; when space runs out the title ellipsises, the
+       sides keep their controls. */
+    grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
     align-items: center;
     gap: 16px;
     box-sizing: border-box;
     height: 44px;
     padding: 0 12px;
-    border-bottom: 2px solid var(--dendrite-border-strong);
+    border-bottom: 1px solid var(--dendrite-border);
     background: var(--dendrite-panel);
     font: 400 13px/1 var(--dendrite-font);
     color: var(--dendrite-text);
@@ -407,7 +408,6 @@
   .dendrite-brand {
     display: inline-flex;
     align-items: center;
-    margin-right: 12px;
     color: var(--dendrite-text);
     font-weight: 600;
     white-space: nowrap;
@@ -466,11 +466,12 @@
     height: 20px;
   }
 
-  /* Between the editor's own actions and the host's */
+  /* Between the brand and the menus, and between the editor's own actions and the host's */
   .dendrite-topbar-sep {
+    flex: none; /* a divider never shrinks */
     width: 1px;
     height: 20px;
-    margin: 0 6px;
+    margin: 0 8px;
     background: var(--dendrite-border);
   }
 
@@ -485,11 +486,20 @@
   }
 
   .dendrite-menu-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
     height: 32px;
-    padding: 0 10px;
+    padding: 0 6px 0 10px;
     border: 0;
     background: transparent;
     color: var(--dendrite-muted);
+  }
+
+  .dendrite-menu-button .dendrite-icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
   }
 
   .dendrite-menu-button:hover,
