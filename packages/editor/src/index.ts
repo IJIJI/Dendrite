@@ -9,6 +9,7 @@ export * from "./session"; // EditorSession, Diagnostic, RunResult, InputValues
 export * from "./tokens"; // styledRanges, lineStartOffsets, toOffset, TokenClass, StyledRange
 export * from "./cm"; // dendriteHighlighting, toLintDiagnostics (the only CodeMirror-aware module)
 export * from "./input-widgets"; // widgetsFor, initialValueFor, WidgetSpec, Control
+export * from "./format"; // formatValue - the one value→text rule panes share
 export * from "./surface"; // SurfaceSpec (+ parts), applySurface
 export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload
