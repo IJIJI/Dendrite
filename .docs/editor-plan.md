@@ -141,7 +141,14 @@ subjects directly (their contract already matched). Tooling notes: `@vitejs/plug
 Vite 8 — the playground pins `^5`; Vite aliases for bare package names must match **exactly**
 (regex) or they rewrite subpaths like `./style.css`. The playground host is `App.tsx` (141 lines);
 the vanilla shell is deleted. Verified in-browser: boot, input edit, `File ▸ Load example`, Back,
-reload-from-URL, Share; menu Escape/outside-click via dispatched events.
+reload-from-URL, Share; menu Escape/outside-click via dispatched events. **Brand pass (commits
+7–12):** the stylesheet was rebuilt on the brand tokens (`light-dark()` pairs, a three-level
+chrome, the outlined wordmark, Lucide-style icons, status tags), the CodeMirror chrome moved into
+`dendriteTheme` in `cm.ts` (its base theme is injected un-layered, so a layered sheet cannot win),
+the syntax palette was chosen from rendered candidates, and the tokens file was synced back
+(1.1). **Theme toggle:** `theme.ts` (`getTheme()`, a lazy page singleton with a `mode`
+observable, remembered in localStorage) and `<TopBar themeToggle/>` - the one UI preference the
+editor stores itself; hosts with their own setting pass `false` and write the attribute.
 
 | Ships | Notes |
 |---|---|

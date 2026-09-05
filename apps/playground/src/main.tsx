@@ -8,10 +8,13 @@ import "@fontsource/kode-mono/500.css";
 import "@dendrite-lang/editor/style.css";
 import "./style.css";
 
+import { getTheme } from "@dendrite-lang/editor";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+
+getTheme(); // applies a remembered theme before the first paint
 
 const root = document.getElementById("root");
 if (!root) throw new Error("missing #root");

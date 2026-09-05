@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
 import { type EditorHandle } from "../editor";
+import { getTheme, nextThemeMode, type ThemeMode } from "../theme";
 import { Wordmark } from "./brand";
 import { useOptionalEditor } from "./context";
 import { cx } from "./cx";
@@ -10,8 +11,9 @@ import { Icon, type IconName } from "./icons";
 //? <Editor.TopBar/>: brand · menus · centred title · actions. Menus and actions are DATA a
 // host supplies, so every host gets the same look and keyboard behaviour (Command pattern
 // in its simplest form); anything with its own UI drops in as an `element`. Inside <Editor>
-// the bar also carries the editor's OWN actions (undo/redo today; editor switch, history
-// later) ahead of the host's - outside one it simply renders what it is given.
+// the bar also carries the editor's OWN actions (undo/redo; editor switch and history later)
+// ahead of the host's - outside one it simply renders what it is given. The theme toggle is
+// the editor's too, but page-level, so it shows with or without an <Editor>.
 
 export interface MenuItem {
   label: string;
@@ -37,6 +39,11 @@ export interface TopBarProps {
   brand?: ReactNode;
   menus?: Menu[];
   actions?: TopBarAction[];
+  /**
+   * The editor's own theme toggle (system → light → dark, remembered in localStorage). A host
+   * with its own theme setting passes `false` and sets `data-dendrite-theme` on <html> itself.
+   */
+  themeToggle?: boolean;
   className?: string;
   style?: CSSProperties;
 }
@@ -48,6 +55,7 @@ export function TopBar({
   brand = defaultBrand,
   menus = [],
   actions = [],
+  themeToggle = true,
   className,
   style,
 }: TopBarProps) {
@@ -68,7 +76,10 @@ export function TopBar({
       </div>
       <div className="dendrite-topbar-actions">
         {editor ? <HistoryActions editor={editor} /> : null}
-        {editor && actions.length > 0 ? <span className="dendrite-topbar-sep" /> : null}
+        {themeToggle ? <ThemeToggle /> : null}
+        {(editor || themeToggle) && actions.length > 0 ? (
+          <span className="dendrite-topbar-sep" />
+        ) : null}
         {actions.map((action, i) =>
           "element" in action ? (
             <span key={i} className="dendrite-topbar-action">
@@ -122,6 +133,27 @@ function HistoryActions({ editor }: { editor: EditorHandle }) {
         <Icon name="redo" />
       </button>
     </>
+  );
+}
+
+const themeName: Record<ThemeMode, string> = { auto: "system", light: "light", dark: "dark" };
+const themeIcon: Record<ThemeMode, IconName> = { auto: "monitor", light: "sun", dark: "moon" };
+
+// One button cycling system → light → dark; the page controller does the applying and remembering.
+function ThemeToggle() {
+  const theme = getTheme();
+  const mode = useObservable(theme.mode);
+  const next = nextThemeMode(mode);
+  return (
+    <button
+      type="button"
+      className="dendrite-icon-button"
+      title={`Theme: ${themeName[mode]} (next: ${themeName[next]})`}
+      aria-label={`Theme: ${themeName[mode]}`}
+      onClick={() => theme.set(next)}
+    >
+      <Icon name={themeIcon[mode]} />
+    </button>
   );
 }
 

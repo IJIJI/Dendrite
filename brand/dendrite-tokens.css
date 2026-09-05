@@ -25,6 +25,18 @@
   --dn-border: #cfcccb;  /* 1px default border */
   --dn-border-strong: #201e1d;  /* 2px section rules, emphasis */
   --dn-dark-border: #3a3735;  /* 1px border on dark */
+  --dn-dark-4: #4a4644;  /* dark hover, one step past dark-3 (derived, 2026-09) */
+
+  /* Editor surfaces (@dendrite-lang/editor) — three levels, bar < page < canvas, 1px rules only.
+     Dark runs one step up the ramp: dark-0 under a full screen of near-white text read as harsh. */
+  --dn-editor-bar: var(--dn-ground-2);  /* top bar */
+  --dn-editor-page: var(--dn-ground);  /* side column */
+  --dn-editor-canvas: var(--dn-ground-1);  /* code, fields, popovers */
+  --dn-editor-well: var(--dn-ground-2);  /* read-only values, tags */
+  --dn-editor-hover: var(--dn-ground-3);
+  --dn-editor-gutter: color-mix(in oklab, var(--dn-editor-canvas), var(--dn-editor-page) 60%);
+  --dn-editor-active-line: color-mix(in oklab, var(--dn-ink) 6%, transparent);  /* a veil, so gutter and selection show through */
+  --dn-selection: var(--dn-iris-200);
 
   /* Accent */
   --dn-iris: #6366f1;  /* accent on light */
@@ -96,16 +108,19 @@
   --dn-motion-base: 200ms;  /* open, close */
   --dn-ease: cubic-bezier(.2,0,0,1);  /* all transitions */
 
-  /* Code · syntax */
-  --dn-code-keyword: #6366f1;  /* let, output, if */
-  --dn-code-decl: oklch(0.44 0.19 277);  /* declared names */
-  --dn-code-input: oklch(0.585 0.16 240);  /* $inputs */
-  --dn-code-fn: #201e1d;  /* Filter, Map, Max */
-  --dn-code-string: oklch(0.585 0.16 160);  /* "text" */
-  --dn-code-number: oklch(0.72 0.16 75);  /* 3.14, true */
-  --dn-code-type: oklch(0.585 0.16 300);  /* Bus, struct fields */
-  --dn-code-comment: #8a8583;  /* // notes */
-  --dn-code-op: #5c5856;  /* => , ( ) */
+  /* Code · syntax — as shipped in @dendrite-lang/editor (2026-09): every hue at text-level
+     contrast on both canvases; punctuation is ink-3 on purpose. Status tags set their word in
+     ink on the soft fill with a 6px dot in the base colour (base-on-soft text is below AA). */
+  --dn-code-keyword: oklch(0.55 0.2 335);  /* let, output · weight 600 */
+  --dn-code-decl: var(--dn-ink);  /* declared names, lambda params */
+  --dn-code-input: oklch(0.55 0.15 55);  /* $inputs, and true / false / null */
+  --dn-code-fn: var(--dn-iris);  /* Filter, Map, Max */
+  --dn-code-string: oklch(0.5 0.14 160);  /* "text" */
+  --dn-code-number: oklch(0.55 0.13 75);  /* 3.14 */
+  --dn-code-type: oklch(0.585 0.16 300);  /* Bus, struct fields (not yet emitted by the editor's lexer) */
+  --dn-code-comment: var(--dn-ink-2);  /* // notes · italic */
+  --dn-code-operator: oklch(0.5 0.15 240);  /* => = >= + */
+  --dn-code-op: var(--dn-ink-3);  /* punctuation , ( ) [ ] : */
   --dn-code-error: oklch(0.585 0.21 25);  /* squiggle, message */
 
   /* Focus */
@@ -128,19 +143,43 @@
     --dn-border: var(--dn-dark-border);
     --dn-border-strong: var(--dn-dark-ink);
     --dn-iris: var(--dn-periwinkle);
-    --dn-code-keyword: #7c83f5;
-    --dn-code-decl: oklch(0.84 0.11 277);
-    --dn-code-input: oklch(0.75 0.12 240);
-    --dn-code-fn: #f3f2f2;
-    --dn-code-string: oklch(0.75 0.13 160);
+    --dn-editor-bar: var(--dn-dark-0);
+    --dn-editor-page: var(--dn-dark-1);
+    --dn-editor-canvas: var(--dn-dark-2);
+    --dn-editor-well: var(--dn-dark-3);
+    --dn-editor-hover: var(--dn-dark-4);
+    --dn-selection: var(--dn-iris-900);
+    /* Status on dark (derived: base at the dark code lightness, soft at L 0.28) */
+    --dn-ok: oklch(0.75 0.13 160);
+    --dn-ok-soft: oklch(0.28 0.05 160);
+    --dn-warn: oklch(0.8 0.14 75);
+    --dn-warn-soft: oklch(0.28 0.05 75);
+    --dn-error: oklch(0.7 0.18 25);
+    --dn-error-soft: oklch(0.28 0.06 25);
+    --dn-info: oklch(0.75 0.12 240);
+    --dn-info-soft: oklch(0.28 0.05 240);
+    --dn-pending: oklch(0.7 0.05 277);
+    --dn-pending-soft: oklch(0.28 0.02 277);
+    --dn-cached: oklch(0.75 0.13 300);
+    --dn-cached-soft: oklch(0.28 0.05 300);
+    --dn-code-keyword: oklch(0.78 0.15 335);
+    --dn-code-decl: var(--dn-dark-ink);
+    --dn-code-input: oklch(0.8 0.13 55);
+    --dn-code-fn: var(--dn-periwinkle);
+    --dn-code-string: oklch(0.8 0.12 160);
     --dn-code-number: oklch(0.8 0.14 75);
     --dn-code-type: oklch(0.75 0.13 300);
-    --dn-code-comment: #7d7977;
-    --dn-code-op: #a8a4a2;
+    --dn-code-comment: var(--dn-dark-ink-2);
+    --dn-code-operator: oklch(0.78 0.11 240);
+    --dn-code-op: var(--dn-dark-ink-3);
     --dn-code-error: oklch(0.7 0.18 25);
   }
 }
 
 /* Changelog
    1.0 · 2026-09 · initial: ink/ground levels, iris ramp, six statuses, code tokens, two monos, radius 0/2, motion.
+   1.1 · 2026-09 · editor sync: syntax palette re-cut (magenta keywords, iris fns, blue operators, orange
+                   inputs + literals, ink names, ink-2 comments, ink-3 punctuation) and --dn-code-operator
+                   split from --dn-code-op; editor surface tokens (--dn-editor-*), --dn-dark-4, --dn-selection;
+                   dark values for the six statuses. The sheet still shows 1.0 until regenerated.
 */
