@@ -27,3 +27,8 @@ export function useEditor(): { editor: EditorHandle | null; error: unknown } {
   const { editor, error } = useEditorContext();
   return { editor, error };
 }
+
+/** Internal - the editor if this component happens to be inside <Editor>, else null. */
+export function useOptionalEditor(): EditorHandle | null {
+  return useContext(EditorContext)?.editor ?? null;
+}
