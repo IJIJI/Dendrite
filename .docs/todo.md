@@ -160,6 +160,25 @@ export against the patched sheet before replacing it.
 
 ---
 
+## Brand — try cooler background colours
+
+**What:** The surfaces are warm greys from the brand ramp (ground `#f3f2f2` … dark-0 `#141312`,
+all near hue 50-60 at low chroma). Try a cooler cast (hue ~250-270, same lightness steps) for the
+editor surfaces, light and dark, and decide whether the brand ramp itself moves with them.
+
+**Why deferred:** a hue shift is a brand-wide decision, and tokens 1.1 were just synced across
+the tokens file, the README and the sheet; it deserves its own round with rendered candidates.
+
+**What it requires:** candidate ramps in OKLCH (keep the L steps, add a little chroma at a cool
+hue), rendered through the surfaces lab (`editor-surfaces.html` from the scratchpad, built on the
+real stylesheet) next to the current warm set; re-check borders, wells and the status soft fills
+against the new ground; then update `--dendrite-*` in `packages/editor/style.css`, the
+`--dn-ground*` / `--dn-dark*` tokens, the README and the sheet together.
+
+**Driving need:** the warm greys read muddy on the dark canvas.
+
+---
+
 ## Editor — tune the highlight colours
 
 **What:** The editor's highlight colours were chosen by formula, not by eye: the active line
