@@ -10,7 +10,7 @@ import {
 } from "@dendrite-lang/core";
 import { basicSetup } from "codemirror";
 
-import { dendriteHighlighting, toLintDiagnostics } from "./cm";
+import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "./cm";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
 import { createSubject, type Observable } from "./observable";
 import { EditorSession } from "./session";
@@ -110,6 +110,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     parent,
     extensions: [
       basicSetup,
+      dendriteTheme,
       lintGutter(),
       dendriteHighlighting(language),
       compileOnEdit,

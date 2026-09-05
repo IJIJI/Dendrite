@@ -26,7 +26,9 @@ Nothing here knows CodeMirror or the language internals.
 - `src/App.tsx` — the host: one document at a time (URL as the source of truth, localStorage as
   a single-slot fallback, preset ids as one-shot entry links), Back/Forward, and the top bar's
   content: `File ▸ Load example ▸ …`, the Share icon, the document title.
-- `src/main.tsx` — `createRoot`; imports the editor stylesheet.
+- `src/main.tsx` — `createRoot`; imports the brand fonts (Fontsource, self-hosted: Archivo,
+  IBM Plex Mono, Kode Mono) and the editor stylesheet. The favicon in `public/` is the brand's
+  avatar mark.
 - `src/examples.ts` — presets as documents: `doc(source, surface)`.
 - `src/style.css` — page layout only; everything inside the editor is themed through the
   package's `--dendrite-*` variables.

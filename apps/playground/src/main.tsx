@@ -1,3 +1,8 @@
+// The brand fonts, self-hosted (no third-party request): only the weights the editor uses.
+import "@fontsource/archivo/400.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/kode-mono/500.css";
 import "@dendrite-lang/editor/style.css";
 import "./style.css";
 

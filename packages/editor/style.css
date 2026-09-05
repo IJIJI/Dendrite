@@ -1,21 +1,92 @@
 /* @dendrite-lang/editor - default styles for the compound components and the code canvas.
+
+   Values are the Dendrite brand tokens (brand/dendrite-tokens.css, sheet v1.0) expressed as
+   the editor's own semantic --dendrite-* variables, so a host rethemes by overriding those
+   and never needs the brand. Colours are light-dark() pairs: the theme follows the system
+   (color-scheme), and a host forces one with data-dendrite-theme="light" | "dark" on <html>.
+
    Everything lives in the `dendrite` cascade layer, so a host's un-layered rules win without
-   specificity fights. Theme by overriding the --dendrite-* custom properties. */
+   specificity fights. CodeMirror's chrome (gutters, selection, lint) is themed from the same
+   variables in src/cm.ts: CodeMirror injects its base theme un-layered, so a layered sheet
+   cannot override it. Fonts are NOT loaded here - the host loads Archivo, IBM Plex Mono and
+   Kode Mono, or the fallbacks apply. */
 
 @layer dendrite {
   :root {
-    --dendrite-bg: #ffffff;
-    --dendrite-panel: #f6f7f9;
-    --dendrite-border: #dfe3e8;
-    --dendrite-text: #1f2530;
-    --dendrite-muted: #7a8494;
-    --dendrite-accent: #3d6fd6;
-    --dendrite-error: #c62828;
-    --dendrite-warning: #b98300;
-    --dendrite-input: #9c5d27;
-    --dendrite-radius: 4px;
-    --dendrite-font: system-ui, -apple-system, "Segoe UI", sans-serif;
-    --dendrite-mono: ui-monospace, Consolas, monospace;
+    color-scheme: light dark;
+
+    /* Surfaces: page level (panel) < raised (bg); sunken (well); pressed / selected (hover) */
+    --dendrite-bg: light-dark(#ffffff, #201e1d);
+    --dendrite-panel: light-dark(#f3f2f2, #141312);
+    --dendrite-well: light-dark(#e6e4e3, #2c2a29);
+    --dendrite-hover: light-dark(#d9d6d5, #3a3735);
+
+    /* Ink: text, secondary text, and ink-3 for placeholders / disabled only - never information */
+    --dendrite-text: light-dark(#201e1d, #f3f2f2);
+    --dendrite-muted: light-dark(#5c5856, #a8a4a2);
+    --dendrite-faint: light-dark(#8a8583, #7d7977);
+
+    --dendrite-border: light-dark(#cfcccb, #3a3735);
+    --dendrite-border-strong: light-dark(#201e1d, #f3f2f2); /* 2px rules between major sections */
+
+    /* Accent: iris on light, periwinkle on dark. -text is the readable one at paragraph size. */
+    --dendrite-accent: light-dark(#6366f1, #7c83f5);
+    --dendrite-accent-text: light-dark(oklch(0.44 0.19 277), #7c83f5);
+    --dendrite-accent-hover: light-dark(oklch(0.51 0.22 277), oklch(0.84 0.11 277));
+    --dendrite-accent-soft: light-dark(
+      oklch(0.92 0.06 277),
+      oklch(0.29 0.1 277)
+    ); /* selection; dark derived */
+
+    /* Status. The brand file has no dark soft fills; those are derived. */
+    --dendrite-error: light-dark(oklch(0.585 0.21 25), oklch(0.7 0.18 25));
+    --dendrite-error-soft: light-dark(oklch(0.94 0.05 25), oklch(0.28 0.06 25));
+    --dendrite-warning: light-dark(oklch(0.72 0.16 75), oklch(0.8 0.14 75));
+    --dendrite-warning-soft: light-dark(oklch(0.95 0.06 75), oklch(0.28 0.05 75));
+    --dendrite-input: light-dark(
+      oklch(0.585 0.16 240),
+      oklch(0.75 0.12 240)
+    ); /* $inputs, code and panes alike */
+
+    --dendrite-radius: 0; /* containers: panes, menus */
+    --dendrite-radius-control: 2px; /* buttons, fields, tags */
+
+    --dendrite-font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --dendrite-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace; /* code you read */
+    --dendrite-mono-ui:
+      "Kode Mono", ui-monospace, Consolas, monospace; /* labels, tags, locations */
+
+    --dendrite-motion-fast: 120ms; /* hover, focus */
+    --dendrite-motion-base: 200ms; /* open, close */
+    --dendrite-ease: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Syntax: one variable per lexer class (src/tokens.ts). The brand's ten code tokens mapped
+       onto them as a placeholder - the palette itself is still to be decided. */
+    --dendrite-syntax-keyword: light-dark(#6366f1, #7c83f5);
+    --dendrite-syntax-op: light-dark(#201e1d, #f3f2f2);
+    --dendrite-syntax-ident: light-dark(oklch(0.44 0.19 277), oklch(0.84 0.11 277));
+    --dendrite-syntax-input: var(--dendrite-input);
+    --dendrite-syntax-number: light-dark(oklch(0.72 0.16 75), oklch(0.8 0.14 75));
+    --dendrite-syntax-string: light-dark(oklch(0.585 0.16 160), oklch(0.75 0.13 160));
+    --dendrite-syntax-literal: var(--dendrite-syntax-number);
+    --dendrite-syntax-operator: light-dark(#5c5856, #a8a4a2);
+    --dendrite-syntax-punct: light-dark(#8a8583, #7d7977);
+    --dendrite-syntax-comment: light-dark(#8a8583, #7d7977);
+  }
+
+  :root[data-dendrite-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-dendrite-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --dendrite-motion-fast: 0ms;
+      --dendrite-motion-base: 0ms;
+    }
   }
 
   /* ── Layout primitives ── */
@@ -46,76 +117,169 @@
     border-left: 1px solid var(--dendrite-border);
   }
 
-  /* ── Canvas ── */
+  /* ── Canvas (the rest of the editor's look is in src/cm.ts) ── */
   .dendrite-canvas {
     flex: 1 1 0; /* fills a Column/Row parent; inert elsewhere */
     min-width: 0;
     min-height: 0;
     overflow: auto;
+    background: var(--dendrite-bg);
   }
 
   .dendrite-canvas .cm-editor {
     height: 100%;
-    font-size: 13.5px;
+  }
+
+  /* ── Shared control behaviour ── */
+  .dendrite-icon-button,
+  .dendrite-menu-button,
+  .dendrite-menu-item > button,
+  .dendrite-diag-loc {
+    font: inherit;
+    cursor: pointer;
+    border-radius: var(--dendrite-radius-control);
+    transition:
+      background-color var(--dendrite-motion-fast) var(--dendrite-ease),
+      color var(--dendrite-motion-fast) var(--dendrite-ease),
+      border-color var(--dendrite-motion-fast) var(--dendrite-ease);
+  }
+
+  .dendrite-icon-button:disabled,
+  .dendrite-menu-item > button:disabled {
+    opacity: 0.45; /* disabled = 45% opacity, no colour change */
+    cursor: default;
+    background: transparent;
+  }
+
+  /* Keyboard focus: the 2px accent ring at 2px offset on every control; mouse focus shows nothing */
+  :where(.dendrite-topbar, .dendrite-pane) :focus-visible {
+    outline: 2px solid var(--dendrite-accent);
+    outline-offset: 2px;
   }
 
   /* ── Panes ── */
   .dendrite-pane {
-    padding: 0.65rem 0.9rem;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--dendrite-border);
-    font-family: var(--dendrite-font);
+    font: 400 14px/1.5 var(--dendrite-font);
     color: var(--dendrite-text);
   }
 
   .dendrite-pane-title {
-    font-size: 0.72rem;
+    /* the overline: 11/1.3, .08em, caps */
+    margin: 0 0 12px;
+    font: 600 11px/1.3 var(--dendrite-font);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
     color: var(--dendrite-muted);
-    margin: 0 0 0.5rem;
   }
 
   .dendrite-empty {
-    color: var(--dendrite-muted);
-    font-size: 0.85rem;
     margin: 0;
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-empty-title {
+    font-weight: 600;
+    color: var(--dendrite-text);
+  }
+
+  .dendrite-empty code {
+    font-family: var(--dendrite-mono);
+    font-size: 0.9em;
+    padding: 0 4px;
+    background: var(--dendrite-well);
+    border-radius: var(--dendrite-radius-control);
+  }
+
+  /* A tag: neutral on the well, status ones on their soft fill with a dot. The word carries
+     the status; the dot and fill only echo it (never colour alone). */
+  .dendrite-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: var(--dendrite-radius-control);
+    background: var(--dendrite-well);
+    color: var(--dendrite-text);
+    font: 600 11px/1.3 var(--dendrite-mono-ui);
+    white-space: nowrap;
+  }
+
+  .dendrite-tag-error,
+  .dendrite-tag-warning {
+    --_status: var(--dendrite-error);
+    background: var(--dendrite-error-soft);
+  }
+
+  .dendrite-tag-warning {
+    --_status: var(--dendrite-warning);
+    background: var(--dendrite-warning-soft);
+  }
+
+  .dendrite-tag-error::before,
+  .dendrite-tag-warning::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--_status);
   }
 
   /* ── Inputs ── */
   .dendrite-input-row {
-    margin-bottom: 0.6rem;
+    margin-bottom: 12px;
   }
 
   .dendrite-input-label {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 0.85rem;
-    margin-bottom: 0.2rem;
+    gap: 8px;
+    margin-bottom: 4px;
   }
 
   .dendrite-input-name {
-    font-family: var(--dendrite-mono);
+    font: 400 13px/1.5 var(--dendrite-mono);
     color: var(--dendrite-input);
   }
 
   .dendrite-input-type {
     color: var(--dendrite-muted);
-    font-size: 0.75rem;
   }
 
   .dendrite-input-row input[type="number"],
   .dendrite-input-row input[type="text"],
   .dendrite-json-input {
+    box-sizing: border-box;
     width: 100%;
-    padding: 0.3rem 0.45rem;
+    padding: 7px 10px;
     border: 1px solid var(--dendrite-border);
-    border-radius: var(--dendrite-radius);
-    font-family: var(--dendrite-mono);
-    font-size: 0.85rem;
+    border-radius: var(--dendrite-radius-control);
+    font: 400 13px/1.4 var(--dendrite-mono);
     background: var(--dendrite-bg);
     color: var(--dendrite-text);
     resize: vertical;
+    transition: border-color var(--dendrite-motion-fast) var(--dendrite-ease);
+  }
+
+  .dendrite-input-row input:hover,
+  .dendrite-json-input:hover {
+    border-color: var(--dendrite-faint);
+  }
+
+  .dendrite-input-row input:focus-visible,
+  .dendrite-json-input:focus-visible {
+    border-color: var(--dendrite-accent);
+  }
+
+  .dendrite-input-row input::placeholder,
+  .dendrite-json-input::placeholder {
+    color: var(--dendrite-faint);
+  }
+
+  .dendrite-input-row input[type="checkbox"] {
+    accent-color: var(--dendrite-accent);
   }
 
   .dendrite-json-input.invalid {
@@ -123,15 +287,18 @@
   }
 
   .dendrite-json-error {
+    min-height: 18px;
+    font-size: 12px;
     color: var(--dendrite-error);
-    font-size: 0.75rem;
-    min-height: 0.9rem;
   }
 
+  /* Read-only value: a code well */
   .dendrite-input-value {
     margin: 0;
-    font-family: var(--dendrite-mono);
-    font-size: 0.85rem;
+    padding: 7px 10px;
+    background: var(--dendrite-well);
+    border-radius: var(--dendrite-radius-control);
+    font: 400 13px/1.5 var(--dendrite-mono);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -140,25 +307,33 @@
   .dendrite-output-row {
     display: flex;
     justify-content: space-between;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-    padding: 0.15rem 0;
+    gap: 12px;
+    padding: 4px 0;
+    font: 400 13px/1.5 var(--dendrite-mono);
+  }
+
+  .dendrite-output-row + .dendrite-output-row {
+    border-top: 1px solid var(--dendrite-border);
   }
 
   .dendrite-output-name {
-    font-family: var(--dendrite-mono);
-    color: var(--dendrite-accent);
+    color: var(--dendrite-accent-text);
   }
 
   .dendrite-output-value {
-    font-family: var(--dendrite-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
     overflow-wrap: anywhere;
   }
 
+  /* Runtime failure: the brand's error view */
   .dendrite-runtime-error {
-    color: var(--dendrite-error);
-    font-size: 0.85rem;
-    font-family: var(--dendrite-mono);
+    margin: 0;
+    padding: 12px 14px;
+    border-left: 2px solid var(--dendrite-error);
+    background: var(--dendrite-error-soft);
+    font: 400 13px/1.5 var(--dendrite-mono);
+    overflow-wrap: anywhere;
   }
 
   /* ── Diagnostics ── */
@@ -170,36 +345,39 @@
 
   .dendrite-diag {
     display: flex;
-    gap: 0.5rem;
-    align-items: baseline;
-    font-size: 0.82rem;
-    padding: 0.2rem 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+
+  .dendrite-diag + .dendrite-diag {
+    border-top: 1px solid var(--dendrite-border);
   }
 
   .dendrite-diag-loc {
+    padding: 1px 6px;
     border: 1px solid var(--dendrite-border);
     background: var(--dendrite-bg);
-    border-radius: var(--dendrite-radius);
-    font-family: var(--dendrite-mono);
-    font-size: 0.75rem;
-    cursor: pointer;
-    padding: 0 0.3rem;
+    color: var(--dendrite-text);
+    font: 500 12px/1.4 var(--dendrite-mono-ui);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dendrite-diag-loc:hover {
+    border-color: var(--dendrite-faint);
+    background: var(--dendrite-panel);
   }
 
   .dendrite-diag-kind {
-    font-family: var(--dendrite-mono);
+    font: 400 12px/1.5 var(--dendrite-mono);
+    color: var(--dendrite-muted);
     white-space: nowrap;
   }
 
-  .dendrite-diag-error .dendrite-diag-kind {
-    color: var(--dendrite-error);
-  }
-
-  .dendrite-diag-warning .dendrite-diag-kind {
-    color: var(--dendrite-warning);
-  }
-
   .dendrite-diag-message {
+    flex-basis: 100%; /* the message on its own line, under location + kind */
     color: var(--dendrite-text);
   }
 
@@ -208,28 +386,40 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr; /* title stays centred whatever the sides weigh */
     align-items: center;
-    height: 2.5rem;
-    padding: 0 0.75rem;
-    border-bottom: 1px solid var(--dendrite-border);
-    background: var(--dendrite-bg);
-    font-family: var(--dendrite-font);
-    font-size: 0.85rem;
+    gap: 16px;
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 12px;
+    border-bottom: 2px solid var(--dendrite-border-strong);
+    background: var(--dendrite-panel);
+    font: 400 13px/1 var(--dendrite-font);
     color: var(--dendrite-text);
   }
 
   .dendrite-topbar-left {
     display: flex;
     align-items: center;
-    gap: 0.15rem;
+    gap: 2px;
     min-width: 0;
   }
 
   .dendrite-brand {
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: var(--dendrite-accent);
-    margin-right: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+    color: var(--dendrite-text);
+    font-weight: 600;
     white-space: nowrap;
+  }
+
+  .dendrite-wordmark {
+    display: block;
+    height: 28px;
+    width: auto;
+  }
+
+  .dendrite-wordmark-fork {
+    stroke: var(--dendrite-accent);
   }
 
   .dendrite-topbar-title {
@@ -238,58 +428,55 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 0 1rem;
   }
 
   .dendrite-topbar-actions {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 0.15rem;
+    gap: 2px;
     min-width: 0;
   }
 
+  /* Ghost buttons on the panel: ink-2 at rest, ink on the well when hovered, pressed on hover */
   .dendrite-icon-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 32px;
+    height: 32px;
     border: 0;
-    border-radius: var(--dendrite-radius);
     background: transparent;
-    color: inherit;
-    cursor: pointer;
+    color: var(--dendrite-muted);
   }
 
   .dendrite-icon-button:hover,
   .dendrite-icon-button:focus-visible {
-    background: var(--dendrite-panel);
-    color: var(--dendrite-accent);
+    background: var(--dendrite-well);
+    color: var(--dendrite-text);
   }
 
-  .dendrite-icon-button:disabled {
-    color: var(--dendrite-muted);
-    cursor: default;
-    background: transparent;
+  .dendrite-icon-button:active {
+    background: var(--dendrite-hover);
   }
 
   .dendrite-icon {
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 20px;
+    height: 20px;
   }
 
   /* Between the editor's own actions and the host's */
   .dendrite-topbar-sep {
     width: 1px;
-    height: 1.2rem;
-    margin: 0 0.35rem;
+    height: 20px;
+    margin: 0 6px;
     background: var(--dendrite-border);
   }
 
   /* Menus */
   .dendrite-menubar {
     display: flex;
+    gap: 2px;
   }
 
   .dendrite-menu {
@@ -297,34 +484,41 @@
   }
 
   .dendrite-menu-button {
+    height: 32px;
+    padding: 0 10px;
     border: 0;
-    border-radius: var(--dendrite-radius);
     background: transparent;
-    padding: 0.3rem 0.55rem;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
+    color: var(--dendrite-muted);
   }
 
   .dendrite-menu-button:hover,
   .dendrite-menu-button:focus-visible,
   .dendrite-menu-button[aria-expanded="true"] {
-    background: var(--dendrite-panel);
+    background: var(--dendrite-well);
+    color: var(--dendrite-text);
   }
 
+  /* Popovers: a raised surface with a 1px border - no shadow; open = opacity + 4px, 200 ms */
   .dendrite-menu-list {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     left: 0;
     z-index: 10;
     min-width: 12rem;
-    margin: 0.2rem 0 0;
-    padding: 0.25rem;
+    margin: 0;
+    padding: 4px;
     list-style: none;
     background: var(--dendrite-bg);
     border: 1px solid var(--dendrite-border);
-    border-radius: calc(var(--dendrite-radius) * 1.5);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    border-radius: var(--dendrite-radius);
+    animation: dendrite-open var(--dendrite-motion-base) var(--dendrite-ease);
+  }
+
+  @keyframes dendrite-open {
+    from {
+      opacity: 0;
+      translate: 0 -4px;
+    }
   }
 
   .dendrite-menu-item {
@@ -334,17 +528,15 @@
   .dendrite-menu-item > button {
     display: flex;
     width: 100%;
+    min-height: 32px;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    gap: 16px;
+    padding: 6px 10px;
     border: 0;
-    border-radius: var(--dendrite-radius);
     background: transparent;
-    padding: 0.35rem 0.6rem;
-    text-align: left;
     color: inherit;
-    font: inherit;
-    cursor: pointer;
+    text-align: left;
     white-space: nowrap;
   }
 
@@ -354,23 +546,23 @@
     background: var(--dendrite-panel);
   }
 
-  .dendrite-menu-item > button:disabled {
-    color: var(--dendrite-muted);
-    cursor: default;
-    background: transparent;
+  .dendrite-menu-item > button:active {
+    background: var(--dendrite-well);
   }
 
   .dendrite-menu-item > button .dendrite-icon {
-    width: 0.9rem;
-    height: 0.9rem;
+    /* inline size: 16px, stroke 1.5 */
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
     color: var(--dendrite-muted);
   }
 
   /* Submenus open on hover / keyboard focus - no state needed. */
   .dendrite-submenu {
     display: none;
-    top: -0.25rem;
-    left: 100%;
+    top: -5px;
+    left: calc(100% + 2px);
   }
 
   .dendrite-menu-item:hover > .dendrite-submenu,
@@ -378,46 +570,44 @@
     display: block;
   }
 
-  /* ── Token colors (classes from tokens.ts via cm.ts) ── */
+  /* ── Token colours (classes from tokens.ts via cm.ts; values are the --dendrite-syntax-* set) ── */
   .tok-keyword {
-    color: #a626a4;
-    font-weight: 600;
+    color: var(--dendrite-syntax-keyword);
   }
 
   .tok-op {
-    color: #4078f2;
+    color: var(--dendrite-syntax-op);
   }
 
   .tok-ident {
-    color: #383a42;
+    color: var(--dendrite-syntax-ident);
   }
 
   .tok-input {
-    color: var(--dendrite-input);
+    color: var(--dendrite-syntax-input);
   }
 
   .tok-number {
-    color: #986801;
+    color: var(--dendrite-syntax-number);
   }
 
   .tok-string {
-    color: #50a14f;
+    color: var(--dendrite-syntax-string);
   }
 
   .tok-literal {
-    color: #b76b01;
+    color: var(--dendrite-syntax-literal);
   }
 
   .tok-operator {
-    color: #0184bc;
+    color: var(--dendrite-syntax-operator);
   }
 
   .tok-punct {
-    color: var(--dendrite-muted);
+    color: var(--dendrite-syntax-punct);
   }
 
   .tok-comment {
-    color: #a0a1a7;
-    font-style: italic;
+    color: var(--dendrite-syntax-comment);
   }
 }

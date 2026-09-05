@@ -18,9 +18,24 @@ export function Outputs({ title, className, style }: PaneProps) {
 function OutputList({ editor }: { editor: EditorHandle }) {
   const { outputs, error } = useObservable(editor.session.outputs);
   if (error) return <p className="dendrite-runtime-error">{error}</p>;
-  if (!outputs)
-    return <p className="dendrite-empty">No runnable program - fix the errors below.</p>;
-  if (outputs.size === 0) return <p className="dendrite-empty">The program declares no outputs.</p>;
+  if (!outputs) {
+    return (
+      <p className="dendrite-empty">
+        <span className="dendrite-empty-title">Nothing to run</span>
+        <br />
+        Fix the errors under diagnostics.
+      </p>
+    );
+  }
+  if (outputs.size === 0) {
+    return (
+      <p className="dendrite-empty">
+        <span className="dendrite-empty-title">No outputs yet</span>
+        <br />
+        Declare one with <code>output name = …</code>
+      </p>
+    );
+  }
   return (
     <>
       {[...outputs].map(([name, value]) => (
