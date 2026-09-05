@@ -1,6 +1,7 @@
-import { redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
+import { indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
-import { EditorView } from "@codemirror/view";
+import { EditorState } from "@codemirror/state";
+import { EditorView, keymap } from "@codemirror/view";
 import {
   createLanguage,
   createStdlib,
@@ -24,6 +25,11 @@ import { lineStartOffsets, toOffset } from "./tokens";
 // session's observables. No storage, no routing, no presets - those are host policy.
 
 const DEBOUNCE_MS = 300;
+
+// What the default keymap needs to know about Dendrite to toggle comments (Mod-/).
+const languageData = EditorState.languageData.of(() => [
+  { commentTokens: { line: "//", block: { open: "/*", close: "*/" } } },
+]);
 
 export interface EditorConfig {
   document: EditorDocument;
@@ -110,6 +116,9 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     parent,
     extensions: [
       basicSetup,
+      // Tab / Shift-Tab indent and dedent (Escape then Tab leaves the editor, per CodeMirror).
+      keymap.of([indentWithTab]),
+      languageData,
       dendriteTheme,
       lintGutter(),
       dendriteHighlighting(language),
