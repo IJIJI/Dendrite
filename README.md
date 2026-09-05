@@ -1,6 +1,5 @@
 <img width="1057" height="233" alt="dendrite-wordmark-BG" src="https://github.com/user-attachments/assets/c75eb08a-761f-413a-b364-ac8ae6bb9679" />
 
-
 <p align="left">
   <!-- <a href="https://www.npmjs.com/package/dendrite"><img alt="npm" src="https://img.shields.io/npm/v/dendrite?style=flat-square&color=6366f1&labelColor=201e1d"></a> -->
   <a href="https://www.npmjs.com/~ijiji"><img alt="npm" src="https://img.shields.io/github/v/release/IJIJI/Dendrite?display_name=tag&include_prereleases?style=flat-square&color=6366f1&labelColor=201e1d"></a>
