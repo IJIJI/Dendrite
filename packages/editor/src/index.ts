@@ -5,13 +5,12 @@
 // under the ./react subpath and is the only place React is allowed (.docs/editor-plan.md).
 
 export * from "./observable"; // watch, + Observable, Subject, createSubject re-exported from core
-export * from "./session"; // EditorSession, Diagnostic, RunResult, InputValues
 export * from "./tokens"; // styledRanges, lineStartOffsets, toOffset, TokenClass, StyledRange
 export * from "./cm"; // dendriteHighlighting, toLintDiagnostics (the only CodeMirror-aware module)
-export * from "./input-widgets"; // widgetsFor, initialValueFor, WidgetSpec, Control
+export * from "./input-widgets"; // widgetsFor, WidgetSpec, Control
 export * from "./format"; // formatValue - the one value→text rule panes share
-export * from "./surface"; // SurfaceSpec (+ parts), surfaceLayer
-export * from "./surface-edit"; // add/update/remove inputs + outputs, validateSurface, typeOptions - editing the surface as data
+export * from "./ports-edit"; // add/update/remove inputs + outputs, typeOptions - editing a layer's ports as data
+export * from "./diagnostic"; // positionOf - the one SourceRef → line/column adapter
 export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload
 export * from "./store"; // DocumentStore + MemoryStore, LocalStorageStore, UrlStore

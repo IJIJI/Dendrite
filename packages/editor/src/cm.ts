@@ -7,12 +7,12 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
-import { type Language } from "@dendrite-lang/core";
+import { type Language, type ProgramDiagnostic } from "@dendrite-lang/core";
 
-import { type Diagnostic } from "./session";
+import { positionOf } from "./diagnostic";
 import { lineStartOffsets, styledRanges, toOffset } from "./tokens";
 
-//? CodeMirror glue: map tokens.ts ranges onto decorations, session diagnostics onto
+//? CodeMirror glue: map tokens.ts ranges onto decorations, program diagnostics onto
 // @codemirror/lint squiggles, and the brand onto the editor's chrome. With editor.ts, the
 // only module that knows about CodeMirror.
 
@@ -42,17 +42,23 @@ export function dendriteHighlighting(language: Language) {
   );
 }
 
-// Session diagnostics → lint diagnostics (only those with a code location can squiggle).
-export function toLintDiagnostics(source: string, diagnostics: Diagnostic[]): LintDiagnostic[] {
+// Program diagnostics → lint diagnostics. Only those that point at text can squiggle: a
+// ports problem names a layer and a row instead, and the Diagnostics pane shows it.
+export function toLintDiagnostics(
+  source: string,
+  diagnostics: readonly ProgramDiagnostic[],
+): LintDiagnostic[] {
   const starts = lineStartOffsets(source);
   const max = source.length;
-  return diagnostics
-    .filter((d) => d.line !== undefined)
-    .map((d) => {
-      const from = Math.min(toOffset(starts, d.line!, d.column ?? 1), max);
-      const to = Math.min(from + Math.max(d.length ?? 1, 1), max);
-      return { from, to, severity: d.severity, message: `${d.kind}: ${d.message}` };
-    });
+  const located = diagnostics.flatMap((d) => {
+    const at = positionOf(d);
+    return at ? [{ d, at }] : [];
+  });
+  return located.map(({ d, at }) => {
+    const from = Math.min(toOffset(starts, at.line, at.column), max);
+    const to = Math.min(from + Math.max(at.length, 1), max);
+    return { from, to, severity: d.severity, message: `${d.kind}: ${d.message}` };
+  });
 }
 
 // The editor's chrome in the brand's variables. CodeMirror injects its base theme un-layered,

@@ -6,8 +6,10 @@ import { decodePayload, encodeDocument } from "./permalink";
 
 const doc = (): EditorDocument => ({
   version: DOCUMENT_VERSION,
-  program: serialiseSource("// hello\noutput out = $a * 2"),
-  surface: { inputs: [{ name: "a", type: { kind: "name", name: "number" } }], outputs: [] },
+  program: serialiseSource("// hello\noutput out = $a * 2", {
+    inputs: [{ name: "a", type: { kind: "name", name: "number" } }],
+    outputs: [],
+  }),
   inputValues: { a: 21 },
 });
 

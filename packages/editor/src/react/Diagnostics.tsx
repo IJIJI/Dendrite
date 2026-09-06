@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 
+import { type ProgramDiagnostic } from "@dendrite-lang/core";
+
+import { positionOf } from "../diagnostic";
 import { type EditorHandle } from "../editor";
-import { type Diagnostic } from "../session";
 import { useEditor } from "./context";
 import { cx } from "./cx";
 import { useObservable } from "./hooks";
@@ -32,8 +34,8 @@ export function Diagnostics({ title, className, style }: PaneProps) {
 }
 
 function DiagnosticItems({ editor }: { editor: EditorHandle }) {
-  const diagnostics = useObservable(editor.session.diagnostics);
-  // Errors before warnings (stable within each severity) - the session emits in pipeline
+  const diagnostics = useObservable(editor.instance.diagnostics);
+  // Errors before warnings (stable within each severity) - the instance emits in pipeline
   // order, which would otherwise list parse warnings above analysis errors.
   const ordered = useMemo(
     () =>
@@ -56,28 +58,32 @@ function DiagnosticItem({
   diagnostic: d,
   onJump,
 }: {
-  diagnostic: Diagnostic;
+  diagnostic: ProgramDiagnostic;
   onJump?(line: number, column: number): void;
 }) {
+  const at = positionOf(d);
   return (
     <li className={cx("dendrite-diag", `dendrite-diag-${d.severity}`)}>
       <span className={cx("dendrite-tag", `dendrite-tag-${d.severity}`)}>{d.severity}</span>
-      {d.line !== undefined && onJump ? (
+      {at && onJump ? (
         <button
           type="button"
           className="dendrite-diag-loc"
-          onClick={() => onJump(d.line!, d.column ?? 1)}
+          onClick={() => onJump(at.line, at.column)}
         >
-          {d.line}:{d.column ?? 1}
+          {at.line}:{at.column}
         </button>
       ) : null}
+      {/* A ports problem points at a declaration rather than at text. */}
+      {d.where ? <span className="dendrite-diag-loc">{d.where}</span> : null}
       <span className="dendrite-diag-kind">{d.kind}</span>
       <span className="dendrite-diag-message">{d.message}</span>
     </li>
   );
 }
 
-const bootFailure = (error: unknown): Diagnostic => ({
+const bootFailure = (error: unknown): ProgramDiagnostic => ({
+  stage: "load",
   severity: "error",
   kind: "boot_failed",
   message: error instanceof Error ? error.message : String(error),

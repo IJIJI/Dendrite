@@ -11,10 +11,22 @@ import {
   migrateDocument,
 } from "./document";
 
+const PORTS = {
+  inputs: [{ name: "a", type: { kind: "name" as const, name: "number" } }],
+  outputs: [],
+};
+
 const current = (): EditorDocument => ({
   version: DOCUMENT_VERSION,
+  program: serialiseSource("output out = $a", PORTS),
+  inputValues: { a: 1 },
+});
+
+// What a v1 document looked like: the ports lived beside the program, as a "surface".
+const v1 = (): Record<string, unknown> => ({
+  version: 1,
   program: serialiseSource("output out = $a"),
-  surface: { inputs: [{ name: "a", type: { kind: "name", name: "number" } }], outputs: [] },
+  surface: { inputs: [...PORTS.inputs], outputs: [] },
   inputValues: { a: 1 },
 });
 
@@ -98,12 +110,30 @@ describe("applyMigrations", () => {
 });
 
 describe("cloneDocument", () => {
-  it("deep-clones so sessions cannot mutate shared presets", () => {
+  it("deep-clones so a session cannot mutate a shared preset", () => {
     const doc = current();
     const clone = cloneDocument(doc);
     (clone.inputValues as Record<string, unknown>).a = 99;
-    clone.surface.inputs.push({ name: "b", type: { kind: "name", name: "string" } });
+    (clone.program.ports?.inputs as unknown as { name: string }[]).push({ name: "b" });
     expect(doc.inputValues.a).toBe(1);
-    expect(doc.surface.inputs).toHaveLength(1);
+    expect(doc.program.ports?.inputs).toHaveLength(1);
+  });
+});
+
+describe("the v1 → v2 migration", () => {
+  it("moves a document's surface into the program's own ports", () => {
+    const migrated = migrateDocument(v1());
+    expect(migrated).toEqual(current());
+  });
+
+  it("keeps a v1 document with no surface loadable", () => {
+    const { surface: _dropped, ...bare } = v1();
+    const migrated = migrateDocument(bare);
+    expect(migrated?.version).toBe(DOCUMENT_VERSION);
+    expect(migrated?.program.ports).toBeUndefined();
+  });
+
+  it("rejects a v1 document whose program is not a record", () => {
+    expect(migrateDocument({ ...v1(), program: "nope" })).toBeNull();
   });
 });

@@ -1,15 +1,19 @@
 import {
-  type InputDefinition,
-  type LanguageDescriptor,
+  flattenPorts,
+  type PortsState,
   type Type,
   typeToString,
+  type Vocabulary,
 } from "@dendrite-lang/core";
 
-//? descriptor.inputs → widget descriptions. Framework-free: this is the descriptor-driven
-// UI mapping the future editor (code AND rete side) builds on; panes.ts renders it.
-// The SESSION is the source of truth for values (panes read via getValue) - this module
-// only describes shape, and provides the one shared initial-value derivation so the UI
-// and the evaluator can never disagree about an input's starting value.
+//? Port declarations → widget descriptions. Framework-free: this is the descriptor-driven
+// UI mapping the editor (code AND rete side) builds on; panes render them.
+//
+// The declarations come from the LAYERS, not from the composed descriptor, so the pane
+// keeps rendering its rows while composition is failing - which is exactly when a user
+// needs to see the row that broke. Control types need the composed descriptor to follow an
+// extends chain, so when composition fails every control falls back to raw JSON.
+// The INSTANCE is the source of truth for values; this module only describes shape.
 
 export type Control = "number" | "boolean" | "text" | "json";
 
@@ -17,11 +21,17 @@ export interface WidgetSpec {
   name: string;
   typeLabel: string; // e.g. "number", "Bus[]", "TallyState"
   control: Control;
+  /** Which layer declares it - a pane offers edits on the editable one only. */
+  layerId: string;
+  /** Fed by the host rather than the user: shown, never editable. */
+  hostFed: boolean;
+  /** Whether its declaring layer may be edited at all. */
+  editable: boolean;
 }
 
 // A named type's primitive base, following the `extends` chain - so a numeric enum like
 // `TallyState extends number` gets a number widget, not a JSON box. Cycle-guarded.
-const primitiveBase = (t: Type, descriptor: LanguageDescriptor): string | undefined => {
+const primitiveBase = (t: Type, descriptor: Vocabulary): string | undefined => {
   if (t.kind !== "name") return undefined;
   const seen = new Set<string>();
   let current: string | undefined = t.name;
@@ -33,8 +43,8 @@ const primitiveBase = (t: Type, descriptor: LanguageDescriptor): string | undefi
   return undefined;
 };
 
-const controlFor = (t: Type, descriptor: LanguageDescriptor): Control => {
-  switch (primitiveBase(t, descriptor)) {
+const controlFor = (t: Type, descriptor: Vocabulary | undefined): Control => {
+  switch (descriptor && primitiveBase(t, descriptor)) {
     case "number":
       return "number";
     case "boolean":
@@ -46,25 +56,22 @@ const controlFor = (t: Type, descriptor: LanguageDescriptor): Control => {
   }
 };
 
-/** The starting value for an input: its declared default, else a sensible zero. */
-export function initialValueFor(def: InputDefinition, descriptor: LanguageDescriptor): unknown {
-  if (def.default !== undefined) return def.default;
-  switch (controlFor(def.type, descriptor)) {
-    case "number":
-      return 0;
-    case "boolean":
-      return false;
-    case "text":
-      return "";
-    default:
-      return def.type.kind === "array" ? [] : null;
+/** One widget per program-level input, in layer order. */
+export function widgetsFor(state: PortsState): WidgetSpec[] {
+  const descriptor = state.composed.ok ? state.composed.descriptor : undefined;
+  const widgets: WidgetSpec[] = [];
+  for (const { layer, level } of state.layers) {
+    if (level !== "program") continue; // global inputs are the host's, not this document's
+    for (const def of flattenPorts([layer]).inputs) {
+      widgets.push({
+        name: def.name,
+        typeLabel: typeToString(def.type),
+        control: controlFor(def.type, descriptor),
+        layerId: layer.id,
+        hostFed: layer.policy.feeds === "host",
+        editable: layer.policy.editable,
+      });
+    }
   }
-}
-
-export function widgetsFor(descriptor: LanguageDescriptor): WidgetSpec[] {
-  return [...descriptor.inputs.values()].map((def) => ({
-    name: def.name,
-    typeLabel: typeToString(def.type),
-    control: controlFor(def.type, descriptor),
-  }));
+  return widgets;
 }

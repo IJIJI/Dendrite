@@ -333,7 +333,9 @@ class Instance implements ProgramInstance {
           ? this.programValues[def.name]
           : defaultValueFor(def, descriptor);
     }
-    const changed = !shallowEqual(this.programValues, next);
+    // Compared against what subscribers have SEEN, not against the internal map: at boot
+    // the map already holds the host starting values while the subject still holds nothing.
+    const changed = !shallowEqual(this.values$.get(), next);
     this.programValues = next;
     if (changed) this.values$.set(next);
   }

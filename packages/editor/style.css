@@ -224,8 +224,25 @@
     background: var(--dendrite-warning-soft);
   }
 
+  /* Stale: the outputs on screen are not from the program in the editor. Muted on
+     purpose - it is a caveat on real values, not a failure. */
+  .dendrite-tag-stale {
+    --_status: var(--dendrite-warning);
+    background: var(--dendrite-warning-soft);
+  }
+
+  .dendrite-output-stale {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 12px;
+    color: var(--dendrite-muted);
+    font-size: 12px;
+  }
+
   .dendrite-tag-error::before,
-  .dendrite-tag-warning::before {
+  .dendrite-tag-warning::before,
+  .dendrite-tag-stale::before {
     content: "";
     width: 6px;
     height: 6px;

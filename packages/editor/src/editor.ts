@@ -3,10 +3,15 @@ import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import {
+  createEnvironment,
   createLanguage,
   createStdlib,
+  EMPTY_PORTS,
   extendLanguage,
   type Language,
+  Policy,
+  type PortLayer,
+  type ProgramInstance,
   serialiseSource,
 } from "@dendrite-lang/core";
 import { basicSetup } from "codemirror";
@@ -14,15 +19,14 @@ import { basicSetup } from "codemirror";
 import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "./cm";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
 import { createSubject, type Observable } from "./observable";
-import { EditorSession } from "./session";
 
 import { lineStartOffsets, toOffset } from "./tokens";
 
 //? createEditor: the host entry point (Facade). Mounts a code editor for one document into
-// an element and owns its lifecycle - the language (the host's or the stdlib, plus the
-// document's surface), the session, the CodeMirror view, debounced compile, lint squiggles,
-// undo/redo, and change notification. Panes are the host's: it renders them from the
-// session's observables. No storage, no routing, no presets - those are host policy.
+// an element and owns its lifecycle - the language, the core ProgramInstance the document
+// runs as, the CodeMirror view, debounced compile, lint squiggles, undo/redo, and change
+// notification. Panes are the host's: it renders them from the instance's observables.
+// No storage, no routing, no presets - those are host policy.
 
 const DEBOUNCE_MS = 300;
 
@@ -33,8 +37,15 @@ const languageData = EditorState.languageData.of(() => [
 
 export interface EditorConfig {
   document: EditorDocument;
-  /** The language the document runs against; its surface is applied to a COPY. Default: the stdlib. */
+  /** The vocabulary the document runs against. Default: the stdlib. */
   language?: Language;
+  /**
+   * Port layers beneath the document's own. `global` hangs on the runtime (one value for
+   * every program a host runs); `program` sits under the document layer, for a capability a
+   * host feeds this program alone. Both must be STABLE references: a fresh object remounts
+   * the editor, exactly like `document`.
+   */
+  layers?: { global?: readonly PortLayer[]; program?: readonly PortLayer[] };
   /** The current document, debounced, after every source edit or input change. */
   onChange?(doc: EditorDocument): void;
 }
@@ -46,11 +57,11 @@ export interface HistoryDepth {
 }
 
 export interface EditorHandle {
-  /** Compile/run state as observables (diagnostics, outputs, inputs) - render panes from these. */
-  readonly session: EditorSession;
+  /** The running program: diagnostics, ports, outputs, values, snapshot. Render panes from it. */
+  readonly instance: ProgramInstance;
   /** Undo/redo depths of the SOURCE history (input-value edits are not part of it). */
   readonly history: Observable<HistoryDepth>;
-  /** The document as it is right now: source, surface, input values. */
+  /** The document as it is right now: program, its ports, and the input values. */
   getDocument(): EditorDocument;
   /** Move the cursor to a 1-based line/column (diagnostics click-through). */
   jumpTo(line: number, column: number): void;
@@ -68,11 +79,20 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
   }
   const initialSource = doc.program.source;
 
-  // A copy, so the document's surface never leaks into a host's language (a second mount
-  // with the same language would otherwise double-register it).
+  // A copy, so nothing the editor does can reach a host's own language object.
   const language = extendLanguage(createLanguage(), config.language ?? createStdlib());
-  const session = new EditorSession(language, doc.surface);
-  for (const [name, value] of Object.entries(doc.inputValues)) session.setInput(name, value);
+  const env = createEnvironment(language);
+  const runtime = env.createRuntime({ layers: config.layers?.global });
+  // The document is the last layer and the only persisted one: it is what a save captures.
+  const instance = env.createInstance(runtime, {
+    program: doc.program,
+    layers: [
+      ...(config.layers?.program ?? []),
+      { id: "document", ports: doc.program.ports ?? EMPTY_PORTS, policy: Policy.user },
+    ],
+    id: "editor",
+    inputValues: doc.inputValues,
+  });
 
   let compileTimer: ReturnType<typeof setTimeout> | undefined;
   let changeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -80,9 +100,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
   const currentSource = (): string => view.state.doc.toString();
   const getDocument = (): EditorDocument => ({
     version: DOCUMENT_VERSION,
-    program: serialiseSource(currentSource()),
-    surface: doc.surface,
-    inputValues: session.inputs.get(),
+    ...instance.snapshot.get(),
   });
 
   const scheduleChange = (): void => {
@@ -91,13 +109,13 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     changeTimer = setTimeout(() => config.onChange?.(getDocument()), DEBOUNCE_MS);
   };
 
-  // Debounced compile on every source edit; the change notification rides on it.
+  // Debounced recompile on every source edit. Editing text never touches the ports, so the
+  // saved program goes back without them and the document layer keeps what it has.
   const compileOnEdit = EditorView.updateListener.of((update) => {
     if (!update.docChanged) return;
     clearTimeout(compileTimer);
     compileTimer = setTimeout(() => {
-      session.compile(update.state.doc.toString());
-      scheduleChange();
+      instance.setProgram(serialiseSource(update.state.doc.toString()));
     }, DEBOUNCE_MS);
   });
 
@@ -127,17 +145,16 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
   });
 
   const subscriptions = [
-    session.diagnostics.subscribe((diagnostics) =>
+    instance.diagnostics.subscribe((diagnostics) =>
       view.dispatch(setDiagnostics(view.state, toLintDiagnostics(currentSource(), diagnostics))),
     ),
-    // Input changes (from whatever pane the host renders) are document changes too.
-    session.inputs.subscribe(scheduleChange),
+    // Everything a save would capture - the source, the ports, the input values - arrives
+    // here, and nowhere else: a host pushing its own values leaves the snapshot silent.
+    instance.snapshot.subscribe(scheduleChange),
   ];
 
-  session.compile(initialSource);
-
   return {
-    session,
+    instance,
     history: history$,
     getDocument,
     jumpTo(line, column) {
@@ -159,6 +176,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
       clearTimeout(compileTimer);
       clearTimeout(changeTimer);
       for (const unsubscribe of subscriptions) unsubscribe();
+      instance.dispose();
       view.destroy();
     },
   };
