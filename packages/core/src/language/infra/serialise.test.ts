@@ -6,7 +6,9 @@ import { createStdlib } from "../stdlib";
 import { type Language } from "../language";
 import { type ASTNode } from "./nodes";
 import { type RawProgram } from "./program";
+import { EMPTY_PORTS, type Ports } from "./ports";
 import {
+  assertSavedPorts,
   deserialise,
   migrate,
   SAVED_PROGRAM_VERSION,
@@ -96,6 +98,54 @@ describe("serialise round-trip (ast form)", () => {
     const saved = serialiseAst(program);
     (program.bindings.get("a") as { value: unknown }).value = 999;
     expect((saved.bindings["a"] as { value: unknown }).value).toBe(1);
+  });
+});
+
+describe("ports on a saved program", () => {
+  const PORTS: Ports = {
+    types: [{ name: "User", fields: { name: Type.string, score: Type.number } }],
+    inputs: [{ name: "user", type: Type.name("User") }],
+    outputs: [{ name: "label", type: Type.string, mode: "required" }],
+  };
+  const roundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+  it("survives a JSON round trip on every form", () => {
+    expect(roundTrip(serialiseSource("output label = $user.name", PORTS)).ports).toEqual(PORTS);
+
+    const program: RawProgram = {
+      bindings: new Map(),
+      outputs: new Map<string, ASTNode>([["label", { kind: "literal", value: "x" }]]),
+    };
+    const ast = serialiseAst(program, PORTS);
+    expect(roundTrip(ast).ports).toEqual(PORTS);
+    expect(deserialise(roundTrip(ast)).outputs.has("label")).toBe(true);
+
+    const rete: SavedProgram = { version: 1, form: "rete", graph: {}, ports: PORTS };
+    expect(roundTrip(rete).ports).toEqual(PORTS);
+  });
+
+  it("is absent when nothing is declared, so old payloads are unchanged", () => {
+    expect("ports" in serialiseSource("output out = 1")).toBe(false);
+    expect("ports" in serialiseAst({ bindings: new Map(), outputs: new Map() })).toBe(false);
+    expect(serialiseSource("output out = 1", EMPTY_PORTS).ports).toEqual(EMPTY_PORTS);
+  });
+
+  it("decouples the saved ports from the live object", () => {
+    const input = { name: "n", type: Type.number };
+    const live: Ports = { inputs: [input], outputs: [] };
+    const saved = serialiseAst({ bindings: new Map(), outputs: new Map() }, live);
+    input.name = "changed";
+    expect(saved.ports?.inputs[0]?.name).toBe("n");
+  });
+
+  it("rejects malformed ports on load, ast form through deserialise", () => {
+    const bad = { version: 1, form: "ast", bindings: {}, outputs: {}, ports: { inputs: "x" } };
+    expect(() => deserialise(bad as unknown as SavedAstProgram)).toThrow(/ports is not a Ports/);
+    expect(() =>
+      assertSavedPorts({ ...serialiseSource("x"), ports: null } as unknown as SavedProgram),
+    ).toThrow(/ports is not a Ports/);
+    expect(() => assertSavedPorts(serialiseSource("x"))).not.toThrow();
+    expect(() => assertSavedPorts(serialiseSource("x", PORTS))).not.toThrow();
   });
 });
 
