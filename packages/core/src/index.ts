@@ -16,6 +16,7 @@ export * from "./language/infra/program"; // RawProgram, CoreProgram
 export * from "./language/infra/serialise"; // SavedProgram forms, serialise/deserialise/migrate
 export * from "./language/infra/identifier"; // isIdentifier - the one identifier rule (lexer + port names)
 export * from "./language/infra/ports"; // Ports, PortType, PortLayer, Policy, EMPTY_PORTS, flattenPorts, isPorts
+export * from "./language/infra/observable"; // Observable, Subject, createSubject
 
 // ── language assembly + source → RawProgram ──────────────────────────────────
 export {
@@ -54,9 +55,12 @@ export * from "./language/evaluator/types"; // EvalState, EvalError (+ kind)
 
 // ── execution levels ─────────────────────────────────────────────────────────
 export { run, createProgramRunner, type ProgramRunner } from "./language/runtime/runner";
+export { defaultValueFor } from "./language/runtime/seed";
 export {
   createRuntime,
   type Runtime,
+  type RuntimeOptions,
+  type RegisterOptions,
   type ProgramHandle,
   type OutputHandler,
   type ErrorHandler,
@@ -66,6 +70,10 @@ export {
 export {
   createEnvironment,
   type Environment,
+  type Pipeline,
+  type ProgramEnvironment,
+  type ProgramEnvironmentResult,
+  type ProgramEnvironmentFactory,
   type CompileResult,
   type CompileWarning,
   type LoadResult,
