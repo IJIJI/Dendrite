@@ -24,11 +24,22 @@ export type AnalysisErrorKind =
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
   | "app_argument_type_mismatch"; // A resolved application argument has an incompatible type
 
+/** What a descriptor-level error is about, so callers can attribute it without parsing text. */
+export interface ErrorSubject {
+  kind: "type" | "input" | "output" | "op";
+  name: string;
+}
+
 export interface AnalysisError {
   kind: AnalysisErrorKind;
   name: string;
   message: string;
   source?: SourceRef;
+  /**
+   * Set by validateDescriptor: the declaration the error was found in. `name` stays the
+   * offending name (for unknown_type the missing type, for a field override the field).
+   */
+  subject?: ErrorSubject;
 }
 
 export type AnalysisWarningKind =

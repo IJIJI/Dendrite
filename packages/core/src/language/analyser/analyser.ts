@@ -21,6 +21,7 @@ import {
   AnalysisErrorKind,
   AnalysisResult,
   AnalysisWarning,
+  ErrorSubject,
 } from "./types";
 
 // Recursive DFS collecting names of RefNodes whose name is in `bindings`.
@@ -602,36 +603,44 @@ function collectTypeNames(t: Type, into: Set<string>): void {
 // only UNregistered names are flagged. Run once when the language is assembled.
 export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisError[] {
   const errors: AnalysisError[] = [];
-  const report = (name: string, where: string) => {
+  const report = (name: string, where: string, subject: ErrorSubject) => {
     if (!descriptor.types.has(name)) {
       errors.push({
         kind: "unknown_type",
         name,
         message: `Type '${name}' is referenced by ${where} but is not registered`,
+        subject,
       });
     }
   };
-  const checkType = (t: Type, where: string) => {
+  const checkType = (t: Type, where: string, subject: ErrorSubject) => {
     const names = new Set<string>();
     collectTypeNames(t, names);
-    for (const name of names) report(name, where);
+    for (const name of names) report(name, where, subject);
   };
 
   for (const def of descriptor.types.values()) {
-    if (def.extends) report(def.extends, `type '${def.name}' (extends)`);
+    const subject: ErrorSubject = { kind: "type", name: def.name };
+    if (def.extends) report(def.extends, `type '${def.name}' (extends)`, subject);
     if (def.fields) {
       for (const [field, t] of Object.entries(def.fields)) {
-        checkType(t, `type '${def.name}' field '${field}'`);
+        checkType(t, `type '${def.name}' field '${field}'`, subject);
       }
     }
   }
   for (const op of descriptor.ops.values()) {
-    for (const input of op.inputs) checkType(input.type, `op '${op.name}' input '${input.name}'`);
-    checkType(op.output, `op '${op.name}' output`);
+    const subject: ErrorSubject = { kind: "op", name: op.name };
+    for (const input of op.inputs) {
+      checkType(input.type, `op '${op.name}' input '${input.name}'`, subject);
+    }
+    checkType(op.output, `op '${op.name}' output`, subject);
   }
-  for (const input of descriptor.inputs.values()) checkType(input.type, `input '${input.name}'`);
-  for (const output of descriptor.outputs.values())
-    checkType(output.type, `output '${output.name}'`);
+  for (const input of descriptor.inputs.values()) {
+    checkType(input.type, `input '${input.name}'`, { kind: "input", name: input.name });
+  }
+  for (const output of descriptor.outputs.values()) {
+    checkType(output.type, `output '${output.name}'`, { kind: "output", name: output.name });
+  }
 
   // Op ↔ evaluator pairing: an op without an evaluator only fails at RUNTIME
   // (evaluator_not_found), and an evaluator without an op is dead code or a typo.
@@ -642,6 +651,7 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
         kind: "missing_evaluator",
         name: op.name,
         message: `Op '${op.name}' has no registered evaluator`,
+        subject: { kind: "op", name: op.name },
       });
     }
   }
@@ -651,6 +661,7 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
         kind: "orphan_evaluator",
         name: evaluator.op,
         message: `Evaluator registered for unknown op '${evaluator.op}'`,
+        subject: { kind: "op", name: evaluator.op },
       });
     }
   }
@@ -669,6 +680,7 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
           kind: "incompatible_field_override",
           name: field,
           message: `Field '${field}' of '${def.name}' has type '${typeToString(ownType)}', incompatible with '${typeToString(inherited)}' inherited from '${def.extends}'`,
+          subject: { kind: "type", name: def.name },
         });
       }
     }
