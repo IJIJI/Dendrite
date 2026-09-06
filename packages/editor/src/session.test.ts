@@ -92,3 +92,34 @@ describe("EditorSession", () => {
     expect(session.outputs.get()).toEqual({ outputs: null, error: null });
   });
 });
+
+describe("EditorSession.setLanguage", () => {
+  it("swaps the language in place: same observables, values carried over, new inputs seeded", () => {
+    const session = new EditorSession(language());
+    session.compile("output double = $n * 2");
+    session.setInput("n", 5);
+    const seen: unknown[] = [];
+    session.inputs.subscribe((values) => seen.push(values));
+
+    const next = createStdlib();
+    next.registerInput({ name: "n", type: Type.number, default: 2 }); // kept: 5, not 2
+    next.registerInput({ name: "extra", type: Type.string }); // new: seeded ""
+    next.registerOutput({ name: "double", type: Type.number });
+    session.setLanguage(next); // "flag" is gone
+
+    expect(session.language).toBe(next);
+    expect(session.inputs.get()).toEqual({ n: 5, extra: "" });
+    expect(seen).toHaveLength(1);
+
+    session.compile("output double = $n * 2");
+    expect(output(session.outputs.get(), "double")).toBe(10);
+  });
+
+  it("leaves everything untouched when the new language is malformed", () => {
+    const session = new EditorSession(language());
+    const broken = createStdlib();
+    broken.registerInput({ name: "bad", type: Type.name("Nope") }); // dangling type
+    expect(() => session.setLanguage(broken)).toThrow(/Nope/);
+    expect(session.inputs.get()).toEqual({ n: 2, flag: false });
+  });
+});
