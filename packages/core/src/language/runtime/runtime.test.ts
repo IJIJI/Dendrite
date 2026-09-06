@@ -315,6 +315,7 @@ describe("runtime - first evaluation errors", () => {
       ports: BOOM,
     });
     expect(handle.initialOutputs.size).toBe(0);
+    expect(handle.initialError?.kind).toBe("host_error"); // reported, not only notified
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError.mock.calls[0][1]).toBeInstanceOf(EvalError);
   });
@@ -330,6 +331,7 @@ describe("runtime - first evaluation errors", () => {
       ports: BOOM,
     });
     expect(replaced.initialOutputs.size).toBe(0);
+    expect(replaced.initialError).toBeInstanceOf(EvalError);
     expect(onError).toHaveBeenCalledTimes(1);
   });
 });

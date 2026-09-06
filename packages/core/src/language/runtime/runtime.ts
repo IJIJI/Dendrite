@@ -26,10 +26,15 @@ export interface ProgramHandle {
 
   /**
    * Outputs from the first evaluation, available immediately after register().
-   * Empty when that evaluation failed - the error reaches onError handlers.
-   * Subsequent changes arrive via onOutput().
+   * Empty when that evaluation failed. Subsequent changes arrive via onOutput().
    */
   readonly initialOutputs: Map<string, unknown>;
+
+  /**
+   * Why that first evaluation produced nothing, or null. It runs before any caller can
+   * subscribe, so its error is reported here as well as to the (not yet attached) handlers.
+   */
+  readonly initialError: EvalError | null;
 
   /** Subscribe to output changes for this program. Returns an unsubscribe function. */
   onOutput(handler: (outputs: Map<string, unknown>) => void): () => void;
@@ -95,13 +100,10 @@ export interface Runtime {
 
   /**
    * Swap the program behind an id, keeping its subscriptions and the values of every
-   * program-level input it still declares. Omitting `ports` keeps the current ones.
+   * program-level input it still declares. Omitting `ports` keeps the current ones;
+   * `values` overwrite what was kept, for a caller that owns those values itself.
    */
-  replace(
-    id: string,
-    program: CoreProgram,
-    options?: Pick<RegisterOptions, "ports">,
-  ): ProgramHandle;
+  replace(id: string, program: CoreProgram, options?: RegisterOptions): ProgramHandle;
 
   /**
    * Unregister by ID - for cases where the handle is unavailable.
@@ -199,19 +201,19 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
     for (const handler of entry.errorHandlers) handler(error);
   }
 
-  // Evaluate one entry and route the outcome. An evaluation error reaches onError and
-  // answers null - no outputs, and never a throw.
+  // Evaluate one entry and route the outcome to its handlers. An evaluation error is
+  // reported, never thrown, and leaves no outputs.
   function evaluateAndRoute(
     entry: ProgramEntry,
     changed?: Set<string>,
-  ): Map<string, unknown> | null {
+  ): { outputs: Map<string, unknown>; error: EvalError | null } {
     const result = entry.evaluate(changed);
     if (!result.ok) {
       notifyError(entry, result.error);
-      return null;
+      return { outputs: new Map(), error: result.error };
     }
     notifyOutput(entry, result.outputs);
-    return result.outputs;
+    return { outputs: result.outputs, error: null };
   }
 
   function applyChanges(changes: Map<string, unknown>): Map<string, Map<string, unknown>> {
@@ -237,8 +239,8 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
       // A handler notified earlier in this pass may have unregistered a later program.
       const entry = entries.get(id);
       if (!entry) continue;
-      const outputs = evaluateAndRoute(entry, changed);
-      if (outputs) results.set(id, outputs);
+      const { outputs, error } = evaluateAndRoute(entry, changed);
+      if (!error) results.set(id, outputs);
     }
     return results;
   }
@@ -252,10 +254,28 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
     entries.delete(id);
   }
 
-  function handleFor(entry: ProgramEntry, initialOutputs: Map<string, unknown>): ProgramHandle {
+  // Starting values for a program's own inputs; every other name is ignored, so a caller
+  // may hand over a whole map without filtering it first.
+  function applyValues(
+    entry: ProgramEntry,
+    ports: Ports,
+    values: Readonly<Record<string, unknown>> | undefined,
+  ): void {
+    if (!values) return;
+    const declared = new Set(ports.inputs.map((input) => input.name));
+    for (const [name, value] of Object.entries(values)) {
+      if (declared.has(name)) entry.setInput(name, value);
+    }
+  }
+
+  function handleFor(
+    entry: ProgramEntry,
+    first: { outputs: Map<string, unknown>; error: EvalError | null },
+  ): ProgramHandle {
     return {
       id: entry.id,
-      initialOutputs,
+      initialOutputs: first.outputs,
+      initialError: first.error,
       onOutput(handler) {
         entry.outputHandlers.add(handler);
         return () => entry.outputHandlers.delete(handler);
@@ -266,11 +286,11 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
       },
       setInput(name, value) {
         entry.setInput(name, value);
-        return evaluateAndRoute(entry, new Set([name])) ?? new Map();
+        return evaluateAndRoute(entry, new Set([name])).outputs;
       },
       fireTrigger(name, value) {
         entry.setInput(name, value);
-        const fired = evaluateAndRoute(entry, new Set([name])) ?? new Map();
+        const fired = evaluateAndRoute(entry, new Set([name])).outputs;
         entry.resetInput(name);
         evaluateAndRoute(entry, new Set([name]));
         return fired;
@@ -314,11 +334,8 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
       entries.set(id, entry);
       addToIndex(entry);
 
-      const declared = new Set(ports.inputs.map((input) => input.name));
-      for (const [name, value] of Object.entries(options.values ?? {})) {
-        if (declared.has(name)) entry.setInput(name, value);
-      }
-      return handleFor(entry, evaluateAndRoute(entry) ?? new Map());
+      applyValues(entry, ports, options.values);
+      return handleFor(entry, evaluateAndRoute(entry));
     },
 
     replace(id, program, options = {}) {
@@ -328,7 +345,8 @@ export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions 
       removeFromIndex(entry);
       entry.replace(bound, globalValues);
       addToIndex(entry);
-      return handleFor(entry, evaluateAndRoute(entry) ?? new Map());
+      applyValues(entry, bound.ports, options.values);
+      return handleFor(entry, evaluateAndRoute(entry));
     },
 
     unregister(id) {
