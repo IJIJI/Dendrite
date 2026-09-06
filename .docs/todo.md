@@ -294,6 +294,71 @@ useful as the widget that fills it.
 
 ---
 
+## IMPORTANT — The editor as a control surface over a runtime it does not own
+
+**What:** `createEditor` builds its own environment, runtime and instance. That is right for the
+playground and wrong for every other host. The editor should mount something the host already
+runs, and that runtime should be able to live in the browser (playground) or behind an API
+(Beacon), without the editor knowing which.
+
+**Why deferred:** the pieces only exist as of the ports/instance refactor (2026-09). Designing
+the remote seam before a real API exists would be guessing at its shape.
+
+**The ordering, settled 2026-09-07.** Each step is useful alone; do them in this order.
+
+1. **Borrow a runtime or an instance.** `EditorConfig` becomes a union: own the stack as now, or
+   take an existing runtime (and optionally an instance) plus the language it was built from.
+   `dispose` must stop unregistering what it does not own. Everything below depends on this.
+   The editor's only extra need beyond `ProgramInstance` is the `Language`, for highlighting.
+2. **Apply / Save / Revert as three verbs.** With a live instance an edit has already changed the
+   running program, so "save" means persist, not apply. The clean arrangement needs no core
+   change: the editor edits a SECOND instance on the SAME runtime (same layers, different id),
+   so it sees the same live global values, and Apply pushes its snapshot into the live one.
+   The editor gains a `dirty` observable and a way to mark the current state saved. The
+   playground keeps autosave by ignoring both.
+   - **Dirty is a CONTENT comparison against the last saved document, never a history position.**
+     Undo one edit, type another, and the undo depth matches again while the content differs.
+   - Saving must NOT clear the undo stack: undo walks back past a save point.
+   - Undo stays per-edit and text-only. An input value dirties the document without entering the
+     stack; adding or removing a port gets its own affordance (a revert toast now, version
+     history later) rather than a second competing stack.
+3. **Version history.** Almost entirely host work: a snapshot is already a self-contained memento
+   (program + its ports + input values) and restoring one is `setProgram`. What it needs is a
+   store, an identity and a timestamp, which the architecture already assigns to the host's
+   envelope. **Decide the envelope's `revision` field NOW rather than later** - two people editing
+   one program is a conflict a client cannot detect without one, and retrofitting a revision into
+   stored documents is unpleasant.
+4. **The transport, once there is a real API.** Implement `ProgramInstance` client-side over a
+   duplex channel so the editor cannot tell local from remote.
+   - Commands (setInput / fireTrigger / setProgram / setLayer) go client→server: small, ordered,
+     sequence-numbered, fire-and-forget. The interface is already shaped for this - every command
+     returns void and reports through observables.
+   - State goes server→client as pushes of the five observables, with the current value of all
+     five as the opening message so a replica never renders empty.
+   - **The one interface change:** `setLayer` currently returns `PortProblem[]` synchronously,
+     which cannot cross a wire. It reports them as `ports` diagnostics instead - the channel that
+     already carries the layer id and the offending row. (`setProgram` throwing on ports with no
+     persisted layer needs the same treatment.)
+   - Authorisation belongs at this seam, and `LayerPolicy` (`editable`, `feeds`) already says what
+     to enforce rather than merely advertise.
+
+**Making a remote runtime feel local** (the point of the whole exercise):
+- **Analyse locally, execute remotely.** Diagnostics and highlighting must never wait for a round
+  trip. Building a `ProgramEnvironment` from the layers the instance publishes is pure, so this
+  costs nothing - BUT it requires the browser to import the same language package, because a
+  language is code (`inferOutput` / `inferInputTypes` are functions), not data.
+- Echo value changes optimistically into the local replica, or a dragged slider fights the user.
+- Drop pushes that predate a command already sent (sequence numbers), or the slider snaps back.
+- Show connection state, and mark outputs `stale` while disconnected - the flag already exists and
+  means exactly that.
+- Block Apply while disconnected; allow editing and saving. Queuing edits and firing them thirty
+  seconds later is dangerous during a live show.
+
+**Driving need:** Beacon. Core runs the lights whether or not anyone has an editor open; the editor
+is a peripheral that attaches to a running program, edits a draft of it, and applies.
+
+---
+
 ## Language service (editor intelligence) — the big one
 
 **What:** A **transport-free, DOM-free** query API over `Language` + a document position:
