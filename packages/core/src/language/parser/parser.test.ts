@@ -10,11 +10,11 @@ import { Type } from "../infra/types";
 
 const CORE = createStdlib();
 
-// A language with one declared context input, for input-vs-ref classification.
-function withInput(name: string, type = "number"): Language {
+// The parser no longer reads declarations: `$name` is an input because of the sigil, not
+// because anything declared it. This just supplies a language whose type exists.
+function withInput(_name: string, type = "number"): Language {
   const lang = createLanguage();
   lang.registerType(type, z.unknown());
-  lang.registerInput({ name, type: Type.name(type) });
   return lang;
 }
 
@@ -61,12 +61,12 @@ describe("identifier & input classification", () => {
     expect(parse("myVar").node).toMatchObject({ kind: "ref", name: "myVar" });
   });
 
-  it("the $ sigil produces an input node, typed from the descriptor", () => {
+  it("the $ sigil produces an input node, left open for the analyser to type", () => {
     const desc = withInput("sourceBus", "string");
     expect(parse("$sourceBus", desc).node).toMatchObject({
       kind: "input",
       name: "sourceBus",
-      type: Type.name("string"),
+      type: Type.any, // the analyser overwrites this from the composed descriptor
     });
   });
 

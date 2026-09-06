@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { createEnvironment } from "../environment";
+import { createEnvironment, type ProgramEnvironment } from "../environment";
 import { createStdlib } from "../stdlib";
 import { type Language } from "../language";
 import { type ASTNode } from "./nodes";
+import { Policy } from "./ports";
 import { type RawProgram } from "./program";
 import { EMPTY_PORTS, type Ports } from "./ports";
 import {
@@ -19,17 +20,35 @@ import {
 } from "./serialise";
 import { Type } from "./types";
 
-// A language exercising structs, arrays, lambdas, and operators.
+// A language exercising structs, arrays, lambdas, and operators, plus the ports the
+// program below is analysed against.
 function makeLang(): Language {
   const lang = createStdlib();
   lang.registerType("User", z.unknown(), {
     fields: { name: Type.string, score: Type.number },
   });
-  lang.registerInput({ name: "xs", type: Type.array(Type.number), default: [] });
-  lang.registerInput({ name: "user", type: Type.name("User") });
-  lang.registerOutput({ name: "top", type: Type.number });
-  lang.registerOutput({ name: "label", type: Type.string });
   return lang;
+}
+
+const PORTS: Ports = {
+  inputs: [
+    { name: "xs", type: Type.array(Type.number), default: [] },
+    { name: "user", type: Type.name("User") },
+  ],
+  outputs: [
+    { name: "top", type: Type.number },
+    { name: "label", type: Type.string },
+  ],
+};
+
+// The pipeline lives on a program environment: a language declares no ports.
+function makeEnv(): ProgramEnvironment {
+  const composed = createEnvironment(makeLang()).forProgram(
+    [],
+    [{ id: "host", ports: PORTS, policy: Policy.host }],
+  );
+  if (!composed.ok) throw new Error(JSON.stringify(composed.problems));
+  return composed.environment;
 }
 
 // Lambdas, desugared operators, array literals, variadic ops, struct field access.
@@ -46,7 +65,7 @@ const INPUTS = { xs: [10], user: { name: "Ada", score: 72 } };
 
 describe("serialise round-trip (ast form)", () => {
   it("save → JSON → load evaluates identically to the direct pipeline", () => {
-    const env = createEnvironment(makeLang());
+    const env = makeEnv();
 
     const parsed = env.parse(SOURCE);
     if (!parsed.ok) throw new Error("parse failed");
@@ -70,7 +89,7 @@ describe("serialise round-trip (ast form)", () => {
 
   it("preserves SourceRefs verbatim - code and rete alike", () => {
     // code refs (from the parser)
-    const env = createEnvironment(makeLang());
+    const env = makeEnv();
     const parsed = env.parse(SOURCE);
     if (!parsed.ok) throw new Error("parse failed");
     const saved = serialiseAst(parsed.program);

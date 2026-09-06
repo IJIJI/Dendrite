@@ -1,17 +1,19 @@
 import {
   createEnvironment,
-  type Environment,
   EvalError,
   type Language,
+  type LanguageDescriptor,
+  type ProgramEnvironment,
   type ProgramRunner,
   type SourceRef,
 } from "@dendrite-lang/core";
 
 import { initialValueFor } from "./input-widgets";
 import { createSubject, type Observable } from "./observable";
+import { type SurfaceSpec, surfaceLayer } from "./surface";
 
-//? EditorSession: framework-free compile/run loop for one Language.
-// Owns the Environment, the current runner, and the live input values, and PUBLISHES its
+//? EditorSession: framework-free compile/run loop for one language and one surface.
+// Owns the ProgramEnvironment, the current runner, and the live input values, and PUBLISHES its
 // state through three observables (diagnostics, outputs, inputs). Hosts decide WHEN to
 // compile (debounce) and how to render; any number of consumers - panes, lint squiggles,
 // URL sync - subscribe without the session knowing they exist. The language can be swapped
@@ -42,21 +44,36 @@ const at = (source?: SourceRef) =>
     ? { line: source.line, column: source.column, length: source.length }
     : {};
 
-// One seeding rule for boot and language swaps: keep a value the language still declares,
+// One seeding rule for boot and surface swaps: keep a value the surface still declares,
 // seed the rest the same way the widgets derive their starting value (initialValueFor), so
 // the UI and the evaluator can never disagree.
-function seedInputs(language: Language, previous: InputValues): InputValues {
+function seedInputs(descriptor: LanguageDescriptor, previous: InputValues): InputValues {
   const seeded: Record<string, unknown> = {};
-  for (const [name, def] of language.descriptor.inputs) {
-    seeded[name] = name in previous ? previous[name] : initialValueFor(def, language.descriptor);
+  for (const [name, def] of descriptor.inputs) {
+    seeded[name] = name in previous ? previous[name] : initialValueFor(def, descriptor);
   }
   return seeded;
 }
 
+// A language plus a surface, composed into the descriptor programs are checked against.
+// Throws on compose problems (a dangling type, a duplicated name), as createEnvironment
+// used to for a malformed language.
+function environmentFor(language: Language, surface: SurfaceSpec): ProgramEnvironment {
+  const composed = createEnvironment(language).forProgram([], [surfaceLayer(surface)]);
+  if (!composed.ok) {
+    throw new Error(
+      "Surface does not compose:\n" +
+        composed.problems.map((p) => `  - ${p.where}: ${p.message}`).join("\n"),
+    );
+  }
+  return composed.environment;
+}
+
 export class EditorSession {
-  private env: Environment;
+  private env: ProgramEnvironment;
   private runner: ProgramRunner | null = null;
   private current: Language;
+  private surface: SurfaceSpec;
 
   private readonly diagnostics$ = createSubject<Diagnostic[]>([]);
   private readonly outputs$ = createSubject<RunResult>({ outputs: null, error: null });
@@ -69,30 +86,36 @@ export class EditorSession {
   /** Current input values - the single source of truth, seeded from the descriptor. */
   readonly inputs: Observable<InputValues> = this.inputs$;
 
-  constructor(language: Language) {
+  constructor(language: Language, surface: SurfaceSpec) {
     this.current = language;
-    this.env = createEnvironment(language);
-    this.inputs$.set(seedInputs(language, {}));
+    this.surface = surface;
+    this.env = environmentFor(language, surface);
+    this.inputs$.set(seedInputs(this.env.descriptor, {}));
   }
 
-  /** The language this session compiles against (see setLanguage). */
+  /** The language this session compiles against (vocabulary only). */
   get language(): Language {
     return this.current;
   }
 
+  /** The composed descriptor: the language plus the surface's ports. */
+  get descriptor(): LanguageDescriptor {
+    return this.env.descriptor;
+  }
+
   /**
-   * Swap the language in place - a surface edit: new inputs, outputs or types. The three
-   * observables keep their identity, so subscribers stay attached; values of inputs that
-   * still exist carry over, new ones seed from their defaults. A malformed language (a
-   * dangling type reference) throws from createEnvironment before anything is swapped.
-   * The caller recompiles the source next; until then there is no runner.
+   * Swap the surface in place - new inputs, outputs or types. The three observables keep
+   * their identity, so subscribers stay attached; values of inputs that still exist carry
+   * over, new ones seed from their defaults. A surface that does not compose (a dangling
+   * type reference) throws before anything is swapped. The caller recompiles the source
+   * next; until then there is no runner.
    */
-  setLanguage(language: Language): void {
-    const env = createEnvironment(language);
-    this.current = language;
+  setSurface(surface: SurfaceSpec): void {
+    const env = environmentFor(this.current, surface);
+    this.surface = surface;
     this.env = env;
     this.runner = null;
-    this.inputs$.set(seedInputs(language, this.inputs$.get()));
+    this.inputs$.set(seedInputs(env.descriptor, this.inputs$.get()));
   }
 
   /** Parse + analyse `source`; on success start a fresh runner and evaluate. */

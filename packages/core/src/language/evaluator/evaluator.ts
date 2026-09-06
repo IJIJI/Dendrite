@@ -1,6 +1,6 @@
 import { CNode } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
-import { type FnValue, LanguageDescriptor } from "../infra/registry";
+import { type FnValue, Vocabulary } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
 // Shared empty local scope for evaluating global bindings. Scope maps are never
@@ -28,7 +28,8 @@ export function updateInput(name: string, value: unknown, state: EvalState): voi
 //  (node, ctx, state) - only `node` and `state` vary as we descend.
 interface EvalContext {
   program: CoreProgram;
-  descriptor: LanguageDescriptor;
+  // Only the evaluators are read here; a full descriptor satisfies this too.
+  descriptor: Vocabulary;
   changedInputs: Set<string> | undefined;
 }
 
@@ -67,7 +68,7 @@ export function evaluate(
   program: CoreProgram,
   state: EvalState,
   changedInputs: Set<string> | undefined,
-  descriptor: LanguageDescriptor,
+  descriptor: Vocabulary,
 ): unknown {
   return evalNode(node, { program, descriptor, changedInputs }, state);
 }
@@ -219,7 +220,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
 export function evaluateProgram(
   program: CoreProgram,
   state: EvalState,
-  descriptor: LanguageDescriptor,
+  descriptor: Vocabulary,
   changedInputs?: Set<string>,
 ): Map<string, unknown> {
   const ctx: EvalContext = { program, descriptor, changedInputs };

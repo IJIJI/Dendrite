@@ -12,7 +12,10 @@
 
 import { createRuntime } from "../../src/language/runtime/runtime";
 import {
-  descriptor,
+  lang,
+  HOST,
+  FILTERING,
+  HONORS,
   filteringProgram,
   honorsProgram,
   scenarios,
@@ -24,11 +27,13 @@ import {
   type Scenario,
 } from "./shared";
 
-const runtime = createRuntime(descriptor);
+const runtime = createRuntime(lang.descriptor, { layers: [HOST] });
 const filtering = timed("register filtering", () =>
-  runtime.register("filtering", filteringProgram),
+  runtime.register("filtering", filteringProgram, { ports: FILTERING.ports }),
 );
-const honors = timed("register honors", () => runtime.register("honors", honorsProgram));
+const honors = timed("register honors", () =>
+  runtime.register("honors", honorsProgram, { ports: HONORS.ports }),
+);
 
 let prev: Scenario | undefined;
 let lastHonors = honors.initialOutputs;

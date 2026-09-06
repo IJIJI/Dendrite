@@ -3,8 +3,8 @@
  * back as readable source.
  *
  * The parser is descriptor-driven: it needs the language to resolve op calls
- * (positional → named input mapping) and to know which $names are real inputs.
- * In this example the stdlib is used.
+ * (positional → named input mapping). It does NOT need to know which $names are
+ * declared - that is the analyser's job. In this example the stdlib is used.
  */
 
 import { readFileSync } from "fs";
@@ -12,16 +12,15 @@ import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createStdlib } from "../../src/language/stdlib";
 import type { ASTNode, SourceRef } from "../../src/language/infra/nodes";
-import { Type, typeToString } from "../../src/language/infra/types";
+import { typeToString } from "../../src/language/infra/types";
 
 // Format a source ref as line:column (or the rete node id), "?" when absent.
 const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
 
 // --- Language ---------------------------------------------------------------
+// No ports needed: parsing $score does not require $score to be declared anywhere.
 const lang = createStdlib();
-lang.registerInput({ name: "score", type: Type.number });
-lang.registerInput({ name: "bonus", type: Type.number });
 
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");

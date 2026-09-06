@@ -9,7 +9,7 @@
 
 import { createProgramRunner } from "../../src/language/runtime/runner";
 import {
-  fullLang,
+  fullDescriptor,
   fullProgram,
   scenarios,
   changesFrom,
@@ -19,7 +19,7 @@ import {
   type Scenario,
 } from "./shared";
 
-const runner = createProgramRunner(fullProgram, fullLang.descriptor);
+const runner = createProgramRunner(fullProgram, fullDescriptor);
 let prev: Scenario | undefined;
 
 for (const s of scenarios) {

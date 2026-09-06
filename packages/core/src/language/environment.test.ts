@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createEnvironment } from "./environment";
+import { createEnvironment, type ProgramEnvironment } from "./environment";
 import { createStdlib } from "./stdlib";
 import { type PortLayer, Policy } from "./infra/ports";
 import {
@@ -11,11 +11,22 @@ import {
 } from "./infra/serialise";
 import { Type } from "./infra/types";
 
-function makeEnv(withInput = true) {
-  const lang = createStdlib();
-  if (withInput) lang.registerInput({ name: "n", type: Type.number, default: 1 });
-  lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
-  return createEnvironment(lang);
+// A program environment over the stdlib, with `out` required and `$n` optional - the
+// pipeline (compile / load / run) lives at this level, never on the bare language.
+function makeEnv(withInput = true): ProgramEnvironment {
+  const inputs = withInput ? [{ name: "n", type: Type.number, default: 1 }] : [];
+  const composed = createEnvironment(createStdlib()).forProgram(
+    [],
+    [
+      {
+        id: "host",
+        ports: { inputs, outputs: [{ name: "out", type: Type.number, mode: "required" }] },
+        policy: Policy.host,
+      },
+    ],
+  );
+  if (!composed.ok) throw new Error(JSON.stringify(composed.problems));
+  return composed.environment;
 }
 
 describe("load - code form", () => {
@@ -40,9 +51,8 @@ describe("load - code form", () => {
 
 describe("load - ast form", () => {
   it("re-analyses against the LOAD-TIME language: descriptor drift surfaces as errors", () => {
-    // Save under a language WITH input $n...
-    const envA = makeEnv(true);
-    const parsed = envA.parse("output out = $n + 1");
+    // Save under an environment WITH input $n...
+    const parsed = makeEnv(true).parse("output out = $n + 1");
     if (!parsed.ok) throw new Error("parse failed");
     const saved = serialiseAst(parsed.program);
 
@@ -101,9 +111,12 @@ describe("forProgram", () => {
 
   it("binds the pipeline to the composed descriptor", () => {
     const env = createEnvironment(createStdlib());
+    const empty = env.forProgram([], []);
+    if (!empty.ok) throw new Error("compose failed");
     const parsed = env.parse(SOURCE);
     if (!parsed.ok) throw new Error("parse failed");
-    const bare = env.analyse(parsed.program);
+    // Nothing is declared without layers, so `$x` is unknown.
+    const bare = empty.environment.analyse(parsed.program);
     expect(bare.errors.map((e) => e.kind)).toContain("unknown_program_input");
 
     const result = env.forProgram([], [DOC]);
@@ -147,7 +160,9 @@ describe("forProgram", () => {
 
     // load analyses against the environment own descriptor: a saved program ports are
     // layer data for an instance to attach, never something load applies by itself.
-    const bare = env.load(serialiseSource(SOURCE, DOC.ports));
+    const empty = env.forProgram([], []);
+    if (!empty.ok) throw new Error("compose failed");
+    const bare = empty.environment.load(serialiseSource(SOURCE, DOC.ports));
     expect(bare.ok).toBe(true);
     if (!bare.ok) return;
     expect(bare.program.outputs.has("out")).toBe(false); // dropped, $x is unknown there

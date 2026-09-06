@@ -8,7 +8,7 @@
 
 import { run } from "../../src/language/runtime/runner";
 import {
-  fullLang,
+  fullDescriptor,
   fullProgram,
   scenarios,
   changesFrom,
@@ -23,7 +23,7 @@ for (let i = 0; i < scenarios.length; i++) {
 
   logHeader(s, changesFrom(prev, s));
   const t0 = performance.now();
-  const outputs = run(fullProgram, fullLang.descriptor, {
+  const outputs = run(fullProgram, fullDescriptor, {
     men: s.men,
     women: s.women,
     unknown: s.unknown,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { analyse, getOutputType } from "./analyser/analyser";
 import { composeLayers, type PortProblem } from "./compose";
-import { type PortLayer, type Ports, Policy } from "./infra/ports";
+import { EMPTY_PORTS, type PortLayer, type Ports, Policy } from "./infra/ports";
 import { Type } from "./infra/types";
 import { createLanguage, parseSource } from "./language";
 import { createStdlib } from "./stdlib";
@@ -47,16 +47,17 @@ describe("composeLayers", () => {
     expect(provenance.outputs.get("tally")).toEqual({ layerId: "host", level: "global" });
   });
 
-  it("keeps ops and evaluators by reference and never mutates the language descriptor", () => {
+  it("keeps ops and evaluators by reference and leaves the vocabulary alone", () => {
     const lang = createStdlib();
-    const before = lang.descriptor.inputs.size;
+    const before = lang.descriptor.types.size;
     const result = composeLayers(
       lang.descriptor,
       [],
-      [layer("d", { inputs: [{ name: "x", type: Type.number }] })],
+      [layer("d", { types: [{ name: "Bus" }], inputs: [{ name: "x", type: Type.number }] })],
     );
     expect(result.ok && result.descriptor.ops).toBe(lang.descriptor.ops);
-    expect(lang.descriptor.inputs.size).toBe(before);
+    expect(result.ok && result.descriptor.evaluators).toBe(lang.descriptor.evaluators);
+    expect(lang.descriptor.types.size).toBe(before); // the layer's type went nowhere near it
   });
 
   it("flags a name declared twice in one layer", () => {
@@ -188,7 +189,9 @@ describe("composeLayers", () => {
     const parsed = parseSource("output out = $x", lang);
     if (!parsed.ok) throw new Error("parse failed");
 
-    const bare = analyse(parsed.program, lang.descriptor);
+    // A vocabulary declares no ports at all, so nothing can be analysed against one
+    // directly - composing is the only way to get a descriptor.
+    const bare = analyse(parsed.program, withPorts(lang, EMPTY_PORTS));
     expect(bare.errors.map((e) => e.kind)).toContain("unknown_program_input");
 
     const composed = withPorts(lang, {

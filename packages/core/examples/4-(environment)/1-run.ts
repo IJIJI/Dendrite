@@ -1,21 +1,47 @@
 import { readFileSync } from "fs";
-import { createEnvironment, createStdlib, Environment, Language, Type } from "../../src/index";
+import {
+  createEnvironment,
+  createStdlib,
+  Language,
+  Policy,
+  type PortLayer,
+  type ProgramEnvironment,
+  Type,
+} from "../../src/index";
 
 const lang: Language = createStdlib();
-lang.registerInput({ name: "heights_men", type: Type.array(Type.number) });
-lang.registerInput({ name: "heights_woman", type: Type.array(Type.number) });
-lang.registerInput({ name: "heights_unknown", type: Type.array(Type.number) });
-lang.registerInput({ name: "treshold", type: Type.number });
-lang.registerOutput({ name: "pass_men", type: Type.number });
-lang.registerOutput({ name: "pass_woman", type: Type.number });
-lang.registerOutput({ name: "pass_unknown", type: Type.number });
-lang.registerOutput({ name: "pass_total", type: Type.number, mode: "required" });
-lang.registerOutput({ name: "avg_height_men", type: Type.number });
-lang.registerOutput({ name: "avg_height_woman", type: Type.number });
-lang.registerOutput({ name: "avg_height_unknown", type: Type.number });
-lang.registerOutput({ name: "avg_height_total", type: Type.number, mode: "required" });
 
-const env: Environment = createEnvironment(lang);
+// Everything the program reads and produces, as one host layer on top of the language.
+const host: PortLayer = {
+  id: "host",
+  ports: {
+    inputs: [
+      { name: "heights_men", type: Type.array(Type.number) },
+      { name: "heights_woman", type: Type.array(Type.number) },
+      { name: "heights_unknown", type: Type.array(Type.number) },
+      { name: "treshold", type: Type.number },
+    ],
+    outputs: [
+      { name: "pass_men", type: Type.number },
+      { name: "pass_woman", type: Type.number },
+      { name: "pass_unknown", type: Type.number },
+      { name: "pass_total", type: Type.number, mode: "required" },
+      { name: "avg_height_men", type: Type.number },
+      { name: "avg_height_woman", type: Type.number },
+      { name: "avg_height_unknown", type: Type.number },
+      { name: "avg_height_total", type: Type.number, mode: "required" },
+    ],
+  },
+  policy: Policy.host,
+};
+
+const composed = createEnvironment(lang).forProgram([host], []);
+if (!composed.ok) {
+  console.error("Ports do not compose:");
+  for (const problem of composed.problems) console.error(` - ${problem.where}: ${problem.message}`);
+  process.exit(1);
+}
+const env: ProgramEnvironment = composed.environment;
 
 const source = readFileSync(new URL("./heights.den", import.meta.url), "utf8");
 

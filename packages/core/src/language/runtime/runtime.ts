@@ -3,7 +3,7 @@ import { outputDependencies } from "../evaluator/evaluator";
 import { EvalError } from "../evaluator/types";
 import { EMPTY_PORTS, type PortLayer, type Ports, Policy } from "../infra/ports";
 import { type CoreProgram } from "../infra/program";
-import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
+import { type InputDefinition, type LanguageDescriptor, type Vocabulary } from "../infra/registry";
 import { type BoundProgram, ProgramEntry } from "./entry";
 import { defaultValueFor } from "./seed";
 
@@ -146,7 +146,7 @@ export interface Runtime {
   getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined;
 }
 
-export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions = {}): Runtime {
+export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): Runtime {
   let layers: readonly PortLayer[] = options.layers ?? [];
   let globalDescriptor = composeGlobal(layers);
 

@@ -4,6 +4,46 @@ Things deliberately postponed. Each entry notes why it was deferred and what imp
 
 ---
 
+## IMPORTANT — Document the core language (two levels)
+
+**What:** Real documentation of the language itself, in two layers that link to each other.
+
+1. **The chain, in plain terms.** One page a newcomer reads end to end: source text becomes
+   tokens, tokens become a raw program, the analyser turns that into a core program with
+   types resolved and dead outputs dropped, port layers compose into the descriptor it is
+   checked against, and the evaluator walks the result on demand with a per-node cache. Say
+   what each stage is allowed to decide and what it must leave alone. One worked example
+   carried through every stage, the same program from text to output values.
+2. **In depth, per stage.** Lexer and the identifier rule; the Pratt parser kernel and how a
+   grammar registers into it; the analyser passes (reference graph, topological order,
+   poisoning, output validation) and every error and warning kind with an example that
+   triggers it; the type system (structured Type, extends chains, array covariance, function
+   variance, the functions-are-never-any totality guard); ports, layers, policies and
+   composition order; the runtime levels (run, runner, runtime, instance) and what each is
+   for; persistence and the two version axes.
+
+**Why deferred:** Everything written so far is either a design record (`.docs/decisions.md`,
+`analyser-spec.md`) or an architecture map for people already inside the code. There is no
+document that teaches the language to someone who has not read it. The ports refactor changed
+the shape of the chain, so writing this before that work settled would have meant rewriting it.
+
+**What it requires:**
+- A stable pipeline. The ports/instance refactor (plan: ports, layers, program instances) has
+  to land first, including the descriptor split, or half the prose ages out immediately.
+- Decide the home: `packages/core/src/readme.md` is a file layout, not a tutorial. This
+  probably wants `.docs/language/` with one file per stage plus the overview, or a docs site
+  (see *Web documentation site*).
+- Every code sample compiled by a test, so examples cannot rot. The examples folder already
+  does this and should be the source of the worked example.
+- The ops reference (`.docs/ops-reference.md`) becomes the appendix rather than being retyped.
+
+**Driving need:** onboarding anyone, including the author after a break, and any external user
+of `@dendrite-lang/core`. This is the gap between "the code is good" and "the language exists
+for other people". Ranked important rather than deferred-indefinitely: it should be written
+while the refactor is fresh, not years later.
+
+---
+
 ## Explicit conversion ops
 
 **What:** Type-conversion ops in the core language — `ToBool`, `ToNumber`, `ToString`, and any others that prove useful.

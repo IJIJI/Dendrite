@@ -39,7 +39,7 @@ export function Inputs({ readOnly = false, title, className, style }: InputsProp
 function InputList({ editor, readOnly }: { editor: EditorHandle; readOnly: ReadOnly }) {
   const { session } = editor;
   const values = useObservable(session.inputs);
-  const widgets = useMemo(() => widgetsFor(session.language.descriptor), [session]);
+  const widgets = useMemo(() => widgetsFor(session.descriptor), [session]);
 
   if (widgets.length === 0) {
     return <p className="dendrite-empty">This program declares no inputs.</p>;

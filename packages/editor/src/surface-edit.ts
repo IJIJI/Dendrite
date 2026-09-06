@@ -1,4 +1,4 @@
-import { type LanguageDescriptor, Type, typeToString } from "@dendrite-lang/core";
+import { type Vocabulary, Type, typeToString } from "@dendrite-lang/core";
 
 import { type SurfaceInputSpec, type SurfaceOutputSpec, type SurfaceSpec } from "./surface";
 
@@ -76,7 +76,7 @@ const baseName = (t: Type): string | undefined =>
  */
 export function validateSurface(
   user: SurfaceSpec,
-  descriptor: LanguageDescriptor,
+  descriptor: Vocabulary,
   provided?: SurfaceSpec,
 ): SurfaceProblem[] {
   const problems: SurfaceProblem[] = [];
@@ -146,7 +146,7 @@ export interface TypeOption {
  * then the rest alphabetically; `null` is not a useful declaration) and the list of each.
  * One array level - nothing has needed more.
  */
-export function typeOptions(descriptor: LanguageDescriptor): TypeOption[] {
+export function typeOptions(descriptor: Vocabulary): TypeOption[] {
   const primitives = ["number", "boolean", "string", "any"];
   const others = [...descriptor.types.keys()]
     .filter((name) => !primitives.includes(name) && name !== "null")

@@ -1,5 +1,5 @@
 import { type ASTNode, type LiteralNode } from "../infra/nodes";
-import { type LanguageDescriptor } from "../infra/registry";
+import { type Vocabulary } from "../infra/registry";
 import { type Token, type TokenKind } from "./lexer";
 import { type Grammar } from "./grammar";
 import {
@@ -30,7 +30,7 @@ export class Parser {
 
   constructor(
     readonly tokens: Token[],
-    readonly descriptor: LanguageDescriptor,
+    readonly descriptor: Vocabulary,
     readonly grammar: Grammar,
   ) {}
 
@@ -143,7 +143,7 @@ export interface ExpressionResult {
 // expression-level testing and reuse.
 export function parseExpression(
   tokens: Token[],
-  descriptor: LanguageDescriptor,
+  descriptor: Vocabulary,
   grammar: Grammar,
 ): ExpressionResult {
   const p = new Parser(tokens, descriptor, grammar);
@@ -158,11 +158,7 @@ export function parseExpression(
 //? Program entry: parse a token stream into a RawProgram. Gated: any error → no
 // program. Lexer diagnostics are merged in by the source→program pipeline, not here.
 // TODO: implement partial parsing where errored bindings are set to an error ast node.
-export function parse(
-  tokens: Token[],
-  descriptor: LanguageDescriptor,
-  grammar: Grammar,
-): ParseResult {
+export function parse(tokens: Token[], descriptor: Vocabulary, grammar: Grammar): ParseResult {
   const p = new Parser(tokens, descriptor, grammar);
   const bindings = new Map<string, ASTNode>();
   const outputs = new Map<string, ASTNode>();
