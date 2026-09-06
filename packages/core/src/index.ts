@@ -57,6 +57,16 @@ export * from "./language/evaluator/types"; // EvalState, EvalError (+ kind)
 export { run, createProgramRunner, type ProgramRunner } from "./language/runtime/runner";
 export { defaultValueFor } from "./language/runtime/seed";
 export {
+  createInstance,
+  type ProgramInstance,
+  type InstanceOptions,
+  type ProgramDiagnostic,
+  type EvalResult,
+  type PortsState,
+  type AttachedLayer,
+  type Snapshot,
+} from "./language/runtime/instance";
+export {
   createRuntime,
   type Runtime,
   type RuntimeOptions,

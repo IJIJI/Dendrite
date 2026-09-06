@@ -7,8 +7,9 @@ import { type LanguageDescriptor } from "./infra/registry";
 import { assertSavedPorts, deserialise, migrate, type SavedProgram } from "./infra/serialise";
 import { type Language, parseSource } from "./language";
 import { type ParseError, type ParseResult, type ParseWarning } from "./parser/types";
+import { createInstance, type InstanceOptions, type ProgramInstance } from "./runtime/instance";
 import { createProgramRunner, run, type ProgramRunner } from "./runtime/runner";
-import { createRuntime, type Runtime } from "./runtime/runtime";
+import { createRuntime, type Runtime, type RuntimeOptions } from "./runtime/runtime";
 
 //? Environment: a Language bound to its convenience operations, so callers don't thread
 // `language` / `descriptor` through every call. The front door for embedding Dendrite.
@@ -88,8 +89,10 @@ export interface Environment extends Pipeline, ProgramEnvironmentFactory {
   readonly language: Language;
   /** Lex + parse source into a RawProgram (no analysis). */
   parse(source: string): ParseResult;
-  /** Reactive multi-program runtime sharing this language's descriptor. */
-  createRuntime(): Runtime;
+  /** Reactive multi-program runtime over this language and the given global port layers. */
+  createRuntime(options?: RuntimeOptions): Runtime;
+  /** One deployed program on that runtime, with its own layers, values and observables. */
+  createInstance(runtime: Runtime, options: InstanceOptions): ProgramInstance;
 }
 
 const loadFailure = (kind: LoadError["kind"], e: unknown): LoadResult => ({
@@ -180,24 +183,30 @@ export function createEnvironment(language: Language): Environment {
     );
   }
 
+  function forProgram(
+    global: readonly PortLayer[],
+    program: readonly PortLayer[],
+  ): ProgramEnvironmentResult {
+    const composed = composeLayers(descriptor, global, program);
+    if (!composed.ok) return { ok: false, problems: composed.problems };
+    return {
+      ok: true,
+      environment: {
+        descriptor: composed.descriptor,
+        provenance: composed.provenance,
+        ...pipelineFor(language, composed.descriptor),
+      },
+    };
+  }
+  // An instance depends on the factory, not on this whole environment (ISP + DIP).
+  const factory: ProgramEnvironmentFactory = { forProgram };
+
   return {
     language,
     parse: (source) => parseSource(source, language),
     ...pipelineFor(language, descriptor),
-
-    forProgram(global, program) {
-      const composed = composeLayers(descriptor, global, program);
-      if (!composed.ok) return { ok: false, problems: composed.problems };
-      return {
-        ok: true,
-        environment: {
-          descriptor: composed.descriptor,
-          provenance: composed.provenance,
-          ...pipelineFor(language, composed.descriptor),
-        },
-      };
-    },
-
-    createRuntime: () => createRuntime(descriptor),
+    forProgram,
+    createRuntime: (options) => createRuntime(descriptor, options),
+    createInstance: (runtime, options) => createInstance(factory, runtime, options),
   };
 }
