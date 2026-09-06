@@ -1,3 +1,4 @@
+import { isIdentifierPart, isIdentifierStart, LITERAL_WORDS } from "../infra/identifier";
 import { type SourceRef } from "../infra/nodes";
 import {
   type ParseError,
@@ -57,11 +58,9 @@ const STRUCTURAL_PUNCT = new Set("()[],.=:$");
 const CORE_OPERATORS = ["=>", "->"];
 
 // Only literal values are recognised at the lexer level (see the note above TokenKind).
-const LITERAL_WORDS: Record<string, TokenKind> = {
-  true: "boolean",
-  false: "boolean",
-  null: "null",
-};
+// The literal words come from infra/identifier.ts (shared with port-name validation); only
+// their token kinds are lexer knowledge.
+const literalKind = (word: string): TokenKind => (word === "null" ? "null" : "boolean");
 
 // Recognised string escapes. Anything else is preserved verbatim and warned on,
 // so no source text is ever silently destroyed.
@@ -75,9 +74,7 @@ const ESCAPES: Record<string, string> = {
 };
 
 //? Character utilities (pure, no state)
-const isLetter = (ch: string) => /[a-zA-Z_]/.test(ch);
 const isDigit = (ch: string) => ch >= "0" && ch <= "9";
-const isAlnum = (ch: string) => isLetter(ch) || isDigit(ch);
 const isSpace = (ch: string) => ch === " " || ch === "\t" || ch === "\r" || ch === "\n";
 
 interface Pos {
@@ -194,8 +191,8 @@ function scanNumber(s: Scanner): Token {
 function scanIdent(s: Scanner): Token {
   const start = s.mark();
   let value = "";
-  while (!s.atEnd() && isAlnum(s.peek())) value += s.advance();
-  const kind = LITERAL_WORDS[value] ?? "ident";
+  while (!s.atEnd() && isIdentifierPart(s.peek())) value += s.advance();
+  const kind = LITERAL_WORDS.has(value) ? literalKind(value) : "ident";
   return { kind, value, source: s.ref(start, value.length) };
 }
 
@@ -282,7 +279,7 @@ export function tokenise(source: string, operators: readonly string[] = []): Lex
       tokens.push(scanNumber(s));
       continue;
     }
-    if (isLetter(ch)) {
+    if (isIdentifierStart(ch)) {
       tokens.push(scanIdent(s));
       continue;
     }
