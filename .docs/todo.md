@@ -132,6 +132,10 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 linker, ONE package with a `/react` subpath, headless core + React UI, config presets instead of
 deployment tiers). Phases 0–4 there cover extraction through the docs embed.
 
+**→ Core prerequisite planned in [ports-plan.md](ports-plan.md)** (settled 2026-09-06): inputs and
+outputs leave `Language` for layered `Ports` (host / capability / document, shared on the runtime,
+local on a `ProgramInstance`); the editor session becomes an adapter over the instance.
+
 **What:** The dual-mode editor package: a code editor (grown from the playground's framework-free
 `lang/` modules) + the Rete node editor, with graph↔code awareness.
 

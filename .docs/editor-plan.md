@@ -170,6 +170,11 @@ Add/remove/edit input + output declarations; type picker over registered named t
 arrays; validation UX for dangling type references (`boot_failed` rendering exists). Gated by
 `surface.userInputs`; outputs stay host-owned when `surface.provided` exists.
 
+**Superseded 2026-09-06 by `ports-plan.md`:** `surface.provided` / `surface.userInputs` become
+port layers (host, capability, document) with policies, held by the runtime (shared) and the
+`ProgramInstance` (local). The editing UI keeps its intent but builds on layers; commit 15a
+(`EditorSession.setLanguage`, `surface-edit.ts`) folds into that plan's P5.
+
 **Per-input read-only shipped in Phase 2** as host policy on the pane
 (`<Editor.Inputs readOnly={(name) => …}/>`) — deliberately NOT on the surface, because the same
 surface is host-fed in Beacon and user-editable in the playground. What remains for this phase:
