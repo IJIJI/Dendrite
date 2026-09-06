@@ -1,6 +1,7 @@
 import { createEvalState, evaluateProgram, updateInput } from "../evaluator/evaluator";
 import { CoreProgram } from "../infra/program";
 import { LanguageDescriptor } from "../infra/registry";
+import { defaultValueFor } from "./seed";
 
 // runner.ts — single-program convenience API.
 //
@@ -63,9 +64,9 @@ export function createProgramRunner(
   const state = createEvalState();
 
   // Initialise all registered inputs from descriptor defaults —
-  // same behaviour as Runtime.register, prevents input_not_set errors
+  // same rule as Runtime.register (defaultValueFor), prevents input_not_set errors
   for (const [name, def] of descriptor.inputs) {
-    updateInput(name, def.default ?? null, state);
+    updateInput(name, defaultValueFor(def, descriptor), state);
   }
 
   return {
