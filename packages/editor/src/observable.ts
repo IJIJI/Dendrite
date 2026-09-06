@@ -1,18 +1,11 @@
-//? Minimal Observer: a current value plus subscribers. The editor's only reactive
-// primitive - the session publishes through subjects, panes (vanilla now, React later)
-// subscribe. `subscribe` reports CHANGES only; read the current value with `get()`. That is
-// the external-store contract React's useSyncExternalStore expects, so Phase 2 binds these
-// directly without an adapter.
+import { type Observable } from "@dendrite-lang/core";
 
-export interface Observable<T> {
-  get(): T;
-  /** Listen for changes. Returns the unsubscribe function. */
-  subscribe(listener: (value: T) => void): () => void;
-}
+//? The reactive primitive itself lives in core (`language/infra/observable.ts`), because a
+// ProgramInstance publishes through it. It is re-exported here so editor code and editor
+// hosts keep importing it from one place, alongside `watch`, which is a rendering
+// convenience with no business in core.
 
-export interface Subject<T> extends Observable<T> {
-  set(value: T): void;
-}
+export { createSubject, type Observable, type Subject } from "@dendrite-lang/core";
 
 /**
  * Render the current value now and again on every change; returns the unsubscribe.
@@ -20,24 +13,4 @@ export interface Subject<T> extends Observable<T> {
 export function watch<T>(observable: Observable<T>, render: (value: T) => void): () => void {
   render(observable.get());
   return observable.subscribe(render);
-}
-
-export function createSubject<T>(initial: T): Subject<T> {
-  let current = initial;
-  const listeners = new Set<(value: T) => void>();
-  return {
-    get: () => current,
-    set(value) {
-      if (Object.is(value, current)) return;
-      current = value;
-      // Iterate a snapshot: a listener may unsubscribe (itself or another) mid-emit.
-      for (const listener of [...listeners]) listener(value);
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
 }
