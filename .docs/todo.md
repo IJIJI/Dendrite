@@ -233,6 +233,27 @@ custom panel via `search({ createPanel })` from `@codemirror/search` (then a dir
 
 ---
 
+## Editor — a field-wise widget for struct inputs
+
+**What:** Render an input whose type is a struct as one control per field, instead of the raw JSON
+box it gets today.
+
+**Why deferred:** `controlFor` (`packages/editor/src/input-widgets.ts`) follows the `extends` chain to
+a primitive and falls back to `json` for everything else, so arrays, functions, opaque types and
+structs all land in the same textarea. That was fine while structs came only from a host. Once a
+port layer can declare its own struct — which it can, as of the ports work — a user will routinely
+declare one and then have to hand-edit JSON to give it a value.
+
+**What it requires:** `WidgetSpec` gains a nested shape (field name → its own `Control`, recursing
+for nested structs) derived from `TypeDefinition.fields`; the pane renders a labelled group and
+writes back a whole object; a decision on what to show for a field the value is missing (fall back
+to `defaultValueFor` per field). Arrays of structs are a second, larger step — leave them on JSON.
+
+**Driving need:** Phase 3 lets a user declare ports in the UI, and a declared struct is only as
+useful as the widget that fills it.
+
+---
+
 ## Language service (editor intelligence) — the big one
 
 **What:** A **transport-free, DOM-free** query API over `Language` + a document position:
@@ -507,6 +528,14 @@ are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-
   set equality; and inference that produces unions (`If` differing branches → `T | U`, `Find` →
   `T | null`). Nodes that might-or-might-not output then type as `T | null`, narrowed via
   `Default`/`IsSet`. Significant — touches the whole type system. Deferred; nice for soundness.
+- **Enumerated types (a named set of allowed values).** A port layer can declare a struct or a
+  newtype, but there is no way to say "one of these three strings", which is the natural source of a
+  dropdown in the Inputs pane and the most likely thing a user will reach for after structs. Two
+  routes: a string-literal union, which falls out of the union work above and needs a literal arm in
+  the `Type` union; or a `values?: readonly unknown[]` field on `TypeDefinition`, checked by the
+  analyser against literals and used by the editor to pick a select control. The second is far
+  smaller and covers the UI need, but it is a second, weaker notion of a type — settle that fork
+  before building either. Ties to the union entry above and to the struct-widget entry.
 
 ### Doc fixes
 
