@@ -37,9 +37,10 @@ export function Inputs({ readOnly = false, title, className, style }: InputsProp
 }
 
 function InputList({ editor, readOnly }: { editor: EditorHandle; readOnly: ReadOnly }) {
-  const { session } = editor;
-  const values = useObservable(session.inputs);
-  const widgets = useMemo(() => widgetsFor(session.descriptor), [session]);
+  const { instance } = editor;
+  const values = useObservable(instance.values);
+  const ports = useObservable(instance.ports);
+  const widgets = useMemo(() => widgetsFor(ports), [ports]);
 
   if (widgets.length === 0) {
     return <p className="dendrite-empty">This program declares no inputs.</p>;
@@ -51,8 +52,9 @@ function InputList({ editor, readOnly }: { editor: EditorHandle; readOnly: ReadO
           key={widget.name}
           widget={widget}
           value={values[widget.name]}
-          readOnly={isReadOnly(readOnly, widget.name)}
-          onChange={(value) => session.setInput(widget.name, value)}
+          // A host-fed input is shown, never typed into: its value is not the user's.
+          readOnly={widget.hostFed || isReadOnly(readOnly, widget.name)}
+          onChange={(value) => instance.setInput(widget.name, value)}
         />
       ))}
     </>

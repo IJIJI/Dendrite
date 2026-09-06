@@ -16,8 +16,8 @@ export function Outputs({ title, className, style }: PaneProps) {
 }
 
 function OutputList({ editor }: { editor: EditorHandle }) {
-  const { outputs, error } = useObservable(editor.session.outputs);
-  if (error) return <p className="dendrite-runtime-error">{error}</p>;
+  const { outputs, error, stale } = useObservable(editor.instance.outputs);
+  if (error) return <p className="dendrite-runtime-error">{`${error.kind}: ${error.message}`}</p>;
   if (!outputs) {
     return (
       <p className="dendrite-empty">
@@ -38,6 +38,14 @@ function OutputList({ editor }: { editor: EditorHandle }) {
   }
   return (
     <>
+      {/* Stale = the program these came from is no longer the one in the editor. They stay
+          on screen because they are what a host is still acting on. */}
+      {stale ? (
+        <p className="dendrite-output-stale">
+          <span className="dendrite-tag dendrite-tag-stale">stale</span>
+          Showing the last program that ran.
+        </p>
+      ) : null}
       {[...outputs].map(([name, value]) => (
         <div key={name} className="dendrite-output-row">
           <span className="dendrite-output-name">{name}</span>

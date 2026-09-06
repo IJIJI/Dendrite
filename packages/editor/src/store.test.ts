@@ -12,8 +12,10 @@ import {
 
 const doc = (a = 1): EditorDocument => ({
   version: DOCUMENT_VERSION,
-  program: serialiseSource("output out = $a"),
-  surface: { inputs: [{ name: "a", type: { kind: "name", name: "number" } }], outputs: [] },
+  program: serialiseSource("output out = $a", {
+    inputs: [{ name: "a", type: { kind: "name", name: "number" } }],
+    outputs: [],
+  }),
   inputValues: { a },
 });
 

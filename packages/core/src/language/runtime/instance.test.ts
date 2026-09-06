@@ -95,6 +95,13 @@ describe("createInstance - boot", () => {
     expect(instance.snapshot.get().inputValues).toEqual({ p: 7 });
   });
 
+  it("publishes the seeded values, not an empty map", () => {
+    // Regression: the first seed equals the map the constructor filled from inputValues, so
+    // comparing the two skipped the publish and every subscriber booted with nothing.
+    const { instance } = setup({ inputValues: { p: 7 } });
+    expect(instance.values.get()).toEqual({ p: 7 });
+  });
+
   it("refuses more than one persisted layer", () => {
     expect(() =>
       setup({
