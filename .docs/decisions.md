@@ -86,9 +86,37 @@ Never inline `actual === expected`. The function is in registry.ts and takes `de
 **ProgramHandle from register().**
 `runtime.register(id, program)` returns a handle with `onOutput`, `onError`, `unregister`. Per-program handler sets stored in ProgramEntry. `unregister()` clears all per-program handlers. Global `runtime.onOutput` remains for dashboards/loggers that observe all programs.
 
-**run() / createProgramRunner() / createRuntime() — three levels.**
+**run() / createProgramRunner() / createRuntime() / createInstance() — four levels.**
 Not unified behind one API. The choice between them is contextual and meaningful. Callers know which they need.
 
-**Environment wrapper (planned, not built).**
-Will hold the descriptor (and, later, a shared prelude) to avoid threading it through every call. Will expose analyse, load, run, createRunner, runtime, and a convenience register(id, saved) that combines load + runtime.register. The analyser and parser it wraps now exist (`analyse`, `parseSource`); environment + serialise are the remaining glue.
+**Environment holds the pipeline; only a ProgramEnvironment can analyse.**
+`createEnvironment(language)` gives `parse`, `forProgram`, `createRuntime` and `createInstance`. The pipeline itself (`analyse`, `compile`, `load`, `run`, `createRunner`) lives on the `ProgramEnvironment` that `forProgram(global, program)` returns, because a language declares no ports and analysing against one silently drops every output as unknown. That was a real bug before the split, caught while writing the environment tests.
+
+---
+
+## Ports, layers and instances (2026-09)
+
+**A language is vocabulary; ports arrive in layers.**
+`Vocabulary` = types, ops, evaluators. `LanguageDescriptor` = that plus inputs and outputs, produced only by `composeLayers`. `registerInput` / `registerOutput` are gone. The motive: a host contract, a per-document surface and a per-capability set of inputs are all "declarations on top of a language", and copying-and-mutating a language per document was the workaround for not having them.
+
+**Order is authority; there is no override.**
+Layers compose in order — the language, then global layers, then program layers — and the first declarer keeps a name. A later layer taking it is `shadowed_name`, blamed on the LATER layer, and any problem fails the whole compose so nothing partially applies. A host contract therefore outranks a document, and a user's declaration can never silently shadow it.
+
+**Policy is data, not a role.**
+`LayerPolicy { editable, feeds, persisted }` with two presets (`Policy.host`, `Policy.user`) and `Policy.custom`. Core enforces none of it: `setInput` accepts any program-level input so a host can seed its own sensor. It is UI policy, and it is what a remote runtime would enforce server-side.
+
+**At most one persisted layer per instance.**
+Makes `snapshot` and `setProgram` unambiguous: the snapshot is that layer's ports plus its inputs' values, and `saved.ports` always targets it. A host persisting more merges them into one.
+
+**The snapshot is silent unless a save would care.**
+It emits for the program, the persisted layer's ports, and the values of that layer's inputs — never for a host pushing a value into an input it feeds itself. Without that a capability sensor writing every frame would mark a document dirty forever.
+
+**Stale outputs rather than hidden ones.**
+When a program stops compiling the runtime keeps running the last good one. Everything it produces afterwards is published with `stale: true`, including outputs from a global update. What the lights follow is what the UI shows, marked.
+
+**Program-level values have one owner.**
+The instance owns them and hands them to the runtime on every register and replace. The entry follows rather than re-deriving, because two components applying "the same rule" independently drift the moment one of them skips a push.
+
+**The parser reads no declarations.**
+`$x` is an input because of the sigil. The type it stamps was always overwritten by the analyser, so reading a declaration at parse time was dead data — and after the split the parser has no ports to read.
 

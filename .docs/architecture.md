@@ -6,8 +6,12 @@
 infra/      — leaf types & semantics (no deps on the rest)
   types.ts      Type union (name | array | function) + constructors, typeToString, predicates
   nodes.ts      ASTNode / CNode, SourceRef, LiteralValue, Analysed, node constructors
-  registry.ts   LanguageDescriptor, descriptor definition types, isCompatible, FnValue
+  registry.ts   Vocabulary + LanguageDescriptor, definition types, isCompatible, FnValue
+  ports.ts      Ports, PortType, PortLayer, Policy, flattenPorts, isPorts
+  identifier.ts the one identifier rule, shared by the lexer and port names
+  observable.ts Observable / Subject / createSubject — the reactive primitive
   program.ts    RawProgram, CoreProgram
+  serialise.ts  SavedProgram (+ the ports it declares), serialise / deserialise / migrate
   ↑
 parser/     — syntax (a grammar-agnostic Pratt kernel + a registered grammar)
   lexer.ts        tokenise()
@@ -16,17 +20,34 @@ parser/     — syntax (a grammar-agnostic Pratt kernel + a registered grammar)
   core-grammar.ts installCoreGrammar() — Dendrite's always-present syntax
   precedence.ts   the BP binding-power ladder (shared convention)
   ↑
-language.ts — assembly: Language = { descriptor, grammar }; createLanguage / extendLanguage / parseSource
+language.ts — assembly: Language = { descriptor: Vocabulary, grammar }; createLanguage /
+              extendLanguage / parseSource
+  ↑
+compose.ts  — composeLayers(vocabulary, global, program) → the LanguageDescriptor a program is
+              analysed and evaluated against, plus provenance; or the problems, each blamed
+              on the layer that caused it
   ↑
 stdlib/     — createStdlib(): primitive types, ops, and their operators
 ```
 
 Consumers of infra (independent of the parser): `analyser/` (`analyse`), `evaluator/`
-(`evaluate`, `EvalState`), `runtime/` (`run`, `createProgramRunner`, `createRuntime`).
+(`evaluate`, `EvalState`), `runtime/` (`run`, `createProgramRunner`, `createRuntime`,
+`createInstance`).
+
+**A language is vocabulary only.** `Vocabulary` is types, ops and evaluators — the words programs
+are written in. What a program reads and produces arrives as **port layers** that compose on top,
+producing a `LanguageDescriptor`. Only `composeLayers` produces one, which is what stops a
+program being analysed against a language that declares nothing: with no declarations every
+output would be dropped as unknown, silently.
+
+Layers stack in order and an earlier one owns a contested name, so a problem is always reported
+against the LATER layer. They hang at one of two **levels**: global (the runtime, one value for
+every program) or program (one instance, values per program).
 
 Semantics (the descriptor: ops, evaluators, types) and syntax (the grammar: nuds/leds/operators)
 are separate concerns that **meet at the AST node**. The Rete editor will read the descriptor only;
-the code editor reads descriptor + grammar.
+the code editor reads descriptor + grammar. The parser reads neither ports nor declarations:
+`$x` is an input because of the sigil, and the analyser types it from the composed descriptor.
 
 ---
 
@@ -125,11 +146,17 @@ can't see them change between iterations. Closures are not cached (they capture 
 
 ---
 
-## Host integration — inputs-only
+## Host integration — inputs-only, declared in layers
 
 Ops are **pure functions of their declared inputs**; there is no `hostContext` side-channel. The host
 projects its world (e.g. an ATEM connection's source/tally state) into typed **context inputs** and
-`updateInput`s them on change. An evaluator reads host data only through op inputs the program wired a
+`updateInput`s them on change.
+
+A host declares those inputs as a **port layer** rather than on the language: `Policy.host` marks a
+layer it feeds and the user may not edit, `Policy.user` the document's own, which is editable and
+saved. Layers at the **global** level hang on the runtime (one value for every program); layers at
+the **program** level belong to one instance. A capability the host feeds to one program alone is
+just a `Policy.host` layer at program level, named after the capability. An evaluator reads host data only through op inputs the program wired a
 context input into — so every dependency is visible in the AST, captured in `dependsOn`, and correctly
 re-evaluated. (A hidden channel — `hostContext` or letting an evaluator peek at `state.inputs` — would
 be invisible to `dependsOn` and cache stale; rejected for exactly that reason. Dendrite is
@@ -153,14 +180,27 @@ side-effect-free, so there's no effect-capability left for such a channel to car
 
 ## Execution levels (`runtime/`)
 
-| | `run()` | `createProgramRunner()` | `createRuntime()` |
-|---|---|---|---|
-| State | None | Single program | Multi-program |
-| Caching | No | Yes | Yes |
-| Subscriptions | No | No | Yes (`ProgramHandle`) |
+| | `run()` | `createProgramRunner()` | `createRuntime()` | `createInstance()` |
+|---|---|---|---|---|
+| State | None | Single program | Multi-program | One deployed program |
+| Caching | No | Yes | Yes | Yes (via the runtime) |
+| Subscriptions | No | No | Yes (`ProgramHandle`) | Five observables |
+| Owns | — | — | global layers, global values | its program layers, values, diagnostics, snapshot |
 
-All accept a `CoreProgram`. `register()` returns a `ProgramHandle` with `onOutput`, `onError`,
-`unregister`. The runtime indexes programs by input name so only affected programs re-evaluate.
+The first three accept a `CoreProgram`. `register()` returns a `ProgramHandle` with `onOutput`,
+`onError`, `setInput`, `fireTrigger` and `unregister`. The runtime indexes programs by GLOBAL input
+name, so only affected programs re-evaluate and a program-level name never fans out.
+
+`createInstance()` takes a `SavedProgram` instead, and is the front door for a host: it composes
+its layers, compiles, registers, recompiles when the global layers move under it, and publishes
+`diagnostics`, `ports`, `outputs`, `values` and `snapshot`. Internally the runtime keeps one
+`ProgramEntry` per registration (`runtime/entry.ts`), which owns that program's evaluation state —
+and therefore its node cache — while the runtime keeps the registry, the index and the global
+values. Seeding goes through one rule for every level (`runtime/seed.ts`).
+
+When a program stops compiling the runtime keeps running the last good one, and everything it
+produces is published `stale: true` rather than hidden — what the lights follow is what the UI
+shows, marked.
 
 ---
 
@@ -171,7 +211,11 @@ formatting, and the operator surface (desugaring is destructive). So `SavedProgr
 union of authoring forms: `code` (source text, re-parsed on load) | `rete` (opaque graph blob,
 reserved — schema + loader arrive with the editor package) | `ast` (plain-record RawProgram, for
 programmatic/headless use; SourceRefs kept verbatim). `env.load(saved)` dispatches on form and
-always **re-analyses** against the load-time language, so descriptor drift surfaces as errors.
+always **re-analyses** against the load-time descriptor, so drift surfaces as errors.
+
+A saved program also carries the ports it declares for itself (`SavedProgram.ports`), so a document
+travels with its own inputs and outputs. That plus the values of those inputs is core's `Snapshot`,
+the memento a host stores; a host's own envelope (ids, names, timestamps, revisions) wraps it.
 `LoadResult` = `CompileResult` + a `stage: "load"` arm (`unsupported_form` / `unsupported_version`
 / `malformed_program`). Core owns the format `version` (+ `migrate()` seam); hosts wrap their own
 envelope (ids, names, timestamps).

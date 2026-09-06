@@ -1,3 +1,10 @@
+> **Delivered 2026-09-07.** Built over eleven commits, B1 through I6. Where this document and
+> the code disagree, the code is right; `.docs/decisions.md` records what was settled along the
+> way, and `.docs/architecture.md` describes the result. Kept for the reasoning, not as a spec.
+>
+> Terminology as built: **PortLayer**, levels **global** / **program**, `Policy.host` /
+> `Policy.user` / `Policy.custom`, `composeLayers`, `ProgramEnvironment`, `ProgramInstance`.
+
 # Ports and Program Instances — core plan
 
 Design settled 2026-09-06; implementation timing is decided separately (see the last section).

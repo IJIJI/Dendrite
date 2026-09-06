@@ -359,6 +359,44 @@ is a peripheral that attaches to a running program, edits a draft of it, and app
 
 ---
 
+## Ports refactor — the small things it left
+
+Each of these is a deliberate omission from the 2026-09 ports work, not an oversight. None blocks
+anything; they are grouped so they can be swept in one sitting.
+
+**An input node's type is write-only until the analyser fills it.** `InputNode.type` is required,
+so the parser stamps `Type.any` as a placeholder, and the analyser overwrites it unconditionally —
+including a type written by hand into a raw program, which several examples do. The codebase
+already has the right convention: a literal node and a reference node carry no type until analysis,
+and their analysed forms re-declare it as required. Making `InputNode.type` optional and requiring
+it on `CInputNode` deletes the placeholder instead of explaining it. Touches the node union, the
+serialiser's guard and a few fixtures.
+
+**`TypeDefinition.schema` is close to dead weight.** Exactly one line in the whole repo reads it
+(`extendLanguage`, to re-register a type onto an extension); nothing validates a value with it.
+A layer-declared type cannot have one at all — ports are JSON that round-trips through a database,
+and a Zod schema is a live object — so `composeLayers` fills in `z.unknown()`. Decide whether the
+field earns its place before anything starts relying on it. If runtime validation ever arrives, a
+layer type needs a serialisable description of its shape, not a schema object.
+
+**`setLayer` composes twice.** Once to decide whether the change is blocked, once inside the
+recompile that follows. Compose is cheap and layer edits are not per-keystroke, so this is a
+knowing trade of work for a simpler control flow. Revisit only if a profile says so.
+
+**A program id that collides with a global layer id throws an unhelpful error.** The runtime names
+a program's synthetic layer after the program, so registering `"grade"` while a global layer is
+also called `"grade"` reports a duplicate layer id. Accurate, and confusing for what is really a
+name-choice accident. Catch it in `register` and rethrow saying the program id collides.
+
+**`watch` has no caller.** It arrived when the editor was extracted from the playground, for a
+vanilla pane module that never existed. Kept because it is exactly what a framework-free host
+needs, but it is untested by use.
+
+**The `.docs/` set has one CRLF file.** `architecture.md` uses CRLF while every other document uses
+LF, which makes multi-line patches to it fail in confusing ways. Normalise it.
+
+---
+
 ## Language service (editor intelligence) — the big one
 
 **What:** A **transport-free, DOM-free** query API over `Language` + a document position:
