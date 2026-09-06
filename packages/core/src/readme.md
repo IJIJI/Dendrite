@@ -5,12 +5,17 @@ A declarative dataflow language. Programs declare named bindings and outputs; wh
 ## Pipeline
 
 ```
+vocabulary + port layers → composeLayers → LanguageDescriptor
+                                    │
+                                    ▼ (analyse checks against it, evaluate runs with it)
 SavedProgram → deserialise → RawProgram → analyse → CoreProgram → evaluate → Map<string, unknown>
 ```
 
 - **RawProgram** - unvalidated AST from the parser or rete adapter (`ASTNode`)
 - **CoreProgram** - validated, every node has `dependsOn: ReadonlySet<string>` (`CNode`)
 - Store RawProgram; CoreProgram is always re-derived on load
+- A **language** is vocabulary only (types, ops, evaluators). Inputs and outputs arrive as port
+  layers, and only `composeLayers` produces the descriptor a program is checked against
 
 ## Pull-based evaluation
 
@@ -23,16 +28,26 @@ Caching uses two WeakMaps keyed on CNode object identity:
 
 ## Execution levels
 
-|               | `run()` | `createProgramRunner()` | `createRuntime()`   |
-| ------------- | ------- | ----------------------- | ------------------- |
-| State         | None    | Single program          | Multi-program       |
-| Caching       | No      | Yes                     | Yes                 |
-| Subscriptions | No      | No                      | Yes (ProgramHandle) |
+Ports hang at one of two levels. **Global** ports live on the runtime: one value shared by every
+program it holds. **Program** ports belong to one program: its own values, and the persisted
+layer's are what a save captures.
+
+|               | `run()` | `createProgramRunner()` | `createRuntime()`   | `createInstance()`                            |
+| ------------- | ------- | ----------------------- | ------------------- | --------------------------------------------- |
+| State         | None    | Single program          | Multi-program       | One deployed program                          |
+| Caching       | No      | Yes                     | Yes                 | Yes (via the runtime)                         |
+| Subscriptions | No      | No                      | Yes (ProgramHandle) | Five observables                              |
+| Owns          | —       | —                       | global layers       | program layers, values, diagnostics, snapshot |
+
+A `ProgramInstance` is the front door for a host: it composes, compiles, registers, recompiles
+when the global layers move under it, and publishes `diagnostics`, `ports`, `outputs`, `values`
+and `snapshot`. The snapshot is the memento a host stores, and it stays silent when a host pushes
+a value into an input it feeds itself, so a sensor never dirties a document.
 
 ## File layout
 
-Layering DAG: **infra ← parser ← language.ts ← stdlib**; analyser / evaluator / runtime
-consume infra. Semantics (descriptor) and syntax (grammar) meet at the AST node.
+Layering DAG: **infra ← parser ← language.ts ← compose.ts ← stdlib**; analyser / evaluator /
+runtime consume infra. Semantics (descriptor) and syntax (grammar) meet at the AST node.
 
 ```
 src/language/

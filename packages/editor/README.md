@@ -1,6 +1,6 @@
 # @dendrite-lang/editor
 
-The Dendrite editor: a **headless core** (session, document, stores, CodeMirror adapter) plus
+The Dendrite editor: a **headless core** (document, stores, CodeMirror adapter) plus
 **React compound components** under `@dendrite-lang/editor/react`. A host lays the components out
 however it likes and owns persistence and routing; the editor owns everything inside.
 
@@ -35,15 +35,15 @@ import { Editor } from "@dendrite-lang/editor/react";
 
 | Component                                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<Editor>`                                  | The provider. `document`; `language?` (default: the stdlib — the document's surface is applied to a _copy_); `onChange?` (debounced; source **and** input changes). A new `document` remounts the editor                                                                                                                                                                                                                                           |
-| `<Editor.Canvas/>`                          | The code editor and the place the session is born — required                                                                                                                                                                                                                                                                                                                                                                                       |
-| `<Editor.Inputs/>`                          | `readOnly`: `true`, or a predicate by input name — host policy, deliberately not part of the document. Editable fields apply once they parse; read-only rows are live                                                                                                                                                                                                                                                                              |
-| `<Editor.Outputs/>` `<Editor.Diagnostics/>` | Last evaluation / diagnostics with click-to-jump. A failed mount surfaces as a `boot_failed` diagnostic instead of a white screen                                                                                                                                                                                                                                                                                                                  |
+| `<Editor>`                                  | The provider. `document`; `language?` (default: the stdlib, copied so nothing leaks back); `layers?` (host port layers beneath the document's own); `onChange?` (debounced; fires for anything a save would capture). A new `document` **or `layers`** remounts the editor, so both must be stable references                                                                                                                                      |
+| `<Editor.Canvas/>`                          | The code editor and the place the running program is born — required                                                                                                                                                                                                                                                                                                                                                                               |
+| `<Editor.Inputs/>`                          | One row per program-level input, in layer order. `readOnly`: `true`, or a predicate by input name — host policy, deliberately not part of the document. An input a host layer FEEDS is always read-only, whatever the prop says. Rows keep rendering while the ports fail to compose, which is when you need to see them                                                                                                                           |
+| `<Editor.Outputs/>` `<Editor.Diagnostics/>` | Last evaluation / diagnostics with click-to-jump. Outputs carry a **stale** tag when the running program is no longer the one in the editor. A problem with the ports names its layer and row instead of a line. A failed mount surfaces as a `boot_failed` diagnostic instead of a white screen                                                                                                                                                   |
 | every pane                                  | `title?: string \| null` (retitle / hide), `className`, `style`                                                                                                                                                                                                                                                                                                                                                                                    |
 | `<Editor.TopBar/>`                          | `brand`, centred `title`, `menus` (data, one submenu level), `actions` (`{ icon, label, onClick }` or `{ element }` for custom UI). Inside `<Editor>` it also carries the editor's own Undo/Redo (source history) ahead of the host's actions, and its theme toggle (`themeToggle`, default on: system → light → dark, remembered in `localStorage`; pass `false` when the host has its own theme setting and writes `data-dendrite-theme` itself) |
 | `<Wordmark/>`                               | The outlined brand wordmark: letters in the text colour, fork in the accent. `<Editor.TopBar/>`'s default `brand`                                                                                                                                                                                                                                                                                                                                  |
 | `<Editor.Row/>` `<Editor.Column/>`          | Flex primitives: `grow`, `size`                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `useEditor()`                               | `{ editor, error }` for host components rendered inside `<Editor>` (e.g. to read `editor.getDocument()` on Share)                                                                                                                                                                                                                                                                                                                                  |
+| `useEditor()`                               | `{ editor, error }` for host components rendered inside `<Editor>` (e.g. to read `editor.getDocument()` on Share, or `editor.instance` for anything the panes do not cover)                                                                                                                                                                                                                                                                        |
 
 **Styling:** `style.css` lives in the `dendrite` cascade layer (a host's plain rules win without
 specificity fights) and is themed through `--dendrite-*` custom properties on `:root`: surfaces
@@ -66,28 +66,30 @@ import { createEditor, LocalStorageStore, watch } from "@dendrite-lang/editor";
 const store = new LocalStorageStore("my-app:document");
 const editor = createEditor(el, {
   document: (await store.load()) ?? myPreset,
-  language: myLanguage, // optional - default createStdlib(); the surface is applied to a COPY
-  onChange: (doc) => void store.save(doc), // debounced; fires on source AND input changes
+  language: myLanguage, // optional - default createStdlib(), copied so nothing leaks back
+  layers: { global: [hostContract] }, // optional - must be a STABLE reference
+  onChange: (doc) => void store.save(doc), // debounced; anything a save would capture
 });
 
-watch(editor.session.outputs, (result) => renderOutputs(result));
-watch(editor.session.diagnostics, (list) => renderDiagnostics(list, editor.jumpTo));
-editor.session.setInput("score", 42); // from whatever inputs UI the host renders
-editor.dispose();
+// The editor mounts a core ProgramInstance: five observables and four commands.
+watch(editor.instance.outputs, (result) => renderOutputs(result)); // { outputs, error, stale }
+watch(editor.instance.diagnostics, (list) => renderDiagnostics(list, editor.jumpTo));
+editor.instance.setInput("score", 42); // from whatever inputs UI the host renders
+editor.dispose(); // unregisters the program and stops every subscription
 ```
 
 | Module               | Role                                                                                                                                                                                                                                            |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `editor.ts`          | `createEditor` - the lifecycle Facade: language copy + surface, session, CodeMirror view, debounced compile, lint, `onChange`                                                                                                                   |
+| `editor.ts`          | `createEditor` - the lifecycle Facade: language copy, environment, runtime, the `ProgramInstance` the document runs as, CodeMirror view, debounced recompile, lint, `onChange`                                                                  |
 | `theme.ts`           | `getTheme()` - the page's colour scheme (`auto` / `light` / `dark`): `mode` observable + `set()`, remembered in localStorage; call it before the first render so a remembered mode never flashes. `createThemeController` takes fakes for tests |
-| `session.ts`         | `EditorSession` - compile/run one program; publishes `diagnostics` / `outputs` / `inputs` as observables                                                                                                                                        |
-| `observable.ts`      | `createSubject`, `watch` - the only reactive primitive (React's external-store contract)                                                                                                                                                        |
-| `document.ts`        | `EditorDocument` (`version`, `program`, `surface`, `inputValues`); `migrateDocument` over an `applyMigrations` chain                                                                                                                            |
-| `surface.ts`         | `SurfaceSpec` - types/inputs/outputs as JSON data; `applySurface`                                                                                                                                                                               |
+| `observable.ts`      | `watch`, plus core's `createSubject` re-exported - the only reactive primitive (React's external-store contract)                                                                                                                                |
+| `document.ts`        | `EditorDocument` (`version`, `program` incl. its `ports`, `inputValues`) - core's `Snapshot` plus an envelope version; `migrateDocument` over an `applyMigrations` chain                                                                        |
+| `ports-edit.ts`      | add / update / remove inputs and outputs on a layer's `Ports`, plus the type options a picker offers. Pure; `instance.setLayer` judges the result                                                                                               |
+| `diagnostic.ts`      | `positionOf` - the one adapter from a core `SourceRef` to a line and column                                                                                                                                                                     |
 | `store.ts`           | `DocumentStore` + `MemoryStore` / `LocalStorageStore` / `UrlStore` (adapters never reject)                                                                                                                                                      |
 | `permalink.ts`       | document ↔ URL payload (deflate + base64url, native streams)                                                                                                                                                                                    |
 | `tokens.ts`, `cm.ts` | lexer-driven highlighting and the editor chrome theme; `cm.ts` + `editor.ts` are the only CodeMirror-aware modules                                                                                                                              |
-| `input-widgets.ts`   | descriptor inputs → widget shapes, plus the one shared initial-value rule                                                                                                                                                                       |
+| `input-widgets.ts`   | port declarations → widget shapes, each carrying its layer, whether a host feeds it, and whether that layer is editable                                                                                                                         |
 | `format.ts`          | `formatValue` - the one value→text rule every pane shares                                                                                                                                                                                       |
 | `react/`             | the compound components above - the only place React is allowed                                                                                                                                                                                 |
 
@@ -97,7 +99,10 @@ editor.dispose();
   (a Composite if it needs several backends) and decides autosave versus an explicit save. Which
   inputs a user may edit is host policy too (`readOnly`), never document data. The one thing the
   editor remembers on its own is the theme mode, a UI preference (opt out with `themeToggle={false}`).
-- **Observables, not callbacks.** Any number of consumers subscribe; the session never learns who.
+- **Observables, not callbacks.** Any number of consumers subscribe; the instance never learns who.
+- **The editor edits a running program.** `editor.instance` is a core `ProgramInstance`: the same
+  object a host runs headless. Today the editor builds its own; mounting one a host already runs
+  is the next step (`.docs/todo.md`).
 - **The document is self-contained and versioned.** `applyMigrations` is generic on purpose so a
   host envelope can chain its own versions the same way.
 - **Composition over configuration.** Layout is JSX; presets are compositions; menus and actions

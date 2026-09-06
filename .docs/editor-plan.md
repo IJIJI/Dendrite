@@ -164,21 +164,29 @@ exists (post-release), it is what the top bar shows as the document title.
 
 ---
 
-## Phase 3 — Surface editing, then publish
+## Phase 3 — Port editing, then publish
 
-Add/remove/edit input + output declarations; type picker over registered named types + structural
-arrays; validation UX for dangling type references (`boot_failed` rendering exists). Gated by
-`surface.userInputs`; outputs stay host-owned when `surface.provided` exists.
+Add/remove/edit input + output declarations on the document's own layer; type picker over
+registered named types + structural arrays.
 
-**Superseded 2026-09-06 by `ports-plan.md`:** `surface.provided` / `surface.userInputs` become
-port layers (host, capability, document) with policies, held by the runtime (shared) and the
-`ProgramInstance` (local). The editing UI keeps its intent but builds on layers; commit 15a
-(`EditorSession.setLanguage`, `surface-edit.ts`) folds into that plan's P5.
+**The foundation landed 2026-09-07** with the ports refactor, so this phase is now UI only:
 
-**Per-input read-only shipped in Phase 2** as host policy on the pane
-(`<Editor.Inputs readOnly={(name) => …}/>`) — deliberately NOT on the surface, because the same
-surface is host-fed in Beacon and user-editable in the playground. What remains for this phase:
-should inputs that come from `surface.provided` *default* to read-only? Decide with ownership.
+- `ports-edit.ts` returns new `Ports` from pure edits; `instance.setLayer(id, ports)` composes the
+  result and answers with the problems that blocked it, each naming the layer and the row.
+- Nothing in the editor validates. `composeLayers` judges names, duplicates and clashes with a
+  layer beneath, and the Diagnostics pane already renders a `ports`-stage problem with its
+  `where` (e.g. "input score") instead of a line number.
+- `widgetsFor` reads the layers rather than the composed descriptor, so rows keep rendering while
+  a declaration is broken — which is exactly when the user needs to see the row.
+
+**Ownership is settled and needs no decision here.** A layer's `Policy` says it: an input a host
+layer FEEDS renders read-only whatever the pane's `readOnly` prop says, and an input on a layer
+that is not `editable` offers no edit affordance. The pane's `readOnly` prop remains for host
+policy on top of that (the same document is host-fed in Beacon and user-editable in the
+playground).
+
+**Still open for this phase:** a revert affordance for a port edit (a toast, not a second undo
+stack — see `todo.md`), and a field-wise widget for struct inputs, which a user can now declare.
 
 **→ Publish `@dendrite-lang/core@0.1.0`.** Checklist: `repository.directory`, LICENSE + README
 inside `packages/core` (npm packs from there), `publishConfig.access: public`, `files`/`exports`/
