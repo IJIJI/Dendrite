@@ -14,6 +14,8 @@ export * from "./language/infra/nodes"; // ASTNode/CNode + variants, SourceRef, 
 export * from "./language/infra/registry"; // LanguageDescriptor, Op/Input/Output/Type/Evaluator definitions, isCompatible, FnValue
 export * from "./language/infra/program"; // RawProgram, CoreProgram
 export * from "./language/infra/serialise"; // SavedProgram forms, serialise/deserialise/migrate
+export * from "./language/infra/identifier"; // isIdentifier - the one identifier rule (lexer + port names)
+export * from "./language/infra/ports"; // Ports, PortType, PortLayer, Policy, EMPTY_PORTS, flattenPorts, isPorts
 
 // ── language assembly + source → RawProgram ──────────────────────────────────
 export {
@@ -23,6 +25,15 @@ export {
   BP,
   type Language,
 } from "./language/language";
+
+// ── port composition (layers → the descriptor a program is analysed against) ─
+export {
+  composeLayers,
+  type ComposeResult,
+  type PortOrigin,
+  type PortProblem,
+  type Provenance,
+} from "./language/compose";
 
 // ── standard library ─────────────────────────────────────────────────────────
 export { createStdlib, extendStdlib } from "./language/stdlib";
