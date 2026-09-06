@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEnvironment } from "./environment";
 import { createStdlib } from "./stdlib";
+import { type PortLayer, Policy } from "./infra/ports";
 import {
   type SavedAstProgram,
   type SavedProgram,
@@ -66,6 +67,90 @@ describe("load - ast form", () => {
     expect(result.ok).toBe(false);
     if (result.ok || result.stage !== "load") throw new Error("expected load failure");
     expect(result.errors[0].kind).toBe("malformed_program");
+  });
+});
+
+describe("load - ports guard", () => {
+  it("rejects malformed ports as malformed_program, code and ast form alike", () => {
+    const env = makeEnv();
+    const parsed = env.parse("output out = $n + 1");
+    if (!parsed.ok) throw new Error("parse failed");
+    const withBadPorts = (saved: SavedProgram): SavedProgram =>
+      ({ ...saved, ports: { inputs: "x" } }) as unknown as SavedProgram;
+
+    for (const saved of [serialiseSource("output out = $n + 1"), serialiseAst(parsed.program)]) {
+      const result = env.load(withBadPorts(saved));
+      expect(result.ok).toBe(false);
+      if (result.ok || result.stage !== "load") throw new Error("expected load failure");
+      expect(result.errors[0].kind).toBe("malformed_program");
+      expect(env.load(saved).ok).toBe(true); // the same program without ports is fine
+    }
+  });
+});
+
+describe("forProgram", () => {
+  const DOC: PortLayer = {
+    id: "doc",
+    ports: {
+      inputs: [{ name: "x", type: Type.number }],
+      outputs: [{ name: "out", type: Type.number }],
+    },
+    policy: Policy.user,
+  };
+  const SOURCE = "output out = $x + 1";
+
+  it("binds the pipeline to the composed descriptor", () => {
+    const env = createEnvironment(createStdlib());
+    const parsed = env.parse(SOURCE);
+    if (!parsed.ok) throw new Error("parse failed");
+    const bare = env.analyse(parsed.program);
+    expect(bare.errors.map((e) => e.kind)).toContain("unknown_program_input");
+
+    const result = env.forProgram([], [DOC]);
+    if (!result.ok) throw new Error(JSON.stringify(result.problems));
+    const { environment } = result;
+    expect(environment.descriptor.inputs.has("x")).toBe(true);
+    expect(environment.provenance.inputs.get("x")).toEqual({ layerId: "doc", level: "program" });
+
+    const typed = environment.compile(SOURCE);
+    expect(typed.ok).toBe(true);
+    if (!typed.ok) return;
+    expect(environment.run(typed.program, { x: 41 }).get("out")).toBe(42);
+    expect(environment.createRunner(typed.program).run({ x: 1 }).get("out")).toBe(2);
+  });
+
+  it("answers compose problems instead of an environment", () => {
+    const env = createEnvironment(createStdlib());
+    const host: PortLayer = { ...DOC, id: "host", policy: Policy.host };
+    const result = env.forProgram([host], [DOC]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.problems).toEqual([
+      expect.objectContaining({ kind: "shadowed_name", layerId: "doc", where: "input x" }),
+      expect.objectContaining({ kind: "shadowed_name", layerId: "doc", where: "output out" }),
+    ]);
+  });
+
+  it("loads saved programs against the composed descriptor", () => {
+    const env = createEnvironment(createStdlib());
+    const result = env.forProgram([], [DOC]);
+    if (!result.ok) throw new Error(JSON.stringify(result.problems));
+    const parsed = env.parse(SOURCE);
+    if (!parsed.ok) throw new Error("parse failed");
+
+    for (const saved of [serialiseSource(SOURCE, DOC.ports), serialiseAst(parsed.program)]) {
+      const loaded = result.environment.load(saved);
+      expect(loaded.ok).toBe(true);
+      if (!loaded.ok) return;
+      expect(result.environment.run(loaded.program, { x: 41 }).get("out")).toBe(42);
+    }
+
+    // load analyses against the environment own descriptor: a saved program ports are
+    // layer data for an instance to attach, never something load applies by itself.
+    const bare = env.load(serialiseSource(SOURCE, DOC.ports));
+    expect(bare.ok).toBe(true);
+    if (!bare.ok) return;
+    expect(bare.program.outputs.has("out")).toBe(false); // dropped, $x is unknown there
   });
 });
 
