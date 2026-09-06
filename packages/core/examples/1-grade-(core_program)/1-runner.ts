@@ -1,12 +1,23 @@
 import { createStdlib } from "../../src/language/stdlib";
-import { createProgramRunner } from "../../src/language/runtime/runner";
+import { createEnvironment } from "../../src/language/environment";
+import { type PortLayer, Policy } from "../../src/language/infra/ports";
 import { Type } from "../../src/language/infra/types";
 import type { CNode } from "../../src/language/infra/nodes";
 import { CoreProgram } from "../../src/language/infra/program";
 
-// --- Language ---------------------------------------------------------------
+// --- Language + ports -------------------------------------------------------
+// The language is vocabulary (types, ops, evaluators). What a program reads and produces
+// arrives as PORT LAYERS composed on top of it, which is what `forProgram` does below.
 const lang = createStdlib();
-lang.registerInput({ name: "score", type: Type.number });
+const host: PortLayer = {
+  id: "host",
+  ports: { inputs: [{ name: "score", type: Type.number }], outputs: [] },
+  policy: Policy.host,
+};
+
+const composed = createEnvironment(lang).forProgram([host], []);
+if (!composed.ok) throw new Error(JSON.stringify(composed.problems));
+const env = composed.environment;
 
 // --- Program ----------------------------------------------------------------
 // let isPassing = $score > 60
@@ -59,13 +70,12 @@ const program: CoreProgram = {
 };
 
 // --- Evaluate ---------------------------------------------------------------
-// createProgramRunner initialises inputs from descriptor defaults and maintains
-// EvalState across calls — subsequent iterations reuse cached values for nodes
-// whose dependsOn does not intersect changedInputs.
+// createRunner initialises inputs from their defaults (score has none of its own, so it
+// seeds 0, the number type's default) and maintains EvalState across calls — subsequent
+// iterations reuse cached values for nodes whose dependsOn does not intersect changedInputs.
 //
-// For a one-shot evaluation, use run(program, lang.descriptor, { score: 45 })
-// from "../../src/language/runtime/runner" instead.
-const runner = createProgramRunner(program, lang.descriptor);
+// For a one-shot evaluation, use env.run(program, { score: 45 }) instead.
+const runner = env.createRunner(program);
 
 const testCases = [45, 60, 85];
 

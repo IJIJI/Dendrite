@@ -3,7 +3,7 @@ import { type AnalysisError, type AnalysisResult, type AnalysisWarning } from ".
 import { composeLayers, type PortProblem, type Provenance } from "./compose";
 import { type PortLayer } from "./infra/ports";
 import { type CoreProgram, type RawProgram } from "./infra/program";
-import { type LanguageDescriptor } from "./infra/registry";
+import { type LanguageDescriptor, type Vocabulary } from "./infra/registry";
 import { assertSavedPorts, deserialise, migrate, type SavedProgram } from "./infra/serialise";
 import { type Language, parseSource } from "./language";
 import { type ParseError, type ParseResult, type ParseWarning } from "./parser/types";
@@ -14,11 +14,11 @@ import { createRuntime, type Runtime, type RuntimeOptions } from "./runtime/runt
 //? Environment: a Language bound to its convenience operations, so callers don't thread
 // `language` / `descriptor` through every call. The front door for embedding Dendrite.
 //
-// Two levels share one Pipeline:
-//   Environment        - the language alone: parse, the pipeline on the language's own
-//                        descriptor, and the factories for runtimes and program environments
-//   ProgramEnvironment - the same pipeline bound to a descriptor composed from port layers,
-//                        which is what a program with inputs and outputs is analysed against
+// Two levels, and only the second can analyse:
+//   Environment        - the language alone: parse, and the factories for runtimes, program
+//                        environments and instances. A language is vocabulary, so it has no
+//                        ports to check a program against and deliberately offers no compile
+//   ProgramEnvironment - the Pipeline, bound to the descriptor composed from port layers
 // `env.forProgram(global, program)` builds the second from the first; it answers with
 // compose problems instead of throwing, since layers come from hosts and documents.
 // (A shared prelude of helper bindings will attach here later — see .docs/todo.md.)
@@ -49,8 +49,10 @@ export interface LoadError {
 
 export type LoadResult = CompileResult | { ok: false; stage: "load"; errors: LoadError[] };
 
-/** The descriptor-bound operations both environment levels offer. */
+/** The descriptor-bound operations a composed program environment offers. */
 export interface Pipeline {
+  /** Lex + parse source into a RawProgram (no analysis). */
+  parse(source: string): ParseResult;
   /** Analyse a RawProgram into a CoreProgram (or diagnostics). */
   analyse(program: RawProgram): AnalysisResult;
   /** parse + analyse in one call; the result names which stage failed. */
@@ -84,10 +86,10 @@ export interface ProgramEnvironmentFactory {
   forProgram(global: readonly PortLayer[], program: readonly PortLayer[]): ProgramEnvironmentResult;
 }
 
-export interface Environment extends Pipeline, ProgramEnvironmentFactory {
-  /** The wrapped language; its descriptor is reachable as `language.descriptor`. */
+export interface Environment extends ProgramEnvironmentFactory {
+  /** The wrapped language; its vocabulary is reachable as `language.descriptor`. */
   readonly language: Language;
-  /** Lex + parse source into a RawProgram (no analysis). */
+  /** Lex + parse source into a RawProgram. Needs no ports: `$x` parses whatever x is. */
   parse(source: string): ParseResult;
   /** Reactive multi-program runtime over this language and the given global port layers. */
   createRuntime(options?: RuntimeOptions): Runtime;
@@ -101,7 +103,7 @@ const loadFailure = (kind: LoadError["kind"], e: unknown): LoadResult => ({
   errors: [{ kind, message: e instanceof Error ? e.message : String(e) }],
 });
 
-// The one Pipeline implementation, bound to whichever descriptor a level analyses against.
+// The one Pipeline implementation, bound to the composed descriptor of one program.
 function pipelineFor(language: Language, descriptor: LanguageDescriptor): Pipeline {
   // The shared analyse tail of compile() and load(): run the analyser and shape the
   // stage-tagged result, carrying earlier-stage warnings into every arm.
@@ -162,6 +164,7 @@ function pipelineFor(language: Language, descriptor: LanguageDescriptor): Pipeli
   }
 
   return {
+    parse: (source) => parseSource(source, language),
     analyse: (program) => analyse(program, descriptor),
     compile,
     load,
@@ -171,15 +174,16 @@ function pipelineFor(language: Language, descriptor: LanguageDescriptor): Pipeli
 }
 
 export function createEnvironment(language: Language): Environment {
-  const { descriptor } = language;
+  const vocabulary: Vocabulary = language.descriptor;
 
   // Fail fast on a malformed language: a dangling type reference or an unsound struct
   // override is a setup bug, and every program built on it would be silently wrong.
-  const typeErrors = validateDescriptor(descriptor);
-  if (typeErrors.length > 0) {
+  // Checked here rather than through composeLayers, which assumes the vocabulary beneath
+  // it is sound and cannot attribute such an error to any layer.
+  const errors = validateDescriptor({ ...vocabulary, inputs: new Map(), outputs: new Map() });
+  if (errors.length > 0) {
     throw new Error(
-      "Language descriptor validation failed:\n" +
-        typeErrors.map((e) => `  - ${e.message}`).join("\n"),
+      "Language validation failed:\n" + errors.map((e) => `  - ${e.message}`).join("\n"),
     );
   }
 
@@ -187,7 +191,7 @@ export function createEnvironment(language: Language): Environment {
     global: readonly PortLayer[],
     program: readonly PortLayer[],
   ): ProgramEnvironmentResult {
-    const composed = composeLayers(descriptor, global, program);
+    const composed = composeLayers(vocabulary, global, program);
     if (!composed.ok) return { ok: false, problems: composed.problems };
     return {
       ok: true,
@@ -204,9 +208,8 @@ export function createEnvironment(language: Language): Environment {
   return {
     language,
     parse: (source) => parseSource(source, language),
-    ...pipelineFor(language, descriptor),
     forProgram,
-    createRuntime: (options) => createRuntime(descriptor, options),
+    createRuntime: (options) => createRuntime(vocabulary, options),
     createInstance: (runtime, options) => createInstance(factory, runtime, options),
   };
 }

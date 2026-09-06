@@ -15,7 +15,12 @@
 
 import { createRuntime } from "../../src/language/runtime/runtime";
 import {
-  runtimeLang,
+  lang,
+  HOST,
+  MEN,
+  WOMEN,
+  UNKNOWN,
+  TOTALS,
   menProgram,
   womenProgram,
   unknownProgram,
@@ -27,12 +32,13 @@ import {
   type Scenario,
 } from "./shared";
 
-const runtime = createRuntime(runtimeLang.descriptor);
+// The measurements are global; each program brings the outputs it declares.
+const runtime = createRuntime(lang.descriptor, { layers: [HOST] });
 
-const menHandle = runtime.register("men", menProgram);
-const womenHandle = runtime.register("women", womenProgram);
-const unknownHandle = runtime.register("unknown", unknownProgram);
-const totalsHandle = runtime.register("totals", totalsProgram);
+const menHandle = runtime.register("men", menProgram, { ports: MEN.ports });
+const womenHandle = runtime.register("women", womenProgram, { ports: WOMEN.ports });
+const unknownHandle = runtime.register("unknown", unknownProgram, { ports: UNKNOWN.ports });
+const totalsHandle = runtime.register("totals", totalsProgram, { ports: TOTALS.ports });
 
 let prev: Scenario | undefined;
 const last: Record<string, Map<string, unknown>> = {

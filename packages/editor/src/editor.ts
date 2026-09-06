@@ -15,7 +15,7 @@ import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "./cm";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
 import { createSubject, type Observable } from "./observable";
 import { EditorSession } from "./session";
-import { applySurface } from "./surface";
+
 import { lineStartOffsets, toOffset } from "./tokens";
 
 //? createEditor: the host entry point (Facade). Mounts a code editor for one document into
@@ -71,9 +71,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
   // A copy, so the document's surface never leaks into a host's language (a second mount
   // with the same language would otherwise double-register it).
   const language = extendLanguage(createLanguage(), config.language ?? createStdlib());
-  applySurface(language, doc.surface);
-
-  const session = new EditorSession(language);
+  const session = new EditorSession(language, doc.surface);
   for (const [name, value] of Object.entries(doc.inputValues)) session.setInput(name, value);
 
   let compileTimer: ReturnType<typeof setTimeout> | undefined;

@@ -12,12 +12,50 @@ import {
 import { isCompatible } from "../infra/registry";
 import { Type, typeToString } from "../infra/types";
 import { createStdlib } from "../stdlib";
-import { createLanguage } from "../language";
+import { createLanguage, type Language } from "../language";
 import { createEnvironment } from "../environment";
+import { type Ports } from "../infra/ports";
+import { type LanguageDescriptor } from "../infra/registry";
+import { withPorts } from "../../testing";
 import { CoreProgram, RawProgram } from "../infra/program";
 import { createEvalState, evaluate } from "../evaluator/evaluator";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+// A language under construction plus the ports its program is checked against. Inputs and
+// outputs belong to port layers now, so a test collects them here and `descriptor` composes
+// them onto the vocabulary on demand - the same thing a host does, minus the ceremony.
+interface TestLanguage {
+  readonly language: Language;
+  registerType: Language["registerType"];
+  registerOp: Language["registerOp"];
+  registerEvaluator: Language["registerEvaluator"];
+  registerInput: (def: Ports["inputs"][number]) => void;
+  registerOutput: (def: Ports["outputs"][number]) => void;
+  /** The composed descriptor. Throws if the ports do not compose. */
+  readonly descriptor: LanguageDescriptor;
+  /** The vocabulary as a portless descriptor, WITHOUT composing - for tests that hand
+   *  validateDescriptor a language that is deliberately broken. */
+  readonly unchecked: LanguageDescriptor;
+}
+
+function testLang(language: Language = createStdlib()): TestLanguage {
+  const ports: Ports = { inputs: [], outputs: [] };
+  return {
+    language,
+    registerType: (...args) => language.registerType(...args),
+    registerOp: (def) => language.registerOp(def),
+    registerEvaluator: (def) => language.registerEvaluator(def),
+    registerInput: (def) => void (ports.inputs as unknown[]).push(def),
+    registerOutput: (def) => void (ports.outputs as unknown[]).push(def),
+    get descriptor() {
+      return withPorts(language, ports);
+    },
+    get unchecked() {
+      return { ...language.descriptor, inputs: new Map(), outputs: new Map() };
+    },
+  };
+}
 
 function lit(value: LiteralNode["value"]): LiteralNode {
   return { kind: "literal", value };
@@ -52,30 +90,30 @@ function opInput(node: CNode | undefined, name: string): CNode {
 
 describe("isCompatible", () => {
   it("any expected → always compatible", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     expect(isCompatible(Type.string, Type.any, lang.descriptor)).toBe(true);
     expect(isCompatible(Type.number, Type.any, lang.descriptor)).toBe(true);
   });
 
   it("null actual → always compatible", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     expect(isCompatible(Type.null, Type.string, lang.descriptor)).toBe(true);
     expect(isCompatible(Type.null, Type.boolean, lang.descriptor)).toBe(true);
   });
 
   it("exact match → compatible", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     expect(isCompatible(Type.string, Type.string, lang.descriptor)).toBe(true);
     expect(isCompatible(Type.number, Type.number, lang.descriptor)).toBe(true);
   });
 
   it("exact mismatch → incompatible", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     expect(isCompatible(Type.string, Type.number, lang.descriptor)).toBe(false);
   });
 
   it("B extends A: B compat with A, not reverse", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("A", z.unknown(), {});
     lang.registerType("B", z.unknown(), { extends: "A" });
     expect(isCompatible(Type.name("B"), Type.name("A"), lang.descriptor)).toBe(true);
@@ -83,7 +121,7 @@ describe("isCompatible", () => {
   });
 
   it("B[] compat with A[] when B extends A, not reverse", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("A", z.unknown(), {});
     lang.registerType("B", z.unknown(), { extends: "A" });
     expect(
@@ -95,7 +133,7 @@ describe("isCompatible", () => {
   });
 
   it("malformed extends cycle terminates and returns false", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("X", z.unknown(), { extends: "Y" });
     lang.registerType("Y", z.unknown(), { extends: "X" });
     expect(isCompatible(Type.name("X"), Type.name("Y"), lang.descriptor)).toBe(true); // one step gets there
@@ -105,7 +143,7 @@ describe("isCompatible", () => {
   });
 
   it("function: identical types compatible; arity mismatch incompatible", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const f = Type.fn([Type.number], Type.boolean);
     expect(isCompatible(f, Type.fn([Type.number], Type.boolean), lang.descriptor)).toBe(true);
     expect(
@@ -114,7 +152,7 @@ describe("isCompatible", () => {
   });
 
   it("function: an (any)-param fn flows where a concrete-param fn is expected (untyped lambdas)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // (any) -> boolean usable where (number) -> boolean is expected
     expect(
       isCompatible(
@@ -126,7 +164,7 @@ describe("isCompatible", () => {
   });
 
   it("function: contravariant params, covariant return (via extends)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Animal", z.unknown(), {});
     lang.registerType("Cat", z.unknown(), { extends: "Animal" });
     const Animal = Type.name("Animal");
@@ -146,7 +184,7 @@ describe("isCompatible", () => {
   });
 
   it("functions are never any (totality guard): blocks the Z combinator", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const f = Type.fn([], Type.number);
     // A function is not compatible with `any` — so it can't be smuggled through an
     // `any` slot, which is exactly what a Z/Y combinator needs.
@@ -169,7 +207,7 @@ describe("core language", () => {
 
 describe("happy path", () => {
   it("literal → correct type, empty dependsOn", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram({}, { out: lit(42) });
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
@@ -181,7 +219,7 @@ describe("happy path", () => {
   });
 
   it("input → correct type, single-item dependsOn", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "score", type: Type.number });
     const prog = makeProgram({}, { out: { kind: "input", name: "score", type: Type.number } });
     const result = analyse(prog, lang.descriptor);
@@ -192,7 +230,7 @@ describe("happy path", () => {
   });
 
   it("chained refs → dependsOn propagates transitively", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "x", type: Type.number });
     // a = input(x), b = ref(a)
     const prog = makeProgram(
@@ -209,7 +247,7 @@ describe("happy path", () => {
   });
 
   it("operation (And) → correct output type, unioned dependsOn", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "p", type: Type.boolean });
     lang.registerInput({ name: "q", type: Type.boolean });
     const prog = makeProgram(
@@ -237,7 +275,7 @@ describe("happy path", () => {
   });
 
   it("Filter on a typed list → output is the list type, predicate param gets the element type", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter(sources, item => true) — item is contextually typed Source
@@ -264,7 +302,7 @@ describe("happy path", () => {
   });
 
   it("a differently-named predicate param still gets the element type (contextual typing)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter(sources, s => IsSet(s)) — 's' is contextually typed Source
@@ -304,7 +342,7 @@ describe("happy path", () => {
 
 describe("array element-type inference", () => {
   const arr = (items: ASTNode[]): ASTNode => ({ kind: "array", items, type: Type.any });
-  const elementOf = (out: string, prog: RawProgram, lang = createStdlib()) => {
+  const elementOf = (out: string, prog: RawProgram, lang: TestLanguage = testLang()) => {
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     return typeToString(getOutputType(result.program.outputs.get(out)!));
@@ -337,7 +375,7 @@ describe("struct field typing", () => {
   const input = (name: string, type: Type): ASTNode => ({ kind: "input", name, type });
 
   it("infers a known field's type", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), { fields: { id: Type.string, name: Type.string } });
     lang.registerInput({ name: "s", type: Type.name("Source") });
     const result = analyse(
@@ -349,7 +387,7 @@ describe("struct field typing", () => {
   });
 
   it("errors on an unknown field", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), { fields: { id: Type.string } });
     lang.registerInput({ name: "s", type: Type.name("Source") });
     const result = analyse(
@@ -360,7 +398,7 @@ describe("struct field typing", () => {
   });
 
   it("resolves nested struct fields (multilevel)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("DisplayName", z.unknown(), { fields: { long: Type.string } });
     lang.registerType("Bus", z.unknown(), {
       fields: { state: Type.number, name: Type.name("DisplayName") },
@@ -373,7 +411,7 @@ describe("struct field typing", () => {
   });
 
   it("leaves field access on a fields-less type as any (no error)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Opaque", z.unknown(), {});
     lang.registerInput({ name: "o", type: Type.name("Opaque") });
     const result = analyse(
@@ -386,14 +424,14 @@ describe("struct field typing", () => {
 
   // --- inheritance via `extends` ---
 
-  const typed = (out: string, prog: RawProgram, lang = createStdlib()) => {
+  const typed = (out: string, prog: RawProgram, lang: TestLanguage = testLang()) => {
     const r = analyse(prog, lang.descriptor);
     expect(r.errors).toEqual([]);
     return typeToString(getOutputType(r.program.outputs.get(out)!));
   };
 
   it("inherits a field from an extends parent", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
     lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
@@ -402,7 +440,7 @@ describe("struct field typing", () => {
   });
 
   it("inherits even when the derived type declares no fields of its own", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
     lang.registerType("Derived", z.unknown(), { extends: "Base" });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
@@ -411,8 +449,10 @@ describe("struct field typing", () => {
   });
 
   it("a more-derived field overrides the inherited one", () => {
-    const lang = createStdlib();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
+    const lang = testLang();
+    // A sound (covariant) narrowing: an unsound one cannot reach the analyser at all, since
+    // building the descriptor rejects it.
+    lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
     lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
     const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
@@ -420,7 +460,7 @@ describe("struct field typing", () => {
   });
 
   it("errors on a field absent from the type and all its parents", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
     lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
@@ -436,74 +476,68 @@ describe("struct field typing", () => {
 
 describe("descriptor validation", () => {
   it("a clean language has no dangling type references", () => {
-    expect(validateDescriptor(createStdlib().descriptor)).toEqual([]);
+    expect(validateDescriptor(testLang().descriptor)).toEqual([]);
   });
 
   it("flags a struct field whose type is unregistered", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Bus", z.unknown(), { fields: { name: Type.name("Ghost") } });
     expect(
-      validateDescriptor(lang.descriptor).some(
+      validateDescriptor(lang.unchecked).some(
         (e) => e.kind === "unknown_type" && e.name === "Ghost",
       ),
     ).toBe(true);
   });
 
-  it("flags an input declared with an unregistered type", () => {
-    const lang = createStdlib();
-    lang.registerInput({ name: "x", type: Type.name("Ghost") });
-    expect(validateDescriptor(lang.descriptor).some((e) => e.name === "Ghost")).toBe(true);
-  });
-
   it("a registered fields-less type is a valid reference (opaque handle)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "s", type: Type.array(Type.name("Source")) });
-    expect(validateDescriptor(lang.descriptor)).toEqual([]);
+    expect(validateDescriptor(lang.descriptor)).toEqual([]); // composes, so it is sound
   });
 
   it("createEnvironment throws on a dangling type reference", () => {
-    const lang = createStdlib();
-    lang.registerOutput({ name: "out", type: Type.name("Ghost") });
-    expect(() => createEnvironment(lang)).toThrow(/descriptor validation failed/);
+    const lang = testLang();
+    lang.registerType("Bus", z.unknown(), { fields: { name: Type.name("Ghost") } });
+    expect(() => createEnvironment(lang.language)).toThrow(/Language validation failed/);
   });
 
   it("flags an op registered without an evaluator", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOp({ name: "Mystery", inputs: [{ name: "a", type: Type.any }], output: Type.any });
     expect(
-      validateDescriptor(lang.descriptor).some(
+      validateDescriptor(lang.unchecked).some(
         (e) => e.kind === "missing_evaluator" && e.name === "Mystery",
       ),
     ).toBe(true);
   });
 
   it("flags an evaluator registered for an unknown op", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerEvaluator({ op: "Nowhere", evaluate: () => null });
     expect(
-      validateDescriptor(lang.descriptor).some(
+      validateDescriptor(lang.unchecked).some(
         (e) => e.kind === "orphan_evaluator" && e.name === "Nowhere",
       ),
     ).toBe(true);
   });
 
   it("accepts a compatible field override (covariant narrowing) and new fields", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
     lang.registerType("Derived", z.unknown(), {
       extends: "Base",
       fields: { a: Type.number, b: Type.string }, // a: any → number (narrow); b is new
     });
-    expect(validateDescriptor(lang.descriptor)).toEqual([]);
+    expect(validateDescriptor(lang.unchecked)).toEqual([]);
   });
 
   it("flags an incompatible field override against the extends parent", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
     lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
     expect(
-      validateDescriptor(lang.descriptor).some((e) => e.kind === "incompatible_field_override"),
+      validateDescriptor(lang.unchecked).some((e) => e.kind === "incompatible_field_override"),
     ).toBe(true);
   });
 });
@@ -512,7 +546,7 @@ describe("descriptor validation", () => {
 
 describe("warnings", () => {
   it("unused binding", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram({ unused: lit(1) }, { out: lit(2) });
     const result = analyse(prog, lang.descriptor);
     expect(result.warnings.some((w) => w.kind === "unused_binding" && w.name === "unused")).toBe(
@@ -521,7 +555,7 @@ describe("warnings", () => {
   });
 
   it("missing desired output", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "desired", type: Type.number, mode: "desired" });
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
@@ -534,7 +568,7 @@ describe("warnings", () => {
   });
 
   it("unknown program output", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram({}, { mystery: lit("hello") });
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
@@ -546,7 +580,7 @@ describe("warnings", () => {
   });
 
   it("field access on primitive type warns", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {},
       {
@@ -565,7 +599,7 @@ describe("warnings", () => {
   });
 
   it("unknown op input key warns", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {},
       {
@@ -588,7 +622,7 @@ describe("warnings", () => {
   });
 
   it("missing required op input → warning, type-default placeholder, binding survives", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // Not requires 'a: boolean'. Provide no inputs.
     const prog = makeProgram(
       {
@@ -613,7 +647,7 @@ describe("warnings", () => {
   });
 
   it("implicit_any_cast: any-typed value into narrow op input → warning, binding not poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "val", type: Type.any });
     // GreaterThan expects number inputs; we pass an any-typed input
     const prog = makeProgram(
@@ -640,7 +674,7 @@ describe("warnings", () => {
   });
 
   it("implicit_any_cast: any-typed output into narrow descriptor output → warning, output included", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
     // Output is any-typed (literal null)
     const prog = makeProgram({}, { score: lit(null) });
@@ -654,7 +688,7 @@ describe("warnings", () => {
   });
 
   it("no implicit_any_cast for null-typed values or when expected is any", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "x", type: Type.any });
     // Equals accepts any on both sides
     const prog = makeProgram(
@@ -680,7 +714,7 @@ describe("warnings", () => {
 
 describe("errors and output poisoning", () => {
   it("unknown_op → binding poisoned; dependent output dropped; independent output survives", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "good", type: Type.boolean, mode: "required" });
     lang.registerOutput({ name: "bad", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
@@ -709,7 +743,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("binding_cycle → cycle members poisoned; acyclic prefix NOT poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // a → b → a (cycle); c → a (prefix, not cycled)
     // But c only sees a as a dep, which is cycled, so c should still fail due to poisoned a
     // Let's test: d is completely independent
@@ -730,7 +764,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("acyclic prefix node is not poisoned by cycle", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // Graph: c → a → b → a (cycle is [a,b]; c is prefix)
     // c references a which is cycled — c itself is not in the cycle
     // But because c depends on a (failed), c's output will be dropped
@@ -750,7 +784,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("op_input_type_mismatch → binding poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
       {
@@ -770,7 +804,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("program_output_type_mismatch → output dropped", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
     const prog = makeProgram({}, { score: lit("not a number") });
     const result = analyse(prog, lang.descriptor);
@@ -782,7 +816,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("missing_required_program_output → ok:false", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "required", type: Type.boolean, mode: "required" });
     const prog = makeProgram({}, {});
     const result = analyse(prog, lang.descriptor);
@@ -795,7 +829,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("undeclared_binding_reference → binding poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog = makeProgram({ bad: ref("doesNotExist") }, { out: ref("bad") });
     const result = analyse(prog, lang.descriptor);
@@ -804,7 +838,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("forward_reference (code editor) → binding poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     // b (index 0) references a (index 1) — forward reference
     const prog: RawProgram = {
@@ -823,7 +857,7 @@ describe("errors and output poisoning", () => {
   });
 
   it("unknown_program_input → binding poisoned", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.string, mode: "required" });
     const prog = makeProgram(
       { b: { kind: "input", name: "undeclaredInput", type: Type.string } },
@@ -839,7 +873,7 @@ describe("errors and output poisoning", () => {
 
 describe("ok flag semantics", () => {
   it("required output dropped → ok:false", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "req", type: Type.boolean, mode: "required" });
     const prog = makeProgram(
       { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
@@ -850,7 +884,7 @@ describe("ok flag semantics", () => {
   });
 
   it("only optional output dropped → ok:true", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "opt", type: Type.boolean, mode: "optional" });
     const prog = makeProgram(
       { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
@@ -862,7 +896,7 @@ describe("ok flag semantics", () => {
   });
 
   it("binding fails but no output depends on it → ok:true", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "good", type: Type.number, mode: "required" });
     const prog = makeProgram(
       {
@@ -878,7 +912,7 @@ describe("ok flag semantics", () => {
   });
 
   it("unknown output + poisoned dep → warns unknown_program_output, does NOT set ok:false", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { b: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean } },
       { mystery: ref("b") }, // unknown output (not in descriptor)
@@ -895,7 +929,7 @@ describe("ok flag semantics", () => {
 
 describe("cascade suppression", () => {
   it("binding A fails; B refs A → only 1 error (for A), no second error for B", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {
         a: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
@@ -916,7 +950,7 @@ describe("cascade suppression", () => {
 
 describe("pruning", () => {
   it("poisoned binding is not in program.bindings", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {
         broken: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
@@ -930,7 +964,7 @@ describe("pruning", () => {
   });
 
   it("surviving output's binding chain is fully present", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "x", type: Type.number });
     const prog = makeProgram(
       {
@@ -945,7 +979,7 @@ describe("pruning", () => {
   });
 
   it("missing-input placeholder binding IS present (valid substitution, not pruned)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {
         b: { kind: "operation", op: "Not", inputs: {}, output: Type.boolean },
@@ -963,7 +997,7 @@ describe("pruning", () => {
   });
 
   it("no error node in program.bindings", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {
         broken: { kind: "operation", op: "Unknown", inputs: {}, output: Type.boolean },
@@ -982,7 +1016,7 @@ describe("pruning", () => {
 
 describe("forward_reference", () => {
   it("earlier-declared binding refs later-declared → forward_reference", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog: RawProgram = {
       bindings: new Map([
@@ -1003,7 +1037,7 @@ describe("forward_reference", () => {
   });
 
   it("later-declared binding refs earlier-declared → no forward_reference", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog: RawProgram = {
       bindings: new Map([
         [
@@ -1020,7 +1054,7 @@ describe("forward_reference", () => {
   });
 
   it("rete program → no forward_reference even when index order would trigger it", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
     const prog: RawProgram = {
       bindings: new Map([
@@ -1040,7 +1074,7 @@ describe("forward_reference", () => {
 
 describe("inferOutput / inferInputTypes", () => {
   it("Filter on Source[] → output Source[], predicate type (Source) -> boolean", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerType("Source", z.unknown(), {});
     lang.registerInput({ name: "items", type: Type.array(Type.name("Source")) });
     const prog = makeProgram(
@@ -1074,7 +1108,7 @@ describe("inferOutput / inferInputTypes", () => {
   });
 
   it("Map with a boolean-returning transform → output boolean[]", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerInput({ name: "items", type: Type.array(Type.any) });
     const prog = makeProgram(
       {},
@@ -1097,7 +1131,7 @@ describe("inferOutput / inferInputTypes", () => {
   });
 
   it("If with matching branch types → concrete output type", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {},
       {
@@ -1124,7 +1158,7 @@ describe("inferOutput / inferInputTypes", () => {
 
 describe("AnalysisResult shape", () => {
   it("failing analysis still has program with surviving outputs", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     lang.registerOutput({ name: "req", type: Type.boolean, mode: "required" });
     lang.registerOutput({ name: "opt", type: Type.boolean, mode: "optional" });
     const prog = makeProgram(
@@ -1150,14 +1184,14 @@ describe("CErrorNode", () => {
   it("evaluator throws EvalError('error_node_reached') for a CErrorNode", () => {
     const errNode: CErrorNode = { kind: "error", dependsOn: new Set() };
     const prog: CoreProgram = { bindings: new Map(), outputs: new Map([["out", errNode]]) };
-    const lang = createStdlib();
+    const lang = testLang();
     expect(() => evaluate(errNode, prog, createEvalState(), undefined, lang.descriptor)).toThrow(
       expect.objectContaining({ kind: "error_node_reached" }),
     );
   });
 
   it("unknown_op inline in a typed input → no implicit_any_cast warning", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       {
         b: {
@@ -1192,7 +1226,7 @@ function lambda(params: LambdaNode["params"], body: ASTNode, returnType?: Type):
 
 describe("lambda (C1)", () => {
   it("infers function type from typed params and body", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
       { out: ref("f") },
@@ -1204,7 +1238,7 @@ describe("lambda (C1)", () => {
   });
 
   it("untyped param defaults to any (gradual)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram({ f: lambda([{ name: "x" }], ref("x")) }, { out: ref("f") });
     const result = analyse(prog, lang.descriptor);
     const f = result.program.bindings.get("f")!;
@@ -1212,7 +1246,7 @@ describe("lambda (C1)", () => {
   });
 
   it("return annotation matching the body → no error", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x"), Type.number) },
       { out: ref("f") },
@@ -1224,7 +1258,7 @@ describe("lambda (C1)", () => {
   });
 
   it("return annotation incompatible with the body → lambda_return_type_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x"), Type.boolean) },
       { out: ref("f") },
@@ -1234,7 +1268,7 @@ describe("lambda (C1)", () => {
   });
 
   it("param shadows a same-named global binding (local-first)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // global x is boolean; the param x is number and must win inside the body.
     const prog = makeProgram(
       { x: lit(true), f: lambda([{ name: "x", type: Type.number }], ref("x")) },
@@ -1248,7 +1282,7 @@ describe("lambda (C1)", () => {
   });
 
   it("nested lambda: inner body sees the enclosing param (lexical layering)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // x => (y => x)  →  (any) -> (any) -> any  (arrow is right-associative)
     const prog = makeProgram(
       { f: lambda([{ name: "x" }], lambda([{ name: "y" }], ref("x"))) },
@@ -1261,7 +1295,7 @@ describe("lambda (C1)", () => {
   });
 
   it("collectRefs strips params: a param ref creates no false dependency edge / cycle", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // global x references f; f's body refs x = its PARAM (shadowed), so there is no
     // f → x edge and hence no x ⇄ f cycle.
     const prog = makeProgram(
@@ -1288,7 +1322,7 @@ function app(
 
 describe("app (C2)", () => {
   it("application of a function-typed callee infers the return type", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
       { out: app(ref("f"), [lit(1)]) },
@@ -1299,14 +1333,14 @@ describe("app (C2)", () => {
   });
 
   it("callee that is not function-typed → app_callee_not_function", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram({}, { out: app(lit(5), [lit(1)]) });
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "app_callee_not_function")).toBe(true);
   });
 
   it("too many positional arguments → app_argument_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x" }], ref("x")) },
       { out: app(ref("f"), [lit(1), lit(2)]) },
@@ -1316,7 +1350,7 @@ describe("app (C2)", () => {
   });
 
   it("missing argument → app_argument_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x" }, { name: "y" }], ref("x")) },
       { out: app(ref("f"), [lit(1)]) },
@@ -1326,7 +1360,7 @@ describe("app (C2)", () => {
   });
 
   it("unknown named parameter → app_argument_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x" }], ref("x")) },
       { out: app(ref("f"), [], { y: lit(1) }) },
@@ -1336,7 +1370,7 @@ describe("app (C2)", () => {
   });
 
   it("positional and named binding the same param → app_argument_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     const prog = makeProgram(
       { f: lambda([{ name: "x" }], ref("x")) },
       { out: app(ref("f"), [lit(1)], { x: lit(2) }) },
@@ -1346,7 +1380,7 @@ describe("app (C2)", () => {
   });
 
   it("argument incompatible with the param type → app_argument_type_mismatch", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // f : (number) -> number; apply with a string
     const prog = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
@@ -1357,7 +1391,7 @@ describe("app (C2)", () => {
   });
 
   it("self-application via a named binding → binding_cycle (recursion blocked)", () => {
-    const lang = createStdlib();
+    const lang = testLang();
     // let f = (x) => f(x)  → f references itself → cycle
     const prog = makeProgram(
       { f: lambda([{ name: "x" }], app(ref("f"), [ref("x")])) },

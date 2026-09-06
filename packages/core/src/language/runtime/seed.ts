@@ -1,4 +1,4 @@
-import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
+import { type InputDefinition, type Vocabulary } from "../infra/registry";
 import { type Type } from "../infra/types";
 
 //? defaultValueFor: the one rule for what an input holds before anyone sets it, and what a
@@ -6,11 +6,11 @@ import { type Type } from "../infra/types";
 // upward → [] for arrays → null. The runner, the runtime and the instance all seed through
 // it, so a host declaring a struct default sees it everywhere at once.
 
-export function defaultValueFor(def: InputDefinition, descriptor: LanguageDescriptor): unknown {
+export function defaultValueFor(def: InputDefinition, descriptor: Vocabulary): unknown {
   return def.default !== undefined ? def.default : typeDefault(def.type, descriptor);
 }
 
-function typeDefault(type: Type, descriptor: LanguageDescriptor): unknown {
+function typeDefault(type: Type, descriptor: Vocabulary): unknown {
   if (type.kind === "array") return [];
   if (type.kind !== "name") return null;
   const seen = new Set<string>(); // cycle guard for malformed extends chains

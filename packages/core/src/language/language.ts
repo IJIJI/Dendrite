@@ -4,11 +4,9 @@ import { type ASTNode } from "./infra/nodes";
 import { type Type } from "./infra/types";
 import {
   type EvaluatorDefinition,
-  type InputDefinition,
-  type LanguageDescriptor,
   type OpDefinition,
-  type OutputDefinition,
   type TypeDefinition,
+  type Vocabulary,
 } from "./infra/registry";
 import {
   createGrammar,
@@ -35,7 +33,7 @@ export { BP } from "./parser/precedence";
 // object: register ops/evaluators AND, optionally, syntax. Sits above infra + parser.
 
 export interface Language {
-  descriptor: LanguageDescriptor;
+  descriptor: Vocabulary;
   grammar: Grammar;
   // Semantics → descriptor.
   registerType(
@@ -44,8 +42,6 @@ export interface Language {
     config?: { default?: unknown; extends?: string; fields?: Record<string, Type> },
   ): void;
   registerOp(def: OpDefinition): void;
-  registerInput(def: InputDefinition): void;
-  registerOutput(def: OutputDefinition): void;
   registerEvaluator(def: EvaluatorDefinition): void;
   // Syntax → grammar. Full handlers, with operator sugar on top.
   registerNud(key: string, nud: Nud): void;
@@ -66,10 +62,8 @@ export interface Language {
 export function createLanguage(): Language {
   const types = new Map<string, TypeDefinition>();
   const ops = new Map<string, OpDefinition>();
-  const inputs = new Map<string, InputDefinition>();
-  const outputs = new Map<string, OutputDefinition>();
   const evaluators = new Map<string, EvaluatorDefinition>();
-  const descriptor: LanguageDescriptor = { types, ops, inputs, outputs, evaluators };
+  const descriptor: Vocabulary = { types, ops, evaluators };
 
   const grammar = createGrammar();
   installCoreGrammar(grammar);
@@ -82,8 +76,6 @@ export function createLanguage(): Language {
       types.set(name, { name, schema, ...config });
     },
     registerOp: (def) => ops.set(def.name, def),
-    registerInput: (def) => inputs.set(def.name, def),
-    registerOutput: (def) => outputs.set(def.name, def),
     registerEvaluator: (def) => evaluators.set(def.op, def),
 
     registerNud: (key, nud) => registerNud(grammar, key, nud),
@@ -128,12 +120,6 @@ export function extendLanguage(extension: Language, base: Language): Language {
   });
   b.ops.forEach((v) => {
     if (!e.ops.has(v.name)) extension.registerOp(v);
-  });
-  b.inputs.forEach((v) => {
-    if (!e.inputs.has(v.name)) extension.registerInput(v);
-  });
-  b.outputs.forEach((v) => {
-    if (!e.outputs.has(v.name)) extension.registerOutput(v);
   });
   b.evaluators.forEach((v) => {
     if (!e.evaluators.has(v.op)) extension.registerEvaluator(v);

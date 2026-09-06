@@ -1,5 +1,4 @@
-import { type Language, type OutputMode, type Type } from "@dendrite-lang/core";
-import { z } from "zod";
+import { type OutputMode, type PortLayer, Policy, type Type } from "@dendrite-lang/core";
 
 //? SurfaceSpec: a language surface as JSON-safe DATA - the types/inputs/outputs a
 // playground document declares on top of the stdlib.
@@ -28,11 +27,18 @@ export interface SurfaceSpec {
   outputs: SurfaceOutputSpec[];
 }
 
-/** Register a surface onto a language (types first, so input/output types resolve). */
-export function applySurface(lang: Language, surface: SurfaceSpec): void {
-  for (const t of surface.types ?? []) {
-    lang.registerType(t.name, z.unknown(), { fields: t.fields, extends: t.extends });
-  }
-  for (const input of surface.inputs) lang.registerInput(input);
-  for (const output of surface.outputs) lang.registerOutput(output);
+/**
+ * The surface as the port layer a document contributes: editable, user-fed, and saved with
+ * the document. (In I4 this disappears - the document's ports ARE this layer.)
+ */
+export function surfaceLayer(surface: SurfaceSpec): PortLayer {
+  return {
+    id: "document",
+    ports: {
+      types: surface.types,
+      inputs: surface.inputs,
+      outputs: surface.outputs,
+    },
+    policy: Policy.user,
+  };
 }

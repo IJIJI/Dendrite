@@ -12,6 +12,8 @@ import { Type } from "../infra/types";
 import { analyse } from "../analyser/analyser";
 import { parseSource } from "../language";
 import { createStdlib } from "../stdlib";
+import { withPorts } from "../../testing";
+import { EMPTY_PORTS } from "../infra/ports";
 import { createEvalState, evaluate, updateInput } from "./evaluator";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -39,14 +41,15 @@ const op = (name: string, inputs: OperationNode["inputs"]): OperationNode => ({
 // Analyse `{ ...bindings } + out = output`, then evaluate `out`.
 function run(bindings: Record<string, ASTNode>, output: ASTNode) {
   const lang = createStdlib();
+  const descriptor = withPorts(lang, EMPTY_PORTS);
   const program: RawProgram = {
     bindings: new Map(Object.entries(bindings)),
     outputs: new Map([["out", output]]),
   };
-  const result = analyse(program, lang.descriptor);
+  const result = analyse(program, descriptor);
   const node = result.program.outputs.get("out");
   const value = node
-    ? evaluate(node, result.program, createEvalState(), undefined, lang.descriptor)
+    ? evaluate(node, result.program, createEvalState(), undefined, descriptor)
     : undefined;
   return { result, value };
 }
@@ -150,7 +153,10 @@ describe("lexical scoping", () => {
 describe("application dependsOn", () => {
   it("re-evaluates an application when an input its body reads changes", () => {
     const lang = createStdlib();
-    lang.registerInput({ name: "flag", type: Type.boolean });
+    const descriptor = withPorts(lang, {
+      inputs: [{ name: "flag", type: Type.boolean }],
+      outputs: [],
+    });
     const program: RawProgram = {
       bindings: new Map<string, ASTNode>([
         [
@@ -163,7 +169,7 @@ describe("application dependsOn", () => {
       ]),
       outputs: new Map<string, ASTNode>([["out", app(ref("f"), [lit(true)])]]),
     };
-    const result = analyse(program, lang.descriptor);
+    const result = analyse(program, descriptor);
     const node = result.program.outputs.get("out")!;
     const state = createEvalState();
 
@@ -180,12 +186,13 @@ describe("application dependsOn", () => {
 
 function runSource(src: string, output = "out") {
   const lang = createStdlib();
+  const descriptor = withPorts(lang, EMPTY_PORTS);
   const parsed = parseSource(src, lang);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-  const analysed = analyse(parsed.program, lang.descriptor);
+  const analysed = analyse(parsed.program, descriptor);
   const node = analysed.program.outputs.get(output);
   const value = node
-    ? evaluate(node, analysed.program, createEvalState(), undefined, lang.descriptor)
+    ? evaluate(node, analysed.program, createEvalState(), undefined, descriptor)
     : undefined;
   return { analysed, value };
 }

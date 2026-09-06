@@ -95,13 +95,21 @@ export interface EvaluatorDefinition {
   inferInputTypes?: (inputTypes: Record<string, Type>) => Record<string, Type>;
 }
 
-//? Language descriptor - Single source of truth for the editor, analyser, evaluator.
-export interface LanguageDescriptor {
+//? Vocabulary - what a LANGUAGE owns: the words programs are written in. A language
+// declares no inputs and no outputs; those belong to port layers, which compose onto a
+// vocabulary to produce the descriptor below (see language/compose.ts).
+export interface Vocabulary {
   types: ReadonlyMap<string, TypeDefinition>;
   ops: ReadonlyMap<string, OpDefinition>;
+  evaluators: ReadonlyMap<string, EvaluatorDefinition>;
+}
+
+//? Language descriptor - a vocabulary plus the ports a program is checked against. Only
+// composeLayers produces one, which is what stops a program being analysed against a bare
+// language: with no declarations, every output would be silently dropped as unknown.
+export interface LanguageDescriptor extends Vocabulary {
   inputs: ReadonlyMap<string, InputDefinition>;
   outputs: ReadonlyMap<string, OutputDefinition>;
-  evaluators: ReadonlyMap<string, EvaluatorDefinition>;
 }
 
 //? isCompatible: Structural type compatibility check for the analyser.
@@ -117,11 +125,7 @@ export interface LanguageDescriptor {
 //  (a function cannot be smuggled through an `any` slot). Always call this
 //  function, never inline, so subtyping stays in one place.
 
-export function isCompatible(
-  actual: Type,
-  expected: Type,
-  descriptor: LanguageDescriptor,
-): boolean {
+export function isCompatible(actual: Type, expected: Type, descriptor: Vocabulary): boolean {
   // any/null permissive rules apply to DATA only — functions are never `any`.
   if (expected.kind === "name" && expected.name === "any") {
     return actual.kind !== "function";

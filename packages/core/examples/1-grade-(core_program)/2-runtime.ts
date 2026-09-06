@@ -1,12 +1,19 @@
 import { createStdlib } from "../../src/language/stdlib";
-import { createRuntime } from "../../src/language/runtime/runtime";
+import { createEnvironment } from "../../src/language/environment";
+import { type PortLayer, Policy } from "../../src/language/infra/ports";
 import { Type } from "../../src/language/infra/types";
 import type { CNode } from "../../src/language/infra/nodes";
 import { CoreProgram } from "../../src/language/infra/program";
 
-// --- Language ---------------------------------------------------------------
+// --- Language + ports -------------------------------------------------------
+// `score` is GLOBAL: one value shared by every program the runtime holds.
 const lang = createStdlib();
-lang.registerInput({ name: "score", type: Type.number });
+const host: PortLayer = {
+  id: "host",
+  ports: { inputs: [{ name: "score", type: Type.number }], outputs: [] },
+  policy: Policy.host,
+};
+const env = createEnvironment(lang);
 
 // --- Programs ----------------------------------------------------------------
 // Program A - "grader":
@@ -81,11 +88,12 @@ const topTierProgram: CoreProgram = {
 };
 
 // --- Runtime ----------------------------------------------------------------
-const runtime = createRuntime(lang.descriptor);
+// The host layer is global here, so both programs read the same `score`.
+const runtime = env.createRuntime({ layers: [host] });
 
 // Global handler - fires for all programs, including the initial evaluation
-// that happens immediately inside register(). score starts as null (no default
-// registered), so GreaterThan(null, 60) → false and the first outputs reflect that.
+// that happens immediately inside register(). score seeds 0 (its type's default,
+// since the input declares none), so GreaterThan(0, 60) → false at first.
 runtime.onOutput((programId, outputs) => {
   const values = [...outputs.entries()].map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ");
   console.log(`  [${programId}] ${values}`);

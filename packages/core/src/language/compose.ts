@@ -9,6 +9,7 @@ import {
   type LanguageDescriptor,
   type OutputDefinition,
   type TypeDefinition,
+  type Vocabulary,
 } from "./infra/registry";
 
 //? composeLayers: stack PortLayers onto a language descriptor and produce the descriptor a
@@ -63,18 +64,20 @@ const namespace = <T>(kind: Kind, base: ReadonlyMap<string, T>): Namespace<T> =>
 });
 
 /**
- * Compose `global` then `program` layers onto `descriptor` (a language descriptor that has
- * already passed validation, as `createEnvironment` guarantees). Every problem is collected,
- * not just the first.
+ * Compose `global` then `program` layers onto a language's vocabulary, producing the
+ * descriptor a program is analysed and evaluated against. Every problem is collected, not
+ * just the first.
  */
 export function composeLayers(
-  descriptor: LanguageDescriptor,
+  vocabulary: Vocabulary,
   global: readonly PortLayer[],
   program: readonly PortLayer[],
 ): ComposeResult {
-  const types = namespace<TypeDefinition>("type", descriptor.types);
-  const inputs = namespace<InputDefinition>("input", descriptor.inputs);
-  const outputs = namespace<OutputDefinition>("output", descriptor.outputs);
+  // Types can already exist (the language declares them); ports never can, which is why a
+  // shadowed input or output always names another layer and never "the language".
+  const types = namespace<TypeDefinition>("type", vocabulary.types);
+  const inputs = namespace<InputDefinition>("input", new Map());
+  const outputs = namespace<OutputDefinition>("output", new Map());
   const problems: PortProblem[] = [];
   const seenLayerIds = new Set<string>();
 
@@ -118,10 +121,10 @@ export function composeLayers(
   // attributed to layers through each error's subject.
   const composed: LanguageDescriptor = {
     types: types.entries,
-    ops: descriptor.ops,
+    ops: vocabulary.ops,
     inputs: inputs.entries,
     outputs: outputs.entries,
-    evaluators: descriptor.evaluators,
+    evaluators: vocabulary.evaluators,
   };
   const owners = { type: types.owners, input: inputs.owners, output: outputs.owners };
   for (const error of validateDescriptor(composed)) problems.push(attribute(error, owners));

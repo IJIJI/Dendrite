@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 # VSCODE
 .vscode/
 .claude/
+.docs/todo.md

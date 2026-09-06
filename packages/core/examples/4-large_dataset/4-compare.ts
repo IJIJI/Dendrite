@@ -13,6 +13,10 @@ import { createProgramRunner, run } from "../../src/language/runtime/runner";
 import { createRuntime } from "../../src/language/runtime/runtime";
 import {
   descriptor,
+  lang,
+  HOST,
+  FILTERING,
+  HONORS,
   program,
   filteringProgram,
   honorsProgram,
@@ -28,9 +32,9 @@ import {
 // ---------------------------------------------------------------------------
 
 const runner = createProgramRunner(program, descriptor);
-const runtime = createRuntime(descriptor);
-const filtering = runtime.register("filtering", filteringProgram);
-const honors = runtime.register("honors", honorsProgram);
+const runtime = createRuntime(lang.descriptor, { layers: [HOST] });
+const filtering = runtime.register("filtering", filteringProgram, { ports: FILTERING.ports });
+const honors = runtime.register("honors", honorsProgram, { ports: HONORS.ports });
 
 // Warmup - let V8 JIT compile hot paths before timed runs
 run(program, descriptor, { values: [1, 2, 3], threshold: 2 });

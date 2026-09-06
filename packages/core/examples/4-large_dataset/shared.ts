@@ -7,11 +7,16 @@
  *
  * Inputs:  values — number[] of scores; threshold — passing bar
  * Outputs: passing (the filtered list), anyPassed, anyCumLaude (> 90)
+ *
+ * Inputs are GLOBAL (one dataset, shared by every program); each program declares the
+ * outputs it owns as its own port layer.
  */
 
-import { analyse } from "../../src/language/analyser/analyser";
-import { createLanguage, parseSource, type Language } from "../../src/language/language";
+import { createEnvironment, type ProgramEnvironment } from "../../src/language/environment";
+import { createLanguage } from "../../src/language/language";
 import { extendStdlib } from "../../src/language/stdlib";
+import { type PortLayer, Policy } from "../../src/language/infra/ports";
+import type { LanguageDescriptor } from "../../src/language/infra/registry";
 import { Type } from "../../src/language/infra/types";
 import type { CoreProgram } from "../../src/language/infra/program";
 
@@ -19,42 +24,66 @@ import type { CoreProgram } from "../../src/language/infra/program";
 // Language
 // ---------------------------------------------------------------------------
 
-function createScoresLang(): Language {
-  const lang = createLanguage();
-  lang.registerInput({ name: "values", type: Type.array(Type.number), default: [] });
-  lang.registerInput({ name: "threshold", type: Type.number, default: 50 });
-  return extendStdlib(lang);
+// Vocabulary only: types, ops and evaluators.
+export const lang = extendStdlib(createLanguage());
+const env = createEnvironment(lang);
+
+// The dataset, global to every program.
+export const HOST: PortLayer = {
+  id: "host",
+  ports: {
+    inputs: [
+      { name: "values", type: Type.array(Type.number), default: [] },
+      { name: "threshold", type: Type.number, default: 50 },
+    ],
+    outputs: [],
+  },
+  policy: Policy.host,
+};
+
+const layer = (id: string, outputs: PortLayer["ports"]["outputs"]): PortLayer => ({
+  id,
+  ports: { inputs: [], outputs },
+  policy: Policy.host,
+});
+
+const PASSING = { name: "passing", type: Type.array(Type.number), mode: "required" as const };
+const ANY_PASSED = { name: "anyPassed", type: Type.boolean, mode: "required" as const };
+const ANY_CUM_LAUDE = { name: "anyCumLaude", type: Type.boolean, mode: "desired" as const };
+
+const FULL = layer("full", [PASSING, ANY_PASSED, ANY_CUM_LAUDE]);
+// Split by dependency boundary for the Runtime.
+export const FILTERING = layer("filtering", [PASSING, ANY_PASSED]);
+export const HONORS = layer("honors", [{ ...ANY_CUM_LAUDE, mode: "required" as const }]);
+
+function environmentFor(spec: PortLayer): ProgramEnvironment {
+  const composed = env.forProgram([HOST], [spec]);
+  if (!composed.ok) {
+    const msgs = composed.problems.map((p) => `  ${p.where}: ${p.message}`).join("\n");
+    throw new Error(`Ports of '${spec.id}' do not compose:\n${msgs}`);
+  }
+  return composed.environment;
 }
 
-// Full language — all outputs. Used by run() and ProgramRunner.
-export const lang = createScoresLang();
-lang.registerOutput({ name: "passing", type: Type.array(Type.number), mode: "required" });
-lang.registerOutput({ name: "anyPassed", type: Type.boolean, mode: "required" });
-lang.registerOutput({ name: "anyCumLaude", type: Type.boolean, mode: "desired" });
-
-export const { descriptor } = lang;
+/** What run() and ProgramRunner evaluate the full program against. */
+export const descriptor: LanguageDescriptor = environmentFor(FULL).descriptor;
 
 // ---------------------------------------------------------------------------
 // Programs (source → parse → analyse)
 // ---------------------------------------------------------------------------
 
-function compileOrThrow(language: Language, source: string, label: string): CoreProgram {
-  const parsed = parseSource(source, language);
-  if (!parsed.ok) {
-    const msgs = parsed.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
-    throw new Error(`Parse failed for '${label}':\n${msgs}`);
+function compileOrThrow(spec: PortLayer, source: string): CoreProgram {
+  const result = environmentFor(spec).compile(source);
+  if (!result.ok) {
+    const msgs = result.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
+    throw new Error(`Compile failed for '${spec.id}' at ${result.stage}:\n${msgs}`);
   }
-  const analysed = analyse(parsed.program, language.descriptor);
-  if (!analysed.ok) {
-    const msgs = analysed.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
-    throw new Error(`Analysis failed for '${label}':\n${msgs}`);
-  }
-  return analysed.program;
+  return result.program;
 }
 
 // Single program for run() and ProgramRunner — all three outputs together.
 export const program = compileOrThrow(
-  lang,
+  FULL,
   `
 let passing     = Filter($values, n => n > $threshold)
 let anyPassed   = Some($values, n => n > $threshold)
@@ -64,18 +93,12 @@ output passing     = passing
 output anyPassed   = anyPassed
 output anyCumLaude = anyCumLaude
 `,
-  "full",
 );
 
-// Split by dependency boundary for the Runtime:
 //   'filtering' dependsOn values+threshold → passing, anyPassed
 //   'honors'    dependsOn values only      → anyCumLaude (skipped on threshold-only changes)
-const filteringLang = createScoresLang();
-filteringLang.registerOutput({ name: "passing", type: Type.array(Type.number), mode: "required" });
-filteringLang.registerOutput({ name: "anyPassed", type: Type.boolean, mode: "required" });
-
 export const filteringProgram = compileOrThrow(
-  filteringLang,
+  FILTERING,
   `
 let passing   = Filter($values, n => n > $threshold)
 let anyPassed = Some($values, n => n > $threshold)
@@ -83,18 +106,13 @@ let anyPassed = Some($values, n => n > $threshold)
 output passing   = passing
 output anyPassed = anyPassed
 `,
-  "filtering",
 );
 
-const honorsLang = createScoresLang();
-honorsLang.registerOutput({ name: "anyCumLaude", type: Type.boolean, mode: "required" });
-
 export const honorsProgram = compileOrThrow(
-  honorsLang,
+  HONORS,
   `
 output anyCumLaude = Some($values, n => n > 90)
 `,
-  "honors",
 );
 
 // ---------------------------------------------------------------------------

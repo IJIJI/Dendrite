@@ -168,7 +168,7 @@ describe("ProgramEntry", () => {
     const broken: BoundProgram = {
       program: { bindings: new Map(), outputs: new Map([["out", corrupt]]) },
       ports: EMPTY_PORTS,
-      composed: makeLang().descriptor,
+      composed: withLayers(makeLang(), [], []),
     };
     expect(() => new ProgramEntry("e", broken, NO_GLOBALS).evaluate(undefined)).toThrow(TypeError);
   });

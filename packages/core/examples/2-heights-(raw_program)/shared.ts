@@ -8,11 +8,16 @@
  *
  * Inputs:  men, women, unknown — number[] of individual height measurements (cm)
  * Outputs: avgX / countX — average height and count above 185 cm, per category and total
+ *
+ * Both arrive as PORT LAYERS: the inputs are global (one set of measurements, shared by
+ * every program) while each program declares the outputs it owns as its own layer.
  */
 
-import { analyse } from "../../src/language/analyser/analyser";
+import { createEnvironment } from "../../src/language/environment";
 import { extendStdlib } from "../../src/language/stdlib";
 import { createLanguage } from "../../src/language/language";
+import { type PortLayer, Policy } from "../../src/language/infra/ports";
+import type { LanguageDescriptor } from "../../src/language/infra/registry";
 import { Type } from "../../src/language/infra/types";
 import type { ASTNode, LambdaNode, OperationNode } from "../../src/language/infra/nodes";
 import type { CoreProgram, RawProgram } from "../../src/language/infra/program";
@@ -21,27 +26,50 @@ import type { CoreProgram, RawProgram } from "../../src/language/infra/program";
 // Language
 // ---------------------------------------------------------------------------
 
-function createHeightsLang() {
-  const lang = createLanguage();
-  lang.registerInput({ name: "men", type: Type.array(Type.number), default: [] });
-  lang.registerInput({ name: "women", type: Type.array(Type.number), default: [] });
-  lang.registerInput({ name: "unknown", type: Type.array(Type.number), default: [] });
-  return extendStdlib(lang);
-}
+// Vocabulary only: types, ops and evaluators. No inputs, no outputs.
+export const lang = extendStdlib(createLanguage());
+const env = createEnvironment(lang);
 
-// Full language — all 8 outputs. Used by run() and ProgramRunner.
-export const fullLang = createHeightsLang();
-fullLang.registerOutput({ name: "avgMen", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "avgWomen", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "avgUnknown", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "avgTotal", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "countMen", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "countWomen", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "countUnknown", type: Type.number, mode: "required" });
-fullLang.registerOutput({ name: "countTotal", type: Type.number, mode: "required" });
+// The host's contract: the three measurement lists, global to every program.
+export const HOST: PortLayer = {
+  id: "host",
+  ports: {
+    inputs: [
+      { name: "men", type: Type.array(Type.number), default: [] },
+      { name: "women", type: Type.array(Type.number), default: [] },
+      { name: "unknown", type: Type.array(Type.number), default: [] },
+    ],
+    outputs: [],
+  },
+  policy: Policy.host,
+};
 
-// Runtime language — inputs only, used for input routing in the 4-way split.
-export const runtimeLang = createHeightsLang();
+// One layer per program, declaring the outputs that program is responsible for.
+const produces = (id: string, ...names: string[]): PortLayer => ({
+  id,
+  ports: {
+    inputs: [],
+    outputs: names.map((name) => ({ name, type: Type.number, mode: "required" as const })),
+  },
+  policy: Policy.host,
+});
+
+const FULL = produces(
+  "full",
+  "avgMen",
+  "avgWomen",
+  "avgUnknown",
+  "avgTotal",
+  "countMen",
+  "countWomen",
+  "countUnknown",
+  "countTotal",
+);
+// The 4-way split: each program owns two outputs and reads one category.
+export const MEN = produces("men", "avgMen", "countMen");
+export const WOMEN = produces("women", "avgWomen", "countWomen");
+export const UNKNOWN = produces("unknown", "avgUnknown", "countUnknown");
+export const TOTALS = produces("totals", "avgTotal", "countTotal");
 
 // ---------------------------------------------------------------------------
 // AST helpers
@@ -233,37 +261,34 @@ const totalsRaw: RawProgram = {
 // Pre-analysed programs
 // ---------------------------------------------------------------------------
 
-function assertOk(result: ReturnType<typeof analyse>, label: string): CoreProgram {
+// Compose the host layer with one program's own layer, giving the descriptor that
+// program is analysed against.
+function environmentFor(layer: PortLayer) {
+  const composed = env.forProgram([HOST], [layer]);
+  if (!composed.ok) {
+    const msgs = composed.problems.map((p) => `  ${p.where}: ${p.message}`).join("\n");
+    throw new Error(`Ports of '${layer.id}' do not compose:\n${msgs}`);
+  }
+  return composed.environment;
+}
+
+function analyseWith(raw: RawProgram, layer: PortLayer): CoreProgram {
+  const result = environmentFor(layer).analyse(raw);
   if (!result.ok) {
     const msgs = result.errors.map((e) => `  ${e.kind}: ${e.message}`).join("\n");
-    throw new Error(`Analysis failed for '${label}':\n${msgs}`);
+    throw new Error(`Analysis failed for '${layer.id}':\n${msgs}`);
   }
   return result.program;
 }
 
-export const fullProgram = assertOk(analyse(fullRaw, fullLang.descriptor), "full");
+/** What run() and ProgramRunner evaluate the full program against. */
+export const fullDescriptor: LanguageDescriptor = environmentFor(FULL).descriptor;
 
-// Scoped languages for the 4-way runtime split — each holds only its two outputs.
-const menLang = createHeightsLang();
-menLang.registerOutput({ name: "avgMen", type: Type.number, mode: "required" });
-menLang.registerOutput({ name: "countMen", type: Type.number, mode: "required" });
-
-const womenLang = createHeightsLang();
-womenLang.registerOutput({ name: "avgWomen", type: Type.number, mode: "required" });
-womenLang.registerOutput({ name: "countWomen", type: Type.number, mode: "required" });
-
-const unknownLang = createHeightsLang();
-unknownLang.registerOutput({ name: "avgUnknown", type: Type.number, mode: "required" });
-unknownLang.registerOutput({ name: "countUnknown", type: Type.number, mode: "required" });
-
-const totalsLang = createHeightsLang();
-totalsLang.registerOutput({ name: "avgTotal", type: Type.number, mode: "required" });
-totalsLang.registerOutput({ name: "countTotal", type: Type.number, mode: "required" });
-
-export const menProgram = assertOk(analyse(menRaw, menLang.descriptor), "men");
-export const womenProgram = assertOk(analyse(womenRaw, womenLang.descriptor), "women");
-export const unknownProgram = assertOk(analyse(unknownRaw, unknownLang.descriptor), "unknown");
-export const totalsProgram = assertOk(analyse(totalsRaw, totalsLang.descriptor), "totals");
+export const fullProgram = analyseWith(fullRaw, FULL);
+export const menProgram = analyseWith(menRaw, MEN);
+export const womenProgram = analyseWith(womenRaw, WOMEN);
+export const unknownProgram = analyseWith(unknownRaw, UNKNOWN);
+export const totalsProgram = analyseWith(totalsRaw, TOTALS);
 
 // ---------------------------------------------------------------------------
 // Dataset
