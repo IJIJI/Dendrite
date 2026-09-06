@@ -1,4 +1,5 @@
 import { AST_NODE_KINDS, type ASTNode } from "./nodes";
+import { isPorts, type Ports } from "./ports";
 import { type RawProgram } from "./program";
 
 //? SavedProgram: the durable JSON form of a program.
@@ -15,6 +16,10 @@ import { type RawProgram } from "./program";
 // ast form. Provenance is preserved uniformly; whether a ref's referent still exists
 // is the host's business.
 //
+// A program may carry its own port declarations (`ports`): the inputs, outputs and struct
+// types its persisted layer contributes on top of the language and the host's layers. A
+// program without `ports` declares nothing of its own.
+//
 // Core owns the FORMAT version (+ migrate seam below); hosts wrap their own envelope
 // (ids, names, timestamps, revisions) around SavedProgram.
 
@@ -23,20 +28,23 @@ import { type RawProgram } from "./program";
 // functions keyed off this constant.
 export const SAVED_PROGRAM_VERSION = 1;
 
-export interface SavedCodeProgram {
+interface SavedProgramBase {
   version: typeof SAVED_PROGRAM_VERSION;
+  /** The program's own port declarations (its persisted layer). Absent = declares nothing. */
+  ports?: Ports;
+}
+
+export interface SavedCodeProgram extends SavedProgramBase {
   form: "code";
   source: string;
 }
 
-export interface SavedReteProgram {
-  version: typeof SAVED_PROGRAM_VERSION;
+export interface SavedReteProgram extends SavedProgramBase {
   form: "rete";
   graph: unknown;
 }
 
-export interface SavedAstProgram {
-  version: typeof SAVED_PROGRAM_VERSION;
+export interface SavedAstProgram extends SavedProgramBase {
   form: "ast";
   bindings: Record<string, ASTNode>;
   outputs: Record<string, ASTNode>;
@@ -44,9 +52,13 @@ export interface SavedAstProgram {
 
 export type SavedProgram = SavedCodeProgram | SavedReteProgram | SavedAstProgram;
 
+// The `ports` key is written only when there is something to write, so a program that
+// declares nothing serialises exactly as it did before ports existed.
+const portsKey = (ports: Ports | undefined): { ports?: Ports } => (ports ? { ports } : {});
+
 /** Wrap authored source text as a saved program (code form). */
-export function serialiseSource(source: string): SavedCodeProgram {
-  return { version: SAVED_PROGRAM_VERSION, form: "code", source };
+export function serialiseSource(source: string, ports?: Ports): SavedCodeProgram {
+  return { version: SAVED_PROGRAM_VERSION, form: "code", source, ...portsKey(ports) };
 }
 
 /**
@@ -54,13 +66,14 @@ export function serialiseSource(source: string): SavedCodeProgram {
  * (structured Types, no functions/Maps/Sets inside), so this is a structural deep-clone
  * (decoupling the saved object from the live program) with Maps → records at the top.
  */
-export function serialiseAst(program: RawProgram): SavedAstProgram {
+export function serialiseAst(program: RawProgram, ports?: Ports): SavedAstProgram {
   const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
   return {
     version: SAVED_PROGRAM_VERSION,
     form: "ast",
     bindings: clone(Object.fromEntries(program.bindings)),
     outputs: clone(Object.fromEntries(program.outputs)),
+    ...portsKey(ports && clone(ports)),
   };
 }
 
@@ -143,11 +156,22 @@ function assertNodeRecord(value: unknown, path: string): void {
 }
 
 /**
+ * Guard the optional `ports` of a saved program of any form (throws descriptively). Part of
+ * deserialise for the ast form; loaders of the other forms call it before trusting `ports`.
+ */
+export function assertSavedPorts(saved: SavedProgram): void {
+  if (saved.ports !== undefined && !isPorts(saved.ports)) {
+    throw new Error("Malformed SavedProgram: ports is not a Ports record");
+  }
+}
+
+/**
  * Deserialise an ast-form SavedProgram back to a RawProgram. Guards the structure
  * (throws descriptively on malformed input); nodes are used as-is - only the top-level
  * records convert back to Maps.
  */
 export function deserialise(saved: SavedAstProgram): RawProgram {
+  assertSavedPorts(saved);
   assertNodeRecord(saved.bindings, "bindings");
   assertNodeRecord(saved.outputs, "outputs");
   return {
