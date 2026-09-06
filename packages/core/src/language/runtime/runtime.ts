@@ -1,26 +1,32 @@
-import {
-  createEvalState,
-  evaluateProgram,
-  outputDependencies,
-  updateInput,
-} from "../evaluator/evaluator";
-import { EvalError, EvalState } from "../evaluator/types";
-import { CoreProgram } from "../infra/program";
-import { type LanguageDescriptor } from "../infra/registry";
+import { composeLayers, type PortProblem } from "../compose";
+import { outputDependencies } from "../evaluator/evaluator";
+import { EvalError } from "../evaluator/types";
+import { EMPTY_PORTS, type PortLayer, type Ports, Policy } from "../infra/ports";
+import { type CoreProgram } from "../infra/program";
+import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
+import { type BoundProgram, ProgramEntry } from "./entry";
+import { defaultValueFor } from "./seed";
 
 // ---------------------------------------------------------------------------
-// ProgramHandle - returned by register(), scoped to one program.
+// Runtime - many programs over one language and one set of GLOBAL port layers.
 //
-// Provides subscriptions and unregistration for a specific program without
-// the consumer needing to track or repeat the program ID.
-// Unregister clears all per-program handlers and removes the program from
-// the runtime index - no dangling handlers can fire after unregistration.
+// Two levels of ports meet here:
+//   global  - the runtime's own layers (a host contract, a capability). One value per
+//             name for every program; the host pushes them with updateInputs.
+//   program - what one registered program declares on top (its document layer). Values
+//             live with that program alone; the host pushes them through its handle.
+// Both levels compose per entry, so a program-layer type resolves when its inputs seed.
+// Compose problems here are configuration bugs (an instance checks its layers first and
+// reports them as diagnostics), so register and replace throw on them.
 // ---------------------------------------------------------------------------
+
+/** Program-scoped subscriptions and input pushes, so callers need not repeat the id. */
 export interface ProgramHandle {
   readonly id: string;
 
   /**
    * Outputs from the first evaluation, available immediately after register().
+   * Empty when that evaluation failed - the error reaches onError handlers.
    * Subsequent changes arrive via onOutput().
    */
   readonly initialOutputs: Map<string, unknown>;
@@ -30,6 +36,15 @@ export interface ProgramHandle {
 
   /** Subscribe to evaluation errors for this program. Returns an unsubscribe function. */
   onError(handler: (error: EvalError) => void): () => void;
+
+  /** Set one PROGRAM-level input and re-evaluate this program. Throws on a global name. */
+  setInput(name: string, value: unknown): Map<string, unknown>;
+
+  /**
+   * Fire a program-level trigger: set, evaluate, then reset to the input's default and
+   * evaluate again. The returned outputs are the fired pass.
+   */
+  fireTrigger(name: string, value: unknown): Map<string, unknown>;
 
   /** Unregister the program and clear all its subscriptions. */
   unregister(): void;
@@ -43,24 +58,50 @@ export interface ProgramHandle {
 export type OutputHandler = (programId: string, outputs: Map<string, unknown>) => void;
 export type ErrorHandler = (programId: string, error: EvalError) => void;
 
-// ---------------------------------------------------------------------------
-// Runtime - manages multiple programs sharing context inputs.
-// ---------------------------------------------------------------------------
+export interface RuntimeOptions {
+  /** Global port layers, in precedence order: an earlier layer owns a contested name. */
+  layers?: readonly PortLayer[];
+}
 
-interface ProgramEntry {
-  id: string;
-  program: CoreProgram;
-  state: EvalState;
-  outputHandlers: Set<(outputs: Map<string, unknown>) => void>;
-  errorHandlers: Set<(error: EvalError) => void>;
+export interface RegisterOptions {
+  /** What this program declares on top of the global layers. */
+  ports?: Ports;
+  /** Starting values for its program-level inputs; other names are ignored. */
+  values?: Readonly<Record<string, unknown>>;
 }
 
 export interface Runtime {
+  /** The global layers, in precedence order. */
+  readonly layers: readonly PortLayer[];
+
   /**
-   * Register a program. Initialises inputs to defaults, runs first evaluation,
-   * and returns a ProgramHandle for program-scoped subscriptions.
+   * Replace one global layer's ports. Returns the compose problems that made the change
+   * impossible (nothing changed), or an empty list once applied. Unknown id throws.
+   * Values of names the layer dropped are pruned; listeners are notified last.
+   *
+   * Already-registered programs keep evaluating as they are: a program-level name that a
+   * new global layer also declares is only re-checked when that program is replaced.
    */
-  register(id: string, program: CoreProgram): ProgramHandle;
+  setLayer(id: string, ports: Ports): PortProblem[];
+
+  /** Subscribe to global layer changes (an instance recompiles on these). */
+  onLayerChange(listener: (layers: readonly PortLayer[]) => void): () => void;
+
+  /**
+   * Register a program: compose its ports, seed its inputs, run the first evaluation and
+   * return a handle. Throws on compose problems or an id that is already registered.
+   */
+  register(id: string, program: CoreProgram, options?: RegisterOptions): ProgramHandle;
+
+  /**
+   * Swap the program behind an id, keeping its subscriptions and the values of every
+   * program-level input it still declares. Omitting `ports` keeps the current ones.
+   */
+  replace(
+    id: string,
+    program: CoreProgram,
+    options?: Pick<RegisterOptions, "ports">,
+  ): ProgramHandle;
 
   /**
    * Unregister by ID - for cases where the handle is unavailable.
@@ -68,18 +109,19 @@ export interface Runtime {
    */
   unregister(id: string): void;
 
-  /** Update a single input and re-evaluate all affected programs. */
+  /** Update a single global input and re-evaluate all affected programs. */
   updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>;
 
   /**
-   * Update multiple inputs atomically - one evaluation pass per program.
+   * Update multiple global inputs atomically - one evaluation pass per program.
    * Preferred over multiple updateInput calls for the same ATEM event.
+   * Names that are not declared globally are ignored.
    */
   updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>;
 
   /**
-   * Fire a trigger - sets the value, evaluates affected programs,
-   * then resets to the trigger's default value.
+   * Fire a global trigger - sets the value, evaluates affected programs,
+   * then resets to the input's default value.
    */
   fireTrigger(name: string, value: unknown): Map<string, Map<string, unknown>>;
 
@@ -102,132 +144,191 @@ export interface Runtime {
   getOutputDependencies(programId: string): Map<string, ReadonlySet<string>> | undefined;
 }
 
-export function createRuntime(descriptor: LanguageDescriptor): Runtime {
-  const programs = new Map<string, ProgramEntry>();
+export function createRuntime(base: LanguageDescriptor, options: RuntimeOptions = {}): Runtime {
+  let layers: readonly PortLayer[] = options.layers ?? [];
+  let globalDescriptor = composeGlobal(layers);
 
-  // Global handler sets - fire for every program, include programId
+  const entries = new Map<string, ProgramEntry>();
+  // Live values of the GLOBAL inputs. Declared names only, so a layer's removal takes its
+  // values with it and a stale value can never re-seed a later program.
+  const globalValues = new Map<string, unknown>();
+  // Global input name → ids of the programs whose outputs depend on it.
+  const inputIndex = new Map<string, Set<string>>();
   const globalOutputHandlers = new Set<OutputHandler>();
   const globalErrorHandlers = new Set<ErrorHandler>();
+  const layerListeners = new Set<(layers: readonly PortLayer[]) => void>();
 
-  // inputIndex - input name → program IDs whose outputs depend on it
-  const inputIndex = new Map<string, Set<string>>();
+  // The global layers alone. A host builds these, so a problem is a setup bug: fail fast.
+  function composeGlobal(ls: readonly PortLayer[]): LanguageDescriptor {
+    const composed = composeLayers(base, ls, []);
+    if (!composed.ok)
+      throw new Error(report("Global port layers do not compose", composed.problems));
+    return composed.descriptor;
+  }
 
-  // currentInputs - tracks the live value of every input set since runtime creation.
-  // Used to seed programs registered after inputs have already been updated.
-  const currentInputs = new Map<string, unknown>();
+  // One entry's descriptor: the global layers plus what this program declares itself.
+  function bind(id: string, program: CoreProgram, ports: Ports): BoundProgram {
+    const composed = composeLayers(base, layers, [{ id, ports, policy: Policy.user }]);
+    if (!composed.ok) {
+      throw new Error(report(`Ports of program '${id}' do not compose`, composed.problems));
+    }
+    return { program, ports, composed: composed.descriptor };
+  }
 
-  function addToIndex(id: string, program: CoreProgram): void {
-    for (const outputNode of program.outputs.values()) {
-      for (const inputName of outputNode.dependsOn) {
-        if (!inputIndex.has(inputName)) inputIndex.set(inputName, new Set());
-        inputIndex.get(inputName)!.add(id);
-      }
+  const globalInputs = (): ReadonlyMap<string, InputDefinition> => globalDescriptor.inputs;
+
+  function addToIndex(entry: ProgramEntry): void {
+    for (const name of entry.indexedNames()) {
+      let ids = inputIndex.get(name);
+      if (!ids) inputIndex.set(name, (ids = new Set()));
+      ids.add(entry.id);
     }
   }
 
-  function removeFromIndex(id: string, program: CoreProgram): void {
-    for (const outputNode of program.outputs.values()) {
-      for (const inputName of outputNode.dependsOn) {
-        inputIndex.get(inputName)?.delete(id);
-      }
-    }
+  function removeFromIndex(entry: ProgramEntry): void {
+    for (const name of entry.indexedNames()) inputIndex.get(name)?.delete(entry.id);
   }
 
-  function notifyOutput(id: string, outputs: Map<string, unknown>): void {
-    for (const handler of globalOutputHandlers) handler(id, outputs);
-    const entry = programs.get(id);
-    if (entry) {
-      for (const handler of entry.outputHandlers) handler(outputs);
-    }
+  function notifyOutput(entry: ProgramEntry, outputs: Map<string, unknown>): void {
+    for (const handler of globalOutputHandlers) handler(entry.id, outputs);
+    for (const handler of entry.outputHandlers) handler(outputs);
   }
 
-  function notifyError(id: string, error: EvalError): void {
-    for (const handler of globalErrorHandlers) handler(id, error);
-    const entry = programs.get(id);
-    if (entry) {
-      for (const handler of entry.errorHandlers) handler(error);
+  function notifyError(entry: ProgramEntry, error: EvalError): void {
+    for (const handler of globalErrorHandlers) handler(entry.id, error);
+    for (const handler of entry.errorHandlers) handler(error);
+  }
+
+  // Evaluate one entry and route the outcome. An evaluation error reaches onError and
+  // answers null - no outputs, and never a throw.
+  function evaluateAndRoute(
+    entry: ProgramEntry,
+    changed?: Set<string>,
+  ): Map<string, unknown> | null {
+    const result = entry.evaluate(changed);
+    if (!result.ok) {
+      notifyError(entry, result.error);
+      return null;
     }
+    notifyOutput(entry, result.outputs);
+    return result.outputs;
   }
 
   function applyChanges(changes: Map<string, unknown>): Map<string, Map<string, unknown>> {
-    const changedInputs = new Set(changes.keys());
+    const accepted = new Map<string, unknown>();
+    for (const [name, value] of changes) {
+      if (globalInputs().has(name)) accepted.set(name, value);
+    }
+    const results = new Map<string, Map<string, unknown>>();
+    if (accepted.size === 0) return results;
 
+    const changed = new Set(accepted.keys());
     const affected = new Set<string>();
-    for (const name of changedInputs) {
+    for (const name of changed) {
       for (const id of inputIndex.get(name) ?? []) affected.add(id);
     }
 
-    for (const [name, value] of changes) {
-      currentInputs.set(name, value);
-      for (const id of affected) {
-        updateInput(name, value, programs.get(id)!.state);
-      }
+    for (const [name, value] of accepted) {
+      globalValues.set(name, value);
+      for (const id of affected) entries.get(id)!.setGlobalInput(name, value);
     }
 
-    const results = new Map<string, Map<string, unknown>>();
     for (const id of affected) {
-      const entry = programs.get(id)!;
-      try {
-        const outputs = evaluateProgram(entry.program, entry.state, descriptor, changedInputs);
-        results.set(id, outputs);
-        notifyOutput(id, outputs);
-      } catch (e) {
-        if (e instanceof EvalError) {
-          notifyError(id, e);
-        } else {
-          throw e;
-        }
-      }
+      // A handler notified earlier in this pass may have unregistered a later program.
+      const entry = entries.get(id);
+      if (!entry) continue;
+      const outputs = evaluateAndRoute(entry, changed);
+      if (outputs) results.set(id, outputs);
     }
-
     return results;
   }
 
   function doUnregister(id: string): void {
-    const entry = programs.get(id);
+    const entry = entries.get(id);
     if (!entry) return;
+    removeFromIndex(entry);
     entry.outputHandlers.clear();
     entry.errorHandlers.clear();
-    removeFromIndex(id, entry.program);
-    programs.delete(id);
+    entries.delete(id);
+  }
+
+  function handleFor(entry: ProgramEntry, initialOutputs: Map<string, unknown>): ProgramHandle {
+    return {
+      id: entry.id,
+      initialOutputs,
+      onOutput(handler) {
+        entry.outputHandlers.add(handler);
+        return () => entry.outputHandlers.delete(handler);
+      },
+      onError(handler) {
+        entry.errorHandlers.add(handler);
+        return () => entry.errorHandlers.delete(handler);
+      },
+      setInput(name, value) {
+        entry.setInput(name, value);
+        return evaluateAndRoute(entry, new Set([name])) ?? new Map();
+      },
+      fireTrigger(name, value) {
+        entry.setInput(name, value);
+        const fired = evaluateAndRoute(entry, new Set([name])) ?? new Map();
+        entry.resetInput(name);
+        evaluateAndRoute(entry, new Set([name]));
+        return fired;
+      },
+      unregister() {
+        doUnregister(entry.id);
+      },
+    };
   }
 
   return {
-    register(id, program) {
-      const state = createEvalState();
-      const outputHandlers = new Set<(outputs: Map<string, unknown>) => void>();
-      const errorHandlers = new Set<(error: EvalError) => void>();
+    get layers() {
+      return layers;
+    },
 
-      programs.set(id, { id, program, state, outputHandlers, errorHandlers });
-      addToIndex(id, program);
+    setLayer(id, ports) {
+      if (!layers.some((layer) => layer.id === id)) throw new Error(`No global layer '${id}'`);
+      const next = layers.map((layer) => (layer.id === id ? { ...layer, ports } : layer));
+      const composed = composeLayers(base, next, []);
+      if (!composed.ok) return composed.problems;
 
-      for (const [name, def] of descriptor.inputs) {
-        updateInput(name, def.default ?? null, state);
+      layers = next;
+      globalDescriptor = composed.descriptor;
+      for (const name of [...globalValues.keys()]) {
+        if (!globalInputs().has(name)) globalValues.delete(name);
       }
-      // Overlay with any values already set at runtime since creation
-      for (const [name, value] of currentInputs) {
-        updateInput(name, value, state);
+      // Notified last: a listener recompiles against the state this call just settled.
+      for (const listener of layerListeners) listener(layers);
+      return [];
+    },
+
+    onLayerChange(listener) {
+      layerListeners.add(listener);
+      return () => layerListeners.delete(listener);
+    },
+
+    register(id, program, options = {}) {
+      if (entries.has(id)) throw new Error(`Program '${id}' is already registered - use replace`);
+      const ports = options.ports ?? EMPTY_PORTS;
+      const entry = new ProgramEntry(id, bind(id, program, ports), globalValues);
+      entries.set(id, entry);
+      addToIndex(entry);
+
+      const declared = new Set(ports.inputs.map((input) => input.name));
+      for (const [name, value] of Object.entries(options.values ?? {})) {
+        if (declared.has(name)) entry.setInput(name, value);
       }
+      return handleFor(entry, evaluateAndRoute(entry) ?? new Map());
+    },
 
-      const changedInputs = new Set(descriptor.inputs.keys());
-      const initialOutputs = evaluateProgram(program, state, descriptor, changedInputs);
-      notifyOutput(id, initialOutputs);
-
-      return {
-        id,
-        initialOutputs,
-        onOutput(handler) {
-          outputHandlers.add(handler);
-          return () => outputHandlers.delete(handler);
-        },
-        onError(handler) {
-          errorHandlers.add(handler);
-          return () => errorHandlers.delete(handler);
-        },
-        unregister() {
-          doUnregister(id);
-        },
-      };
+    replace(id, program, options = {}) {
+      const entry = entries.get(id);
+      if (!entry) throw new Error(`Program '${id}' is not registered`);
+      const bound = bind(id, program, options.ports ?? entry.ports);
+      removeFromIndex(entry);
+      entry.replace(bound, globalValues);
+      addToIndex(entry);
+      return handleFor(entry, evaluateAndRoute(entry) ?? new Map());
     },
 
     unregister(id) {
@@ -244,8 +345,8 @@ export function createRuntime(descriptor: LanguageDescriptor): Runtime {
 
     fireTrigger(name, value) {
       const results = applyChanges(new Map([[name, value]]));
-      const defaultValue = descriptor.inputs.get(name)?.default ?? null;
-      applyChanges(new Map([[name, defaultValue]]));
+      const def = globalInputs().get(name);
+      if (def) applyChanges(new Map([[name, defaultValueFor(def, globalDescriptor)]]));
       return results;
     },
 
@@ -260,8 +361,11 @@ export function createRuntime(descriptor: LanguageDescriptor): Runtime {
     },
 
     getOutputDependencies(programId) {
-      const entry = programs.get(programId);
+      const entry = entries.get(programId);
       return entry ? outputDependencies(entry.program) : undefined;
     },
   };
 }
+
+const report = (headline: string, problems: readonly PortProblem[]): string =>
+  `${headline}:\n` + problems.map((p) => `  - ${p.where}: ${p.message}`).join("\n");
