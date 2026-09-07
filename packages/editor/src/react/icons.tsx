@@ -16,7 +16,9 @@ export type IconName =
   | "redo"
   | "sun"
   | "moon"
-  | "monitor";
+  | "monitor"
+  | "plus"
+  | "trash";
 
 const glyphs: Record<IconName, ReactNode> = {
   // undo-2 / redo-2
@@ -88,6 +90,22 @@ const glyphs: Record<IconName, ReactNode> = {
     </>
   ),
   "chevron-down": <path d="m6 9 6 6 6-6" />,
+  plus: (
+    <>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </>
+  ),
+  // trash-2
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </>
+  ),
 };
 
 export function Icon({ name }: { name: IconName }) {
