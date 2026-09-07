@@ -28,6 +28,13 @@ Content in this file belongs to `@dendrite-lang/beacon`, a separate (planned) pa
 
 ## Beacon context inputs
 
+Since 2026-09-07 these are declared as a **port layer**, not on the language:
+`{ id: "beacon", ports: { inputs: [...] }, policy: Policy.host }`, passed to
+`env.createRuntime({ layers: [...] })` because every lighthouse shares them. A capability that
+applies to one program only is the same thing at program level, passed to `createInstance`.
+`Policy.host` marks them host-fed, so an editor renders them read-only and never saves their
+values. See `architecture.md`, "Host integration".
+
 | Name | Type | Trigger | Default |
 |---|---|---|---|
 | `sourceBusNew` | `SourceBus` | — | — |

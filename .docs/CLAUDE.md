@@ -24,7 +24,7 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | In development — inputs/outputs leave `Language` for layered `Ports` + `ProgramInstance` (`ports-plan.md`, settled 2026-09-06) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
 | `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | In development — headless core + React compound components (`./react`: `<Editor>`, canvas, panes, top bar, layout) landed; Rete to come (`editor-plan.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 
@@ -58,14 +58,19 @@ source ──parseSource──▶ RawProgram ──analyse──▶ CoreProgram 
 ```
 packages/core/src/language/
   infra/      types.ts (Type union + constructors), nodes.ts (ASTNode/CNode, node constructors),
-              registry.ts (LanguageDescriptor, isCompatible, FnValue), program.ts (Raw/CoreProgram)
+              registry.ts (Vocabulary + LanguageDescriptor, isCompatible, FnValue),
+              ports.ts (Ports, PortLayer, Policy), identifier.ts, observable.ts,
+              program.ts (Raw/CoreProgram), serialise.ts (SavedProgram + its ports)
   parser/     lexer.ts, parser.ts (Pratt kernel), grammar.ts (registration API),
               core-grammar.ts (installCoreGrammar), precedence.ts (BP ladder), types.ts
   analyser/   analyser.ts (analyse: pass pipeline), types.ts
   evaluator/  evaluator.ts (evaluate, EvalContext, memoise), types.ts (EvalState, EvalError)
-  runtime/    runner.ts (run, createProgramRunner), runtime.ts (createRuntime, ProgramHandle)
+  runtime/    runner.ts (run, createProgramRunner), runtime.ts (createRuntime, ProgramHandle),
+              entry.ts (one program state), seed.ts (defaultValueFor), instance.ts (createInstance)
   stdlib/     index.ts (createStdlib — types, ops, operators)
   language.ts Language assembly: createLanguage / extendLanguage / parseSource
+  compose.ts  composeLayers: vocabulary + port layers -> the descriptor a program is checked against
+  environment.ts createEnvironment / forProgram: the pipeline, bound to a composed descriptor
 ```
 
 See `architecture.md` for the layering DAG and full design.
@@ -96,8 +101,10 @@ See `architecture.md` for the layering DAG and full design.
   (concrete output type). No `apply`, no `HigherOrderNode`.
 
 ### Registration / Language
-- A **`Language` = `{ descriptor, grammar }`** with one unified register API
-  (type/op/input/output/evaluator → descriptor; nud/led/statement/infix/prefix → grammar).
+- A **`Language` = `{ descriptor: Vocabulary, grammar }`** with one unified register API
+  (type/op/evaluator → descriptor; nud/led/statement/infix/prefix → grammar). A language declares
+  no inputs and no outputs: those arrive as **port layers** and compose into the
+  `LanguageDescriptor` a program is checked against (`language/compose.ts`).
 - `createLanguage()` = empty base (core grammar only); `createStdlib()` = batteries (types + ops +
   operators); `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's operator vocab is single-sourced from

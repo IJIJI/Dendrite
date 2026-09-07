@@ -17,7 +17,7 @@ embed, and Beacon. Supersedes the "Editor era", "React switch", "user-settable i
 | **UI** | Headless core + React UI (Bridge + Observer) | Editor state lives in framework-free per-pane models with `subscribe`; React components hold *view* state only. Vue later ≈ 1–2 days of render code; without the discipline ≈ a rewrite. No vanilla pane implementation — non-React hosts use the iframe embed. |
 | **Tiers** | None. One component + config presets (`playground` / `docs` / `host`) | "Full editor" == the Beacon embed on more platforms; there is no separate studio app. Playground = reference host + dev harness. |
 | **Read-only** | No such flag | Docs snippets are editable (better docs); static code blocks are the docs framework's job. Speculative Generality. |
-| **Surface ownership** | `surface.provided` (host-owned outputs) + `surface.userInputs: boolean` | "Locked" was the wrong model — the real question is *who supplies a value at runtime*. Outputs are host-owned when a host surface exists (correctness); user-declared inputs are a flag Beacon can flip on later. |
+| **Surface ownership** | ~~`surface.provided` + `surface.userInputs`~~ → **superseded 2026-09-07 by port layers**: a `Policy` per layer says who may edit it, who feeds its values, and whether it is saved | "Locked" was the wrong model — the real question is *who supplies a value at runtime*, which is now `policy.feeds`. A host layer's inputs render read-only whatever a pane asks for, and no flag is needed. |
 | **Saving / history** | Editor emits `onChange(doc)`; optional `save` config renders button + status; store adapters are a convenience export; history = Memento, later | Host owns persistence. Capability by presence (ISP). |
 | **Publish** | `@dendrite-lang/core@0.1.0` after Phase 3 ("editor + some polishes") | The extraction is the first real external consumer of core's API — publish after it, not before. |
 | **Pages** | Playground moves to `/Dendrite/playground/` in Phase 0; a root `index.html` forwards `location.hash` | Docs take the root in Phase 4 without breaking share links. |
@@ -97,20 +97,30 @@ Speculative Generality). The playground keeps its vanilla shell through this pha
 
 **New:**
 
+A Phase-0 sketch. What was built is smaller — panes, actions and saving became the host's
+composition rather than config, and the surface became port layers. The shape as of 2026-09-07:
+
 ```ts
 createEditor(el, config): EditorHandle            // imperative mount, framework-free
 
 interface EditorConfig {
-  document: EditorDocument;
+  document: EditorDocument;                        // { version, program (incl. its ports), inputValues }
   language?: Language;                             // default createStdlib(); Beacon passes its extended one
-  mode?: "code";                                   // "rete" | "dual" later
-  surface?: { provided?: SurfaceSpec; userInputs?: boolean };
-  panes?:   { inputs?: boolean; outputs?: boolean; diagnostics?: boolean };
-  actions?: { share?: boolean; save?: boolean; openInPlayground?: string };
-  onChange?(doc: EditorDocument): void;
-  save?:    { onSave(doc: EditorDocument): Promise<void>; status?: SaveStatus };
+  layers?: { global?: readonly PortLayer[]; program?: readonly PortLayer[] };  // stable references
+  onChange?(doc: EditorDocument): void;            // debounced; anything a save would capture
+}
+
+interface EditorHandle {
+  instance: ProgramInstance;                       // the running program: five observables
+  history: Observable<HistoryDepth>;
+  getDocument(): EditorDocument;
+  jumpTo(line, column): void;
+  undo(): void; redo(): void; dispose(): void;
 }
 ```
+
+Still to come (`todo.md`): mounting a runtime the editor does not own, and an explicit save
+with a dirty flag, which is what a host editor needs instead of the playground's autosave.
 
 - **Presets** `PRESETS.playground` / `docs` / `host` — plain objects a host spreads (Strategy as data).
 - **Models** (Observer): `createInputsModel` / `createOutputsModel` / `createDiagnosticsModel`, each

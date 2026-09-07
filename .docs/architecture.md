@@ -7,7 +7,7 @@ infra/      — leaf types & semantics (no deps on the rest)
   types.ts      Type union (name | array | function) + constructors, typeToString, predicates
   nodes.ts      ASTNode / CNode, SourceRef, LiteralValue, Analysed, node constructors
   registry.ts   Vocabulary + LanguageDescriptor, definition types, isCompatible, FnValue
-  ports.ts      Ports, PortType, PortLayer, Policy, flattenPorts, isPorts
+  ports.ts      Ports, PortLayer, Policy, flattenPorts, isPorts
   identifier.ts the one identifier rule, shared by the lexer and port names
   observable.ts Observable / Subject / createSubject — the reactive primitive
   program.ts    RawProgram, CoreProgram
