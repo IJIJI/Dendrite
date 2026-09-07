@@ -289,8 +289,33 @@ for nested structs) derived from `TypeDefinition.fields`; the pane renders a lab
 writes back a whole object; a decision on what to show for a field the value is missing (fall back
 to `defaultValueFor` per field). Arrays of structs are a second, larger step — leave them on JSON.
 
-**Driving need:** Phase 3 lets a user declare ports in the UI, and a declared struct is only as
-useful as the widget that fills it.
+**Driving need — not yet.** Phase 3 shipped a picker over the types the language already
+REGISTERS; declaring a type in a layer is not in the UI (see the entry below), so a user still
+cannot make a struct that would need this widget. The trigger is type authoring, or a host whose
+layer declares a struct the user must fill.
+
+---
+
+## Editor — the declaration fields the port panes do not expose
+
+**What:** Phase 3's rows carry a name and a type and nothing else. `InputDefinition.trigger` and
+`.default`, `OutputDefinition.mode`, and `Ports.types` — declaring a struct or a newtype on the
+layer — have no UI.
+
+**Why deferred:** none has a named consumer, which is this plan's standing rule for a config
+surface. `trigger` and `mode` are host-contract concepts (Beacon declares them in code, where they
+belong); `default` is derived from the type, and the value widget already sets the value.
+
+**What it requires:** for `mode`, one more `<select>` in `PortDeclaration` and an
+`updateOutput(…, { mode })`. For `trigger`, a checkbox plus a decision about what a user-fed
+trigger even means in an editor (a "fire" button next to the value?). For types, a third section in
+the pane and `addType` / `updateType` / `removeType` in `ports-edit.ts` — plus the field editor a
+struct needs, which is the same shape as the struct-input widget above. Note that a persisted layer
+refuses a `schema`, so a user-declared type carries shape only and validates through `extends`.
+
+**Driving need:** the type one is the real one — it unblocks the struct-input widget and is the
+natural next thing a user reaches for after "add an input". `mode` follows a user who wants to be
+told when they delete an output the rest of their program relied on.
 
 ---
 
@@ -497,10 +522,14 @@ document). See `apps/playground/src/lang/{surface,document,permalink}.ts`.
 
 ---
 
-## Playground — user-settable inputs and outputs
+## Playground — user-settable inputs and outputs — DONE
 
-**→ Scheduled as [editor-plan.md](editor-plan.md) Phase 3** (built in React against the Phase 1
-models, gated by `surface.userInputs`). Kept here for the requirements.
+**Delivered 2026-09-07** as [editor-plan.md](editor-plan.md) Phase 3, on layers rather than the
+`SurfaceSpec` sketched below: the document's own `Policy.user` layer is what the panes edit, the
+gate is that layer's `editable` rather than a `surface.userInputs` flag, and `composeLayers` — not
+the editor — judges every change. Declarations travel in share URLs as predicted, through
+`SavedProgram.ports`. What is still missing is listed under "the declaration fields the port panes
+do not expose". The original requirements are kept below for the record.
 
 **What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) from
 the playground itself. **The data structure already exists** — documents carry a `SurfaceSpec`
