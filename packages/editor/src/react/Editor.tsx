@@ -4,11 +4,11 @@ import { createEditor, type EditorConfig, type EditorHandle } from "../editor";
 import { EditorContext, type EditorContextValue } from "./context";
 
 //? <Editor>: the provider of the compound components. Holds the config and, once
-// <Editor.Canvas/> has mounted it, the editor. A new `document` or `language` remounts the
-// editor (attach's identity changes, so the canvas effect re-runs); `onChange` is read
-// through a ref so updating it never remounts. A throwing createEditor (unsupported program
-// form, dangling type in the surface) becomes `error`, not a crash - effects are invisible
-// to React error boundaries.
+// <Editor.Canvas/> has mounted it, the editor. A new `document`, `language` or `layers`
+// remounts the editor (attach's identity changes, so the canvas effect re-runs); `onChange`
+// is read through a ref so updating it never remounts. A throwing createEditor (unsupported
+// program form, dangling type in the surface) becomes `error`, not a crash - effects are
+// invisible to React error boundaries.
 
 export type EditorProps = EditorConfig & { children?: ReactNode };
 
@@ -19,7 +19,7 @@ interface Mounted {
 
 const unmounted: Mounted = { editor: null, error: undefined };
 
-export function Editor({ document, language, onChange, children }: EditorProps) {
+export function Editor({ document, language, layers, onChange, children }: EditorProps) {
   const [mounted, setMounted] = useState<Mounted>(unmounted);
 
   const onChangeRef = useRef(onChange);
@@ -33,6 +33,7 @@ export function Editor({ document, language, onChange, children }: EditorProps) 
         const editor = createEditor(parent, {
           document,
           language,
+          layers,
           onChange: (doc) => onChangeRef.current?.(doc),
         });
         setMounted({ editor, error: undefined });
@@ -45,7 +46,7 @@ export function Editor({ document, language, onChange, children }: EditorProps) 
         return () => setMounted(unmounted);
       }
     },
-    [document, language],
+    [document, language, layers],
   );
 
   const value = useMemo<EditorContextValue>(() => ({ ...mounted, attach }), [mounted, attach]);
