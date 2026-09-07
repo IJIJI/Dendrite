@@ -79,7 +79,7 @@ export const TOTALS = produces("totals", "avgTotal", "countTotal");
 // evaluator's inferInputTypes), exactly as in source programs.
 
 function inp(name: string): ASTNode {
-  return { kind: "input", name, type: Type.array(Type.number) };
+  return { kind: "input", name };
 }
 function lit(value: number): ASTNode {
   return { kind: "literal", value };

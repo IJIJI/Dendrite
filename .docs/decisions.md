@@ -117,6 +117,9 @@ When a program stops compiling the runtime keeps running the last good one. Ever
 **Program-level values have one owner.**
 The instance owns them and hands them to the runtime on every register and replace. The entry follows rather than re-deriving, because two components applying "the same rule" independently drift the moment one of them skips a push.
 
+**A type definition is the same shape wherever it is declared; `schema` is optional.**
+A host attaches a zod schema to a type it registers on the LANGUAGE, where it is code. A type inside a port layer carries shape only and inherits validation through `extends`, because a schema cannot travel: converting one to JSON keeps enums and bounds but drops a `.refine` predicate silently (zod 4.4.3), so a saved "even number" would come back accepting odd ones. Serialising strips a schema and `isPorts` refuses one. Nothing in core calls a schema yet — the boundary check is in `todo.md`.
+
 **The parser reads no declarations.**
 `$x` is an input because of the sigil. The type it stamps was always overwritten by the analyser, so reading a declaration at parse time was dead data — and after the split the parser has no ports to read.
 

@@ -168,8 +168,15 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
     return composed.descriptor;
   }
 
-  // One entry's descriptor: the global layers plus what this program declares itself.
+  // One entry's descriptor: the global layers plus what this program declares itself. The
+  // program's own layer is named after the program, which is what makes a problem readable -
+  // and what makes an id shared with a global layer worth its own message.
   function bind(id: string, program: CoreProgram, ports: Ports): BoundProgram {
+    if (layers.some((layer) => layer.id === id)) {
+      throw new Error(
+        `Program id '${id}' collides with a global layer of the same name - rename one`,
+      );
+    }
     const composed = composeLayers(base, layers, [{ id, ports, policy: Policy.user }]);
     if (!composed.ok) {
       throw new Error(report(`Ports of program '${id}' do not compose`, composed.problems));

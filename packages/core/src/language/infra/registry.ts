@@ -5,7 +5,15 @@ import { type Type } from "./types";
 //? Definition types
 export interface TypeDefinition {
   name: string;
-  schema: ZodType<unknown>;
+  /**
+   * Optional runtime validator for values of this type. Nothing in core calls it yet; it is
+   * the slot a boundary check would use, and it only exists on types a host registers on the
+   * LANGUAGE. A type declared inside a port layer travels with a saved program, and a zod
+   * schema cannot: converting one to JSON drops `.refine` predicates silently, and nothing
+   * revives it. Inheritance is the way round that - a layer type extending a language type
+   * inherits its validator without carrying anything.
+   */
+  schema?: ZodType<unknown>;
   /**
    * The "zero" or "empty" value for this type. Used as a resilient fallback when a node
    * produces null or is unset. Auto-derived for primitives; complex types should provide one.

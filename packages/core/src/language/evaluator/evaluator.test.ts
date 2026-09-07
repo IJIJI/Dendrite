@@ -163,7 +163,7 @@ describe("application dependsOn", () => {
           "f",
           lambda(
             [{ name: "x", type: Type.boolean }],
-            op("And", { nodes: [ref("x"), { kind: "input", name: "flag", type: Type.boolean }] }),
+            op("And", { nodes: [ref("x"), { kind: "input", name: "flag" }] }),
           ),
         ],
       ]),

@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { validateDescriptor } from "./analyser/analyser";
 import { type AnalysisError } from "./analyser/types";
 import { isIdentifier } from "./infra/identifier";
@@ -108,8 +106,7 @@ export function composeLayers(
       if (seenLayerIds.has(layer.id)) throw new Error(`Duplicate layer id '${layer.id}'`);
       seenLayerIds.add(layer.id);
       const at: PortOrigin = { layerId: layer.id, level };
-      for (const t of layer.ports.types ?? [])
-        place(types, at, t.name, { ...t, schema: z.unknown() });
+      for (const t of layer.ports.types ?? []) place(types, at, t.name, { ...t });
       for (const i of layer.ports.inputs) place(inputs, at, i.name, i);
       for (const o of layer.ports.outputs) place(outputs, at, o.name, o);
     }

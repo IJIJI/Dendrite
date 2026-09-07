@@ -1,7 +1,6 @@
-import { z, type ZodType } from "zod";
+import { z } from "zod";
 
 import { type ASTNode } from "./infra/nodes";
-import { type Type } from "./infra/types";
 import {
   type EvaluatorDefinition,
   type OpDefinition,
@@ -36,11 +35,7 @@ export interface Language {
   descriptor: Vocabulary;
   grammar: Grammar;
   // Semantics → descriptor.
-  registerType(
-    name: string,
-    schema: ZodType<unknown>,
-    config?: { default?: unknown; extends?: string; fields?: Record<string, Type> },
-  ): void;
+  registerType(name: string, config?: Omit<TypeDefinition, "name">): void;
   registerOp(def: OpDefinition): void;
   registerEvaluator(def: EvaluatorDefinition): void;
   // Syntax → grammar. Full handlers, with operator sugar on top.
@@ -72,8 +67,8 @@ export function createLanguage(): Language {
     descriptor,
     grammar,
 
-    registerType(name, schema, config) {
-      types.set(name, { name, schema, ...config });
+    registerType(name, config) {
+      types.set(name, { name, ...config });
     },
     registerOp: (def) => ops.set(def.name, def),
     registerEvaluator: (def) => evaluators.set(def.op, def),
@@ -95,10 +90,10 @@ export function createLanguage(): Language {
 // grammar parses `42` / `"x"` / `true` AND the descriptor knows those types (for defaults,
 // schemas, extends). Arrays/functions stay structural (Type.array / Type.fn) - none to register.
 function installCorePrimitives(lang: Language): void {
-  lang.registerType("boolean", z.boolean(), { default: false });
-  lang.registerType("number", z.number(), { default: 0 });
-  lang.registerType("string", z.string(), { default: "" });
-  lang.registerType("any", z.unknown(), { default: null });
+  lang.registerType("boolean", { schema: z.boolean(), default: false });
+  lang.registerType("number", { schema: z.number(), default: 0 });
+  lang.registerType("string", { schema: z.string(), default: "" });
+  lang.registerType("any", { default: null }); // any value is valid; nothing to check
 }
 
 /**
@@ -111,7 +106,8 @@ export function extendLanguage(extension: Language, base: Language): Language {
   const e = extension.descriptor;
   b.types.forEach((v) => {
     if (!e.types.has(v.name)) {
-      extension.registerType(v.name, v.schema, {
+      extension.registerType(v.name, {
+        schema: v.schema,
         default: v.default,
         extends: v.extends,
         fields: v.fields,

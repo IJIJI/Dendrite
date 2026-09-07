@@ -1,6 +1,5 @@
 import { createStdlib, type Ports, Type } from "@dendrite-lang/core";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import {
   addInput,
@@ -46,7 +45,7 @@ describe("port edits are pure", () => {
 describe("typeOptions", () => {
   it("offers builtins first, then registered types, each with its list form; never null", () => {
     const lang = createStdlib();
-    lang.registerType("Bus", z.unknown(), {});
+    lang.registerType("Bus", {});
     const labels = typeOptions(lang.descriptor).map((o) => o.label);
     expect(labels.slice(0, 4)).toEqual(["number", "number[]", "boolean", "boolean[]"]);
     expect(labels).toContain("Bus");

@@ -6,11 +6,11 @@ import { createLanguage } from "../language";
 import { defaultValueFor } from "./seed";
 
 const lang = createLanguage();
-lang.registerType("Score", z.number(), { extends: "number" });
-lang.registerType("Grade", z.number(), { extends: "Score" });
-lang.registerType("Bus", z.unknown(), { fields: { n: Type.number } });
-lang.registerType("Route", z.unknown(), { default: { stops: [] } });
-lang.registerType("Loop", z.unknown(), { extends: "Loop" });
+lang.registerType("Score", { schema: z.number(), extends: "number" });
+lang.registerType("Grade", { schema: z.number(), extends: "Score" });
+lang.registerType("Bus", { fields: { n: Type.number } });
+lang.registerType("Route", { default: { stops: [] } });
+lang.registerType("Loop", { extends: "Loop" });
 const d = lang.descriptor;
 
 describe("defaultValueFor", () => {
