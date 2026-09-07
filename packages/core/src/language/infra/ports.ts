@@ -8,11 +8,9 @@ import { type InputDefinition, type OutputDefinition, type TypeDefinition } from
 // values at runtime, and whether the layer is saved with the program; core reads those fields,
 // it never branches on a layer "kind" - the presets below are just the two common combinations.
 
-/** A struct type a layer declares; compose supplies the schema. */
-export type PortType = Omit<TypeDefinition, "schema">;
-
 export interface Ports {
-  readonly types?: readonly PortType[];
+  /** Ordinary type definitions. A saved one carries no `schema` - see TypeDefinition. */
+  readonly types?: readonly TypeDefinition[];
   readonly inputs: readonly InputDefinition[];
   readonly outputs: readonly OutputDefinition[];
 }
@@ -71,7 +69,11 @@ const isTypeDeclaration = (value: unknown): boolean =>
   isRecord(value) &&
   typeof value["name"] === "string" &&
   (value["fields"] === undefined || isRecord(value["fields"])) &&
-  (value["extends"] === undefined || typeof value["extends"] === "string");
+  (value["extends"] === undefined || typeof value["extends"] === "string") &&
+  // Serialising strips it, so one here means a hand-built or corrupted payload. Whatever
+  // JSON.stringify made of a zod schema is not a working validator, and calling it later
+  // would be worse than refusing it now.
+  value["schema"] === undefined;
 
 /** Structural guard for stored ports (a saved program's `ports`, a share URL). */
 export function isPorts(value: unknown): value is Ports {

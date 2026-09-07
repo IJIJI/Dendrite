@@ -7,7 +7,7 @@ import { type Language } from "../language";
 import { type ASTNode } from "./nodes";
 import { Policy } from "./ports";
 import { type RawProgram } from "./program";
-import { EMPTY_PORTS, type Ports } from "./ports";
+import { EMPTY_PORTS, isPorts, type Ports } from "./ports";
 import {
   assertSavedPorts,
   deserialise,
@@ -24,7 +24,7 @@ import { Type } from "./types";
 // program below is analysed against.
 function makeLang(): Language {
   const lang = createStdlib();
-  lang.registerType("User", z.unknown(), {
+  lang.registerType("User", {
     fields: { name: Type.string, score: Type.number },
   });
   return lang;
@@ -141,6 +141,20 @@ describe("ports on a saved program", () => {
 
     const rete: SavedProgram = { version: 1, form: "rete", graph: {}, ports: PORTS };
     expect(roundTrip(rete).ports).toEqual(PORTS);
+  });
+
+  it("never saves a type's schema, and refuses one that arrives anyway", () => {
+    const withSchema: Ports = {
+      types: [{ name: "Even", extends: "number", schema: z.number() }],
+      inputs: [],
+      outputs: [],
+    };
+    const saved = serialiseSource("output out = 1", withSchema);
+    expect(saved.ports?.types?.[0]).toEqual({ name: "Even", extends: "number" });
+    expect(withSchema.types?.[0].schema).toBeDefined(); // the live object is untouched
+
+    // A hand-built payload carrying one is malformed: it cannot be a working validator.
+    expect(isPorts({ ...withSchema })).toBe(false);
   });
 
   it("is absent when nothing is declared, so old payloads are unchanged", () => {

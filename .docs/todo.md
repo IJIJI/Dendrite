@@ -359,41 +359,53 @@ is a peripheral that attaches to a running program, edits a draft of it, and app
 
 ---
 
+## Value validation at the boundary (and enums)
+
+**What:** Nothing in core ever checks that a value a host pushes matches the type it was
+declared with. `updateInput("user", "oops")` succeeds, and the program fails later at a field
+access, or quietly computes nonsense. `TypeDefinition.schema` is the slot for the check and
+nothing calls it.
+
+**Why deferred:** it needs a decision about enums first (below), and the ports work had to settle
+what a type even is before the check could be designed once for both levels.
+
+**What it requires:**
+- One place that validates when a value arrives — `instance.setInput`, `runtime.updateInputs`,
+  and the entry's seeding. Cost matters: a live show pushes values at frame rate, so decide
+  whether validation is always on, opt-in per layer, or development-only.
+- **Walk the `extends` chain and apply every ancestor's schema, not just the most derived one.**
+  Static compatibility already walks that chain to let a `Derived` flow where a `Base` is
+  expected; validation has to honour the same claim. It also means a host writing
+  `Grade extends Score extends number` never repeats the parent's rules.
+- A failure needs a channel. A new `ProgramDiagnostic` stage is the natural home, since the
+  panes already render those and a bad value is not an `EvalError`.
+- **Enums want a serialisable form, not a schema.** A list of allowed values on the type
+  travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
+  That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
+  drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
+  and reloaded would accept odd ones. Hence the split settled 2026-09-07: a **language** type may
+  carry a zod schema (it is code); a type inside a **port layer** carries shape only, and
+  inherits validation through `extends` from a language type.
+
+**Driving need:** a host pushing a struct that does not match its declaration is currently
+invisible until something downstream misbehaves.
+
+---
+
 ## Ports refactor — the small things it left
 
-Each of these is a deliberate omission from the 2026-09 ports work, not an oversight. None blocks
-anything; they are grouped so they can be swept in one sitting.
-
-**An input node's type is write-only until the analyser fills it.** `InputNode.type` is required,
-so the parser stamps `Type.any` as a placeholder, and the analyser overwrites it unconditionally —
-including a type written by hand into a raw program, which several examples do. The codebase
-already has the right convention: a literal node and a reference node carry no type until analysis,
-and their analysed forms re-declare it as required. Making `InputNode.type` optional and requiring
-it on `CInputNode` deletes the placeholder instead of explaining it. Touches the node union, the
-serialiser's guard and a few fixtures.
-
-**`TypeDefinition.schema` is close to dead weight.** Exactly one line in the whole repo reads it
-(`extendLanguage`, to re-register a type onto an extension); nothing validates a value with it.
-A layer-declared type cannot have one at all — ports are JSON that round-trips through a database,
-and a Zod schema is a live object — so `composeLayers` fills in `z.unknown()`. Decide whether the
-field earns its place before anything starts relying on it. If runtime validation ever arrives, a
-layer type needs a serialisable description of its shape, not a schema object.
+Two knowing trades, kept deliberately. (The other four items in this entry were swept on
+2026-09-07: the input node stopped carrying a type it could not know, `schema` became optional
+so a type definition is the same shape wherever it is declared, a program id colliding with a
+global layer id now says so, and the three CRLF documents were normalised to LF.)
 
 **`setLayer` composes twice.** Once to decide whether the change is blocked, once inside the
-recompile that follows. Compose is cheap and layer edits are not per-keystroke, so this is a
-knowing trade of work for a simpler control flow. Revisit only if a profile says so.
-
-**A program id that collides with a global layer id throws an unhelpful error.** The runtime names
-a program's synthetic layer after the program, so registering `"grade"` while a global layer is
-also called `"grade"` reports a duplicate layer id. Accurate, and confusing for what is really a
-name-choice accident. Catch it in `register` and rethrow saying the program id collides.
+recompile that follows. Compose is cheap and layer edits are not per-keystroke, so this trades a
+little work for a simpler control flow. Revisit only if a profile says so.
 
 **`watch` has no caller.** It arrived when the editor was extracted from the playground, for a
 vanilla pane module that never existed. Kept because it is exactly what a framework-free host
 needs, but it is untested by use.
-
-**The `.docs/` set has one CRLF file.** `architecture.md` uses CRLF while every other document uses
-LF, which makes multi-line patches to it fail in confusing ways. Normalise it.
 
 ---
 

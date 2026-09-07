@@ -153,6 +153,14 @@ describe("runtime", () => {
     expect(rt.getOutputDependencies("missing")).toBeUndefined();
   });
 
+  it("register names its own layer after the program, so a shared id is refused clearly", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    expect(() => rt.register("host", build(lang, "output out = Add($x, 1)"))).toThrow(
+      /collides with a global layer/,
+    );
+  });
+
   it("register refuses an id that is already taken", () => {
     const lang = makeLang();
     const rt = runtimeFor(lang);

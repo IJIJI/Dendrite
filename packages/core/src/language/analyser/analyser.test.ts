@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { analyse, getOutputType, validateDescriptor } from "./analyser";
 import {
@@ -114,16 +113,16 @@ describe("isCompatible", () => {
 
   it("B extends A: B compat with A, not reverse", () => {
     const lang = testLang();
-    lang.registerType("A", z.unknown(), {});
-    lang.registerType("B", z.unknown(), { extends: "A" });
+    lang.registerType("A", {});
+    lang.registerType("B", { extends: "A" });
     expect(isCompatible(Type.name("B"), Type.name("A"), lang.descriptor)).toBe(true);
     expect(isCompatible(Type.name("A"), Type.name("B"), lang.descriptor)).toBe(false);
   });
 
   it("B[] compat with A[] when B extends A, not reverse", () => {
     const lang = testLang();
-    lang.registerType("A", z.unknown(), {});
-    lang.registerType("B", z.unknown(), { extends: "A" });
+    lang.registerType("A", {});
+    lang.registerType("B", { extends: "A" });
     expect(
       isCompatible(Type.array(Type.name("B")), Type.array(Type.name("A")), lang.descriptor),
     ).toBe(true);
@@ -134,8 +133,8 @@ describe("isCompatible", () => {
 
   it("malformed extends cycle terminates and returns false", () => {
     const lang = testLang();
-    lang.registerType("X", z.unknown(), { extends: "Y" });
-    lang.registerType("Y", z.unknown(), { extends: "X" });
+    lang.registerType("X", { extends: "Y" });
+    lang.registerType("Y", { extends: "X" });
     expect(isCompatible(Type.name("X"), Type.name("Y"), lang.descriptor)).toBe(true); // one step gets there
     expect(isCompatible(Type.name("Y"), Type.name("X"), lang.descriptor)).toBe(true); // one step gets there
     // Neither X nor Y is a subtype of "other"
@@ -165,8 +164,8 @@ describe("isCompatible", () => {
 
   it("function: contravariant params, covariant return (via extends)", () => {
     const lang = testLang();
-    lang.registerType("Animal", z.unknown(), {});
-    lang.registerType("Cat", z.unknown(), { extends: "Animal" });
+    lang.registerType("Animal", {});
+    lang.registerType("Cat", { extends: "Animal" });
     const Animal = Type.name("Animal");
     const Cat = Type.name("Cat");
 
@@ -221,7 +220,7 @@ describe("happy path", () => {
   it("input → correct type, single-item dependsOn", () => {
     const lang = testLang();
     lang.registerInput({ name: "score", type: Type.number });
-    const prog = makeProgram({}, { out: { kind: "input", name: "score", type: Type.number } });
+    const prog = makeProgram({}, { out: { kind: "input", name: "score" } });
     const result = analyse(prog, lang.descriptor);
     expect(result.ok).toBe(true);
     const node = result.program.outputs.get("out")!;
@@ -235,7 +234,7 @@ describe("happy path", () => {
     // a = input(x), b = ref(a)
     const prog = makeProgram(
       {
-        a: { kind: "input", name: "x", type: Type.number },
+        a: { kind: "input", name: "x" },
         b: ref("a"),
       },
       { out: ref("b") },
@@ -258,8 +257,8 @@ describe("happy path", () => {
           op: "And",
           inputs: {
             nodes: [
-              { kind: "input", name: "p", type: Type.boolean },
-              { kind: "input", name: "q", type: Type.boolean },
+              { kind: "input", name: "p" },
+              { kind: "input", name: "q" },
             ],
           },
           output: Type.boolean,
@@ -276,7 +275,7 @@ describe("happy path", () => {
 
   it("Filter on a typed list → output is the list type, predicate param gets the element type", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), {});
+    lang.registerType("Source", {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter(sources, item => true) — item is contextually typed Source
     const prog = makeProgram(
@@ -286,7 +285,7 @@ describe("happy path", () => {
           kind: "operation",
           op: "Filter",
           inputs: {
-            list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) },
+            list: { kind: "input", name: "sources" },
             predicate: { kind: "lambda", params: [{ name: "item" }], body: lit(true) },
           },
           output: Type.array(Type.any),
@@ -303,7 +302,7 @@ describe("happy path", () => {
 
   it("a differently-named predicate param still gets the element type (contextual typing)", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), {});
+    lang.registerType("Source", {});
     lang.registerInput({ name: "sources", type: Type.array(Type.name("Source")) });
     // Filter(sources, s => IsSet(s)) — 's' is contextually typed Source
     const prog = makeProgram(
@@ -313,7 +312,7 @@ describe("happy path", () => {
           kind: "operation",
           op: "Filter",
           inputs: {
-            list: { kind: "input", name: "sources", type: Type.array(Type.name("Source")) },
+            list: { kind: "input", name: "sources" },
             predicate: {
               kind: "lambda",
               params: [{ name: "s" }],
@@ -372,11 +371,12 @@ describe("struct field typing", () => {
     field: name,
     type: Type.any,
   });
-  const input = (name: string, type: Type): ASTNode => ({ kind: "input", name, type });
+  // The type argument is ignored: an input node carries no type until the analyser types it.
+  const input = (name: string, _type?: Type): ASTNode => ({ kind: "input", name });
 
   it("infers a known field's type", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), { fields: { id: Type.string, name: Type.string } });
+    lang.registerType("Source", { fields: { id: Type.string, name: Type.string } });
     lang.registerInput({ name: "s", type: Type.name("Source") });
     const result = analyse(
       makeProgram({}, { out: field(input("s", Type.name("Source")), "id") }),
@@ -388,7 +388,7 @@ describe("struct field typing", () => {
 
   it("errors on an unknown field", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), { fields: { id: Type.string } });
+    lang.registerType("Source", { fields: { id: Type.string } });
     lang.registerInput({ name: "s", type: Type.name("Source") });
     const result = analyse(
       makeProgram({}, { out: field(input("s", Type.name("Source")), "bogus") }),
@@ -399,8 +399,8 @@ describe("struct field typing", () => {
 
   it("resolves nested struct fields (multilevel)", () => {
     const lang = testLang();
-    lang.registerType("DisplayName", z.unknown(), { fields: { long: Type.string } });
-    lang.registerType("Bus", z.unknown(), {
+    lang.registerType("DisplayName", { fields: { long: Type.string } });
+    lang.registerType("Bus", {
       fields: { state: Type.number, name: Type.name("DisplayName") },
     });
     lang.registerInput({ name: "bus", type: Type.name("Bus") });
@@ -412,7 +412,7 @@ describe("struct field typing", () => {
 
   it("leaves field access on a fields-less type as any (no error)", () => {
     const lang = testLang();
-    lang.registerType("Opaque", z.unknown(), {});
+    lang.registerType("Opaque", {});
     lang.registerInput({ name: "o", type: Type.name("Opaque") });
     const result = analyse(
       makeProgram({}, { out: field(input("o", Type.name("Opaque")), "whatever") }),
@@ -432,8 +432,8 @@ describe("struct field typing", () => {
 
   it("inherits a field from an extends parent", () => {
     const lang = testLang();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
-    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
+    lang.registerType("Base", { fields: { a: Type.number } });
+    lang.registerType("Derived", { extends: "Base", fields: { b: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
     const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
     expect(typed("out", prog, lang)).toBe("number");
@@ -441,8 +441,8 @@ describe("struct field typing", () => {
 
   it("inherits even when the derived type declares no fields of its own", () => {
     const lang = testLang();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
-    lang.registerType("Derived", z.unknown(), { extends: "Base" });
+    lang.registerType("Base", { fields: { a: Type.number } });
+    lang.registerType("Derived", { extends: "Base" });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
     const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
     expect(typed("out", prog, lang)).toBe("number");
@@ -452,8 +452,8 @@ describe("struct field typing", () => {
     const lang = testLang();
     // A sound (covariant) narrowing: an unsound one cannot reach the analyser at all, since
     // building the descriptor rejects it.
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
-    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
+    lang.registerType("Base", { fields: { a: Type.any } });
+    lang.registerType("Derived", { extends: "Base", fields: { a: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
     const prog = makeProgram({}, { out: field(input("d", Type.name("Derived")), "a") });
     expect(typed("out", prog, lang)).toBe("string");
@@ -461,8 +461,8 @@ describe("struct field typing", () => {
 
   it("errors on a field absent from the type and all its parents", () => {
     const lang = testLang();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
-    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { b: Type.string } });
+    lang.registerType("Base", { fields: { a: Type.number } });
+    lang.registerType("Derived", { extends: "Base", fields: { b: Type.string } });
     lang.registerInput({ name: "d", type: Type.name("Derived") });
     const result = analyse(
       makeProgram({}, { out: field(input("d", Type.name("Derived")), "nope") }),
@@ -481,7 +481,7 @@ describe("descriptor validation", () => {
 
   it("flags a struct field whose type is unregistered", () => {
     const lang = testLang();
-    lang.registerType("Bus", z.unknown(), { fields: { name: Type.name("Ghost") } });
+    lang.registerType("Bus", { fields: { name: Type.name("Ghost") } });
     expect(
       validateDescriptor(lang.unchecked).some(
         (e) => e.kind === "unknown_type" && e.name === "Ghost",
@@ -491,14 +491,14 @@ describe("descriptor validation", () => {
 
   it("a registered fields-less type is a valid reference (opaque handle)", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), {});
+    lang.registerType("Source", {});
     lang.registerInput({ name: "s", type: Type.array(Type.name("Source")) });
     expect(validateDescriptor(lang.descriptor)).toEqual([]); // composes, so it is sound
   });
 
   it("createEnvironment throws on a dangling type reference", () => {
     const lang = testLang();
-    lang.registerType("Bus", z.unknown(), { fields: { name: Type.name("Ghost") } });
+    lang.registerType("Bus", { fields: { name: Type.name("Ghost") } });
     expect(() => createEnvironment(lang.language)).toThrow(/Language validation failed/);
   });
 
@@ -524,8 +524,8 @@ describe("descriptor validation", () => {
 
   it("accepts a compatible field override (covariant narrowing) and new fields", () => {
     const lang = testLang();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.any } });
-    lang.registerType("Derived", z.unknown(), {
+    lang.registerType("Base", { fields: { a: Type.any } });
+    lang.registerType("Derived", {
       extends: "Base",
       fields: { a: Type.number, b: Type.string }, // a: any → number (narrow); b is new
     });
@@ -534,8 +534,8 @@ describe("descriptor validation", () => {
 
   it("flags an incompatible field override against the extends parent", () => {
     const lang = testLang();
-    lang.registerType("Base", z.unknown(), { fields: { a: Type.number } });
-    lang.registerType("Derived", z.unknown(), { extends: "Base", fields: { a: Type.string } });
+    lang.registerType("Base", { fields: { a: Type.number } });
+    lang.registerType("Derived", { extends: "Base", fields: { a: Type.string } });
     expect(
       validateDescriptor(lang.unchecked).some((e) => e.kind === "incompatible_field_override"),
     ).toBe(true);
@@ -656,7 +656,7 @@ describe("warnings", () => {
           kind: "operation",
           op: "GreaterThan",
           inputs: {
-            a: { kind: "input", name: "val", type: Type.any },
+            a: { kind: "input", name: "val" },
             b: lit(0),
           },
           output: Type.boolean,
@@ -698,7 +698,7 @@ describe("warnings", () => {
           kind: "operation",
           op: "Equals",
           inputs: {
-            a: { kind: "input", name: "x", type: Type.any },
+            a: { kind: "input", name: "x" },
             b: lit("hello"),
           },
           output: Type.boolean,
@@ -859,10 +859,7 @@ describe("errors and output poisoning", () => {
   it("unknown_program_input → binding poisoned", () => {
     const lang = testLang();
     lang.registerOutput({ name: "out", type: Type.string, mode: "required" });
-    const prog = makeProgram(
-      { b: { kind: "input", name: "undeclaredInput", type: Type.string } },
-      { out: ref("b") },
-    );
+    const prog = makeProgram({ b: { kind: "input", name: "undeclaredInput" } }, { out: ref("b") });
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "unknown_program_input")).toBe(true);
     expect(result.ok).toBe(false);
@@ -968,7 +965,7 @@ describe("pruning", () => {
     lang.registerInput({ name: "x", type: Type.number });
     const prog = makeProgram(
       {
-        a: { kind: "input", name: "x", type: Type.number },
+        a: { kind: "input", name: "x" },
         b: ref("a"),
       },
       { out: ref("b") },
@@ -1075,7 +1072,7 @@ describe("forward_reference", () => {
 describe("inferOutput / inferInputTypes", () => {
   it("Filter on Source[] → output Source[], predicate type (Source) -> boolean", () => {
     const lang = testLang();
-    lang.registerType("Source", z.unknown(), {});
+    lang.registerType("Source", {});
     lang.registerInput({ name: "items", type: Type.array(Type.name("Source")) });
     const prog = makeProgram(
       {},
@@ -1084,7 +1081,7 @@ describe("inferOutput / inferInputTypes", () => {
           kind: "operation",
           op: "Filter",
           inputs: {
-            list: { kind: "input", name: "items", type: Type.array(Type.name("Source")) },
+            list: { kind: "input", name: "items" },
             predicate: {
               kind: "lambda",
               params: [{ name: "item" }],
@@ -1117,7 +1114,7 @@ describe("inferOutput / inferInputTypes", () => {
           kind: "operation",
           op: "Map",
           inputs: {
-            list: { kind: "input", name: "items", type: Type.array(Type.any) },
+            list: { kind: "input", name: "items" },
             transform: { kind: "lambda", params: [{ name: "item" }], body: lit(true) },
           },
           output: Type.array(Type.any),

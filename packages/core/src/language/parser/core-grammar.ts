@@ -207,12 +207,11 @@ export function installCoreGrammar(g: Grammar): void {
   // name is never an input: no descriptor lookup, no shadowing.
   registerNud(g, "ident", (_p, t) => ({ kind: "ref", name: t.value, source: t.source }));
 
-  // Input sigil: $name → InputNode. The type is left open: the analyser resolves it from
-  // the composed descriptor and overwrites whatever is stamped here, so reading a
-  // declaration at parse time would be dead data - and the parser has no ports to read.
+  // Input sigil: $name → InputNode. No type: the parser has no ports to read, and the
+  // analyser resolves one from the composed descriptor.
   registerNud(g, "$", (p, t) => {
     const name = p.expect("ident");
-    return { kind: "input", name: name.value, type: Type.any, source: t.source };
+    return { kind: "input", name: name.value, source: t.source };
   });
 
   // '(' opens either a parenthesised lambda - (x: T, y) => body, () => body - or a

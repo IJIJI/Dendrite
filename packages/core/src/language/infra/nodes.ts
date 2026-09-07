@@ -37,11 +37,12 @@ export interface ArrayNode {
   source?: SourceRef;
 }
 
-// A named value loaded from context before eval: sourceBusNew, fallbackState
+// A named value loaded from context before eval: sourceBusNew, fallbackState.
+// No type: which input a name refers to is a property of the port layers a program is
+// composed against, not of the text, so only the analyser can know it (see CInputNode).
 export interface InputNode {
   kind: "input";
   name: string;
-  type: Type;
   source?: SourceRef;
 }
 
@@ -174,7 +175,9 @@ export interface Analysed {
 export interface CLiteralNode extends LiteralNode, Analysed {
   readonly type: Type; // required post-analysis
 }
-export interface CInputNode extends InputNode, Analysed {}
+export interface CInputNode extends InputNode, Analysed {
+  readonly type: Type; // required post-analysis: the declared type, from the descriptor
+}
 export interface CRefNode extends RefNode, Analysed {
   readonly type: Type; // required post-analysis
 }

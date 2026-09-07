@@ -65,8 +65,7 @@ describe("identifier & input classification", () => {
     const desc = withInput("sourceBus", "string");
     expect(parse("$sourceBus", desc).node).toMatchObject({
       kind: "input",
-      name: "sourceBus",
-      type: Type.any, // the analyser overwrites this from the composed descriptor
+      name: "sourceBus", // the analyser overwrites this from the composed descriptor
     });
   });
 
