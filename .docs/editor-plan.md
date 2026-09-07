@@ -195,8 +195,39 @@ that is not `editable` offers no edit affordance. The pane's `readOnly` prop rem
 policy on top of that (the same document is host-fed in Beacon and user-editable in the
 playground).
 
-**Still open for this phase:** a revert affordance for a port edit (a toast, not a second undo
-stack — see `todo.md`), and a field-wise widget for struct inputs, which a user can now declare.
+**Landed 2026-09-07** (three commits). What differs from the sketch above, and why:
+
+- **`input-widgets.ts` became `port-rows.ts`** — outputs need the same "declarations → rows"
+  reading that inputs had, so both live together and share `PortRow`. `ports-edit.ts` stayed what
+  it was: editing `Ports` as data.
+- **Outputs are listed at EVERY level, inputs only at program level.** A global input is a host
+  value shared by every program; a global output is one *this* program is expected to produce.
+- **The outputs pane is a union**, because an undeclared output is a WARNING, not an error: the
+  analyser keeps it and runs it. So produced names are not a subset of declared ones — declared
+  rows first (value, or `—` when the program never assigns it), then produced-but-undeclared ones
+  marked `undeclared`. Declaring buys a type check and a required/desired contract, not permission.
+- **One hook, `usePortEdits`,** holds the verbs both panes need. A row's problems come from TWO
+  sources merged: what `setLayer` REFUSED (nothing moved, so it reaches no observable) and the
+  `ports` diagnostics a change caused further down. When `setLayer` reports refusals as diagnostics
+  instead — which it must, to cross a wire (`todo.md`) — the local half just goes empty.
+- **`typeOptions` degrades to the primitives** when composition failed, and a row's picker always
+  contains its own type, so a declaration naming a type the language lost can still be retyped
+  rather than only deleted.
+- **Declaration editing follows the layer's policy**, not the pane's `readOnly` — except that a
+  bare `readOnly` (the whole pane, not a predicate) is a host saying "display only" and hides the
+  affordances too.
+- **The name field is uncontrolled**, like the value fields: a refused rename leaves what was typed
+  in the DOM with the reason under it, and Escape puts the declared name back.
+- **A rename does not move the value.** The instance reseeds the new name from its type. The one
+  place that would have quietly lost data is undo, so the removal memento carries the value.
+- **The revert affordance is one strip in the pane, not a toast system** — "Removed `$score` ·
+  Undo", eight seconds. It is deliberately not a second undo stack beside CodeMirror's.
+- **A `layers` config passed to `<Editor>` was being dropped** on the way to `createEditor` — found
+  while wiring this, fixed first.
+
+**Not exposed, for want of a consumer:** output `mode`, input `trigger` / `default`, and declaring
+TYPES in a layer. That last one is why the struct-input widget stayed in `todo.md`: the picker
+offers registered types only, so a user cannot yet declare a struct to need a widget for.
 
 **→ Publish `@dendrite-lang/core@0.1.0`.** Checklist: `repository.directory`, LICENSE + README
 inside `packages/core` (npm packs from there), `publishConfig.access: public`, `files`/`exports`/
