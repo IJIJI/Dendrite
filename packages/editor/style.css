@@ -141,6 +141,8 @@
   .dendrite-icon-button,
   .dendrite-menu-button,
   .dendrite-menu-item > button,
+  .dendrite-add-port,
+  .dendrite-port-type,
   .dendrite-diag-loc {
     font: inherit;
     cursor: pointer;
@@ -272,8 +274,8 @@
     color: var(--dendrite-muted);
   }
 
-  .dendrite-input-row input[type="number"],
-  .dendrite-input-row input[type="text"],
+  .dendrite-input-row > input[type="number"],
+  .dendrite-input-row > input[type="text"],
   .dendrite-json-input {
     box-sizing: border-box;
     width: 100%;
@@ -287,22 +289,22 @@
     transition: border-color var(--dendrite-motion-fast) var(--dendrite-ease);
   }
 
-  .dendrite-input-row input:hover,
+  .dendrite-input-row > input:hover,
   .dendrite-json-input:hover {
     border-color: var(--dendrite-faint);
   }
 
-  .dendrite-input-row input:focus-visible,
+  .dendrite-input-row > input:focus-visible,
   .dendrite-json-input:focus-visible {
     border-color: var(--dendrite-accent);
   }
 
-  .dendrite-input-row input::placeholder,
+  .dendrite-input-row > input::placeholder,
   .dendrite-json-input::placeholder {
     color: var(--dendrite-faint);
   }
 
-  .dendrite-input-row input[type="checkbox"] {
+  .dendrite-input-row > input[type="checkbox"] {
     accent-color: var(--dendrite-accent);
   }
 
@@ -327,10 +329,145 @@
     overflow-wrap: anywhere;
   }
 
+  /* ── Port declarations: the row header both panes share ──
+     Chromeless until pointed at - a declaration is read far more often than it is changed,
+     so the fields only draw a border on hover and focus. */
+  .dendrite-port-head {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .dendrite-input-row > .dendrite-port-head {
+    margin-bottom: 4px;
+  }
+
+  .dendrite-port-sigil {
+    font: 400 13px/1.5 var(--dendrite-mono);
+    color: var(--dendrite-input);
+  }
+
+  /* The name field wears its port's colour, the same one the canvas gives a $input or an
+     output name - so a declaration reads as the thing it declares. */
+  .dendrite-outputs .dendrite-port-name {
+    color: var(--dendrite-accent-text);
+  }
+
+  .dendrite-port-name {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    min-width: 40px;
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-radius: var(--dendrite-radius-control);
+    background: transparent;
+    color: var(--dendrite-input);
+    font: 400 13px/1.4 var(--dendrite-mono);
+  }
+
+  .dendrite-port-type {
+    flex: none;
+    max-width: 45%;
+    padding: 3px 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--dendrite-muted);
+    font: 600 11px/1.3 var(--dendrite-mono-ui);
+  }
+
+  .dendrite-port-name:hover,
+  .dendrite-port-type:hover {
+    border-color: var(--dendrite-border);
+  }
+
+  .dendrite-port-name:focus-visible,
+  .dendrite-port-type:focus-visible {
+    border-color: var(--dendrite-accent);
+    background: var(--dendrite-bg);
+  }
+
+  .dendrite-port-head .dendrite-icon-button {
+    flex: none;
+    width: 24px;
+    height: 24px;
+  }
+
+  .dendrite-port-head .dendrite-icon-button .dendrite-icon,
+  .dendrite-add-port .dendrite-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Why the row was refused, or what it broke below it. Full width, under the row. */
+  .dendrite-port-problems {
+    flex-basis: 100%;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--dendrite-error);
+  }
+
+  /* A removal, still revertible. Sits where the row was, and leaves on its own. */
+  .dendrite-port-undo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    background: var(--dendrite-well);
+    border-radius: var(--dendrite-radius-control);
+    font-size: 12px;
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-port-undo-label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dendrite-port-undo-action {
+    flex: none;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--dendrite-accent-text);
+    font: 600 11px/1.3 var(--dendrite-mono-ui);
+    cursor: pointer;
+  }
+
+  .dendrite-port-undo-action:hover,
+  .dendrite-port-undo-action:focus-visible {
+    color: var(--dendrite-accent-hover);
+  }
+
+  .dendrite-add-port {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px dashed var(--dendrite-border);
+    background: transparent;
+    color: var(--dendrite-muted);
+    font: 600 11px/1.3 var(--dendrite-mono-ui);
+    text-transform: uppercase;
+  }
+
+  .dendrite-add-port:hover,
+  .dendrite-add-port:focus-visible {
+    border-color: var(--dendrite-faint);
+    color: var(--dendrite-text);
+  }
+
   /* ── Outputs ── */
   .dendrite-output-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
+    align-items: center;
     gap: 12px;
     padding: 4px 0;
     font: 400 13px/1.5 var(--dendrite-mono);

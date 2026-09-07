@@ -54,6 +54,21 @@ export const removeOutput = (ports: Ports, name: string): Ports => ({
   outputs: ports.outputs.filter((output) => output.name !== name),
 });
 
+// ---- naming ----
+
+/**
+ * `base`, then `base2`, `base3`… - the first that no declaration in `taken` holds. A new row
+ * has to be named before it exists, and composing rejects a duplicate outright, so the name
+ * must clear every layer's declarations of that kind, not just the one being edited.
+ */
+export function uniqueName(taken: Iterable<string>, base: string): string {
+  const used = new Set(taken);
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}${n}`)) n++;
+  return `${base}${n}`;
+}
+
 export interface TypeOption {
   label: string; // typeToString(type): "number", "Bus[]"
   type: Type;
@@ -63,10 +78,13 @@ export interface TypeOption {
  * The types a declaration may pick: every named type the language knows (builtins first,
  * then the rest alphabetically; `null` is not a useful declaration) and the list of each.
  * One array level - nothing has needed more.
+ *
+ * No vocabulary means composition failed, so the type universe is unknown; the four
+ * primitives are still offered, because a broken declaration is fixed by retyping it.
  */
-export function typeOptions(descriptor: Vocabulary): TypeOption[] {
+export function typeOptions(descriptor?: Vocabulary): TypeOption[] {
   const primitives = ["number", "boolean", "string", "any"];
-  const others = [...descriptor.types.keys()]
+  const others = [...(descriptor?.types.keys() ?? [])]
     .filter((name) => !primitives.includes(name) && name !== "null")
     .sort();
   const options: TypeOption[] = [];
@@ -76,6 +94,19 @@ export function typeOptions(descriptor: Vocabulary): TypeOption[] {
     options.push({ label: typeToString(Type.array(named)), type: Type.array(named) });
   }
   return options;
+}
+
+/**
+ * The options for ONE row's picker: `typeOptions` plus the type it already holds, so a
+ * declaration naming a type the language lost still shows what it says and can be retyped
+ * rather than only deleted.
+ */
+export function typeOptionsFor(descriptor: Vocabulary | undefined, current: Type): TypeOption[] {
+  const options = typeOptions(descriptor);
+  const label = typeToString(current);
+  return options.some((option) => option.label === label)
+    ? options
+    : [{ label, type: current }, ...options];
 }
 
 /** The option whose label matches (what a <select> hands back), or undefined. */

@@ -8,6 +8,8 @@ import {
   removeOutput,
   typeFromLabel,
   typeOptions,
+  typeOptionsFor,
+  uniqueName,
   updateInput,
   updateOutput,
 } from "./ports-edit";
@@ -55,5 +57,38 @@ describe("typeOptions", () => {
       Type.array(Type.name("Bus")),
     );
     expect(typeFromLabel(typeOptions(lang.descriptor), "nope")).toBeUndefined();
+  });
+
+  it("offers the primitives with no vocabulary - a broken compose still allows a retype", () => {
+    expect(typeOptions().map((o) => o.label)).toEqual([
+      "number",
+      "number[]",
+      "boolean",
+      "boolean[]",
+      "string",
+      "string[]",
+      "any",
+      "any[]",
+    ]);
+  });
+
+  it("keeps a row's own type in its picker, even one the language no longer knows", () => {
+    const lost = Type.name("Bus");
+    const options = typeOptionsFor(createStdlib().descriptor, lost);
+    expect(options[0]).toEqual({ label: "Bus", type: lost });
+    // Already present → not duplicated.
+    expect(
+      typeOptionsFor(createStdlib().descriptor, Type.number).filter((o) => o.label === "number"),
+    ).toHaveLength(1);
+  });
+});
+
+describe("uniqueName", () => {
+  it("takes the base when free, else the first free suffix", () => {
+    expect(uniqueName([], "input")).toBe("input");
+    expect(uniqueName(["input"], "input")).toBe("input2");
+    expect(uniqueName(["input", "input2", "input3"], "input")).toBe("input4");
+    // Gaps are filled rather than skipped.
+    expect(uniqueName(["input", "input3"], "input")).toBe("input2");
   });
 });
