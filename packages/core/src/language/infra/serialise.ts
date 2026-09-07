@@ -55,18 +55,11 @@ export type SavedProgram = SavedCodeProgram | SavedReteProgram | SavedAstProgram
 // The `ports` key is written only when there is something to write, so a program that
 // declares nothing serialises exactly as it did before ports existed.
 //
-// A type's `schema` never travels. JSON.stringify turns a zod schema into an object that
-// looks structured but revives as nothing, and a `.refine` predicate disappears from it
-// silently - a saved "even number" would come back accepting odd ones. A type that needs
-// validating belongs on the language, where it is code; `isPorts` refuses a stored schema
-// for the same reason.
-const withoutSchemas = (ports: Ports): Ports =>
-  ports.types?.some((type) => type.schema !== undefined)
-    ? { ...ports, types: ports.types.map(({ schema: _dropped, ...rest }) => rest) }
-    : ports;
-
-const portsKey = (ports: Ports | undefined): { ports?: Ports } =>
-  ports ? { ports: withoutSchemas(ports) } : {};
+// A type's `schema` never reaches here: `createInstance` refuses a persisted layer that
+// declares one, because JSON.stringify turns a zod schema into an object that revives as
+// nothing and drops a `.refine` predicate silently. `isPorts` refuses one on the way back
+// in, which is the case types cannot help with - an untrusted payload.
+const portsKey = (ports: Ports | undefined): { ports?: Ports } => (ports ? { ports } : {});
 
 /** Wrap authored source text as a saved program (code form). */
 export function serialiseSource(source: string, ports?: Ports): SavedCodeProgram {

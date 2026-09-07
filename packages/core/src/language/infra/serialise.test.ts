@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import { createEnvironment, type ProgramEnvironment } from "../environment";
 import { createStdlib } from "../stdlib";
@@ -143,18 +142,15 @@ describe("ports on a saved program", () => {
     expect(roundTrip(rete).ports).toEqual(PORTS);
   });
 
-  it("never saves a type's schema, and refuses one that arrives anyway", () => {
-    const withSchema: Ports = {
-      types: [{ name: "Even", extends: "number", schema: z.number() }],
+  it("refuses a stored schema, which cannot be a working validator", () => {
+    // Nothing produces one - createInstance refuses a persisted layer that declares a type
+    // with a schema - so this is the untrusted-payload case.
+    const hand = {
+      types: [{ name: "Even", extends: "number", schema: {} }],
       inputs: [],
       outputs: [],
     };
-    const saved = serialiseSource("output out = 1", withSchema);
-    expect(saved.ports?.types?.[0]).toEqual({ name: "Even", extends: "number" });
-    expect(withSchema.types?.[0].schema).toBeDefined(); // the live object is untouched
-
-    // A hand-built payload carrying one is malformed: it cannot be a working validator.
-    expect(isPorts({ ...withSchema })).toBe(false);
+    expect(isPorts(hand)).toBe(false);
   });
 
   it("is absent when nothing is declared, so old payloads are unchanged", () => {

@@ -163,6 +163,18 @@ class Instance implements ProgramInstance {
         `Instance '${this.id}' has more than one persisted layer; merge them into one`,
       );
     }
+    // A persisted layer is saved as JSON, and a zod schema does not survive that: converting
+    // one keeps enums and bounds but drops a `.refine` predicate silently, so a saved
+    // validator would come back weaker than it went in. Refused here, at construction, rather
+    // than discovered on the next reload. A layer the host rebuilds from code may carry one.
+    const saved = this.layers.find((layer) => layer.policy.persisted);
+    const validated = saved?.ports.types?.find((type) => type.schema !== undefined);
+    if (saved && validated) {
+      throw new Error(
+        `Layer '${saved.id}' of instance '${this.id}' is persisted, so type '${validated.name}' ` +
+          `cannot carry a schema - declare the type on the language instead`,
+      );
+    }
 
     // Starting values are the host's, but only for what it may persist - a value for a
     // host-fed input would be saved and re-seeded stale on the next load.
