@@ -130,18 +130,20 @@ export function usePortEdits(
   const target = editableLayer(ports);
   const vocabulary = ports.composed.ok ? ports.composed.descriptor : undefined;
 
-  const apply = (layerId: string, next: Ports, row?: PortRow): void => {
+  /** Hand the layer to core; false when it refused, in which case nothing moved. */
+  const apply = (layerId: string, next: Ports, row?: PortRow): boolean => {
     const blocking = instance.setLayer(layerId, next);
     const refusal =
       blocking.length > 0 && row
         ? { key: rowKey(row), messages: blocking.map((problem) => problem.message) }
         : null;
     setRefused(refusal);
+    return blocking.length === 0;
   };
 
-  const edit = (row: PortRow, build: (current: Ports) => Ports): void => {
+  const edit = (row: PortRow, build: (current: Ports) => Ports): boolean => {
     const current = layerPorts(ports, row.layerId);
-    if (current) apply(row.layerId, build(current), row);
+    return current !== undefined && apply(row.layerId, build(current), row);
   };
 
   return {
@@ -157,9 +159,15 @@ export function usePortEdits(
 
     rename(row, name) {
       if (name === row.name) return;
-      // The value keyed by the old name goes with it - the instance reseeds the new name from
-      // its type. A rename is a declaration edit, not a move.
-      edit(row, (current) => ops.update(current, row.name, { name }));
+      // Values are keyed by name, so to the instance a rename is one input gone and another
+      // arrived - it drops the old value and seeds the new name from its type. Carry the
+      // value across, or renaming would quietly wipe what the user typed into the field.
+      // Only after core accepted the change: the new name does not exist until it did.
+      const values = kind === "inputs" ? instance.values.get() : {};
+      const carried = row.name in values ? { value: values[row.name] } : null;
+      if (edit(row, (current) => ops.update(current, row.name, { name })) && carried) {
+        instance.setInput(name, carried.value);
+      }
     },
 
     retype(row, type) {
