@@ -218,8 +218,10 @@ playground).
   affordances too.
 - **The name field is uncontrolled**, like the value fields: a refused rename leaves what was typed
   in the DOM with the reason under it, and Escape puts the declared name back.
-- **A rename does not move the value.** The instance reseeds the new name from its type. The one
-  place that would have quietly lost data is undo, so the removal memento carries the value.
+- **Values are carried by the editor, because names key them.** To the instance a rename is one
+  input gone and another arrived, so it drops the old value and seeds the new name from its type;
+  the pane re-sets the value once core has accepted the change. Undo does the same through the
+  removal memento. Both would otherwise wipe what the user typed, silently.
 - **The revert affordance is one strip in the pane, not a toast system** — "Removed `$score` ·
   Undo", eight seconds. It is deliberately not a second undo stack beside CodeMirror's.
 - **A `layers` config passed to `<Editor>` was being dropped** on the way to `createEditor` — found

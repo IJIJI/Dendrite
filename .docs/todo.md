@@ -296,6 +296,38 @@ layer declares a struct the user must fill.
 
 ---
 
+## Editor — refactor the icons to the WebKontrol style
+
+**What:** Rework `packages/editor/src/react/icons.tsx` into WebKontrol's arrangement
+(`WebKontrol/app/ui/src/components/icons/Icons.tsx`): an `icon(viewBox, children, fill?)` factory
+producing one component per glyph, collected in a named `Icons` object, each taking
+`{ size = 20, className, style }`. Dendrite instead has a `glyphs` record and one `Icon({ name })`
+that renders every glyph on a fixed 24 grid at stroke 1.75, sized from CSS (`.dendrite-icon`).
+
+**Why deferred:** it is a shape change, not a fix — the current set works and is themed. Doing it
+alongside the port panes would have mixed a refactor into a feature.
+
+**The tension to settle first, because the styles disagree on purpose:**
+- **Sizing.** WebKontrol takes a `size` prop; Dendrite sizes from the stylesheet, so a host
+  retheming the editor moves icons with everything else and no caller has to know a number. Decide
+  whether `size` becomes an override on top of the CSS default, or replaces it.
+- **Per-icon viewBox and stroke.** WebKontrol varies both per glyph (13/16 boxes, stroke 1.2/1.3).
+  Dendrite pins one grid, `strokeWidth 1.75`, and `square` caps with `miter` joins deliberately, so
+  the set shares the wordmark's corners. A per-icon factory makes that drift trivial — if the style
+  moves, the brand note in the file header has to move with it, or state that the corner rule still
+  binds every glyph.
+- **Fill.** WebKontrol's `fill` flag has no consumer here yet; every Dendrite glyph is a stroke.
+
+**What it requires:** the factory and the `Icons` object, the eleven existing glyphs ported, the
+`IconName` union either dropped (keys become the API) or kept for `TopBarAction.icon`, which is
+data and needs a *name*, not a component — so the top bar likely keeps a lookup either way. Then
+the call sites: `TopBar`, `PortFields`, and `.dendrite-icon` in `style.css`.
+
+**Driving need:** consistency across the author's own UIs, and per-icon components read better at
+the call site than `<Icon name="trash" />`.
+
+---
+
 ## Editor — the declaration fields the port panes do not expose
 
 **What:** Phase 3's rows carry a name and a type and nothing else. `InputDefinition.trigger` and
