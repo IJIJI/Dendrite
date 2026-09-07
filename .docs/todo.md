@@ -383,9 +383,10 @@ what a type even is before the check could be designed once for both levels.
   travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
   That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
   drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
-  and reloaded would accept odd ones. Hence the split settled 2026-09-07: a **language** type may
-  carry a zod schema (it is code); a type inside a **port layer** carries shape only, and
-  inherits validation through `extends` from a language type.
+  and reloaded would accept odd ones. Hence the split settled 2026-09-07: a type may
+  carry a zod schema wherever its declaration is CODE (the language, or a capability layer the
+  host rebuilds each boot). The exception is the layer an instance persists, which is saved as
+  JSON; a type there carries shape only and inherits validation through `extends`.
 
 **Driving need:** a host pushing a struct that does not match its declaration is currently
 invisible until something downstream misbehaves.

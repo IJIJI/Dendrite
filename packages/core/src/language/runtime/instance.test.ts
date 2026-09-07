@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { createEnvironment } from "../environment";
 import { type PortLayer, type Ports, Policy } from "../infra/ports";
@@ -111,6 +112,33 @@ describe("createInstance - boot", () => {
         ],
       }),
     ).toThrow(/more than one persisted layer/);
+  });
+
+  it("refuses a schema on the layer it will save, and keeps one the host rebuilds", () => {
+    const validated = { name: "Even", extends: "number", schema: z.number() };
+
+    // The document layer is saved as JSON, where a schema cannot survive.
+    expect(() =>
+      setup({
+        layers: [
+          {
+            id: "document",
+            ports: { types: [validated], inputs: [], outputs: [] },
+            policy: Policy.user,
+          },
+        ],
+      }),
+    ).toThrow(/cannot carry a schema/);
+
+    // A capability layer is code, rebuilt every boot, so its schema is safe.
+    const { instance } = setup({
+      program: serialiseSource("output out = Add($g, 0)"),
+      layers: [
+        { id: "cap", ports: { types: [validated], inputs: [], outputs: [] }, policy: Policy.host },
+      ],
+    });
+    const composed = instance.ports.get().composed;
+    expect(composed.ok && composed.descriptor.types.get("Even")?.schema).toBeDefined();
   });
 
   it("reports a program that does not compile, with nothing ever registered", () => {
