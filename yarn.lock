@@ -328,6 +328,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@dendrite-lang/link@workspace:packages/link":
+  version: 0.0.0-use.local
+  resolution: "@dendrite-lang/link@workspace:packages/link"
+  dependencies:
+    "@dendrite-lang/core": "workspace:^"
+    tsup: "npm:^8.5.1"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.9"
+    zod: "npm:^4.4.3"
+  peerDependencies:
+    "@dendrite-lang/core": ^0.1.0
+  languageName: unknown
+  linkType: soft
+
 "@emnapi/core@npm:1.10.0":
   version: 1.10.0
   resolution: "@emnapi/core@npm:1.10.0"
