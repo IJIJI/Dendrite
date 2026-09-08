@@ -98,17 +98,21 @@ Speculative Generality). The playground keeps its vanilla shell through this pha
 **New:**
 
 A Phase-0 sketch. What was built is smaller — panes, actions and saving became the host's
-composition rather than config, and the surface became port layers. The shape as of 2026-09-07:
+composition rather than config, and the surface became port layers. The shape as of 2026-09-08:
 
 ```ts
 createEditor(el, config): EditorHandle            // imperative mount, framework-free
 
 interface EditorConfig {
-  document: EditorDocument;                        // { version, program (incl. its ports), inputValues }
-  language?: Language;                             // default createStdlib(); Beacon passes its extended one
-  layers?: { global?: readonly PortLayer[]; program?: readonly PortLayer[] };  // stable references
+  connection: Connection;                          // what to edit and where it came from (below)
   onChange?(doc: EditorDocument): void;            // debounced; anything a save would capture
 }
+
+interface Connection { instance: ProgramInstance; language: Language; release?(): void }
+ownStack({ document, language?, layers? })        // a private stack - the playground
+joinRuntime(language, runtime, { document, layers? })  // the editor's own instance on a host runtime
+attach(language, instance)                        // a program the host runs - local, or a link replica
+// <Editor> takes a `connection`, or `document` (+ language, layers) as the ownStack shorthand.
 
 interface EditorHandle {
   instance: ProgramInstance;                       // the running program: five observables
@@ -230,6 +234,19 @@ playground).
 **Not exposed, for want of a consumer:** output `mode`, input `trigger` / `default`, and declaring
 TYPES in a layer. That last one is why the struct-input widget stayed in `todo.md`: the picker
 offers registered types only, so a user cannot yet declare a struct to need a widget for.
+
+### Between 3 and 4 — the editor connects, it does not own (landed 2026-09-08)
+
+Not a phase of this plan but its precondition for every host that is not the playground:
+`createEditor` takes a `Connection` (`ownStack` / `joinRuntime` / `attach`) and releases only
+what the connection made; `@dendrite-lang/link` serves a `ProgramInstance` over a `Channel` the
+host implements and connects a replica the editor cannot tell from a local one. Design record:
+`editor-core-plan.md`; result: `architecture.md` "Linking"; what is still open: `todo.md`, "The
+editor as a control surface". Walked through in the playground over a `MessageChannel` and over
+a real WebSocket against `packages/link/examples/serve-ws.ts` with a throwaway host patch (not
+committed): a host-pushed global moves the pane, a pane edit reaches the served instance, a
+source edit comes back as lint, a refused rename lands under its row, add / remove / undo of a
+port round-trip, and killing the server marks the outputs stale.
 
 **→ Publish `@dendrite-lang/core@0.1.0`.** Checklist: `repository.directory`, LICENSE + README
 inside `packages/core` (npm packs from there), `publishConfig.access: public`, `files`/`exports`/

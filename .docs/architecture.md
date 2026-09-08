@@ -34,6 +34,16 @@ Consumers of infra (independent of the parser): `analyser/` (`analyse`), `evalua
 (`evaluate`, `EvalState`), `runtime/` (`run`, `createProgramRunner`, `createRuntime`,
 `createInstance`).
 
+Above core, two more workspace packages, each depending on core only:
+
+```
+packages/link/   — @dendrite-lang/link: a ProgramInstance across a channel. serveInstance (the
+                   host's end), connectInstance (a replica that IS a ProgramInstance), the wire
+                   as data, Channel adapters (MessagePort, WebSocket). See "Linking" below.
+packages/editor/ — @dendrite-lang/editor: the code editor over a Connection (own stack, a host's
+                   runtime, or an attached instance - local or a link replica); React under /react.
+```
+
 **A language is vocabulary only.** `Vocabulary` is types, ops and evaluators — the words programs
 are written in. What a program reads and produces arrives as **port layers** that compose on top,
 producing a `LanguageDescriptor`. Only `composeLayers` produces one, which is what stops a
@@ -201,6 +211,47 @@ values. Seeding goes through one rule for every level (`runtime/seed.ts`).
 When a program stops compiling the runtime keeps running the last good one, and everything it
 produces is published `stale: true` rather than hidden — what the lights follow is what the UI
 shows, marked.
+
+Every instance command returns nothing and reports through the observables. A refused layer
+change is published as `ports` diagnostics marked `refused` — nothing moved — rather than
+returned, because a synchronous answer cannot cross a wire, and the editor drives instances
+across one (below).
+
+---
+
+## Linking an editor to a core it does not own (`packages/link`)
+
+The editor depends on exactly one object, a `ProgramInstance`, plus a `Language` to highlight
+with. A `Connection` (`packages/editor/src/connection.ts`) is where those come from: `ownStack`
+(a private stack — the playground), `joinRuntime` (the editor's own instance on a runtime the
+host runs, seeing its live global values), or `attach` (a program the host already runs). The
+last one is how a **remote** core is reached: `connectInstance` returns a replica that
+implements `ProgramInstance`, and the editor cannot tell it from a local one.
+
+**The wire is data.** Commands (`setInput`, `fireTrigger`, `setProgram`, `setLayer`) go client
+→ server, sequence-numbered and fire-and-forget. Pushes come back, one per observable, each
+stamped with the last command the server had seen on that channel; `hello` is answered with all
+five at once, so a replica never renders empty. Dendrite owns the shapes and both ends; the host
+owns the pipe by implementing `Channel { send, onMessage, status? }` over whatever it already
+has, or takes an adapter.
+
+**What the replica does to feel local:** it recomposes `ports` from the layers with its own
+language (a composed descriptor holds functions and cannot cross — hence `hello` carries a
+protocol version and a vocabulary fingerprint, and a mismatch is refused with the difference
+named); it echoes `setInput` into `values` at once, and into `snapshot` for the persisted
+layer's inputs; it drops a `values` push stamped before its latest command and adopts the clock
+of a `state` push; it marks outputs `stale` when the channel drops and re-handshakes when it
+returns; it refuses locally what a local instance refuses.
+
+**The server is the trust boundary.** Core trusts its caller on purpose (`Policy` is data); a
+client is not the host. `serveInstance` enforces each layer's policy — no editing a layer that
+is not `editable`, no feeding an input a `feeds: "host"` layer owns — strips zod schemas, which
+cross no wire, and drops what is malformed or what core throws on, reporting each. Who the
+client is, which program it opens, and revisions are the host's, at its own API.
+
+Not yet: analysing locally (diagnostics mirror the server's, one round trip of latency) and
+detecting two writers (the envelope's `revision` field exists for it; version history is where
+detection lands). `packages/link/README.md` has the protocol table.
 
 ---
 
