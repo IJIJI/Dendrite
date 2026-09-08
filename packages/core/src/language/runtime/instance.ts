@@ -33,6 +33,11 @@ export interface ProgramDiagnostic {
   layerId?: string;
   /** The offending declaration, e.g. "input score" - so a pane can point at the row. */
   where?: string;
+  /**
+   * The change this describes was REFUSED - nothing moved, and `where` names what was
+   * attempted rather than anything that exists. A pane shows it on the row being edited.
+   */
+  refused?: true;
 }
 
 /**
@@ -86,13 +91,17 @@ export interface ProgramInstance {
   readonly snapshot: Observable<Snapshot>;
 
   /**
-   * Replace one program-level layer's ports. Returns the problems that make the change
-   * impossible, in which case nothing moves; an empty list means it was applied. Problems
-   * the change causes for OTHER layers do not block it - they surface as `ports`
-   * diagnostics and the outputs go stale, because order is authority and an earlier layer
-   * outranks a later one. Unknown id throws.
+   * Replace one program-level layer's ports. Problems that make the change impossible
+   * refuse it - nothing moves - and are published as `ports` diagnostics next to the running
+   * program's own, until the next change that compiles. Problems the change causes for
+   * OTHER layers do not block it - they surface as `ports` diagnostics too and the outputs
+   * go stale, because order is authority and an earlier layer outranks a later one. Unknown
+   * id throws.
+   *
+   * Every command here returns nothing and reports through the observables: that is the
+   * shape a command needs to cross a wire, and a synchronous answer would not.
    */
-  setLayer(id: string, ports: Ports): PortProblem[];
+  setLayer(id: string, ports: Ports): void;
   /** Set one program-level input. Throws on a global name. */
   setInput(name: string, value: unknown): void;
   /** Fire a program-level trigger: set, evaluate, reset to its default, evaluate again. */
@@ -146,6 +155,11 @@ class Instance implements ProgramInstance {
   // The live program-level values. The public `values` observable is the view of it.
   private programValues: Record<string, unknown> = {};
   private stale = false;
+  // What the last compile said, and why the last layer change was refused (if it was). Kept
+  // apart because a refusal moves nothing: the compiled list stays true, and the refusal
+  // stays visible - through setInput and fireTrigger - until a change that compiles.
+  private compiled: ProgramDiagnostic[] = [];
+  private refusal: ProgramDiagnostic[] = [];
   private readonly unsubscribes: (() => void)[] = [];
 
   constructor(
@@ -198,7 +212,7 @@ class Instance implements ProgramInstance {
     this.snapshot = this.snapshot$;
   }
 
-  setLayer(id: string, ports: Ports): PortProblem[] {
+  setLayer(id: string, ports: Ports): void {
     if (!this.layers.some((layer) => layer.id === id)) {
       throw new Error(`No program-level layer '${id}' on instance '${this.id}'`);
     }
@@ -206,13 +220,18 @@ class Instance implements ProgramInstance {
 
     const composed = this.factory.forProgram(this.runtime.layers, next);
     const blocking = composed.ok ? [] : composed.problems.filter((p) => p.layerId === id);
-    if (blocking.length > 0) return blocking;
+    if (blocking.length > 0) {
+      // Nothing moved: the running program, its layers and its outputs are all still right,
+      // so only the diagnostics change - what compiled, plus why this was refused.
+      this.refusal = blocking.map((problem) => ({ ...portDiagnostic(problem), refused: true }));
+      this.publishDiagnostics();
+      return;
+    }
 
     const wasPersisted = this.persistedLayer()?.id === id;
     this.layers = next;
     this.recompile();
     if (wasPersisted) this.publishSnapshot();
-    return [];
   }
 
   setInput(name: string, value: unknown): void {
@@ -287,7 +306,9 @@ class Instance implements ProgramInstance {
       return;
     }
 
-    this.diagnostics$.set(diagnostics);
+    this.compiled = diagnostics;
+    this.refusal = [];
+    this.publishDiagnostics();
     this.seedValues(composed.environment.descriptor);
     const ports = flattenPorts(this.layers);
     const values = this.programValues;
@@ -326,7 +347,9 @@ class Instance implements ProgramInstance {
 
   // A failed compose or compile: keep the program the runtime is still running, and say so.
   private fail(diagnostics: ProgramDiagnostic[]): void {
-    this.diagnostics$.set(diagnostics);
+    this.compiled = diagnostics;
+    this.refusal = [];
+    this.publishDiagnostics();
     this.live = false;
     this.stale = true;
     const current = this.outputs$.get();
@@ -405,6 +428,10 @@ class Instance implements ProgramInstance {
 
   private publishSnapshot(): void {
     this.snapshot$.set(this.buildSnapshot());
+  }
+
+  private publishDiagnostics(): void {
+    this.diagnostics$.set([...this.compiled, ...this.refusal]);
   }
 }
 

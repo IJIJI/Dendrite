@@ -23,14 +23,11 @@ import {
 
 //? The declaration verbs both port panes need, over one instance and one kind of port.
 // Nothing here validates: every verb builds new Ports and hands them to setLayer, which
-// composes and answers. Only VIEW state lives here (which edit was refused), so the panes
-// stay renderers.
-//
-// A row's problems come from two places on purpose. setLayer returns the ones that BLOCKED
-// the change - nothing moved, so they reach no observable - while a change that applied but
-// broke a later layer arrives as a `ports` diagnostic. When the editor drives a runtime
-// across a wire that synchronous return becomes a diagnostic too (see todo.md), and this
-// merge keeps working with the local half simply always empty.
+// composes and answers through `diagnostics` - a refusal moves nothing and says why there,
+// a change that applied but broke a later layer says so the same way. Only VIEW state lives
+// here (the last row edited, the last removal), so the panes stay renderers, and nothing
+// reads a command's return: that is what lets the same panes drive an instance across a
+// wire, where there is none.
 
 export type PortKind = "inputs" | "outputs";
 
@@ -113,9 +110,10 @@ export function usePortEdits(
   diagnostics: readonly ProgramDiagnostic[],
   kind: PortKind,
 ): PortEdits {
-  // The last refused edit, keyed by the row it was made on - which still holds its old name,
-  // because a refused change moves nothing.
-  const [refused, setRefused] = useState<{ key: string; messages: string[] } | null>(null);
+  // The row the last edit was made on. A REFUSED change names what was attempted, which is
+  // not a row - a refused rename leaves the row holding its old name - so core's `refused`
+  // diagnostics are shown on this row rather than matched by name (see `problems`).
+  const [lastEdited, setLastEdited] = useState<PortRow | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
 
   // Deliberately NOT a second undo stack next to CodeMirror's: text and declarations would
@@ -130,43 +128,49 @@ export function usePortEdits(
   const target = editableLayer(ports);
   const vocabulary = ports.composed.ok ? ports.composed.descriptor : undefined;
 
-  /** Hand the layer to core; false when it refused, in which case nothing moved. */
-  const apply = (layerId: string, next: Ports, row?: PortRow): boolean => {
-    const blocking = instance.setLayer(layerId, next);
-    const refusal =
-      blocking.length > 0 && row
-        ? { key: rowKey(row), messages: blocking.map((problem) => problem.message) }
-        : null;
-    setRefused(refusal);
-    return blocking.length === 0;
-  };
+  const isLast = (row: PortRow): boolean =>
+    lastEdited !== null && rowKey(lastEdited) === rowKey(row);
+  const refusedOn = (row: PortRow): boolean =>
+    isLast(row) && diagnostics.some((d) => d.refused && d.layerId === row.layerId);
 
-  const edit = (row: PortRow, build: (current: Ports) => Ports): boolean => {
+  // Hand the layer to core. It answers through `diagnostics` - a refusal moves nothing and
+  // says why there - so there is nothing to read back here.
+  const edit = (row: PortRow, build: (current: Ports) => Ports): void => {
     const current = layerPorts(ports, row.layerId);
-    return current !== undefined && apply(row.layerId, build(current), row);
+    if (!current) return;
+    setLastEdited(row);
+    instance.setLayer(row.layerId, build(current));
   };
 
   return {
     canAdd: target !== undefined,
 
-    // Nothing can refuse this, which is why it blames no row: the name is generated clear of
-    // every layer's declarations and `number` is a type every language has.
+    // Nothing can refuse this: the name is generated clear of every layer's declarations and
+    // `number` is a type every language has.
     add() {
       if (!target) return;
       const name = uniqueName(declaredNames(ports, kind), ops.singular);
-      apply(target.id, ops.add(target.ports, { name, type: NEW_PORT_TYPE }));
+      instance.setLayer(target.id, ops.add(target.ports, { name, type: NEW_PORT_TYPE }));
     },
 
     rename(row, name) {
-      if (name === row.name) return;
+      if (name === row.name) {
+        // Nothing to change - but if this row's last attempt was refused, the user has now
+        // put the declared name back (Escape), and the refusal is moot. Core only clears it
+        // on a change that compiles, so re-submit the layer exactly as it stands.
+        if (refusedOn(row)) edit(row, (current) => current);
+        return;
+      }
       // Values are keyed by name, so to the instance a rename is one input gone and another
       // arrived - it drops the old value and seeds the new name from its type. Carry the
       // value across, or renaming would quietly wipe what the user typed into the field.
-      // Only after core accepted the change: the new name does not exist until it did.
+      // Only once the new name exists, which the published layers say: a refused rename
+      // leaves them as they were.
       const values = kind === "inputs" ? instance.values.get() : {};
-      const carried = row.name in values ? { value: values[row.name] } : null;
-      if (edit(row, (current) => ops.update(current, row.name, { name })) && carried) {
-        instance.setInput(name, carried.value);
+      edit(row, (current) => ops.update(current, row.name, { name }));
+      const declared = layerPorts(instance.ports.get(), row.layerId)?.inputs ?? [];
+      if (row.name in values && declared.some((input) => input.name === name)) {
+        instance.setInput(name, values[row.name]);
       }
     },
 
@@ -178,7 +182,7 @@ export function usePortEdits(
       const before = layerPorts(ports, row.layerId);
       if (!before) return;
       const values = instance.values.get();
-      apply(row.layerId, ops.remove(before, row.name), row);
+      edit(row, (current) => ops.remove(current, row.name));
       setRemoval({
         label: `${ops.sigil}${row.name}`,
         layerId: row.layerId,
@@ -190,13 +194,13 @@ export function usePortEdits(
     },
 
     problems(row) {
-      const where = `${ops.singular} ${row.name}`;
-      return [
-        ...(refused?.key === rowKey(row) ? refused.messages : []),
-        ...diagnostics
-          .filter((d) => d.stage === "ports" && d.layerId === row.layerId && d.where === where)
-          .map((d) => d.message),
-      ];
+      const own = `${ops.singular} ${row.name}`;
+      // Applied problems name a row that exists; refused ones name what was attempted, and
+      // edits are sequential, so those belong to the row edited last.
+      return diagnostics
+        .filter((d) => d.stage === "ports" && d.layerId === row.layerId)
+        .filter((d) => (d.refused ? isLast(row) : d.where === own))
+        .map((d) => d.message);
     },
 
     options: (row) => typeOptionsFor(vocabulary, row.type),
