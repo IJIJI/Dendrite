@@ -8,5 +8,5 @@
       "@dendrite-lang/core": ["../core/src/index.ts"]
     }
   },
-  "include": ["src", "*.ts"]
+  "include": ["src", "examples", "*.ts"]
 }
