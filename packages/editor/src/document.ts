@@ -23,6 +23,13 @@ export interface EditorDocument extends Snapshot {
    */
   program: SavedProgram;
   inputValues: Record<string, unknown>;
+  /**
+   * The host's revision of this document, if it keeps one. Two people editing one program
+   * is a conflict a client cannot detect without it, so the slot exists before any store
+   * does: retrofitting it into stored documents would be the unpleasant version. Optional
+   * addition, so no version bump; the editor carries it and never interprets it.
+   */
+  revision?: number;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -36,7 +43,8 @@ export function isDocument(value: unknown): value is EditorDocument {
     isRecord(program) &&
     typeof program["form"] === "string" &&
     (program["ports"] === undefined || isPorts(program["ports"])) &&
-    isRecord(value["inputValues"])
+    isRecord(value["inputValues"]) &&
+    (value["revision"] === undefined || typeof value["revision"] === "number")
   );
 }
 

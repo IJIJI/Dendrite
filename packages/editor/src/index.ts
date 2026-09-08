@@ -14,5 +14,6 @@ export * from "./diagnostic"; // positionOf - the one SourceRef → line/column 
 export * from "./document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./permalink"; // encodeDocument, decodePayload
 export * from "./store"; // DocumentStore + MemoryStore, LocalStorageStore, UrlStore
+export * from "./connection"; // Connection + ownStack / joinRuntime / attach - where the instance comes from
 export * from "./editor"; // createEditor, EditorConfig, EditorHandle - the host entry point
 export * from "./theme"; // getTheme, ThemeMode - the page's colour scheme (auto / light / dark)

@@ -2,31 +2,22 @@ import { indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/com
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import {
-  createEnvironment,
-  createLanguage,
-  createStdlib,
-  EMPTY_PORTS,
-  extendLanguage,
-  type Language,
-  Policy,
-  type PortLayer,
-  type ProgramInstance,
-  serialiseSource,
-} from "@dendrite-lang/core";
+import { type ProgramInstance, serialiseSource } from "@dendrite-lang/core";
 import { basicSetup } from "codemirror";
 
 import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "./cm";
+import { type Connection } from "./connection";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
 import { createSubject, type Observable } from "./observable";
 
 import { lineStartOffsets, toOffset } from "./tokens";
 
-//? createEditor: the host entry point (Facade). Mounts a code editor for one document into
-// an element and owns its lifecycle - the language, the core ProgramInstance the document
-// runs as, the CodeMirror view, debounced compile, lint squiggles, undo/redo, and change
-// notification. Panes are the host's: it renders them from the instance's observables.
-// No storage, no routing, no presets - those are host policy.
+//? createEditor: the host entry point (Facade). Mounts a code editor over a Connection - the
+// ProgramInstance it edits and the Language it highlights with, obtained however the host
+// chose (connection.ts) - and owns its own lifecycle: the CodeMirror view, debounced
+// compile, lint squiggles, undo/redo, and change notification. Panes are the host's: it
+// renders them from the instance's observables. No storage, no routing, no presets - those
+// are host policy - and no stack of its own: that is the connection's.
 
 const DEBOUNCE_MS = 300;
 
@@ -36,16 +27,8 @@ const languageData = EditorState.languageData.of(() => [
 ]);
 
 export interface EditorConfig {
-  document: EditorDocument;
-  /** The vocabulary the document runs against. Default: the stdlib. */
-  language?: Language;
-  /**
-   * Port layers beneath the document's own. `global` hangs on the runtime (one value for
-   * every program a host runs); `program` sits under the document layer, for a capability a
-   * host feeds this program alone. Both must be STABLE references: a fresh object remounts
-   * the editor, exactly like `document`.
-   */
-  layers?: { global?: readonly PortLayer[]; program?: readonly PortLayer[] };
+  /** What to edit and how it was obtained: ownStack / joinRuntime / attach (connection.ts). */
+  connection: Connection;
   /** The current document, debounced, after every source edit or input change. */
   onChange?(doc: EditorDocument): void;
 }
@@ -71,28 +54,15 @@ export interface EditorHandle {
 }
 
 export function createEditor(parent: HTMLElement, config: EditorConfig): EditorHandle {
-  const { document: doc } = config;
+  const { instance, language } = config.connection;
   // The editor edits TEXT - only code-form programs are editable here. (rete-form documents
-  // arrive with the editor era; ast-form ones have no text to edit.)
-  if (doc.program.form !== "code") {
-    throw new Error(`The editor cannot edit '${doc.program.form}'-form programs yet`);
+  // arrive with the editor era; ast-form ones have no text to edit.) Read from the instance,
+  // so an attached program is held to the same rule as a document.
+  const { program } = instance.snapshot.get();
+  if (program.form !== "code") {
+    throw new Error(`The editor cannot edit '${program.form}'-form programs yet`);
   }
-  const initialSource = doc.program.source;
-
-  // A copy, so nothing the editor does can reach a host's own language object.
-  const language = extendLanguage(createLanguage(), config.language ?? createStdlib());
-  const env = createEnvironment(language);
-  const runtime = env.createRuntime({ layers: config.layers?.global });
-  // The document is the last layer and the only persisted one: it is what a save captures.
-  const instance = env.createInstance(runtime, {
-    program: doc.program,
-    layers: [
-      ...(config.layers?.program ?? []),
-      { id: "document", ports: doc.program.ports ?? EMPTY_PORTS, policy: Policy.user },
-    ],
-    id: "editor",
-    inputValues: doc.inputValues,
-  });
+  const initialSource = program.source;
 
   let compileTimer: ReturnType<typeof setTimeout> | undefined;
   let changeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -176,7 +146,8 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
       clearTimeout(compileTimer);
       clearTimeout(changeTimer);
       for (const unsubscribe of subscriptions) unsubscribe();
-      instance.dispose();
+      // What the connection made, it unmakes; what it was handed keeps running.
+      config.connection.release?.();
       view.destroy();
     },
   };

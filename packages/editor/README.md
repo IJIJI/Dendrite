@@ -35,7 +35,7 @@ import { Editor } from "@dendrite-lang/editor/react";
 
 | Component                                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<Editor>`                                  | The provider. `document`; `language?` (default: the stdlib, copied so nothing leaks back); `layers?` (host port layers beneath the document's own); `onChange?` (debounced; fires for anything a save would capture). A new `document` **or `layers`** remounts the editor, so both must be stable references                                                                                                                                      |
+| `<Editor>`                                  | The provider. Either a `connection` (`joinRuntime`, `attach`, a link replica — see Headless) or the `ownStack` shorthand: `document`; `language?` (default: the stdlib, copied so nothing leaks back); `layers?` (host port layers beneath the document's own). `onChange?` (debounced; fires for anything a save would capture). A new `connection`, `document`, `language` or `layers` remounts the editor, so pass stable references            |
 | `<Editor.Canvas/>`                          | The code editor and the place the running program is born — required                                                                                                                                                                                                                                                                                                                                                                               |
 | `<Editor.Inputs/>`                          | One row per program-level input, in layer order. `readOnly`: `true`, or a predicate by input name — host policy, deliberately not part of the document. An input a host layer FEEDS is always read-only, whatever the prop says. Rows keep rendering while the ports fail to compose, which is when you need to see them                                                                                                                           |
 | `<Editor.Outputs/>` `<Editor.Diagnostics/>` | Last evaluation / diagnostics with click-to-jump. Outputs carry a **stale** tag when the running program is no longer the one in the editor. A problem with the ports names its layer and row instead of a line. A failed mount surfaces as a `boot_failed` diagnostic instead of a white screen                                                                                                                                                   |
@@ -61,37 +61,55 @@ boundary is lint-enforced.
 ## Headless (framework-free)
 
 ```ts
-import { createEditor, LocalStorageStore, watch } from "@dendrite-lang/editor";
+import {
+  attach,
+  createEditor,
+  joinRuntime,
+  LocalStorageStore,
+  ownStack,
+  watch,
+} from "@dendrite-lang/editor";
 
+// The editor edits ONE thing - a core ProgramInstance - and highlights with ONE thing - a
+// Language. A Connection is where those come from; pick the one that fits the host:
 const store = new LocalStorageStore("my-app:document");
-const editor = createEditor(el, {
-  document: (await store.load()) ?? myPreset,
+const connection = ownStack({
+  document: (await store.load()) ?? myPreset, // a private language copy, runtime and instance
   language: myLanguage, // optional - default createStdlib(), copied so nothing leaks back
-  layers: { global: [hostContract] }, // optional - must be a STABLE reference
+  layers: { global: [hostContract] }, // optional
+});
+// joinRuntime(language, runtime, { document })  - the editor's own instance on a runtime the
+//                                                 host runs; sees the host's live global values
+// attach(language, instance)                    - a program the host already runs, local or a
+//                                                 @dendrite-lang/link replica; edits are live
+
+const editor = createEditor(el, {
+  connection, // a STABLE reference: a new one is a new editor
   onChange: (doc) => void store.save(doc), // debounced; anything a save would capture
 });
 
-// The editor mounts a core ProgramInstance: five observables and four commands.
+// Five observables and four commands, whatever the connection.
 watch(editor.instance.outputs, (result) => renderOutputs(result)); // { outputs, error, stale }
 watch(editor.instance.diagnostics, (list) => renderDiagnostics(list, editor.jumpTo));
 editor.instance.setInput("score", 42); // from whatever inputs UI the host renders
-editor.dispose(); // unregisters the program and stops every subscription
+editor.dispose(); // releases what the connection MADE - never a program it was handed
 ```
 
-| Module               | Role                                                                                                                                                                                                                                            |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `editor.ts`          | `createEditor` - the lifecycle Facade: language copy, environment, runtime, the `ProgramInstance` the document runs as, CodeMirror view, debounced recompile, lint, `onChange`                                                                  |
-| `theme.ts`           | `getTheme()` - the page's colour scheme (`auto` / `light` / `dark`): `mode` observable + `set()`, remembered in localStorage; call it before the first render so a remembered mode never flashes. `createThemeController` takes fakes for tests |
-| `observable.ts`      | `watch`, plus core's `createSubject` re-exported - the only reactive primitive (React's external-store contract)                                                                                                                                |
-| `document.ts`        | `EditorDocument` (`version`, `program` incl. its `ports`, `inputValues`) - core's `Snapshot` plus an envelope version; `migrateDocument` over an `applyMigrations` chain                                                                        |
-| `ports-edit.ts`      | add / update / remove inputs and outputs on a layer's `Ports`, plus the type options a picker offers. Pure; `instance.setLayer` judges the result                                                                                               |
-| `diagnostic.ts`      | `positionOf` - the one adapter from a core `SourceRef` to a line and column                                                                                                                                                                     |
-| `store.ts`           | `DocumentStore` + `MemoryStore` / `LocalStorageStore` / `UrlStore` (adapters never reject)                                                                                                                                                      |
-| `permalink.ts`       | document ↔ URL payload (deflate + base64url, native streams)                                                                                                                                                                                    |
-| `tokens.ts`, `cm.ts` | lexer-driven highlighting and the editor chrome theme; `cm.ts` + `editor.ts` are the only CodeMirror-aware modules                                                                                                                              |
-| `input-widgets.ts`   | port declarations → widget shapes, each carrying its layer, whether a host feeds it, and whether that layer is editable                                                                                                                         |
-| `format.ts`          | `formatValue` - the one value→text rule every pane shares                                                                                                                                                                                       |
-| `react/`             | the compound components above - the only place React is allowed                                                                                                                                                                                 |
+| Module               | Role                                                                                                                                                                                                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `connection.ts`      | `Connection` - the instance to edit and the language to highlight with - and the three ways to get one: `ownStack` (private stack), `joinRuntime` (own instance on a host runtime), `attach` (a program the host runs). `release` undoes only what was made |
+| `editor.ts`          | `createEditor` - the lifecycle Facade over a connection: CodeMirror view, debounced recompile, lint, `onChange`, `dispose`                                                                                                                                  |
+| `theme.ts`           | `getTheme()` - the page's colour scheme (`auto` / `light` / `dark`): `mode` observable + `set()`, remembered in localStorage; call it before the first render so a remembered mode never flashes. `createThemeController` takes fakes for tests             |
+| `observable.ts`      | `watch`, plus core's `createSubject` re-exported - the only reactive primitive (React's external-store contract)                                                                                                                                            |
+| `document.ts`        | `EditorDocument` (`version`, `program` incl. its `ports`, `inputValues`) - core's `Snapshot` plus an envelope version; `migrateDocument` over an `applyMigrations` chain                                                                                    |
+| `ports-edit.ts`      | add / update / remove inputs and outputs on a layer's `Ports`, plus the type options a picker offers. Pure; `instance.setLayer` judges the result                                                                                                           |
+| `diagnostic.ts`      | `positionOf` - the one adapter from a core `SourceRef` to a line and column                                                                                                                                                                                 |
+| `store.ts`           | `DocumentStore` + `MemoryStore` / `LocalStorageStore` / `UrlStore` (adapters never reject)                                                                                                                                                                  |
+| `permalink.ts`       | document ↔ URL payload (deflate + base64url, native streams)                                                                                                                                                                                                |
+| `tokens.ts`, `cm.ts` | lexer-driven highlighting and the editor chrome theme; `cm.ts` + `editor.ts` are the only CodeMirror-aware modules                                                                                                                                          |
+| `port-rows.ts`       | port declarations → the rows a pane renders (`widgetsFor`, `outputRows`), each carrying its layer and whether that layer is editable; `editableLayer`, `declaredNames`                                                                                      |
+| `format.ts`          | `formatValue` - the one value→text rule every pane shares                                                                                                                                                                                                   |
+| `react/`             | the compound components above - the only place React is allowed                                                                                                                                                                                             |
 
 ## Principles
 
@@ -101,8 +119,9 @@ editor.dispose(); // unregisters the program and stops every subscription
   editor remembers on its own is the theme mode, a UI preference (opt out with `themeToggle={false}`).
 - **Observables, not callbacks.** Any number of consumers subscribe; the instance never learns who.
 - **The editor edits a running program.** `editor.instance` is a core `ProgramInstance`: the same
-  object a host runs headless. Today the editor builds its own; mounting one a host already runs
-  is the next step (`.docs/todo.md`).
+  object a host runs headless. Where it comes from is the `Connection`'s business - a private
+  stack, a host's runtime, or a program the host already runs, in-process or through a
+  `@dendrite-lang/link` replica - and the editor cannot tell which.
 - **The document is self-contained and versioned.** `applyMigrations` is generic on purpose so a
   host envelope can chain its own versions the same way.
 - **Composition over configuration.** Layout is JSX; presets are compositions; menus and actions

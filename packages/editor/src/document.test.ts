@@ -42,6 +42,11 @@ describe("isDocument", () => {
     expect(isDocument({ ...current(), program: "not a program" })).toBe(false);
     expect(isDocument({ ...current(), inputValues: [] })).toBe(false);
   });
+
+  it("carries an optional host revision, and only a numeric one", () => {
+    expect(isDocument({ ...current(), revision: 3 })).toBe(true);
+    expect(isDocument({ ...current(), revision: "3" })).toBe(false);
+  });
 });
 
 describe("migrateDocument", () => {
