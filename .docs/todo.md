@@ -238,6 +238,31 @@ hover range. Tune them in the playground and settle them.
 
 ---
 
+## Editor — an example layout: slimmed down, read-only, shows the answer
+
+**What:** A third layout beside `DefaultLayout` and the embed's compact one, for a documented
+example: the program and what it produces, nothing else - no editing, no declarations, no
+diagnostics, no bar. The PHP manual's "example + output" as a live block.
+
+**Why deferred:** the docs site's islands (docs plan, step 3) render examples through the full
+editor, and the reference page renders their output as text derived at build time. Both are
+fine to start with; a purpose-built read-only block is a design question, not plumbing.
+
+**The design is to be decided.** Open: whether inputs show at all (a read-only Inputs pane
+with the seeded values, or nothing); whether outputs sit beside or under the code; whether the
+code is a canvas (CodeMirror, read-only) or plain highlighted text through `styledRanges`;
+how it relates to the compact/embed layout (a preset of it, or a fourth layout); and how
+"open in playground" looks when there is no bar.
+
+**What it requires:** the layout component; `readOnly` on the canvas (CodeMirror
+`EditorState.readOnly`); a `Live` variant in `apps/docs`; possibly `styledRanges` → static
+spans for the no-canvas option.
+
+**Driving need:** the language docs, once their examples want to be live without inviting
+edits on every page.
+
+---
+
 ## Editor — pane resizing
 
 **What:** Drag handles between the canvas and the side column (and between stacked panes), so a

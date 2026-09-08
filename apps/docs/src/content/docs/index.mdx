@@ -1,0 +1,55 @@
+---
+title: Dendrite
+description: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
+# Starlight titles a page "<title> | <site>", which reads "Dendrite | Dendrite" here; a title
+# tag in `head` replaces the default one.
+head:
+  - tag: title
+    content: Dendrite - a declarative dataflow language
+template: splash
+hero:
+  tagline: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
+  image:
+    light: ../../assets/dendrite-wordmark.svg
+    dark: ../../assets/dendrite-wordmark-dark.svg
+  actions:
+    # Relative, so it works under any base. Frontmatter cannot read env, so the playground
+    # link is the deployed URL: a plain link, not the share round trip (the island's "open
+    # in playground" carries a document and uses PUBLIC_PLAYGROUND_URL).
+    - text: Read the guide
+      link: ./learn/getting-started/
+      icon: right-arrow
+    - text: Try the playground
+      link: https://ijiji.github.io/Dendrite/playground/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Code } from "@astrojs/starlight/components";
+
+{/* The root used to be a hash-forwarding redirect to the playground (it was deployed at the
+    root for a day); keep that promise for any share link that carries its document here.
+    The splash has no anchors of its own. */}
+
+<script is:inline>
+  if (location.hash.length > 1) location.replace("playground/" + location.hash);
+</script>
+
+<CardGrid stagger>
+  <Card title="Declarative" icon="pencil">
+    A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
+  </Card>
+  <Card title="Incremental" icon="rocket">
+    When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
+  </Card>
+  <Card title="Embeddable" icon="puzzle">
+    The vocabulary is yours to extend. What a program reads and produces is what a host declares.
+  </Card>
+</CardGrid>
+
+<Code
+  lang="text"
+  code={`let scores = [4, 8, 15, 16, 23]
+let high   = Filter(scores, item => item > 10)
+output any = Some(scores, item => item > 10)`}
+/>
