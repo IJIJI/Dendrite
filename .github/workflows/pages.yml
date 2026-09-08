@@ -1,19 +1,17 @@
-# Build the playground and deploy it to GitHub Pages.
+# Build the docs and the playground and deploy them to GitHub Pages as one site.
 #
-# Site layout: the root is a hash-forwarding redirect (.github/pages/index.html) and the
-# playground lives under /playground/, so the docs site can take the root later without
-# breaking share links (which encode the whole document in the #fragment).
+# Site layout: the docs (apps/docs) at the root, the playground (apps/playground) under
+# /playground/, where share links (the document in the #fragment) point.
 # One-time repo setup: Settings → Pages → Source = "GitHub Actions".
-name: Deploy playground
+name: Deploy site
 
 on:
   push:
     branches: [main]
     paths:
-      - "apps/playground/**"
-      - "packages/core/**"
-      - ".github/pages/**"
-      - ".github/workflows/playground.yml"
+      - "apps/**"
+      - "packages/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,22 +27,29 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 15 # a hung build must not hold the pages concurrency slot
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
-      # The playground bundles the language SOURCE via its Vite alias - no core build needed.
+      # Both apps bundle the language and editor SOURCE via their Vite aliases - no package
+      # build needed. Each takes its deployed base path from the environment.
       - name: Build playground
         run: yarn workspace dendrite-playground run build
         env:
           PLAYGROUND_BASE: /Dendrite/playground/
 
+      - name: Build docs
+        run: yarn workspace dendrite-docs run build
+        env:
+          DOCS_BASE: /Dendrite/
+          PUBLIC_PLAYGROUND_URL: /Dendrite/playground/
+
       - name: Assemble the site
         run: |
           mkdir -p site
+          cp -r apps/docs/dist/. site/
           cp -r apps/playground/dist site/playground
-          cp .github/pages/index.html site/index.html
 
       - uses: actions/configure-pages@v5
 

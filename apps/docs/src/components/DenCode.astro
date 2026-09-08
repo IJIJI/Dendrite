@@ -1,0 +1,14 @@
+---
+// A Dendrite snippet, highlighted by the editor's own lexer rendered to spans at build time
+// (den-parts.ts) - the canvas and the page share one classification. In Markdown the same
+// thing is a ```den fence (remark-den.ts); this component is for .astro templates.
+import { denHtml } from "../lib/den-parts";
+
+interface Props {
+  code: string;
+}
+
+const { code } = Astro.props;
+---
+
+<pre class="den"><code set:html={denHtml(code)} /></pre>

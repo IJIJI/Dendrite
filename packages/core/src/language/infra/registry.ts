@@ -1,5 +1,7 @@
 import { type ZodType } from "zod";
 
+// Type-only: serialise → ports → registry is the runtime order, and this edge back is erased.
+import { type SavedProgram } from "./serialise";
 import { type Type } from "./types";
 
 //? Definition types
@@ -45,6 +47,15 @@ export interface OpDefinition {
   inputs: OpInput[];
   output: Type; // static fallback: used when inferOutput is absent/undefined
   category?: string;
+  /** One plain sentence (no markup) for a reference page and, later, editor hover. */
+  description?: string;
+  /**
+   * Complete, self-contained programs showing the op - literals only, no `$inputs` (nothing
+   * declares them) - as SavedPrograms, so an example is whatever the language can author:
+   * code today (`den`), a rete graph later, with no change here. Each is loaded by a test so
+   * it cannot rot. Undeclared outputs only warn, so `output x = …` needs no ports.
+   */
+  examples?: readonly SavedProgram[];
 }
 
 export interface InputDefinition {

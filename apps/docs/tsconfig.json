@@ -1,0 +1,14 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "paths": {
+      "@dendrite-lang/core": ["../../packages/core/src/index.ts"],
+      "@dendrite-lang/editor": ["../../packages/editor/src/index.ts"],
+      "@dendrite-lang/editor/react": ["../../packages/editor/src/react/index.tsx"]
+    }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}

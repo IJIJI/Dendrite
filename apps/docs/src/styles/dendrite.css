@@ -1,0 +1,111 @@
+/* The Dendrite brand on Starlight. Starlight is themed through --sl-* custom properties;
+   these map them onto the brand tokens (brand/dendrite-tokens.css; the dark derivations are
+   the editor's, packages/editor/style.css). Fonts are self-hosted, as in the playground. */
+
+@import "@fontsource/archivo/400.css";
+@import "@fontsource/archivo/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/kode-mono/500.css"; /* the editor's labels and tags, inside islands */
+
+:root {
+  --sl-font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  /* Starlight's ramp runs white → gray-1 … gray-6 → black, TEXT to BACKGROUND in both themes
+     (the light theme inverts the greys). Roles it reads: gray-2 is body text, gray-3 muted,
+     gray-5/6 hairlines and inline code, gray-6/7 the nav and sidebar, black the page.
+     Light: the brand's ink ramp down to its ground ramp. */
+  --sl-color-white: #201e1d; /* ink: headings */
+  --sl-color-gray-1: #201e1d; /* ink: strong text */
+  --sl-color-gray-2: #5c5856; /* ink-2: body text */
+  --sl-color-gray-3: #8a8583; /* ink-3: muted text, placeholders */
+  --sl-color-gray-4: #cfcccb; /* border */
+  --sl-color-gray-5: #d9d6d5; /* ground-3: hairline-light, hover */
+  --sl-color-gray-6: #e6e4e3; /* ground-2: inline code, hairlines */
+  --sl-color-gray-7: #f3f2f2; /* ground: the nav bar */
+  --sl-color-black: #ffffff; /* ground-1: the page, as the editor's canvas */
+  --sl-color-accent: #6366f1; /* iris */
+  --sl-color-accent-high: oklch(0.44 0.19 277); /* iris-ink: accent text at paragraph size */
+  --sl-color-accent-low: oklch(0.92 0.06 277); /* iris-200 */
+}
+
+:root[data-theme="dark"] {
+  /* Dark: dark-1 page, one step up the ramp, as the editor's panel - dark-0 under a screen
+     of near-white text reads harsh. */
+  --sl-color-white: #f3f2f2; /* dark-ink */
+  --sl-color-gray-1: #f3f2f2;
+  --sl-color-gray-2: #a8a4a2; /* dark-ink-2: body text */
+  --sl-color-gray-3: #7d7977; /* dark-ink-3: muted */
+  --sl-color-gray-4: #4a4644; /* dark-4 */
+  --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
+  --sl-color-gray-6: #2c2a29; /* dark-2: nav and sidebar */
+  --sl-color-black: #201e1d; /* dark-1: the page */
+  --sl-color-accent: #7c83f5; /* periwinkle */
+  --sl-color-accent-high: oklch(0.84 0.11 277);
+  --sl-color-accent-low: oklch(0.29 0.1 277);
+}
+
+/* The brand's corners: square containers, 2px controls. */
+:root {
+  --sl-border-radius: 0;
+}
+
+.sl-link-button,
+.sl-markdown-content code,
+.sl-markdown-content pre {
+  border-radius: 2px;
+}
+
+.sl-markdown-content code {
+  font-size: 0.9em;
+}
+
+/* A Dendrite block (DenCode, a ```den fence): the editor's canvas face on the page's well,
+   and under it what the snippet produces, as the reference page derives it at build time.
+   `pre.den`, not `.den` - inline code carries the class too and keeps Starlight's box. */
+pre.den {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 2px;
+  background: var(--sl-color-gray-6);
+  font: 400 13px/1.6 var(--sl-font-mono);
+  overflow-x: auto;
+}
+
+pre.den + .produces {
+  margin: 0 0 1.5rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-top: 0;
+  border-radius: 0 0 2px 2px;
+  font: 400 12px/1.6 var(--sl-font-mono);
+  color: var(--sl-color-gray-3);
+}
+
+.op .signature code {
+  font-size: 0.85em;
+}
+
+/* Inline Dendrite (`…{:den}` in Markdown, and the signatures): Starlight's inline-code
+   box, the tokens' own colours inside it. */
+code.den .tok-ident {
+  color: inherit;
+}
+
+/* A live example: the real editor in the page. The layout's column fills the box because
+   the box is a flex row. */
+.live {
+  display: flex;
+  height: 24rem;
+  margin: 1.5rem 0;
+  border: 1px solid var(--sl-color-gray-4);
+}
+
+/* A sidebar label that is code (the head script in astro.config.ts marks it): the editor's
+   label face, as the canvas prints a tag. */
+.sidebar-content summary .large.mono {
+  font-family: "Kode Mono", ui-monospace, Consolas, monospace;
+  font-weight: 500;
+}

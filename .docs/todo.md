@@ -238,6 +238,79 @@ hover range. Tune them in the playground and settle them.
 
 ---
 
+## Core — the stdlib in segments a host can pick
+
+**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
+wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
+lighthouse that never needs list ops does not carry them, and the docs can say "your host
+has these".
+
+**Why deferred:** no host exists yet that wants less than everything; the segment names are
+already the ops' `category`, so the split is mostly mechanical when it comes.
+
+**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
+step over the base) with `createStdlib()` composing all of them; operators registered with
+the segment that owns their op; a test that the composition equals today's stdlib; the docs'
+per-segment pages (already one per `category`) gain "how to include only this".
+
+**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
+
+---
+
+## Docs — content notes from the first look at the empty site
+
+Collected 2026-09-09 when the scaffold went up, for the content pass:
+
+- **The chain wants a block diagram first**, prose second. The brand sheet
+  (`brand/brand-sheet.html`) has a block style to reuse; inline SVG in the MDX, themed
+  through the `--sl-*` tokens so it flips with the site.
+- **Learn is a path, not a reference:** getting started (playground, no install) → writing
+  programs with the base operators → how the language works → the full stdlib. The sidebar
+  is already in that order; the content must read that way too, each page ending in "next".
+- **Two readers.** Learn + stdlib are for someone writing programs; Host developers is for
+  someone embedding the language, and it owns Installation (every package, every option)
+  and the packages. Say this on the splash and at the top of each section's first page.
+- **stdlib** is printed as code, one page per segment (generated), the index explaining the
+  conventions (variadic inputs, `any`, function-typed inputs) and, once core has it, how a
+  host picks segments.
+- **A glossary** only once terms accumulate across pages; not as a stub.
+- **Code samples in the site's own colours:** highlight Dendrite through the editor's
+  `styledRanges` (the same lexer the canvas uses) rendered to spans at build time, rather
+  than a second grammar for Shiki. Landed with the ops reference.
+
+---
+
+## Editor — the example layout: read-only code, settable inputs, live outputs
+
+**What (sharpened 2026-09-09):** a layout preset for a documented example - the program,
+read-only; the inputs, settable; the outputs, live; one "open in playground" affordance. No
+declarations, no diagnostics, no menus. The PHP manual's "example + output" as a live block,
+where the reader changes the inputs. This may well be the only editor the docs need; the
+more equipped, editable embed (compact layout + enlarge-to-page) stays on the table. Either
+way **each is a layout the editor ships**, chosen by the host - a config, not a fork.
+
+**Why deferred:** the docs site's first island (the splash) runs the full editor and shows
+what is wrong with that in a small box: the share and undo/redo controls sit at different
+heights outside a top bar that holds nothing else, and 24rem does not fit the default
+layout. Left in place as the test case for this work.
+
+**The design is to be decided.** Open: whether the code is a read-only canvas (CodeMirror
+`EditorState.readOnly` - keeps highlighting and selection) or static spans via `styledRanges`
+(lighter, no CodeMirror on the page); outputs beside or under the code; where "open in
+playground" sits with no bar; whether the reference pages should render this instead of
+`DenCode` + the derived output text (probably not - the text is instant and searchable).
+
+**What it requires:** `Editor.ExampleLayout` (or a name to be chosen) in
+`packages/editor/src/react/`; `readOnly` on the canvas; the inputs pane as it is (values
+editable, declarations not - `readOnly` for declarations is already the layer policy);
+`Live` in `apps/docs` switching to it; a height that follows content rather than a fixed
+box.
+
+**Driving need:** the language docs' examples and the examples page; the splash island as
+the smoke test.
+
+---
+
 ## Editor — pane resizing
 
 **What:** Drag handles between the canvas and the side column (and between stacked panes), so a
@@ -519,19 +592,15 @@ once several documents exist.
 
 ---
 
-## Web documentation site
+## Web documentation site — DONE (empty), 2026-09-09
 
-**What:** Public docs for the language: guide (syntax, types, lambdas, operators), op/stdlib
-reference (generatable from the descriptor — `category`, inputs, output types are all registered
-data), embedding guide (Environment/runtime API), and an embedded playground for live examples.
-
-**Notes:** Framework choice interacts with the playground-React decision below (a React-based docs
-stack like Docusaurus favors React-ifying the playground for embedding; Astro/Starlight or
-VitePress change that calculus). Deploys next to the playground on GitHub Pages.
-
-**Embedded live examples:** first via an **iframe embed mode** on the playground — a payload URL
-plus an `embed` flag that hides the chrome (framework-agnostic, tiny once document-payload URLs
-exist). Component-level embedding is the React-switch alternative.
+**Built as [docs-plan.md](docs-plan.md):** `apps/docs`, Astro + Starlight, at the root of
+`ijiji.github.io/Dendrite/` with the playground under `/playground/` (one Pages workflow assembles
+both). The stdlib reference is generated from the descriptor, one page per segment, every
+example run. Live examples are React islands importing the editor directly - no iframe mode;
+the docs' own example block is "the example layout" below. What remains is the CONTENT:
+"Document the core language (two levels)" at the top of this file, with the notes from the
+first look at the empty site under "Docs — content notes".
 
 ---
 

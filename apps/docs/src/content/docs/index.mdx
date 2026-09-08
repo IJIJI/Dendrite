@@ -1,0 +1,51 @@
+---
+title: Dendrite
+description: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
+# Starlight titles a page "<title> | <site>", which reads "Dendrite | Dendrite" here; a title
+# tag in `head` replaces the default one.
+head:
+  - tag: title
+    content: Dendrite - a declarative dataflow language
+template: splash
+hero:
+  tagline: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
+  image:
+    light: ../../assets/dendrite-wordmark.svg
+    dark: ../../assets/dendrite-wordmark-dark.svg
+  actions:
+    # Relative, so it works under any base. Frontmatter cannot read env, so the playground
+    # link is the deployed URL: a plain link, not the share round trip (the island's "open
+    # in playground" carries a document and uses PUBLIC_PLAYGROUND_URL).
+    - text: Get started
+      link: ./learn/getting-started/
+      icon: right-arrow
+    - text: Try the playground
+      link: https://ijiji.github.io/Dendrite/playground/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+import Live from "../../components/Live";
+
+<CardGrid stagger>
+  <Card title="Declarative" icon="pencil">
+    A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
+  </Card>
+  <Card title="Incremental" icon="rocket">
+    When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
+  </Card>
+  <Card title="Embeddable" icon="puzzle">
+    The vocabulary is yours to extend. What a program reads and produces is what a host declares.
+  </Card>
+</CardGrid>
+
+<Live
+  client:only="react"
+  source={`// Change $threshold on the right; only what depends on it recomputes.
+let scores = [4, 8, 15, 16, 23]
+let high   = Filter(scores, item => item > $threshold)
+output count = Length(high)
+output any   = Some(scores, item => item > $threshold)`}
+  ports={{ inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }], outputs: [] }}
+/>

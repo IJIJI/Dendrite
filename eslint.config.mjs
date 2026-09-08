@@ -9,6 +9,7 @@ export default tseslint.config(
       // Build output and installs at any depth - every workspace has its own dist/.
       "**/dist/**",
       "**/node_modules/**",
+      "**/.astro/**", // Astro's generated types (flat config does not read .gitignore)
       ".yarn/**",
     ],
   },
