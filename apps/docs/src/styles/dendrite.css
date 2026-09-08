@@ -60,3 +60,10 @@
 .sl-markdown-content code {
   font-size: 0.9em;
 }
+
+/* A sidebar label that is code (the head script in astro.config.ts marks it): the editor's
+   label face, as the canvas prints a tag. */
+.sidebar-content summary .large.mono {
+  font-family: "Kode Mono", ui-monospace, Consolas, monospace;
+  font-weight: 500;
+}

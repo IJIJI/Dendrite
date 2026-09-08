@@ -27,6 +27,17 @@ export default defineConfig({
       favicon: "/favicon.svg",
       customCss: ["./src/styles/dendrite.css"],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/IJIJI/Dendrite" }],
+      // The social links open in a new tab (Starlight's own component, one attribute added).
+      components: { SocialIcons: "./src/components/SocialIcons.astro" },
+      // Sidebar labels are plain text, so a label that is CODE - `stdlib` - is marked from a
+      // script rather than markup; dendrite.css sets it in Kode Mono. Runs before first paint.
+      head: [
+        {
+          tag: "script",
+          content:
+            'document.addEventListener("DOMContentLoaded",()=>{for(const s of document.querySelectorAll(".sidebar-content summary .large"))if(s.textContent.trim()==="stdlib")s.classList.add("mono")})',
+        },
+      ],
       sidebar: [
         // Since Starlight 0.39 `autogenerate` is an ITEM inside a labelled group, never a
         // group by itself - so every section names itself here and lists what it holds.
