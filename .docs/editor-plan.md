@@ -262,8 +262,8 @@ generated from the descriptor · docs index inherits the hash-forward redirect f
 
 **Landed 2026-09-09, differently** (`docs-plan.md`): the framework is Astro + Starlight, not
 Docusaurus - Vite reuse, React islands for the editor, zero-JS prose; there is no iframe mode,
-the docs import the editor directly; the ops reference is generated and RUN; the hash-forward
-lives on the splash. What this phase called `PRESETS.docs` is now `todo.md`, "the example
+the docs import the editor directly; the ops reference is generated and RUN; nothing forwards
+old root share links (the playground sat at the root for days, not months). What this phase called `PRESETS.docs` is now `todo.md`, "the example
 layout": read-only code, settable inputs, live outputs, open in playground - a layout the
 editor ships.
 

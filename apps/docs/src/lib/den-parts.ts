@@ -1,9 +1,9 @@
 import { createStdlib } from "@dendrite-lang/core";
 import { styledRanges } from "@dendrite-lang/editor";
 
-//? Dendrite source → highlighted parts, by the editor's own lexer. The one classification
-// the canvas, the DenCode component and the remark plugin share, so the site never carries
-// a grammar of its own that could drift from what actually parses.
+//? Dendrite source → highlighted parts, by the editor's own lexer - the classification the
+// canvas uses, so the site never carries a grammar of its own that could drift from what
+// actually parses. Two renderings: HTML (DenCode, .md) and, in remark-den.ts, JSX nodes (.mdx).
 
 export interface Part {
   text: string;

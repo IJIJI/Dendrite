@@ -2,7 +2,7 @@ import type { Code, InlineCode, Root } from "mdast";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 
-import { denHtml } from "../lib/den-parts";
+import { denHtml, denParts } from "../lib/den-parts";
 
 //? Dendrite in Markdown: a ```den fence, or inline code ending in {:den}, highlighted by the
 // editor's own lexer (den-parts.ts) instead of a Shiki grammar. Runs before Starlight's
@@ -23,31 +23,18 @@ type JsxElement = {
 
 const attr = (name: string, value: string): Attribute => ({ type: "mdxJsxAttribute", name, value });
 
-// The parts as JSX nodes, for MDX.
-function jsxSpans(code: string): (JsxElement | JsxText)[] {
-  // denHtml already escapes; JSX text nodes must not, so rebuild from the parts.
-  const html = denHtml(code);
-  const nodes: (JsxElement | JsxText)[] = [];
-  const re = /<span class="tok-([a-z]+)">([\s\S]*?)<\/span>|([^<]+)/g;
-  for (const match of html.matchAll(re)) {
-    const [, cls, inner, plain] = match;
-    const value = unescape(cls ? (inner ?? "") : (plain ?? ""));
-    nodes.push(
-      cls
-        ? {
-            type: "mdxJsxTextElement",
-            name: "span",
-            attributes: [attr("class", `tok-${cls}`)],
-            children: [{ type: "text", value }],
-          }
-        : { type: "text", value },
-    );
-  }
-  return nodes;
-}
-
-const unescape = (text: string): string =>
-  text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+// The parts as JSX nodes, for MDX (text nodes are not escaped; MDX does that).
+const jsxSpans = (code: string): (JsxElement | JsxText)[] =>
+  denParts(code).map(({ text, cls }) =>
+    cls
+      ? {
+          type: "mdxJsxTextElement",
+          name: "span",
+          attributes: [attr("class", `tok-${cls}`)],
+          children: [{ type: "text", value: text }],
+        }
+      : { type: "text", value: text },
+  );
 
 export const remarkDen: Plugin<[], Root> = () => (tree, file) => {
   const mdx = /\.mdx$/.test(file.path ?? "");

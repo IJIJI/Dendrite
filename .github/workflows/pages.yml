@@ -1,9 +1,7 @@
 # Build the docs and the playground and deploy them to GitHub Pages as one site.
 #
 # Site layout: the docs (apps/docs) at the root, the playground (apps/playground) under
-# /playground/. Share links encode the whole document in the #fragment and have always
-# pointed at /playground/ - except for the one day the playground was deployed at the root,
-# which the docs' splash still forwards (apps/docs/src/components/HashForward.astro).
+# /playground/, where share links (the document in the #fragment) point.
 # One-time repo setup: Settings → Pages → Source = "GitHub Actions".
 name: Deploy site
 

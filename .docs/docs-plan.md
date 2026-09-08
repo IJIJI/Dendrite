@@ -26,7 +26,7 @@ it.
 | Point | Decision | Why |
 |---|---|---|
 | Framework | **Astro + Starlight**, in `apps/docs` | Content-first MD/MDX; React islands for a live editor; Vite underneath so the workspace source aliases carry over; zero JS on prose pages; Pagefind search; CSS-variable theming the brand tokens map onto. Docusaurus was the runner-up (React end-to-end, built-in versioning we don't need before 1.0); VitePress is Vue and fights the React editor. |
-| Layout on Pages | Docs at `/Dendrite/`, playground stays at `/Dendrite/playground/` | Share links encode the document in the `#` under `/playground/`; nothing moves. The redirect page retires. |
+| Layout on Pages | Docs at `/Dendrite/`, playground stays at `/Dendrite/playground/` | Share links encode the document in the `#` under `/playground/`; nothing moves. The redirect page retires, and the few days the playground spent at the root get no forward. |
 | Local dev | Two dev servers, each at `/` | The playground on `:5173`, the docs on `:4321`. Live examples in the docs import the editor directly, so the docs never need the playground server. |
 | Audiences → sections | **Learn** (users) · **Standard Library** (reference) · **Integrate** (host developers) · **Contribute** (later) | Audience-first. Getting-started per audience; Examples under Learn; a changelog once 0.1.0 ships. |
 | Op text | `OpDefinition.description?` and `examples?: readonly string[]` **in core**, on the stdlib | One source for the reference page, for editor hover later, and for a test that compiles every example so it cannot rot. Docs-only prose stays in MDX around the generated table. |
