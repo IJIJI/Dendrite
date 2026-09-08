@@ -87,6 +87,12 @@
   font-size: 0.85em;
 }
 
+/* Inline Dendrite (`…{:den}` in Markdown, and the signatures): Starlight's inline-code
+   box, the tokens' own colours inside it. */
+code.den .tok-ident {
+  color: inherit;
+}
+
 /* A live example: the real editor in the page. The layout's column fills the box because
    the box is a flex row. */
 .live {

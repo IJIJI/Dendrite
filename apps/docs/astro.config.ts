@@ -3,6 +3,8 @@ import starlight from "@astrojs/starlight";
 import { defineConfig, passthroughImageService } from "astro/config";
 import { fileURLToPath, URL } from "node:url";
 
+import { remarkDen } from "./src/plugins/remark-den";
+
 //? The docs site: Starlight at the root, the playground beside it under /playground/ (the
 // Pages workflow assembles the two builds). `.ts` rather than `.mjs` for the same reason the
 // playground's Vite config is: it reads process.env, which the root ESLint config resolves
@@ -16,6 +18,9 @@ export default defineConfig({
   base: process.env.DOCS_BASE ?? "/",
   // Only SVGs so far; the default service wants sharp for nothing.
   image: { service: passthroughImageService() },
+  // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer. User
+  // plugins run before Starlight's Expressive Code, which then leaves them alone.
+  markdown: { remarkPlugins: [remarkDen] },
   integrations: [
     starlight({
       title: "Dendrite",

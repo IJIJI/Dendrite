@@ -26,11 +26,21 @@ const pipeline = composed.environment;
 const ops = [...env.language.descriptor.ops.values()].filter((op) => op.category === category);
 if (ops.length === 0) throw new Error(`no stdlib ops in category '${category}'`);
 
+// The signature is not Dendrite source (`->`, `nodes...`), so it wears the editor's token
+// classes by hand: the op in the op colour, names as identifiers, types as text, the rest
+// as punctuation.
+const span = (cls: string, text: string): string => `<span class="tok-${cls}">${text}</span>`;
 const signature = (op: OpDefinition): string => {
   const inputs = op.inputs
-    .map((input) => `${input.name}${input.variadic ? "..." : ""}: ${typeToString(input.type)}`)
-    .join(", ");
-  return `${op.name}(${inputs}) -> ${typeToString(op.output)}`;
+    .map(
+      (input) =>
+        span("ident", input.name) +
+        (input.variadic ? span("punct", "...") : "") +
+        span("punct", ": ") +
+        typeToString(input.type),
+    )
+    .join(span("punct", ", "));
+  return `${span("op", op.name)}${span("punct", "(")}${inputs}${span("punct", ")")} ${span("operator", "->")} ${typeToString(op.output)}`;
 };
 
 // "name = value" per output. Examples are literal-only, so running needs no inputs.
@@ -48,7 +58,7 @@ const produced = (example: SavedProgram): string[] => {
     <section class="op">
       <h2 id={op.name}>{op.name}</h2>
       <p class="signature">
-        <code>{signature(op)}</code>
+        <code class="den" set:html={signature(op)} />
       </p>
       <p>{op.description}</p>
       {op.examples?.map((example) =>
