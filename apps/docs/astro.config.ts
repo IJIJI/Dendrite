@@ -1,3 +1,4 @@
+import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 import { defineConfig, passthroughImageService } from "astro/config";
@@ -18,9 +19,11 @@ export default defineConfig({
   base: process.env.DOCS_BASE ?? "/",
   // Only SVGs so far; the default service wants sharp for nothing.
   image: { service: passthroughImageService() },
-  // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer. User
-  // plugins run before Starlight's Expressive Code, which then leaves them alone.
-  markdown: { remarkPlugins: [remarkDen] },
+  // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer. Astro 7's
+  // default Markdown processor takes no remark plugins, so the unified pipeline is chosen
+  // explicitly - it is the one Starlight's own plugins use. User plugins run before
+  // Starlight's Expressive Code, which then leaves them alone.
+  markdown: { processor: unified({ remarkPlugins: [remarkDen] }) },
   integrations: [
     starlight({
       title: "Dendrite",
