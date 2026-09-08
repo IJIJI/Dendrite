@@ -256,19 +256,17 @@ describe("ProgramInstance - layers", () => {
     const { instance } = setup();
     instance.setInput("p", 5);
 
-    expect(
-      instance.setLayer("document", {
-        inputs: [
-          { name: "p", type: Type.number },
-          { name: "q", type: Type.number, default: 2 },
-        ],
-        outputs: [],
-      }),
-    ).toEqual([]);
+    instance.setLayer("document", {
+      inputs: [
+        { name: "p", type: Type.number },
+        { name: "q", type: Type.number, default: 2 },
+      ],
+      outputs: [],
+    });
     expect(instance.values.get()).toEqual({ p: 5, q: 2 });
 
     // Removing an input the program never referenced drops its value and nothing else.
-    expect(instance.setLayer("document", DOC)).toEqual([]);
+    instance.setLayer("document", DOC);
     expect(instance.values.get()).toEqual({ p: 5 });
     expect(instance.snapshot.get()).toEqual({
       program: serialiseSource(SOURCE, DOC),
@@ -276,19 +274,44 @@ describe("ProgramInstance - layers", () => {
     });
   });
 
-  it("refuses a layer change that takes a name an earlier layer owns", () => {
+  it("refuses a layer change that takes a name an earlier layer owns, through diagnostics", () => {
     const { instance } = setup();
     const before = instance.ports.get();
 
-    const problems = instance.setLayer("document", {
+    instance.setLayer("document", {
       inputs: [{ name: "g", type: Type.number }],
       outputs: [],
     });
-    expect(problems).toEqual([
-      expect.objectContaining({ kind: "shadowed_name", layerId: "document", where: "input g" }),
+    expect(instance.diagnostics.get()).toEqual([
+      expect.objectContaining({
+        stage: "ports",
+        kind: "shadowed_name",
+        layerId: "document",
+        where: "input g",
+        refused: true,
+      }),
     ]);
-    expect(instance.ports.get()).toBe(before); // nothing moved
+    // Nothing moved: the layers, the outputs and their freshness are all as they were.
+    expect(instance.ports.get()).toBe(before);
+    expect(instance.outputs.get()).toMatchObject({ stale: false, error: null });
     expect(outputsOf(instance)).toBe(0);
+  });
+
+  it("keeps a refusal visible through value changes, and clears it on the next compile", () => {
+    const { instance } = setup();
+    instance.setLayer("document", { inputs: [{ name: "g", type: Type.number }], outputs: [] });
+    expect(kinds(instance)).toEqual(["shadowed_name"]);
+
+    // A value change is not a compile; the row that was refused should still say why.
+    instance.setInput("p", 3);
+    expect(kinds(instance)).toEqual(["shadowed_name"]);
+
+    // A second refusal replaces the first rather than piling up.
+    instance.setLayer("document", { inputs: [{ name: "1", type: Type.number }], outputs: [] });
+    expect(kinds(instance)).toEqual(["invalid_name"]);
+
+    instance.setLayer("document", DOC);
+    expect(kinds(instance)).toEqual([]);
   });
 
   it("applies a change that breaks a LATER layer, and flags that layer instead", () => {
@@ -303,11 +326,10 @@ describe("ProgramInstance - layers", () => {
     });
 
     // The capability layer takes the document's name. It is earlier, so it wins.
-    const problems = instance.setLayer("cap", {
+    instance.setLayer("cap", {
       inputs: [{ name: "p", type: Type.number }],
       outputs: [],
     });
-    expect(problems).toEqual([]);
     expect(instance.diagnostics.get()).toEqual([
       expect.objectContaining({
         stage: "ports",
@@ -316,6 +338,8 @@ describe("ProgramInstance - layers", () => {
         where: "input p",
       }),
     ]);
+    // Applied, not refused: the problem names a row that now really exists.
+    expect(instance.diagnostics.get()[0]!.refused).toBeUndefined();
     expect(instance.outputs.get().stale).toBe(true);
   });
 

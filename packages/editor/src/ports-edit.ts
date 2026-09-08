@@ -9,8 +9,8 @@ import {
 
 //? Editing a layer's Ports as DATA. Pure functions that return new Ports, plus the type
 // options a picker offers. Framework-free: a pane calls these and hands the result to
-// instance.setLayer(), which composes it and answers with any problems - so nothing here
-// validates. Names, duplicates and clashes with a layer beneath are core's to judge.
+// instance.setLayer(), which composes it and answers through its diagnostics - so nothing
+// here validates. Names, duplicates and clashes with a layer beneath are core's to judge.
 
 // ---- inputs ----
 
