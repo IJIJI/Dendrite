@@ -25,7 +25,8 @@ output result  = status
 | Package | Description | Status |
 |---|---|---|
 | `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | In development — headless core + React compound components (`./react`: `<Editor>`, canvas, panes, top bar, layout) landed; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | In development — headless core + React compound components (`./react`: `<Editor>`, canvas, panes, top bar, layout) landed; mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 
 ---

@@ -351,22 +351,43 @@ told when they delete an output the rest of their program relied on.
 
 ---
 
-## IMPORTANT — The editor as a control surface over a runtime it does not own
+## The editor as a control surface over a runtime it does not own — steps 1 and 4 DONE
 
-**What:** `createEditor` builds its own environment, runtime and instance. That is right for the
+**What:** `createEditor` built its own environment, runtime and instance. That was right for the
 playground and wrong for every other host. The editor should mount something the host already
 runs, and that runtime should be able to live in the browser (playground) or behind an API
 (Beacon), without the editor knowing which.
 
-**Why deferred:** the pieces only exist as of the ports/instance refactor (2026-09). Designing
-the remote seam before a real API exists would be guessing at its shape.
+**Landed 2026-09-08** (five commits; design record in `editor-core-plan.md`, result in
+`architecture.md` "Linking"):
 
-**The ordering, settled 2026-09-07.** Each step is useful alone; do them in this order.
+- **Step 1.** `createEditor` takes a `Connection` — `ownStack` / `joinRuntime(language, runtime,
+  …)` / `attach(language, instance)` — and `dispose` releases only what the connection made.
+  The host passes a `Language`, not an environment: the editor builds its own from it.
+- **Step 4, ahead of a real API,** because the wire's shape is fixed by `ProgramInstance`, not by
+  Beacon: `@dendrite-lang/link`. `serveInstance` / `connectInstance`; a `Channel` the host
+  implements over its own pipe; MessagePort and WebSocket adapters. `setLayer` reports refusals
+  as `ports` diagnostics marked `refused` (the one interface change, landed first). The replica
+  recomposes `ports` from the layers with its own language, echoes values (and the persisted
+  layer's into the snapshot), drops pushes stamped before its latest command, adopts a `state`
+  push's clock on reconnect, marks outputs stale on disconnect, refuses locally what a local
+  instance refuses. `hello` carries a protocol version and a vocabulary fingerprint; a mismatch
+  is refused with the difference named. The server enforces `LayerPolicy` and strips schemas.
+- The envelope carries an optional `revision`, decided now (step 3's precondition).
 
-1. **Borrow a runtime or an instance.** `EditorConfig` becomes a union: own the stack as now, or
-   take an existing runtime (and optionally an instance) plus the language it was built from.
-   `dispose` must stop unregistering what it does not own. Everything below depends on this.
-   The editor's only extra need beyond `ProgramInstance` is the `Language`, for highlighting.
+**Still open from the "feel local" list** — small, in order of value:
+- **Analyse locally.** Diagnostics mirror the server's today (one truth, one round trip). The
+  replica has the layers and the language; running `forProgram(...).load(program)` on each edit
+  is pure. Decide whether local and server diagnostics merge or local simply wins.
+- **Show connection state.** `RemoteInstance.status` (`connected` / `disconnected` / `rejected`)
+  exists; nothing in the UI reads it. The `stale` tag on the outputs is the visible signal. A
+  TopBar indicator is ~20 lines.
+- **Two writers.** The canvas never reads the program back from the instance: after a reconnect
+  `state` (or any `setProgram` from elsewhere) text and program can differ until the next
+  keystroke, when the text wins. That is what `revision` is for; detection is step 3.
+
+**Remaining, at the end of the backlog:**
+
 2. **Apply / Save / Revert as three verbs.** With a live instance an edit has already changed the
    running program, so "save" means persist, not apply. The clean arrangement needs no core
    change: the editor edits a SECOND instance on the SAME runtime (same layers, different id),
@@ -385,31 +406,10 @@ the remote seam before a real API exists would be guessing at its shape.
    envelope. **Decide the envelope's `revision` field NOW rather than later** - two people editing
    one program is a conflict a client cannot detect without one, and retrofitting a revision into
    stored documents is unpleasant.
-4. **The transport, once there is a real API.** Implement `ProgramInstance` client-side over a
-   duplex channel so the editor cannot tell local from remote.
-   - Commands (setInput / fireTrigger / setProgram / setLayer) go client→server: small, ordered,
-     sequence-numbered, fire-and-forget. The interface is already shaped for this - every command
-     returns void and reports through observables.
-   - State goes server→client as pushes of the five observables, with the current value of all
-     five as the opening message so a replica never renders empty.
-   - **The one interface change:** `setLayer` currently returns `PortProblem[]` synchronously,
-     which cannot cross a wire. It reports them as `ports` diagnostics instead - the channel that
-     already carries the layer id and the offending row. (`setProgram` throwing on ports with no
-     persisted layer needs the same treatment.)
-   - Authorisation belongs at this seam, and `LayerPolicy` (`editable`, `feeds`) already says what
-     to enforce rather than merely advertise.
-
-**Making a remote runtime feel local** (the point of the whole exercise):
-- **Analyse locally, execute remotely.** Diagnostics and highlighting must never wait for a round
-  trip. Building a `ProgramEnvironment` from the layers the instance publishes is pure, so this
-  costs nothing - BUT it requires the browser to import the same language package, because a
-  language is code (`inferOutput` / `inferInputTypes` are functions), not data.
-- Echo value changes optimistically into the local replica, or a dragged slider fights the user.
-- Drop pushes that predate a command already sent (sequence numbers), or the slider snaps back.
-- Show connection state, and mark outputs `stale` while disconnected - the flag already exists and
-  means exactly that.
-- Block Apply while disconnected; allow editing and saving. Queuing edits and firing them thirty
-  seconds later is dangerous during a live show.
+4. ~~The transport~~ — done, see above. What it still lacks is the "feel local" list above; one
+   rule from it stands as a decision for step 2: **block Apply while disconnected; allow editing
+   and saving.** Queuing edits and firing them thirty seconds later is dangerous during a show,
+   which is also why the WebSocket adapter drops a send while the socket is not open.
 
 **Driving need:** Beacon. Core runs the lights whether or not anyone has an editor open; the editor
 is a peripheral that attaches to a running program, edits a draft of it, and applies.

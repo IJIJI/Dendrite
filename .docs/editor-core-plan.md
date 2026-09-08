@@ -1,10 +1,17 @@
 # The editor as a control surface over core — plan
 
-> **Status: a design sketch, not an approved plan.** Written 2026-09-07/08 from the discussion
-> that followed the ports refactor; refreshed 2026-09-08 after Phase 3 (port editing in the UI)
-> landed. The steps are ordered and sized, but none is approved for implementation.
-> `.docs/todo.md` carries the short version under "The editor as a control surface over a
-> runtime it does not own".
+> **Status: S1 and S4 landed 2026-09-08; S2 and S3 remain, at the end of the backlog.** Written
+> 2026-09-07/08 from the discussion that followed the ports refactor. Three things differ from
+> the sketch below: the host passes a **`Language`, not an environment** (the editor builds its
+> own — `createEnvironment` is pure over a language); the editor's config is a **`Connection`**
+> object (`ownStack` / `joinRuntime` / `attach`) rather than a union; and **the transport was
+> built before a real API existed**, because its shape is fixed by `ProgramInstance`, not by
+> Beacon: `@dendrite-lang/link` (`serveInstance` / `connectInstance`, a `Channel` the host
+> implements over its own pipe, MessagePort and WebSocket adapters). S4's
+> `createRemoteInstance` sketch is `connectInstance`; the `setLayer` change landed first, as its
+> own commit. Apply stays the host's (`live.setProgram(editor.getDocument().program)`), so the
+> link never needs a "draft" — it serves whichever instance the server chooses. The envelope's
+> `revision` field is decided (optional, no bump). `.docs/todo.md` carries the short version.
 
 ## Context
 

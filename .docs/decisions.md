@@ -123,6 +123,15 @@ A host attaches a zod schema wherever the declaration is CODE: on the language, 
 **Every instance command returns nothing and reports through the observables.**
 `setLayer` used to hand back the problems that refused a change, synchronously. That answer cannot cross a wire, and the editor is going to drive instances across one (`editor-core-plan.md`). So a refusal is now published as `ports` diagnostics - the channel that already carries the layer id and the offending row - next to the running program's own, and stays there through value changes until a change that compiles. Nothing moves on a refusal, so the compiled diagnostics stay true; the two lists are kept apart in the instance for exactly that reason. `runtime.setLayer` keeps its return: global layers are the host's, in-process, and never on the wire.
 
+**The link owns the message shapes and both ends; the host owns the pipe.**
+`@dendrite-lang/link` defines `Command` / `Push` and ships `serveInstance` and `connectInstance`; a host implements `Channel { send, onMessage, status? }` over whatever it already has, or takes an adapter. Rejected: each host implementing `ProgramInstance` over its own API (every host would redo the hard parts - recomposing ports, optimistic echo, sequence numbers, stale-on-disconnect). The replica recomposes `ports` from the layers rather than receiving a descriptor, because a descriptor holds functions; that is why the client imports the same language package, and why `hello` carries a protocol version and a vocabulary fingerprint - two builds that disagree are refused with the difference named, never silently wrong. The server is the trust boundary and enforces `LayerPolicy`; who the client is stays the host's. Built before a real API existed, on purpose: the wire's shape comes from `ProgramInstance`, not from the API.
+
+**The editor connects; it does not own.**
+`createEditor` takes a `Connection` - `ownStack`, `joinRuntime(language, runtime, …)`, `attach(language, instance)` - and releases only what the connection made. The host passes a `Language`, not an environment: `createEnvironment` is pure over a language and the runtime holds only the vocabulary, so the editor builds its own. Connection objects rather than a config union, because a new way to connect is then a new function and not an edit inside `createEditor`.
+
+**The document envelope carries `revision?: number`.**
+Optional, so no version bump; the editor carries it and never interprets it. Decided before any store exists because two people editing one program is a conflict a client cannot detect without it, and retrofitting it into stored documents is the unpleasant version.
+
 **The parser reads no declarations.**
 `$x` is an input because of the sigil. The type it stamps was always overwritten by the analyser, so reading a declaration at parse time was dead data — and after the split the parser has no ports to read.
 
