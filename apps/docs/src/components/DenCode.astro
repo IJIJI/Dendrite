@@ -1,0 +1,29 @@
+---
+// A Dendrite snippet, highlighted by the editor's own lexer (styledRanges) rendered to
+// spans at build time - the canvas and the page share one classification, so the site
+// never needs a second grammar kept in step with the language. The classes and colours
+// are the editor stylesheet's (.tok-*, --dendrite-syntax-*), loaded globally.
+import { createStdlib } from "@dendrite-lang/core";
+import { styledRanges } from "@dendrite-lang/editor";
+
+interface Props {
+  code: string;
+}
+
+const { code } = Astro.props;
+const language = createStdlib();
+
+type Part = { text: string; cls?: string };
+const parts: Part[] = [];
+let at = 0;
+for (const range of styledRanges(code, language)) {
+  if (range.from > at) parts.push({ text: code.slice(at, range.from) });
+  parts.push({ text: code.slice(range.from, range.to), cls: range.cls });
+  at = range.to;
+}
+if (at < code.length) parts.push({ text: code.slice(at) });
+---
+
+{/* One line, so no template whitespace lands inside the <pre>. */}
+<pre
+  class="den"><code>{parts.map((part) => (part.cls ? <span class={`tok-${part.cls}`}>{part.text}</span> : part.text))}</code></pre>

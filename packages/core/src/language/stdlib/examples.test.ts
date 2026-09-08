@@ -5,8 +5,9 @@ import { createStdlib } from "./index";
 
 //? Every stdlib op documents itself: a description and at least one example, each a program
 // that LOADS against the stdlib - the same path the runtime takes, so a rete-form example is
-// covered by the same line the day its loader exists. A rot guard, not a behaviour test: an
-// example that compiles but would throw at runtime passes here.
+// covered by the same line the day its loader exists - and RUNS, since the reference page
+// shows what each example produces. A rot guard, not a behaviour test: nothing here says
+// what the output should be, only that there is one.
 
 const env = createEnvironment(createStdlib());
 // No ports: examples are self-contained and their outputs are undeclared, which only warns.
@@ -24,6 +25,12 @@ describe("every stdlib op documents itself", () => {
         const result = pipeline.load(example);
         const why = result.ok ? "" : result.errors.map((e) => e.message).join("; ");
         expect(result.ok, `${op.name}: ${label}\n${why}`).toBe(true);
+        if (result.ok) {
+          expect(
+            () => pipeline.run(result.program, {}),
+            `${op.name}: ${label} throws`,
+          ).not.toThrow();
+        }
       }
     });
   }

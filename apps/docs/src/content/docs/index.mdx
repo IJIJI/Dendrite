@@ -25,15 +25,11 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, Code } from "@astrojs/starlight/components";
+import { Card, CardGrid } from "@astrojs/starlight/components";
+import HashForward from "../../components/HashForward.astro";
+import Live from "../../components/Live";
 
-{/* The root used to be a hash-forwarding redirect to the playground (it was deployed at the
-    root for a day); keep that promise for any share link that carries its document here.
-    The splash has no anchors of its own. */}
-
-<script is:inline>
-  if (location.hash.length > 1) location.replace("playground/" + location.hash);
-</script>
+<HashForward />
 
 <CardGrid stagger>
   <Card title="Declarative" icon="pencil">
@@ -47,9 +43,12 @@ import { Card, CardGrid, Code } from "@astrojs/starlight/components";
   </Card>
 </CardGrid>
 
-<Code
-  lang="text"
-  code={`let scores = [4, 8, 15, 16, 23]
-let high   = Filter(scores, item => item > 10)
-output any = Some(scores, item => item > 10)`}
+<Live
+  client:only="react"
+  source={`// Change $threshold on the right; only what depends on it recomputes.
+let scores = [4, 8, 15, 16, 23]
+let high   = Filter(scores, item => item > $threshold)
+output count = Length(high)
+output any   = Some(scores, item => item > $threshold)`}
+  ports={{ inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }], outputs: [] }}
 />
