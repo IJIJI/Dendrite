@@ -8,6 +8,7 @@ import {
   Type,
 } from "@dendrite-lang/core";
 
+import { carryValue } from "../carry-value";
 import { declaredNames, editableLayer, layerPorts, type PortRow } from "../port-rows";
 import {
   addInput,
@@ -163,15 +164,11 @@ export function usePortEdits(
       }
       // Values are keyed by name, so to the instance a rename is one input gone and another
       // arrived - it drops the old value and seeds the new name from its type. Carry the
-      // value across, or renaming would quietly wipe what the user typed into the field.
-      // Only once the new name exists, which the published layers say: a refused rename
-      // leaves them as they were.
+      // value across (carry-value.ts), or renaming would quietly wipe what the user typed.
       const values = kind === "inputs" ? instance.values.get() : {};
-      edit(row, (current) => ops.update(current, row.name, { name }));
-      const declared = layerPorts(instance.ports.get(), row.layerId)?.inputs ?? [];
-      if (row.name in values && declared.some((input) => input.name === name)) {
-        instance.setInput(name, values[row.name]);
-      }
+      const change = (): void => edit(row, (current) => ops.update(current, row.name, { name }));
+      if (row.name in values) carryValue(instance, name, values[row.name], change);
+      else change();
     },
 
     retype(row, type) {
@@ -211,10 +208,10 @@ export function usePortEdits(
         setRemoval(null);
         // ponytail: no guard against the name having been taken again in the meantime -
         // setLayer would refuse and the row simply does not come back. Eight seconds.
-        instance.setLayer(removal.layerId, removal.ports);
+        const change = (): void => instance.setLayer(removal.layerId, removal.ports);
         if (kind === "inputs" && removal.hadValue) {
-          instance.setInput(removal.name, removal.value);
-        }
+          carryValue(instance, removal.name, removal.value, change);
+        } else change();
       },
       dismiss: () => setRemoval(null),
     },
