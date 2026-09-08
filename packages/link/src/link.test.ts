@@ -11,10 +11,13 @@ import {
   type Subject,
   Type,
 } from "@dendrite-lang/core";
+import { type AddressInfo } from "node:net";
 import { describe, expect, it, vi } from "vitest";
+import WebSocket, { WebSocketServer } from "ws";
 import { z } from "zod";
 
 import { messagePortChannel } from "./channels/message-port";
+import { webSocketChannel } from "./channels/web-socket";
 import { connectInstance, type RemoteInstance } from "./connect";
 import {
   type Channel,
@@ -505,5 +508,39 @@ describe("over a MessageChannel", () => {
     replica.dispose();
     port1.close();
     port2.close();
+  });
+});
+
+describe("over a WebSocket", () => {
+  it("handshakes once the socket opens, round-trips JSON, and goes stale on close", async () => {
+    const host = live();
+    const wss = new WebSocketServer({ port: 0 });
+    await new Promise((resolve) => wss.once("listening", resolve));
+    const { port } = wss.address() as AddressInfo;
+    const stops: (() => void)[] = [];
+    wss.on("connection", (socket) => {
+      stops.push(
+        serveInstance(host.instance, webSocketChannel(socket), { language: host.language }),
+      );
+    });
+
+    // connectInstance says hello at once, into a socket that is not open yet; that one is
+    // dropped, and the one the channel's status flip triggers is the one that counts.
+    const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+    const replica = await connectInstance(createStdlib(), webSocketChannel(socket));
+    expect(replica.status.get()).toBe("connected");
+    expect(outputOf(replica)).toBe(0);
+
+    replica.setInput("p", 6);
+    await vi.waitFor(() => expect(host.instance.values.get()).toEqual({ p: 6 }));
+    await vi.waitFor(() => expect(outputOf(replica)).toBe(6));
+
+    socket.close();
+    await vi.waitFor(() => expect(replica.status.get()).toBe("disconnected"));
+    expect(replica.outputs.get().stale).toBe(true);
+
+    for (const stop of stops) stop();
+    replica.dispose();
+    await new Promise((resolve) => wss.close(resolve));
   });
 });

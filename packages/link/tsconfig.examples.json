@@ -1,0 +1,11 @@
+{
+  // For RUNNING the examples (tsx). No `paths`: core resolves through node_modules to its
+  // built package, as it would for any consumer. Resolving to core's SOURCE here breaks
+  // its `export *` re-exports - tsx transpiles that source as CommonJS (core's package.json
+  // says "type": "commonjs") and Node's CJS→ESM interop cannot see star re-exports.
+  // Typechecking still uses tsconfig.json, where source resolution is what we want.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {}
+  }
+}

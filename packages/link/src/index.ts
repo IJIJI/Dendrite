@@ -7,3 +7,4 @@ export * from "./protocol"; // Channel, Command, Push, WireState, PROTOCOL, fing
 export * from "./serve"; // serveInstance, ServeOptions, enforcePolicy, stripSchemas
 export * from "./connect"; // connectInstance, RemoteInstance
 export * from "./channels/message-port"; // messagePortChannel
+export * from "./channels/web-socket"; // webSocketChannel
