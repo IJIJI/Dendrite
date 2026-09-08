@@ -280,28 +280,34 @@ Collected 2026-09-09 when the scaffold went up, for the content pass:
 
 ---
 
-## Editor — an example layout: slimmed down, read-only, shows the answer
+## Editor — the example layout: read-only code, settable inputs, live outputs
 
-**What:** A third layout beside `DefaultLayout` and the embed's compact one, for a documented
-example: the program and what it produces, nothing else - no editing, no declarations, no
-diagnostics, no bar. The PHP manual's "example + output" as a live block.
+**What (sharpened 2026-09-09):** a layout preset for a documented example - the program,
+read-only; the inputs, settable; the outputs, live; one "open in playground" affordance. No
+declarations, no diagnostics, no menus. The PHP manual's "example + output" as a live block,
+where the reader changes the inputs. This may well be the only editor the docs need; the
+more equipped, editable embed (compact layout + enlarge-to-page) stays on the table. Either
+way **each is a layout the editor ships**, chosen by the host - a config, not a fork.
 
-**Why deferred:** the docs site's islands (docs plan, step 3) render examples through the full
-editor, and the reference page renders their output as text derived at build time. Both are
-fine to start with; a purpose-built read-only block is a design question, not plumbing.
+**Why deferred:** the docs site's first island (the splash) runs the full editor and shows
+what is wrong with that in a small box: the share and undo/redo controls sit at different
+heights outside a top bar that holds nothing else, and 24rem does not fit the default
+layout. Left in place as the test case for this work.
 
-**The design is to be decided.** Open: whether inputs show at all (a read-only Inputs pane
-with the seeded values, or nothing); whether outputs sit beside or under the code; whether the
-code is a canvas (CodeMirror, read-only) or plain highlighted text through `styledRanges`;
-how it relates to the compact/embed layout (a preset of it, or a fourth layout); and how
-"open in playground" looks when there is no bar.
+**The design is to be decided.** Open: whether the code is a read-only canvas (CodeMirror
+`EditorState.readOnly` - keeps highlighting and selection) or static spans via `styledRanges`
+(lighter, no CodeMirror on the page); outputs beside or under the code; where "open in
+playground" sits with no bar; whether the reference pages should render this instead of
+`DenCode` + the derived output text (probably not - the text is instant and searchable).
 
-**What it requires:** the layout component; `readOnly` on the canvas (CodeMirror
-`EditorState.readOnly`); a `Live` variant in `apps/docs`; possibly `styledRanges` → static
-spans for the no-canvas option.
+**What it requires:** `Editor.ExampleLayout` (or a name to be chosen) in
+`packages/editor/src/react/`; `readOnly` on the canvas; the inputs pane as it is (values
+editable, declarations not - `readOnly` for declarations is already the layer policy);
+`Live` in `apps/docs` switching to it; a height that follows content rather than a fixed
+box.
 
-**Driving need:** the language docs, once their examples want to be live without inviting
-edits on every page.
+**Driving need:** the language docs' examples and the examples page; the splash island as
+the smoke test.
 
 ---
 

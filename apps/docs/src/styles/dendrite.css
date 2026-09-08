@@ -61,9 +61,10 @@
   font-size: 0.9em;
 }
 
-/* A Dendrite snippet (DenCode): the editor's canvas face on the page's well, and under it
-   what the snippet produces, as the reference page derives it at build time. */
-.den {
+/* A Dendrite block (DenCode, a ```den fence): the editor's canvas face on the page's well,
+   and under it what the snippet produces, as the reference page derives it at build time.
+   `pre.den`, not `.den` - inline code carries the class too and keeps Starlight's box. */
+pre.den {
   margin: 0;
   padding: 0.75rem 1rem;
   border: 1px solid var(--sl-color-gray-5);
@@ -73,7 +74,7 @@
   overflow-x: auto;
 }
 
-.den + .produces {
+pre.den + .produces {
   margin: 0 0 1.5rem;
   padding: 0.4rem 1rem;
   border: 1px solid var(--sl-color-gray-5);
