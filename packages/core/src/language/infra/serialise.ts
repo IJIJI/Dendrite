@@ -67,6 +67,22 @@ export function serialiseSource(source: string, ports?: Ports): SavedCodeProgram
 }
 
 /**
+ * A Dendrite program as a template literal, serialised as code: the leading newline and the
+ * common indentation are stripped, so a multi-line program reads like one inside TypeScript.
+ * For an op's documented examples and for tests; `String.raw`, so a `\n` inside a Dendrite
+ * string literal stays the two characters the language sees.
+ */
+export function den(strings: TemplateStringsArray, ...values: unknown[]): SavedCodeProgram {
+  const lines = String.raw(strings, ...values)
+    .replace(/^\n/, "")
+    .trimEnd()
+    .split("\n");
+  const indented = lines.filter((line) => line.trim() !== "");
+  const indent = Math.min(...indented.map((line) => /^ */.exec(line)![0].length));
+  return serialiseSource(lines.map((line) => line.slice(indent)).join("\n"));
+}
+
+/**
  * Serialise a RawProgram to the ast form. Nodes are already JSON-safe plain objects
  * (structured Types, no functions/Maps/Sets inside), so this is a structural deep-clone
  * (decoupling the saved object from the live program) with Maps → records at the top.

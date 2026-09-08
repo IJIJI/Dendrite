@@ -9,6 +9,7 @@ import { type RawProgram } from "./program";
 import { EMPTY_PORTS, isPorts, type Ports } from "./ports";
 import {
   assertSavedPorts,
+  den,
   deserialise,
   migrate,
   SAVED_PROGRAM_VERSION,
@@ -206,5 +207,39 @@ describe("deserialise guard", () => {
   it("rejects malformed children with a path", () => {
     const node = { kind: "operation", op: "Add", inputs: { nodes: [42] }, output: Type.number };
     expect(() => deserialise(ast({ a: node }))).toThrow(/inputs\.nodes\[0\]/);
+  });
+});
+
+describe("den - a program as a template literal", () => {
+  it("wraps a one-liner as code form, untouched", () => {
+    expect(den`output x = 1`).toEqual({
+      version: SAVED_PROGRAM_VERSION,
+      form: "code",
+      source: "output x = 1",
+    });
+  });
+
+  it("drops the leading newline and the common indentation of a block", () => {
+    const saved = den`
+      let a = 1
+      output b = a
+    `;
+    expect(saved.source).toBe(["let a = 1", "output b = a"].join("\n"));
+  });
+
+  it("keeps a blank line inside a block and relative indentation", () => {
+    const saved = den`
+      let a = 1
+
+      output b = If(a > 0,
+        "yes", "no")
+    `;
+    expect(saved.source).toBe(
+      ["let a = 1", "", "output b = If(a > 0,", '  "yes", "no")'].join("\n"),
+    );
+  });
+
+  it("is raw: a backslash sequence reaches the language as written", () => {
+    expect(den`output s = "a\nb"`.source).toBe(String.raw`output s = "a\nb"`);
   });
 });

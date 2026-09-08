@@ -1,5 +1,6 @@
 import { type ASTNode, operationNode } from "../infra/nodes";
 import { type FnValue } from "../infra/registry";
+import { den } from "../infra/serialise";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
 
@@ -38,24 +39,32 @@ export function createStdlib(): Language {
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
     output: Type.boolean,
     category: "logic",
+    description: "True when every node is true.",
+    examples: [den`output ok = And(true, 1 > 0)`],
   });
   lang.registerOp({
     name: "Or",
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
     output: Type.boolean,
     category: "logic",
+    description: "True when any node is true.",
+    examples: [den`output ok = Or(false, 1 > 0)`],
   });
   lang.registerOp({
     name: "Not",
     inputs: [{ name: "a", type: Type.boolean }],
     output: Type.boolean,
     category: "logic",
+    description: "The opposite of a.",
+    examples: [den`output off = Not(true)`],
   });
   lang.registerOp({
     name: "Xor",
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
     output: Type.boolean,
     category: "logic",
+    description: "True when an odd number of nodes are true.",
+    examples: [den`output one = Xor(true, false)`],
   });
 
   // -------------------------------------------------------------------------
@@ -70,6 +79,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "comparison",
+    description: "True when a and b are the same value.",
+    examples: [den`output same = Equals("a", "a")`],
   });
   lang.registerOp({
     name: "NotEquals",
@@ -79,6 +90,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "comparison",
+    description: "True when a and b differ.",
+    examples: [den`output differ = NotEquals(1, 2)`],
   });
   lang.registerOp({
     name: "GreaterThan",
@@ -88,6 +101,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "comparison",
+    description: "True when a is greater than b.",
+    examples: [den`output bigger = GreaterThan(3, 2)`],
   });
   lang.registerOp({
     name: "LessThan",
@@ -97,6 +112,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "comparison",
+    description: "True when a is less than b.",
+    examples: [den`output smaller = LessThan(2, 3)`],
   });
 
   // -------------------------------------------------------------------------
@@ -112,6 +129,8 @@ export function createStdlib(): Language {
     ],
     output: Type.any,
     category: "control",
+    description: "Picks then or else by condition. Both branches are evaluated.",
+    examples: [den`output label = If(72 >= 60, "Pass", "Fail")`],
   });
 
   lang.registerOp({
@@ -119,6 +138,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "value", type: Type.any }],
     output: Type.boolean,
     category: "control",
+    description: "True when value is not null.",
+    examples: [den`output found = IsSet(Find([1, 2, 3], item => item > 5))`],
   });
 
   lang.registerOp({
@@ -129,6 +150,8 @@ export function createStdlib(): Language {
     ],
     output: Type.any,
     category: "control",
+    description: "The value, or fallback when the value is null.",
+    examples: [den`output first = Default(Find([1, 2, 3], item => item > 5), 0)`],
   });
 
   // -------------------------------------------------------------------------
@@ -140,6 +163,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "list", type: Type.array(Type.any) }],
     output: Type.number,
     category: "array",
+    description: "How many items list holds.",
+    examples: [den`output count = Length([4, 8, 15])`],
   });
 
   // Variadic: each argument is ONE array (the per-arg type), collected into an
@@ -149,6 +174,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "arrays", type: Type.array(Type.any), variadic: true }],
     output: Type.array(Type.any),
     category: "array",
+    description: "One array of every given array's items, in order.",
+    examples: [den`output all = Concat([1, 2], [3], [4, 5])`],
   });
 
   lang.registerOp({
@@ -159,6 +186,8 @@ export function createStdlib(): Language {
     ],
     output: Type.array(Type.any),
     category: "array",
+    description: "The nested array with depth levels of nesting removed.",
+    examples: [den`output flat = Flatten([[1, 2], [3, 4]], 1)`],
   });
 
   lang.registerOp({
@@ -166,6 +195,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
+    description: "The mean of the numbers in list.",
+    examples: [den`output mean = Average([4, 8, 15])`],
   });
 
   lang.registerOp({
@@ -173,6 +204,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
+    description: "The largest number in list.",
+    examples: [den`output top = Max([4, 8, 15])`],
   });
 
   lang.registerOp({
@@ -180,6 +213,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
+    description: "The smallest number in list.",
+    examples: [den`output low = Min([4, 8, 15])`],
   });
 
   lang.registerOp({
@@ -190,6 +225,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "array",
+    description: "True when list holds value.",
+    examples: [den`output has = Includes(["a", "b"], "b")`],
   });
 
   // -------------------------------------------------------------------------
@@ -201,6 +238,8 @@ export function createStdlib(): Language {
     inputs: [{ name: "nodes", type: Type.number, variadic: true }],
     output: Type.number,
     category: "arithmetic",
+    description: "The sum of the nodes.",
+    examples: [den`output sum = Add(1, 2, 3)`],
   });
   lang.registerOp({
     name: "Subtract",
@@ -210,12 +249,16 @@ export function createStdlib(): Language {
     ],
     output: Type.number,
     category: "arithmetic",
+    description: "a minus b.",
+    examples: [den`output diff = Subtract(10, 4)`],
   });
   lang.registerOp({
     name: "Multiply",
     inputs: [{ name: "nodes", type: Type.number, variadic: true }],
     output: Type.number,
     category: "arithmetic",
+    description: "The product of the nodes.",
+    examples: [den`output area = Multiply(3, 4)`],
   });
   lang.registerOp({
     name: "Divide",
@@ -225,6 +268,8 @@ export function createStdlib(): Language {
     ],
     output: Type.number,
     category: "arithmetic",
+    description: "a divided by b; dividing by zero gives zero.",
+    examples: [den`output half = Divide(9, 2)`],
   });
 
   //TODO: Add more math operations.
@@ -245,6 +290,8 @@ export function createStdlib(): Language {
     ],
     output: Type.array(Type.any),
     category: "list",
+    description: "The items of list for which predicate holds, in order.",
+    examples: [den`output big = Filter([4, 8, 15, 16], item => item > 10)`],
   });
   lang.registerOp({
     name: "Map",
@@ -254,6 +301,8 @@ export function createStdlib(): Language {
     ],
     output: Type.array(Type.any),
     category: "list",
+    description: "Each item of list passed through transform.",
+    examples: [den`output doubled = Map([1, 2, 3], item => item * 2)`],
   });
   lang.registerOp({
     name: "Find",
@@ -263,6 +312,8 @@ export function createStdlib(): Language {
     ],
     output: Type.any,
     category: "list",
+    description: "The first item of list for which predicate holds, or null.",
+    examples: [den`output first = Find([4, 8, 15, 16], item => item > 10)`],
   });
   lang.registerOp({
     name: "Every",
@@ -272,6 +323,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "list",
+    description: "True when predicate holds for every item of list.",
+    examples: [den`output allBig = Every([15, 16, 23], item => item > 10)`],
   });
   lang.registerOp({
     name: "Some",
@@ -281,6 +334,8 @@ export function createStdlib(): Language {
     ],
     output: Type.boolean,
     category: "list",
+    description: "True when predicate holds for at least one item of list.",
+    examples: [den`output anyBig = Some([4, 8, 15], item => item > 10)`],
   });
   lang.registerOp({
     name: "Reduce",
@@ -291,6 +346,14 @@ export function createStdlib(): Language {
     ],
     output: Type.any,
     category: "list",
+    description: "Folds list into one value, left to right, starting from initial.",
+    examples: [
+      den`output total = Reduce([1, 2, 3], 0, (acc, item) => acc + item)`,
+      den`
+        let scores = [4, 8, 15, 16, 23]
+        output best = Reduce(scores, 0, (acc, item) => If(item > acc, item, acc))
+      `,
+    ],
   });
 
   // -------------------------------------------------------------------------
