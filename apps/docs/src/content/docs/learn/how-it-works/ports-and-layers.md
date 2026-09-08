@@ -1,6 +1,6 @@
 ---
-title: Ports and layers
-description: What a program reads and produces, declared in layers whose order is authority.
+title: "Ports and layers"
+description: "What a program reads and produces, declared in layers whose order is authority."
 sidebar:
   order: 3
 ---

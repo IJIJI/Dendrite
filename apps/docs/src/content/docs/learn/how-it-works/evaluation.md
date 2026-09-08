@@ -1,6 +1,6 @@
 ---
-title: Evaluation
-description: Pull-based, incremental, and what stale means.
+title: "Evaluation"
+description: "Pull-based, incremental, and what stale means."
 sidebar:
   order: 4
 ---

@@ -1,6 +1,6 @@
 ---
-title: Examples
-description: The worked programs, live.
+title: "Examples"
+description: "The worked programs, live."
 sidebar:
   order: 1
 ---

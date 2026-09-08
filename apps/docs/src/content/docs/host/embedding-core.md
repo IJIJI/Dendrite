@@ -1,6 +1,6 @@
 ---
-title: Embedding core
-description: Environment, runtime, instance, layers and policies, values.
+title: "Embedding core"
+description: "Environment, runtime, instance, layers and policies, values."
 sidebar:
   order: 2
 ---

@@ -238,6 +238,48 @@ hover range. Tune them in the playground and settle them.
 
 ---
 
+## Core — the stdlib in segments a host can pick
+
+**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
+wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
+lighthouse that never needs list ops does not carry them, and the docs can say "your host
+has these".
+
+**Why deferred:** no host exists yet that wants less than everything; the segment names are
+already the ops' `category`, so the split is mostly mechanical when it comes.
+
+**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
+step over the base) with `createStdlib()` composing all of them; operators registered with
+the segment that owns their op; a test that the composition equals today's stdlib; the docs'
+per-segment pages (already one per `category`) gain "how to include only this".
+
+**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
+
+---
+
+## Docs — content notes from the first look at the empty site
+
+Collected 2026-09-09 when the scaffold went up, for the content pass:
+
+- **The chain wants a block diagram first**, prose second. The brand sheet
+  (`brand/brand-sheet.html`) has a block style to reuse; inline SVG in the MDX, themed
+  through the `--sl-*` tokens so it flips with the site.
+- **Learn is a path, not a reference:** getting started (playground, no install) → writing
+  programs with the base operators → how the language works → the full stdlib. The sidebar
+  is already in that order; the content must read that way too, each page ending in "next".
+- **Two readers.** Learn + stdlib are for someone writing programs; Host developers is for
+  someone embedding the language, and it owns Installation (every package, every option)
+  and the packages. Say this on the splash and at the top of each section's first page.
+- **stdlib** is printed as code, one page per segment (generated), the index explaining the
+  conventions (variadic inputs, `any`, function-typed inputs) and, once core has it, how a
+  host picks segments.
+- **A glossary** only once terms accumulate across pages; not as a stub.
+- **Code samples in the site's own colours:** highlight Dendrite through the editor's
+  `styledRanges` (the same lexer the canvas uses) rendered to spans at build time, rather
+  than a second grammar for Shiki. Landed with the ops reference.
+
+---
+
 ## Editor — an example layout: slimmed down, read-only, shows the answer
 
 **What:** A third layout beside `DefaultLayout` and the embed's compact one, for a documented

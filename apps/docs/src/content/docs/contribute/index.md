@@ -1,6 +1,6 @@
 ---
-title: Contributing
-description: Where the maintainer documents live, for now.
+title: "Contributing"
+description: "Where the maintainer documents live, for now."
 sidebar:
   order: 1
 ---

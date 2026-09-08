@@ -30,18 +30,33 @@ export default defineConfig({
       sidebar: [
         // Since Starlight 0.39 `autogenerate` is an ITEM inside a labelled group, never a
         // group by itself - so every section names itself here and lists what it holds.
+        // Two readers: a USER writes programs (Learn, then stdlib); a HOST DEVELOPER embeds
+        // the language (Host developers, which also holds the packages).
         {
           label: "Learn",
           items: [
             "learn/getting-started",
-            "learn/the-chain",
-            { label: "Language", items: [{ autogenerate: { directory: "learn/language" } }] },
+            {
+              label: "Writing programs",
+              items: [{ autogenerate: { directory: "learn/writing" } }],
+            },
+            {
+              label: "How it works",
+              items: [{ autogenerate: { directory: "learn/how-it-works" } }],
+            },
             { label: "Examples", items: [{ autogenerate: { directory: "learn/examples" } }] },
-            "learn/glossary",
           ],
         },
-        { label: "Standard Library", items: [{ autogenerate: { directory: "stdlib" } }] },
-        { label: "Integrate", items: [{ autogenerate: { directory: "integrate" } }] },
+        { label: "stdlib", items: [{ autogenerate: { directory: "stdlib" } }] },
+        {
+          label: "Host developers",
+          items: [
+            "host/installation",
+            "host/embedding-core",
+            "host/extending-the-language",
+            { label: "Packages", items: [{ autogenerate: { directory: "host/packages" } }] },
+          ],
+        },
         { label: "Contribute", items: [{ autogenerate: { directory: "contribute" } }] },
       ],
     }),
