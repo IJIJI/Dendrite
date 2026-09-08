@@ -592,19 +592,15 @@ once several documents exist.
 
 ---
 
-## Web documentation site
+## Web documentation site — DONE (empty), 2026-09-09
 
-**What:** Public docs for the language: guide (syntax, types, lambdas, operators), op/stdlib
-reference (generatable from the descriptor — `category`, inputs, output types are all registered
-data), embedding guide (Environment/runtime API), and an embedded playground for live examples.
-
-**Notes:** Framework choice interacts with the playground-React decision below (a React-based docs
-stack like Docusaurus favors React-ifying the playground for embedding; Astro/Starlight or
-VitePress change that calculus). Deploys next to the playground on GitHub Pages.
-
-**Embedded live examples:** first via an **iframe embed mode** on the playground — a payload URL
-plus an `embed` flag that hides the chrome (framework-agnostic, tiny once document-payload URLs
-exist). Component-level embedding is the React-switch alternative.
+**Built as [docs-plan.md](docs-plan.md):** `apps/docs`, Astro + Starlight, at the root of
+`ijiji.github.io/Dendrite/` with the playground under `/playground/` (one Pages workflow assembles
+both). The stdlib reference is generated from the descriptor, one page per segment, every
+example run. Live examples are React islands importing the editor directly - no iframe mode;
+the docs' own example block is "the example layout" below. What remains is the CONTENT:
+"Document the core language (two levels)" at the top of this file, with the notes from the
+first look at the empty site under "Docs — content notes".
 
 ---
 

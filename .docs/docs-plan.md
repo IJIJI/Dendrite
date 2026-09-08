@@ -1,8 +1,17 @@
 # The documentation site — plan
 
-> **Status: settled 2026-09-08, not yet built.** Framework and shape decided; the language
-> CONTENT is written afterwards, page by page, into the skeleton this plan builds. The plan for
-> that content is `todo.md`, "Document the core language (two levels)".
+> **Status: built 2026-09-09** (`apps/docs`, Astro 7 + Starlight 0.42), empty - the language
+> CONTENT is written afterwards, page by page, into the skeleton; that plan is `todo.md`,
+> "Document the core language (two levels)", and the notes from the first look at the empty
+> site are there under "Docs — content notes". What settled while building, beyond this plan:
+> op examples are `SavedProgram`s written with a `den` tagged template (multi-line, dedented,
+> rete-ready) and the reference RUNS each one, showing what it produced; Dendrite in Markdown
+> (` ```den ` fences, `{:den}` inline) and in the ops signatures is highlighted through the
+> editor's own lexer (`styledRanges`), not a Shiki grammar; the ops reference is one MDX page
+> per segment; the config is `astro.config.ts` with the unified Markdown processor declared;
+> images pass through (no sharp); sections are Learn (a path) · `stdlib` · Host developers
+> (with Installation and the packages) · Contribute. The docs' example block (read-only code,
+> settable inputs, live outputs) is `todo.md`, "the example layout".
 
 ## Context
 

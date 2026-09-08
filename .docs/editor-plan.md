@@ -260,6 +260,13 @@ inside `packages/core` (npm packs from there), `publishConfig.access: public`, `
 · iframe embed mode · docs framework (React decision → Docusaurus is the natural fit) · op reference
 generated from the descriptor · docs index inherits the hash-forward redirect for old share links.
 
+**Landed 2026-09-09, differently** (`docs-plan.md`): the framework is Astro + Starlight, not
+Docusaurus - Vite reuse, React islands for the editor, zero-JS prose; there is no iframe mode,
+the docs import the editor directly; the ops reference is generated and RUN; the hash-forward
+lives on the splash. What this phase called `PRESETS.docs` is now `todo.md`, "the example
+layout": read-only code, settable inputs, live outputs, open in playground - a layout the
+editor ships.
+
 ---
 
 ## Backlog after this plan (see `todo.md`)
