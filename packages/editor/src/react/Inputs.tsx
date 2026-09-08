@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { type EditorHandle } from "../editor";
 import { formatValue } from "../format";
@@ -16,8 +16,9 @@ import { type PortEdits, usePortEdits } from "./usePortEdits";
 // fields are UNCONTROLLED: the DOM holds what is being typed; a value is applied only once
 // it parses (a half-typed number or an unfinished JSON literal simply isn't applied yet).
 // Read-only is HOST policy, not part of the document: the same surface is host-fed in
-// Beacon and user-editable in the playground. A host must not push values into an input it
-// also lets the user edit (the field would go stale) - mark such inputs read-only instead.
+// Beacon and user-editable in the playground. A field follows its value whenever the user
+// is not in it (useFollow below), so a value arriving from elsewhere - a host push, a rename
+// carried across a wire - shows; while the user is typing, theirs wins.
 //
 // Whether a DECLARATION may be edited is the layer's policy, not this prop - except that a
 // wholly read-only pane (`readOnly` as a bare `true`) is a host saying "display only", so
@@ -117,69 +118,108 @@ function InputRow({
   );
 }
 
+// Uncontrolled fields hold what is being typed - but a value can also change UNDER a field:
+// a host pushing one, a rename carrying one across a wire a push after the row rendered. A
+// field follows its value whenever the user is not in it; while they are, theirs wins.
+function useFollow<T extends HTMLInputElement | HTMLTextAreaElement>(
+  render: (value: unknown) => string,
+  value: unknown,
+) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el && document.activeElement !== el) el.value = render(value);
+  }, [render, value]);
+  return ref;
+}
+
+const asNumber = (value: unknown): string => String(value ?? 0);
+const asText = (value: unknown): string => String(value ?? "");
+const asJson = (value: unknown): string => JSON.stringify(value, null, 2);
+
 function Field({ id, widget, value, onChange }: FieldProps & { id: string }) {
   const label = `$${widget.name}`;
   switch (widget.control) {
     case "number":
-      return (
-        <input
-          id={id}
-          type="number"
-          aria-label={label}
-          defaultValue={String(value ?? 0)}
-          onChange={(e) => {
-            // An empty field is "mid-edit", not zero - apply only real numbers.
-            if (e.currentTarget.value.trim() === "") return;
-            const n = Number(e.currentTarget.value);
-            if (Number.isFinite(n)) onChange(n);
-          }}
-        />
-      );
+      return <NumberField id={id} label={label} value={value} onChange={onChange} />;
     case "boolean":
-      return (
-        <input
-          id={id}
-          type="checkbox"
-          aria-label={label}
-          defaultChecked={Boolean(value)}
-          onChange={(e) => onChange(e.currentTarget.checked)}
-        />
-      );
+      return <BooleanField id={id} label={label} value={value} onChange={onChange} />;
     case "text":
-      return (
-        <input
-          id={id}
-          type="text"
-          aria-label={label}
-          defaultValue={String(value ?? "")}
-          onChange={(e) => onChange(e.currentTarget.value)}
-        />
-      );
+      return <TextField id={id} label={label} value={value} onChange={onChange} />;
     case "json":
       return <JsonField id={id} label={label} value={value} onChange={onChange} />;
   }
 }
 
-function JsonField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
+interface ControlProps {
   id: string;
   label: string;
   value: unknown;
   onChange(v: unknown): void;
-}) {
+}
+
+function NumberField({ id, label, value, onChange }: ControlProps) {
+  const ref = useFollow<HTMLInputElement>(asNumber, value);
+  return (
+    <input
+      ref={ref}
+      id={id}
+      type="number"
+      aria-label={label}
+      defaultValue={asNumber(value)}
+      onChange={(e) => {
+        // An empty field is "mid-edit", not zero - apply only real numbers.
+        if (e.currentTarget.value.trim() === "") return;
+        const n = Number(e.currentTarget.value);
+        if (Number.isFinite(n)) onChange(n);
+      }}
+    />
+  );
+}
+
+function BooleanField({ id, label, value, onChange }: ControlProps) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.checked = Boolean(value);
+  }, [value]);
+  return (
+    <input
+      ref={ref}
+      id={id}
+      type="checkbox"
+      aria-label={label}
+      defaultChecked={Boolean(value)}
+      onChange={(e) => onChange(e.currentTarget.checked)}
+    />
+  );
+}
+
+function TextField({ id, label, value, onChange }: ControlProps) {
+  const ref = useFollow<HTMLInputElement>(asText, value);
+  return (
+    <input
+      ref={ref}
+      id={id}
+      type="text"
+      aria-label={label}
+      defaultValue={asText(value)}
+      onChange={(e) => onChange(e.currentTarget.value)}
+    />
+  );
+}
+
+function JsonField({ id, label, value, onChange }: ControlProps) {
   const [error, setError] = useState<string | null>(null);
+  const ref = useFollow<HTMLTextAreaElement>(asJson, value);
   return (
     <>
       <textarea
+        ref={ref}
         id={id}
         aria-label={label}
         className={cx("dendrite-json-input", error !== null && "invalid")}
         rows={4}
-        defaultValue={JSON.stringify(value, null, 2)}
+        defaultValue={asJson(value)}
         onChange={(e) => {
           try {
             onChange(JSON.parse(e.currentTarget.value) as unknown);
