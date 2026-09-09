@@ -131,7 +131,7 @@ function Host({
   ];
 
   return (
-    <Editor.DefaultLayout
+    <Editor.FullLayout
       topBar={{
         title,
         start: [

@@ -5,11 +5,13 @@
 
 import { Actions, items } from "./blocks/Actions";
 import { Canvas } from "./blocks/Canvas";
-import { DefaultLayout } from "./layouts/DefaultLayout";
 import { Diagnostics } from "./blocks/panes/Diagnostics";
 import { Editor as EditorRoot } from "./Editor";
 import { Inputs } from "./blocks/panes/Inputs";
+import { CompactLayout } from "./layouts/CompactLayout";
+import { FullLayout } from "./layouts/FullLayout";
 import { Column, Row } from "./layouts/Layout";
+import { MinimalLayout } from "./layouts/MinimalLayout";
 import { Outputs } from "./blocks/panes/Outputs";
 import { TopBar } from "./blocks/TopBar";
 
@@ -22,7 +24,9 @@ export const Editor = Object.assign(EditorRoot, {
   Actions,
   Row,
   Column,
-  DefaultLayout,
+  MinimalLayout,
+  CompactLayout,
+  FullLayout,
   /** The editor's own controls as items: `end: [Editor.items.undo, Editor.items.redo, share]`. */
   items,
 });
@@ -45,5 +49,7 @@ export type {
   MenuItem,
 } from "./blocks/Actions";
 export type { IconName } from "./icons";
-export type { LayoutProps } from "./layouts/Layout";
-export type { DefaultLayoutProps } from "./layouts/DefaultLayout";
+export type { LayoutProps, LayoutConfig } from "./layouts/Layout";
+export type { MinimalLayoutProps } from "./layouts/MinimalLayout";
+export type { CompactLayoutProps } from "./layouts/CompactLayout";
+export type { FullLayoutProps } from "./layouts/FullLayout";

@@ -20,7 +20,7 @@ yarn workspace dendrite-playground dev  # http://localhost:5173
 ## Layout
 
 The playground is a React **host** of `@dendrite-lang/editor` (see that package's README): it
-renders `<Editor>` with the `DefaultLayout` preset and owns persistence and routing policy.
+renders `<Editor>` with the `FullLayout` preset and owns persistence and routing policy.
 Nothing here knows CodeMirror or the language internals.
 
 - `src/App.tsx` — the host: one document at a time (URL as the source of truth, localStorage as

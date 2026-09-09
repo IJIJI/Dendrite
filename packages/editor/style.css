@@ -137,6 +137,70 @@
     height: 100%;
   }
 
+  /* ── Layout presets ──
+     Full is the playground's arrangement (its side column is above). Minimal and Compact
+     follow their content in height; the code block is the positioned parent of a corner
+     cluster (see "Code block" under the top bar). */
+  .dendrite-code {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Minimal: a bordered block on the panel surface - the input strip, the code, the lines */
+  .dendrite-minimal-layout {
+    border: 1px solid var(--dendrite-border);
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas,
+  .dendrite-compact-layout .dendrite-canvas {
+    flex: none;
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas .cm-editor,
+  .dendrite-compact-layout .dendrite-canvas .cm-editor {
+    height: auto;
+  }
+
+  .dendrite-minimal-layout > .dendrite-code + .dendrite-pane {
+    border-top: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-minimal-layout > .dendrite-pane:last-child {
+    border-bottom: 0;
+  }
+
+  /* A program with no inputs shows no strip */
+  .dendrite-minimal-layout .dendrite-inputs:has(> .dendrite-empty) {
+    display: none;
+  }
+
+  /* Compact: the panes beside the code when there is room, below it when there is not */
+  .dendrite-compact-layout {
+    border: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-compact-body {
+    flex-wrap: wrap;
+  }
+
+  .dendrite-compact-body > .dendrite-code {
+    flex: 3 1 28rem;
+    max-height: var(--dendrite-compact-max-height, 24rem);
+  }
+
+  .dendrite-compact-side {
+    flex: 1 1 16rem;
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-compact-layout > .dendrite-diagnostics {
+    border-top: 1px solid var(--dendrite-border);
+    border-bottom: 0;
+    background: var(--dendrite-panel);
+  }
+
   /* ── Shared control behaviour ── */
   .dendrite-icon-button,
   .dendrite-menu-button,

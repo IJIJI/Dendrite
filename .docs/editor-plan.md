@@ -144,7 +144,7 @@ with a dirty flag, which is what a host editor needs instead of the playground's
 
 **Landed 2026-09-05** (five commits). What differs from the sketch below, and why:
 **compound components** (`<Editor>` provider + `Canvas` / `Inputs` / `Outputs` / `Diagnostics` /
-`TopBar` / `Row` / `Column` / `DefaultLayout`) replaced the `panes` config — layout is JSX, presets
+`TopBar` / `Row` / `Column` / `DefaultLayout` - renamed `FullLayout` on 2026-09-10, when `MinimalLayout` and `CompactLayout` joined it on one `LayoutConfig`) replaced the `panes` config — layout is JSX, presets
 are compositions, so the config shrank instead of growing; the **top bar is data-driven** (menus
 with one submenu level, actions as `{icon,label,onClick}` or `{element}`) rather than a slot, so
 every host gets one look and keyboard model; panes take `title?: string | null`; **per-input

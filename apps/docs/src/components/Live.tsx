@@ -53,8 +53,6 @@ function LiveLayout() {
   };
   // No theme toggle: Starlight's is the one, and the editor follows it through color-scheme.
   return (
-    <Editor.DefaultLayout
-      topBar={{ title: "", end: [Editor.items.undo, Editor.items.redo, open] }}
-    />
+    <Editor.FullLayout topBar={{ title: "", end: [Editor.items.undo, Editor.items.redo, open] }} />
   );
 }
