@@ -1,12 +1,12 @@
 import { type CSSProperties } from "react";
 
-import { Canvas } from "../chrome/Canvas";
+import { Canvas } from "../blocks/Canvas";
 import { cx } from "../cx";
-import { Diagnostics } from "../panes/Diagnostics";
-import { Inputs } from "../panes/Inputs";
+import { Diagnostics } from "../blocks/panes/Diagnostics";
+import { Inputs } from "../blocks/panes/Inputs";
 import { Column, Row } from "./Layout";
-import { Outputs } from "../panes/Outputs";
-import { TopBar, type TopBarProps } from "../chrome/TopBar";
+import { Outputs } from "../blocks/panes/Outputs";
+import { TopBar, type TopBarProps } from "../blocks/TopBar";
 
 //? <Editor.DefaultLayout/>: the playground arrangement as a preset - top bar, canvas on the
 // left, the three panes stacked on the right. A preset is just a composition of the same

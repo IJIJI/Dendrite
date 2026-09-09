@@ -1,16 +1,13 @@
 import { indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
-import { lintGutter, setDiagnostics } from "@codemirror/lint";
-import { EditorState } from "@codemirror/state";
+import { setDiagnostics } from "@codemirror/lint";
 import { EditorView, keymap } from "@codemirror/view";
 import { type ProgramInstance, serialiseSource } from "@dendrite-lang/core";
-import { basicSetup } from "codemirror";
 
-import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "../code/cm";
+import { type CodeOptions, codeExtensions, toLintDiagnostics } from "../code/cm";
+import { lineStartOffsets, toOffset } from "../code/tokens";
+import { createSubject, type Observable } from "../observable";
 import { type Connection } from "./connection";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
-import { createSubject, type Observable } from "../observable";
-
-import { lineStartOffsets, toOffset } from "../code/tokens";
 
 //? createEditor: the host entry point (Facade). Mounts a code editor over a Connection - the
 // ProgramInstance it edits and the Language it highlights with, obtained however the host
@@ -21,12 +18,7 @@ import { lineStartOffsets, toOffset } from "../code/tokens";
 
 const DEBOUNCE_MS = 300;
 
-// What the default keymap needs to know about Dendrite to toggle comments (Mod-/).
-const languageData = EditorState.languageData.of(() => [
-  { commentTokens: { line: "//", block: { open: "/*", close: "*/" } } },
-]);
-
-export interface EditorConfig {
+export interface EditorConfig extends CodeOptions {
   /** What to edit and how it was obtained: ownStack / joinRuntime / attach (connection.ts). */
   connection: Connection;
   /** The current document, debounced, after every source edit or input change. */
@@ -42,6 +34,8 @@ export interface HistoryDepth {
 export interface EditorHandle {
   /** The running program: diagnostics, ports, outputs, values, snapshot. Render panes from it. */
   readonly instance: ProgramInstance;
+  /** Whether the source can be typed into (the `editable` option); undo/redo only apply then. */
+  readonly editable: boolean;
   /** Undo/redo depths of the SOURCE history (input-value edits are not part of it). */
   readonly history: Observable<HistoryDepth>;
   /** The document as it is right now: program, its ports, and the input values. */
@@ -101,14 +95,10 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     doc: initialSource,
     parent,
     extensions: [
-      basicSetup,
+      ...codeExtensions(language, config),
       // Tab / Shift-Tab indent and dedent (Escape then Tab leaves the editor, per CodeMirror);
       // Ctrl-Shift-Z redoes everywhere (the default keymap binds it on macOS only).
       keymap.of([indentWithTab, { key: "Mod-Shift-z", run: redo }]),
-      languageData,
-      dendriteTheme,
-      lintGutter(),
-      dendriteHighlighting(language),
       compileOnEdit,
       trackHistory,
     ],
@@ -125,6 +115,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
 
   return {
     instance,
+    editable: config.editable ?? true,
     history: history$,
     getDocument,
     jumpTo(line, column) {

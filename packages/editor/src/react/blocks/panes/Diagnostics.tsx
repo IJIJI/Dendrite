@@ -2,11 +2,11 @@ import { useMemo } from "react";
 
 import { type ProgramDiagnostic } from "@dendrite-lang/core";
 
-import { positionOf } from "../../code/diagnostic";
-import { type EditorHandle } from "../../session/editor";
-import { useEditor } from "../context";
-import { cx } from "../cx";
-import { useObservable } from "../hooks";
+import { positionOf } from "../../../code/diagnostic";
+import { type EditorHandle } from "../../../session/editor";
+import { useEditor } from "../../context";
+import { cx } from "../../cx";
+import { useObservable } from "../../hooks";
 import { Pane, type PaneProps } from "./Pane";
 
 //? <Editor.Diagnostics/>: parse + analysis diagnostics with click-to-jump, errors first.

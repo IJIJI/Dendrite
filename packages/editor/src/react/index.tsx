@@ -3,14 +3,14 @@
 // the ONLY place React is allowed in the package (lint-enforced): the core stays headless.
 // Styles: import "@dendrite-lang/editor/style.css" once; theme via --dendrite-* variables.
 
-import { Canvas } from "./chrome/Canvas";
+import { Canvas } from "./blocks/Canvas";
 import { DefaultLayout } from "./layouts/DefaultLayout";
-import { Diagnostics } from "./panes/Diagnostics";
+import { Diagnostics } from "./blocks/panes/Diagnostics";
 import { Editor as EditorRoot } from "./Editor";
-import { Inputs } from "./panes/Inputs";
+import { Inputs } from "./blocks/panes/Inputs";
 import { Column, Row } from "./layouts/Layout";
-import { Outputs } from "./panes/Outputs";
-import { TopBar } from "./chrome/TopBar";
+import { Outputs } from "./blocks/panes/Outputs";
+import { TopBar } from "./blocks/TopBar";
 
 export const Editor = Object.assign(EditorRoot, {
   TopBar,
@@ -24,12 +24,12 @@ export const Editor = Object.assign(EditorRoot, {
 });
 
 export { useEditor } from "./context";
-export { Wordmark } from "./chrome/brand";
+export { Wordmark } from "./brand";
 export type { EditorProps } from "./Editor";
-export type { CanvasProps } from "./chrome/Canvas";
-export type { PaneProps } from "./panes/Pane";
-export type { InputsProps, ReadOnly } from "./panes/Inputs";
-export type { TopBarProps, TopBarAction, Menu, MenuItem } from "./chrome/TopBar";
-export type { IconName } from "./chrome/icons";
+export type { CanvasProps } from "./blocks/Canvas";
+export type { PaneProps } from "./blocks/panes/Pane";
+export type { InputsProps, ReadOnly } from "./blocks/panes/Inputs";
+export type { TopBarProps, TopBarAction, Menu, MenuItem } from "./blocks/TopBar";
+export type { IconName } from "./icons";
 export type { LayoutProps } from "./layouts/Layout";
 export type { DefaultLayoutProps } from "./layouts/DefaultLayout";

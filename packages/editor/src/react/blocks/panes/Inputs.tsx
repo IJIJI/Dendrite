@@ -1,11 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { type EditorHandle } from "../../session/editor";
-import { formatValue } from "../../ports/format";
-import { type WidgetSpec, widgetsFor } from "../../ports/port-rows";
-import { useEditor } from "../context";
-import { cx } from "../cx";
-import { editorKey, useObservable } from "../hooks";
+import { type EditorHandle } from "../../../session/editor";
+import { formatValue } from "../../../ports/format";
+import { type WidgetSpec, widgetsFor } from "../../../ports/port-rows";
+import { useEditor } from "../../context";
+import { cx } from "../../cx";
+import { editorKey, useObservable } from "../../hooks";
 import { Pane, type PaneProps } from "./Pane";
 import { AddPort, PortDeclaration, PortProblems, UndoStrip } from "./PortFields";
 import { type PortEdits, usePortEdits } from "./usePortEdits";

@@ -2,11 +2,11 @@ import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 
 
 import { type EditorHandle } from "../../session/editor";
 import { getTheme, nextThemeMode, type ThemeMode } from "../../theme";
-import { Wordmark } from "./brand";
+import { Wordmark } from "../brand";
 import { useOptionalEditor } from "../context";
 import { cx } from "../cx";
 import { useObservable } from "../hooks";
-import { Icon, type IconName } from "./icons";
+import { Icon, type IconName } from "../icons";
 
 //? <Editor.TopBar/>: brand · menus · centred title · actions. Menus and actions are DATA a
 // host supplies, so every host gets the same look and keyboard behaviour (Command pattern
