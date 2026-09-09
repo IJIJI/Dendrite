@@ -1,6 +1,6 @@
-import { type PortRow } from "../port-rows";
-import { typeFromLabel } from "../ports-edit";
-import { Icon } from "./icons";
+import { type PortRow } from "../../ports/port-rows";
+import { typeFromLabel } from "../../ports/ports-edit";
+import { Icon } from "../chrome/icons";
 import { type PortEdits, type PortUndo } from "./usePortEdits";
 
 //? The controls a declaration row is made of, shared by the inputs and outputs panes: the

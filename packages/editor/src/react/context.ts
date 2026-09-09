@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import { type EditorHandle } from "../editor";
+import { type EditorHandle } from "../session/editor";
 
 //? The compound components' shared state: the mounted editor (null until <Editor.Canvas/>
 // has mounted it), the mount error if createEditor threw, and - for the canvas only - the

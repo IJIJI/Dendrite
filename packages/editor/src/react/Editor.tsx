@@ -1,8 +1,8 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { type Connection, ownStack } from "../connection";
-import { type EditorDocument } from "../document";
-import { createEditor, type EditorHandle } from "../editor";
+import { type Connection, ownStack } from "../session/connection";
+import { type EditorDocument } from "../session/document";
+import { createEditor, type EditorHandle } from "../session/editor";
 import { EditorContext, type EditorContextValue } from "./context";
 
 //? <Editor>: the provider of the compound components. Holds what to connect to and, once

@@ -5,12 +5,12 @@ import { EditorView, keymap } from "@codemirror/view";
 import { type ProgramInstance, serialiseSource } from "@dendrite-lang/core";
 import { basicSetup } from "codemirror";
 
-import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "./cm";
+import { dendriteHighlighting, dendriteTheme, toLintDiagnostics } from "../code/cm";
 import { type Connection } from "./connection";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
-import { createSubject, type Observable } from "./observable";
+import { createSubject, type Observable } from "../observable";
 
-import { lineStartOffsets, toOffset } from "./tokens";
+import { lineStartOffsets, toOffset } from "../code/tokens";
 
 //? createEditor: the host entry point (Facade). Mounts a code editor over a Connection - the
 // ProgramInstance it edits and the Language it highlights with, obtained however the host

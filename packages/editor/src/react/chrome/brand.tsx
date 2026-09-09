@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { cx } from "./cx";
+import { cx } from "../cx";
 
 //? The Dendrite wordmark as inline SVG - the outlines of brand/assets/dendrite-wordmark.svg
 // (Chakra Petch 600, no font dependency). The D and the letters follow the text colour and

@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffect, useRef } from "react";
 
-import { useEditorContext } from "./context";
-import { cx } from "./cx";
+import { useEditorContext } from "../context";
+import { cx } from "../cx";
 
 //? <Editor.Canvas/>: the code editor itself - the one element createEditor can mount into,
 // so this is where the session is born. Siblings render their empty state until it has.

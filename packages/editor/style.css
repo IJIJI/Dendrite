@@ -7,7 +7,7 @@
 
    Everything lives in the `dendrite` cascade layer, so a host's un-layered rules win without
    specificity fights. CodeMirror's chrome (gutters, selection, lint) is themed from the same
-   variables in src/cm.ts: CodeMirror injects its base theme un-layered, so a layered sheet
+   variables in src/code/cm.ts: CodeMirror injects its base theme un-layered, so a layered sheet
    cannot override it. Fonts are NOT loaded here - the host loads Archivo, IBM Plex Mono and
    Kode Mono, or the fallbacks apply. */
 
@@ -66,7 +66,7 @@
     --dendrite-motion-base: 200ms; /* open, close */
     --dendrite-ease: cubic-bezier(0.2, 0, 0, 1);
 
-    /* Syntax: one variable per lexer class (src/tokens.ts). Keywords magenta (600), ops iris,
+    /* Syntax: one variable per lexer class (src/code/tokens.ts). Keywords magenta (600), ops iris,
        names in the text colour, operators blue, $inputs and literals orange, strings green, numbers
        amber - every hue at text-level contrast on both canvases; punctuation is ink-3 on purpose. */
     --dendrite-syntax-keyword: light-dark(oklch(0.55 0.2 335), oklch(0.78 0.15 335));
@@ -124,7 +124,7 @@
     border-left: 1px solid var(--dendrite-border);
   }
 
-  /* ── Canvas (the rest of the editor's look is in src/cm.ts) ── */
+  /* ── Canvas (the rest of the editor's look is in src/code/cm.ts) ── */
   .dendrite-canvas {
     flex: 1 1 0; /* fills a Column/Row parent; inert elsewhere */
     min-width: 0;

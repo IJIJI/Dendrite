@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { type EditorHandle } from "../editor";
+import { type EditorHandle } from "../session/editor";
 import { type Observable } from "../observable";
 
 /** Subscribe a component to an observable; re-renders on change (the external-store contract). */

@@ -1,11 +1,11 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
-import { type EditorHandle } from "../editor";
-import { getTheme, nextThemeMode, type ThemeMode } from "../theme";
+import { type EditorHandle } from "../../session/editor";
+import { getTheme, nextThemeMode, type ThemeMode } from "../../theme";
 import { Wordmark } from "./brand";
-import { useOptionalEditor } from "./context";
-import { cx } from "./cx";
-import { useObservable } from "./hooks";
+import { useOptionalEditor } from "../context";
+import { cx } from "../cx";
+import { useObservable } from "../hooks";
 import { Icon, type IconName } from "./icons";
 
 //? <Editor.TopBar/>: brand · menus · centred title · actions. Menus and actions are DATA a

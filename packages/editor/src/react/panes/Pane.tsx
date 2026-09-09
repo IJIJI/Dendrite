@@ -1,6 +1,6 @@
 import { type CSSProperties, type ReactNode, useId } from "react";
 
-import { cx } from "./cx";
+import { cx } from "../cx";
 
 //? The frame every side pane shares: a section with a small uppercase heading that doubles
 // as its accessible name. Hosts retitle it (Beacon: "Live state") or hide it (`null`).

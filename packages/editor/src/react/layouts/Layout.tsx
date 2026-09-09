@@ -1,6 +1,6 @@
 import { type CSSProperties, type ReactNode } from "react";
 
-import { cx } from "./cx";
+import { cx } from "../cx";
 
 //? <Editor.Row/> / <Editor.Column/>: flex primitives so a host composes a layout without
 // writing CSS. `grow` fills the parent; `size` fixes the basis (width in a Row, height in
