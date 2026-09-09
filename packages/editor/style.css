@@ -188,6 +188,53 @@
     color: var(--dendrite-muted);
   }
 
+  /* A collapsed pane is a <details>: the heading and a one-line summary on its toggle,
+     a chevron at the end that turns when open. Nothing here opens it. */
+  details.dendrite-pane > .dendrite-pane-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle .dendrite-pane-title {
+    margin: 0;
+    flex: none;
+  }
+
+  .dendrite-pane-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--dendrite-muted);
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle::after {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-left: auto;
+    border-right: 1.5px solid var(--dendrite-muted);
+    border-bottom: 1.5px solid var(--dendrite-muted);
+    transform: rotate(-45deg);
+    transition: transform var(--dendrite-motion-fast) var(--dendrite-ease);
+  }
+
+  details[open].dendrite-pane > .dendrite-pane-toggle::after {
+    transform: rotate(45deg);
+  }
+
+  details[open].dendrite-pane > .dendrite-pane-toggle {
+    margin-bottom: 12px;
+  }
+
   .dendrite-empty-title {
     font-weight: 600;
     color: var(--dendrite-text);
@@ -316,6 +363,50 @@
     min-height: 18px;
     font-size: 12px;
     color: var(--dendrite-error);
+  }
+
+  /* The inputs in one wrapping line, "$name = [field]" each, as a documented example shows
+     them (a class a host or a layout puts on the pane). The type tag steps aside. */
+  .dendrite-inputs-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-label,
+  .dendrite-inputs-inline .dendrite-port-head {
+    margin: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-name::after {
+    content: " =";
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-inputs-inline .dendrite-input-type {
+    display: none;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row > input[type="number"],
+  .dendrite-inputs-inline .dendrite-input-row > input[type="text"] {
+    width: 9ch;
+  }
+
+  .dendrite-inputs-inline .dendrite-json-input {
+    width: 16rem;
+  }
+
+  .dendrite-inputs-inline .dendrite-empty,
+  .dendrite-inputs-inline .dendrite-port-undo {
+    flex-basis: 100%;
   }
 
   /* Read-only value: a code well */
@@ -485,6 +576,40 @@
     font-variant-numeric: tabular-nums;
     text-align: right;
     overflow-wrap: anywhere;
+  }
+
+  /* The outputs as "→ name = value" lines, as the reference derives them (a class a host or
+     a layout puts on the pane, and what a static block prints in the same markup). */
+  .dendrite-outputs-lines .dendrite-output-row {
+    justify-content: flex-start;
+    gap: 0.5ch;
+    padding: 2px 0;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-row + .dendrite-output-row {
+    border-top: 0;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-row::before {
+    content: "→";
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-outputs-lines .dendrite-port-head {
+    flex: none;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-name::after {
+    content: " =";
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-outputs-lines .dendrite-input-type {
+    display: none;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-value {
+    text-align: left;
   }
 
   /* Runtime failure: the brand's error view */

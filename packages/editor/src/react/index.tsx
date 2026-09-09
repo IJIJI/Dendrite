@@ -34,6 +34,7 @@ export type { EditorProps } from "./Editor";
 export type { CanvasProps } from "./blocks/Canvas";
 export type { PaneProps } from "./blocks/panes/Pane";
 export type { InputsProps, ReadOnly } from "./blocks/panes/Inputs";
+export type { OutputsProps } from "./blocks/panes/Outputs";
 export type { TopBarProps } from "./blocks/TopBar";
 export type {
   ActionsProps,

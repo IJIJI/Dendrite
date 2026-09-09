@@ -10,7 +10,7 @@ export * from "./code/cm"; // dendriteHighlighting, toLintDiagnostics (the only 
 export * from "./ports/port-rows"; // widgetsFor, outputRows, editableLayer - declarations as pane rows
 export * from "./ports/format"; // formatValue - the one value→text rule panes share
 export * from "./ports/ports-edit"; // add/update/remove inputs + outputs, typeOptions, uniqueName - a layer as editable data
-export * from "./code/diagnostic"; // positionOf - the one SourceRef → line/column adapter
+export * from "./code/diagnostic"; // positionOf - the one SourceRef → line/column adapter; sortDiagnostics, summarise
 export * from "./session/document"; // EditorDocument, DOCUMENT_VERSION, isDocument, migrateDocument, cloneDocument
 export * from "./session/permalink"; // encodeDocument, decodePayload
 export * from "./session/store"; // DocumentStore + MemoryStore, LocalStorageStore, UrlStore

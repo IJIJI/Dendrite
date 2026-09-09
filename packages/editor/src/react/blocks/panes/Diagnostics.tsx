@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { type ProgramDiagnostic } from "@dendrite-lang/core";
 
-import { positionOf } from "../../../code/diagnostic";
+import { positionOf, sortDiagnostics, summarise } from "../../../code/diagnostic";
 import { type EditorHandle } from "../../../session/editor";
 import { useEditor } from "../../context";
 import { cx } from "../../cx";
@@ -11,16 +11,18 @@ import { Pane, type PaneProps } from "./Pane";
 
 //? <Editor.Diagnostics/>: parse + analysis diagnostics with click-to-jump, errors first.
 // Also where a failed mount surfaces (a `boot_failed` entry) instead of a white screen.
+// Collapsible, its summary line counts the problems ("2 errors · 1 warning") and never
+// unfolds on its own - the squiggles and gutter dots already point at the spot.
 
-export function Diagnostics({ title, className, style }: PaneProps) {
+export function Diagnostics({ collapsible, ...pane }: PaneProps) {
   const { editor, error } = useEditor();
   return (
     <Pane
-      title={title}
+      {...pane}
       defaultTitle="Diagnostics"
       kind="diagnostics"
-      className={className}
-      style={style}
+      collapsible={collapsible}
+      summary={collapsible ? <Summary editor={editor} /> : undefined}
     >
       <ul className="dendrite-diag-list">
         {editor ? (
@@ -33,17 +35,26 @@ export function Diagnostics({ title, className, style }: PaneProps) {
   );
 }
 
+function Summary({ editor }: { editor: EditorHandle | null }) {
+  return editor ? <LiveSummary editor={editor} /> : null;
+}
+
+function LiveSummary({ editor }: { editor: EditorHandle }) {
+  const diagnostics = useObservable(editor.instance.diagnostics);
+  const { text, severity } = summarise(diagnostics);
+  return (
+    <>
+      {severity ? (
+        <span className={cx("dendrite-tag", `dendrite-tag-${severity}`)}>{severity}</span>
+      ) : null}
+      {text}
+    </>
+  );
+}
+
 function DiagnosticItems({ editor }: { editor: EditorHandle }) {
   const diagnostics = useObservable(editor.instance.diagnostics);
-  // Errors before warnings (stable within each severity) - the instance emits in pipeline
-  // order, which would otherwise list parse warnings above analysis errors.
-  const ordered = useMemo(
-    () =>
-      [...diagnostics].sort((a, b) =>
-        a.severity === b.severity ? 0 : a.severity === "error" ? -1 : 1,
-      ),
-    [diagnostics],
-  );
+  const ordered = useMemo(() => sortDiagnostics(diagnostics), [diagnostics]);
   if (ordered.length === 0) return <li className="dendrite-empty">No problems.</li>;
   return (
     <>
