@@ -433,7 +433,7 @@ layer declares a struct the user must fill.
 
 ## Editor — refactor the icons to the WebKontrol style
 
-**What:** Rework `packages/editor/src/react/chrome/icons.tsx` into WebKontrol's arrangement
+**What:** Rework `packages/editor/src/react/icons.tsx` into WebKontrol's arrangement
 (`WebKontrol/app/ui/src/components/icons/Icons.tsx`): an `icon(viewBox, children, fill?)` factory
 producing one component per glyph, collected in a named `Icons` object, each taking
 `{ size = 20, className, style }`. Dendrite instead has a `glyphs` record and one `Icon({ name })`
