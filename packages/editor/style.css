@@ -559,7 +559,7 @@
     color: var(--dendrite-text);
   }
 
-  .dendrite-topbar-left {
+  .dendrite-topbar-start {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -592,12 +592,34 @@
     white-space: nowrap;
   }
 
-  .dendrite-topbar-actions {
+  /* A cluster of items (Actions): the bar's sides, or a code block's corner */
+  .dendrite-actions {
     display: flex;
-    justify-content: flex-end;
     align-items: center;
     gap: 2px;
     min-width: 0;
+  }
+
+  .dendrite-topbar-end {
+    justify-content: flex-end;
+  }
+
+  /* ── Code block ──
+     The canvas (or a static Source) with a cluster floating in its corner; the cluster
+     reports its width to --dendrite-code-inset-right (Actions.tsx), which cm.ts reads. */
+  .dendrite-code {
+    position: relative;
+  }
+
+  .dendrite-code > .dendrite-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    padding: 2px;
+    background: var(--dendrite-panel);
+    border: 1px solid var(--dendrite-border);
+    border-radius: var(--dendrite-radius);
   }
 
   /* Ghost buttons on the panel: ink-2 at rest, ink on the well when hovered, pressed on hover */
@@ -627,7 +649,7 @@
     height: 20px;
   }
 
-  /* Between the brand and the menus, and between the editor's own actions and the host's */
+  /* Between the brand and the start items, and between the editor's own controls and the host's */
   .dendrite-topbar-sep {
     flex: none; /* a divider never shrinks */
     width: 1px;
@@ -637,11 +659,6 @@
   }
 
   /* Menus */
-  .dendrite-menubar {
-    display: flex;
-    gap: 2px;
-  }
-
   .dendrite-menu {
     position: relative;
   }

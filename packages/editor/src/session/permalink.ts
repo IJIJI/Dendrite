@@ -35,6 +35,14 @@ export async function encodeDocument(doc: EditorDocument): Promise<string> {
   return toBase64Url(await pipe(bytes, new CompressionStream("deflate-raw")));
 }
 
+/**
+ * A document as a link to a page that reads the fragment (the playground): `${base}#${payload}`.
+ * The one shape every host builds, so an "open in …" affordance anywhere lands the same way.
+ */
+export async function documentUrl(base: string, doc: EditorDocument): Promise<string> {
+  return `${base}#${await encodeDocument(doc)}`;
+}
+
 /** Fragment payload → current document (migrating older envelopes), or null on any malformed input. */
 export async function decodePayload(payload: string): Promise<EditorDocument | null> {
   try {

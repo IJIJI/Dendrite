@@ -1,5 +1,5 @@
 import { type Ports, type SavedProgram, serialiseSource } from "@dendrite-lang/core";
-import { DOCUMENT_VERSION, type EditorDocument, encodeDocument } from "@dendrite-lang/editor";
+import { DOCUMENT_VERSION, documentUrl, type EditorDocument } from "@dendrite-lang/editor";
 import { Editor, type TopBarAction, useEditor } from "@dendrite-lang/editor/react";
 import { useMemo } from "react";
 
@@ -42,15 +42,19 @@ export default function Live(props: LiveProps) {
 function LiveLayout() {
   const { editor } = useEditor();
   const open: TopBarAction = {
-    icon: "share",
+    icon: "external",
     label: "Open in playground",
     onClick: () => {
       if (!editor) return;
-      void encodeDocument(editor.getDocument()).then((payload) =>
-        window.open(`${PLAYGROUND}#${payload}`, "_blank", "noopener"),
+      void documentUrl(PLAYGROUND, editor.getDocument()).then((href) =>
+        window.open(href, "_blank", "noopener"),
       );
     },
   };
   // No theme toggle: Starlight's is the one, and the editor follows it through color-scheme.
-  return <Editor.DefaultLayout topBar={{ title: "", actions: [open], themeToggle: false }} />;
+  return (
+    <Editor.DefaultLayout
+      topBar={{ title: "", end: [Editor.items.undo, Editor.items.redo, open] }}
+    />
+  );
 }
