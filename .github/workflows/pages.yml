@@ -41,8 +41,9 @@ jobs:
         env:
           PLAYGROUND_BASE: /Dendrite/playground/
 
-      - name: Build the editor (the docs' config imports it)
-        run: yarn workspace @dendrite-lang/editor run build
+      # The editor's published entry imports the core's, so both are built, in order.
+      - name: Build the packages (the docs' config imports the editor)
+        run: yarn workspace @dendrite-lang/core run build && yarn workspace @dendrite-lang/editor run build
 
       - name: Build docs
         run: yarn workspace dendrite-docs run build
