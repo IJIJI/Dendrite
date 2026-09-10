@@ -32,12 +32,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
-      # Both apps bundle the language and editor SOURCE via their Vite aliases - no package
-      # build needed. Each takes its deployed base path from the environment.
+      # Both apps bundle the language and editor SOURCE via their Vite aliases. The docs'
+      # Astro config is the exception: it loads before those aliases exist and imports the
+      # editor's published entry (the remark plugin highlights through it), so the editor
+      # is built first. Each app takes its deployed base path from the environment.
       - name: Build playground
         run: yarn workspace dendrite-playground run build
         env:
           PLAYGROUND_BASE: /Dendrite/playground/
+
+      - name: Build the editor (the docs' config imports it)
+        run: yarn workspace @dendrite-lang/editor run build
 
       - name: Build docs
         run: yarn workspace dendrite-docs run build

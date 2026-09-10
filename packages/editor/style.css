@@ -7,7 +7,7 @@
 
    Everything lives in the `dendrite` cascade layer, so a host's un-layered rules win without
    specificity fights. CodeMirror's chrome (gutters, selection, lint) is themed from the same
-   variables in src/cm.ts: CodeMirror injects its base theme un-layered, so a layered sheet
+   variables in src/code/cm.ts: CodeMirror injects its base theme un-layered, so a layered sheet
    cannot override it. Fonts are NOT loaded here - the host loads Archivo, IBM Plex Mono and
    Kode Mono, or the fallbacks apply. */
 
@@ -66,7 +66,7 @@
     --dendrite-motion-base: 200ms; /* open, close */
     --dendrite-ease: cubic-bezier(0.2, 0, 0, 1);
 
-    /* Syntax: one variable per lexer class (src/tokens.ts). Keywords magenta (600), ops iris,
+    /* Syntax: one variable per lexer class (src/code/tokens.ts). Keywords magenta (600), ops iris,
        names in the text colour, operators blue, $inputs and literals orange, strings green, numbers
        amber - every hue at text-level contrast on both canvases; punctuation is ink-3 on purpose. */
     --dendrite-syntax-keyword: light-dark(oklch(0.55 0.2 335), oklch(0.78 0.15 335));
@@ -124,7 +124,7 @@
     border-left: 1px solid var(--dendrite-border);
   }
 
-  /* ── Canvas (the rest of the editor's look is in src/cm.ts) ── */
+  /* ── Canvas (the rest of the editor's look is in src/code/cm.ts) ── */
   .dendrite-canvas {
     flex: 1 1 0; /* fills a Column/Row parent; inert elsewhere */
     min-width: 0;
@@ -135,6 +135,109 @@
 
   .dendrite-canvas .cm-editor {
     height: 100%;
+  }
+
+  /* ── Layout presets ──
+     Full is the playground's arrangement (its side column is above). Minimal and Compact
+     follow their content in height; the code block is the positioned parent of a corner
+     cluster (see "Code block" under the top bar). */
+  .dendrite-code {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* A program shown, not run (<Editor.Source/>, a docs code block): the canvas' face on a
+     <pre>. Font, line height and padding mirror what dendriteTheme (cm.ts) gives .cm-content,
+     so a static block and a live one are indistinguishable; keep the two in step. */
+  .dendrite-source {
+    margin: 0;
+    padding: 12px var(--dendrite-code-inset-right, 16px) 12px var(--dendrite-code-inset-left, 16px);
+    overflow-x: auto;
+    background: var(--dendrite-bg);
+    color: var(--dendrite-text);
+    font: 400 14px/1.65 var(--dendrite-mono);
+  }
+
+  .dendrite-source > code {
+    font: inherit;
+  }
+
+  /* Minimal: a bordered block on the panel surface - the input strip, the code, the lines */
+  .dendrite-minimal-layout {
+    border: 1px solid var(--dendrite-border);
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas,
+  .dendrite-compact-layout .dendrite-canvas {
+    flex: none;
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas .cm-editor,
+  .dendrite-compact-layout .dendrite-canvas .cm-editor {
+    height: auto;
+  }
+
+  /* A host asks for a taller code area that still grows with its content (the landing) */
+  .dendrite-minimal-layout .dendrite-canvas .cm-editor {
+    min-height: var(--dendrite-code-min-height, 0);
+  }
+
+  .dendrite-minimal-layout > .dendrite-code + .dendrite-pane {
+    border-top: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-minimal-layout > .dendrite-pane:last-child {
+    border-bottom: 0;
+  }
+
+  /* The input strip with the actions at its end (Minimal's `inputs` spot): the strip carries
+     the hairline, the pane inside it fills the width; a program with no inputs hides the
+     pane, and the strip with it unless the actions live there. */
+  .dendrite-minimal-strip {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-minimal-strip > .dendrite-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    border-bottom: 0;
+  }
+
+  .dendrite-minimal-strip > .dendrite-actions {
+    flex: none;
+    padding: 6px 8px;
+  }
+
+  .dendrite-minimal-layout .dendrite-inputs:has(> .dendrite-empty) {
+    display: none;
+  }
+
+  /* Compact: the panes beside the code when there is room, below it when there is not */
+  .dendrite-compact-layout {
+    border: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-compact-body {
+    flex-wrap: wrap;
+  }
+
+  .dendrite-compact-body > .dendrite-code {
+    flex: 3 1 28rem;
+    max-height: var(--dendrite-compact-max-height, 24rem);
+  }
+
+  .dendrite-compact-side {
+    flex: 1 1 16rem;
+    background: var(--dendrite-panel);
+  }
+
+  .dendrite-compact-layout > .dendrite-diagnostics {
+    border-top: 1px solid var(--dendrite-border);
+    border-bottom: 0;
+    background: var(--dendrite-panel);
   }
 
   /* ── Shared control behaviour ── */
@@ -186,6 +289,53 @@
   .dendrite-empty {
     margin: 0;
     color: var(--dendrite-muted);
+  }
+
+  /* A collapsed pane is a <details>: the heading and a one-line summary on its toggle,
+     a chevron at the end that turns when open. Nothing here opens it. */
+  details.dendrite-pane > .dendrite-pane-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle .dendrite-pane-title {
+    margin: 0;
+    flex: none;
+  }
+
+  .dendrite-pane-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--dendrite-muted);
+  }
+
+  details.dendrite-pane > .dendrite-pane-toggle::after {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-left: auto;
+    border-right: 1.5px solid var(--dendrite-muted);
+    border-bottom: 1.5px solid var(--dendrite-muted);
+    transform: rotate(-45deg);
+    transition: transform var(--dendrite-motion-fast) var(--dendrite-ease);
+  }
+
+  details[open].dendrite-pane > .dendrite-pane-toggle::after {
+    transform: rotate(45deg);
+  }
+
+  details[open].dendrite-pane > .dendrite-pane-toggle {
+    margin-bottom: 12px;
   }
 
   .dendrite-empty-title {
@@ -316,6 +466,60 @@
     min-height: 18px;
     font-size: 12px;
     color: var(--dendrite-error);
+  }
+
+  /* The inputs as a grid of "$name = [field]" cells that wrap into rows, as a documented
+     example shows them (a class a host or a layout puts on the pane). Cells are at least
+     --dendrite-inline-min wide (long names get room), auto-fill so a lone field keeps its
+     cell instead of stretching across the strip, the field fills its cell, the type tag
+     steps aside. A multi-line value (the JSON field) takes a whole row. */
+  .dendrite-inputs-inline {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--dendrite-inline-min, 12rem), 1fr));
+    align-items: center;
+    gap: 8px 20px;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row:has(> .dendrite-json-input) {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-label,
+  .dendrite-inputs-inline .dendrite-port-head {
+    flex: none;
+    margin: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-name::after {
+    content: " =";
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-inputs-inline .dendrite-input-type {
+    display: none;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row > input[type="number"],
+  .dendrite-inputs-inline .dendrite-input-row > input[type="text"],
+  .dendrite-inputs-inline .dendrite-json-input,
+  .dendrite-inputs-inline .dendrite-input-value {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-empty,
+  .dendrite-inputs-inline .dendrite-port-undo {
+    grid-column: 1 / -1;
   }
 
   /* Read-only value: a code well */
@@ -487,6 +691,41 @@
     overflow-wrap: anywhere;
   }
 
+  /* The outputs as "→ name = value" lines, as the reference derives them (a class a host or
+     a layout puts on the pane, and what a static block prints in the same markup). */
+  .dendrite-outputs-lines .dendrite-output-row {
+    justify-content: flex-start;
+    gap: 0.5ch;
+    padding: 2px 0;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-row + .dendrite-output-row {
+    border-top: 0;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-row::before {
+    content: "→";
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-outputs-lines .dendrite-port-head {
+    flex: none;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-name::after {
+    content: " =";
+    color: var(--dendrite-muted);
+  }
+
+  /* No type or status tags on a line: the value is the point, as in a static block */
+  .dendrite-outputs-lines .dendrite-tag {
+    display: none;
+  }
+
+  .dendrite-outputs-lines .dendrite-output-value {
+    text-align: left;
+  }
+
   /* Runtime failure: the brand's error view */
   .dendrite-runtime-error {
     margin: 0;
@@ -559,7 +798,7 @@
     color: var(--dendrite-text);
   }
 
-  .dendrite-topbar-left {
+  .dendrite-topbar-start {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -592,12 +831,49 @@
     white-space: nowrap;
   }
 
-  .dendrite-topbar-actions {
+  /* A cluster of items (Actions): the bar's sides, or a code block's corner */
+  .dendrite-actions {
     display: flex;
-    justify-content: flex-end;
     align-items: center;
     gap: 2px;
     min-width: 0;
+  }
+
+  .dendrite-topbar-end {
+    justify-content: flex-end;
+  }
+
+  /* ── Code block ──
+     The canvas (or a static Source) with a cluster floating in a top corner; the cluster
+     reports its width to --dendrite-code-inset-right / -left (Actions.tsx), which cm.ts
+     reads. A descendant selector, not a child one: a static block rendered on a server can
+     wrap the cluster in a slot element. */
+  .dendrite-code {
+    position: relative;
+  }
+
+  .dendrite-code .dendrite-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    padding: 2px;
+    background: var(--dendrite-panel);
+    border: 1px solid var(--dendrite-border);
+    border-radius: var(--dendrite-radius);
+  }
+
+  .dendrite-code .dendrite-actions-start {
+    right: auto;
+    left: 6px;
+  }
+
+  /* The cluster at the top of a side column (Compact's and Full's `side` spot) */
+  .dendrite-side-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--dendrite-border);
   }
 
   /* Ghost buttons on the panel: ink-2 at rest, ink on the well when hovered, pressed on hover */
@@ -627,7 +903,7 @@
     height: 20px;
   }
 
-  /* Between the brand and the menus, and between the editor's own actions and the host's */
+  /* Between the brand and the start items, and between the editor's own controls and the host's */
   .dendrite-topbar-sep {
     flex: none; /* a divider never shrinks */
     width: 1px;
@@ -637,11 +913,6 @@
   }
 
   /* Menus */
-  .dendrite-menubar {
-    display: flex;
-    gap: 2px;
-  }
-
   .dendrite-menu {
     position: relative;
   }

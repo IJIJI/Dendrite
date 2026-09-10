@@ -4,7 +4,7 @@ import {
   LocalStorageStore,
   UrlStore,
 } from "@dendrite-lang/editor";
-import { Editor, type TopBarAction, useEditor } from "@dendrite-lang/editor/react";
+import { defaultActions, Editor, type TopBarItem, useEditor } from "@dendrite-lang/editor/react";
 import { useEffect, useState } from "react";
 
 import { type ExamplePreset, examples } from "./examples";
@@ -119,7 +119,10 @@ function Host({
     ? (examples.find((e) => e.id === presetId)?.name ?? "Example")
     : "Shared document";
 
-  const actions: TopBarAction[] = [
+  // The editor's own controls first, then the host's: the flash, then Share. They render at
+  // the bar's end, Full's default spot.
+  const actions: TopBarItem[] = [
+    ...defaultActions,
     ...(flash ? [{ element: <span className="playground-flash">{flash}</span> }] : []),
     {
       icon: "share",
@@ -129,10 +132,10 @@ function Host({
   ];
 
   return (
-    <Editor.DefaultLayout
+    <Editor.FullLayout
       topBar={{
         title,
-        menus: [
+        start: [
           {
             label: "File",
             items: [
@@ -151,8 +154,8 @@ function Host({
             ],
           },
         ],
-        actions,
       }}
+      actions={actions}
     />
   );
 }

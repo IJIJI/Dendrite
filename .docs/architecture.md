@@ -222,7 +222,7 @@ across one (below).
 ## Linking an editor to a core it does not own (`packages/link`)
 
 The editor depends on exactly one object, a `ProgramInstance`, plus a `Language` to highlight
-with. A `Connection` (`packages/editor/src/connection.ts`) is where those come from: `ownStack`
+with. A `Connection` (`packages/editor/src/session/connection.ts`) is where those come from: `ownStack`
 (a private stack — the playground), `joinRuntime` (the editor's own instance on a runtime the
 host runs, seeing its live global values), or `attach` (a program the host already runs). The
 last one is how a **remote** core is reached: `connectInstance` returns a replica that

@@ -1,20 +1,88 @@
-import { type Diagnostic as LintDiagnostic } from "@codemirror/lint";
-import { RangeSetBuilder } from "@codemirror/state";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { bracketMatching } from "@codemirror/language";
+import { type Diagnostic as LintDiagnostic, lintGutter, lintKeymap } from "@codemirror/lint";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { EditorState, type Extension, RangeSetBuilder } from "@codemirror/state";
 import {
+  crosshairCursor,
   Decoration,
   type DecorationSet,
+  dropCursor,
   EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
 import { type Language, type ProgramDiagnostic } from "@dendrite-lang/core";
+import { minimalSetup } from "codemirror";
 
 import { positionOf } from "./diagnostic";
 import { lineStartOffsets, styledRanges, toOffset } from "./tokens";
 
-//? CodeMirror glue: map tokens.ts ranges onto decorations, program diagnostics onto
-// @codemirror/lint squiggles, and the brand onto the editor's chrome. With editor.ts, the
-// only module that knows about CodeMirror.
+//? CodeMirror glue: the extension list a code view is built from, tokens.ts ranges as
+// decorations, program diagnostics as @codemirror/lint squiggles, and the brand on the
+// editor's chrome. With session/editor.ts, the only module that knows about CodeMirror.
+
+/** How the code is presented. Every layout takes these; each picks its own defaults. */
+export interface CodeOptions {
+  /** The source can be typed into. Default true. */
+  editable?: boolean;
+  /**
+   * The gutter to the left of the code: `full` is line numbers and lint dots, `compact` the
+   * lint dots alone, `none` nothing (squiggles and their hover message stay). Default full.
+   */
+  gutters?: "full" | "compact" | "none";
+}
+
+// What the default keymap needs to know about Dendrite to toggle comments (Mod-/).
+const languageData = EditorState.languageData.of(() => [
+  { commentTokens: { line: "//", block: { open: "/*", close: "*/" } } },
+]);
+
+// What basicSetup adds over minimalSetup, minus the gutters (a separate choice below) and
+// minus what is inert without something to feed it - foldGutter needs a syntax tree,
+// autocompletion a source, indentOnInput a language; basicSetup hid that. Completion returns
+// with a descriptor-driven source, later.
+const editing: Extension = [
+  highlightActiveLine(),
+  dropCursor(),
+  EditorState.allowMultipleSelections.of(true),
+  bracketMatching(),
+  closeBrackets(),
+  rectangularSelection(),
+  crosshairCursor(),
+  highlightSelectionMatches(),
+  keymap.of([...closeBracketsKeymap, ...searchKeymap, ...lintKeymap]),
+];
+
+const readOnly: Extension = [EditorState.readOnly.of(true), EditorView.editable.of(false)];
+
+/**
+ * The extensions a code view is built from: the setup, editing or read-only, the chosen
+ * gutter, comment tokens, the theme and the highlighting. The session adds its own listeners.
+ */
+export function codeExtensions(
+  language: Language,
+  { editable = true, gutters = "full" }: CodeOptions = {},
+): Extension[] {
+  return [
+    minimalSetup, // history, selection drawing, special chars, the default keymap
+    editable ? editing : readOnly,
+    // Squiggles and their hover message come with setDiagnostics itself; a gutter is extra.
+    gutters === "full"
+      ? [lineNumbers(), highlightActiveLineGutter(), lintGutter()]
+      : gutters === "compact"
+        ? lintGutter()
+        : [],
+    languageData,
+    dendriteTheme,
+    dendriteHighlighting(language),
+  ];
+}
 
 // Syntax highlighting as a ViewPlugin: re-tokenise the full document on change (documents
 // are playground-sized; simplicity over incrementality) and mark each token with a
@@ -73,7 +141,12 @@ export const dendriteTheme = EditorView.theme({
   "&": { color: "var(--dendrite-text)", backgroundColor: "var(--dendrite-bg)" },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { fontFamily: "var(--dendrite-mono)", fontSize: "14px", lineHeight: "1.65" },
-  ".cm-content": { padding: "12px 0" }, // caret: drawSelection paints .cm-cursor instead
+  // The side insets are a layout's to set (a cluster floating over the code's corner): a
+  // variable on an ancestor is the one override this un-layered theme allows. Caret:
+  // drawSelection's .cm-cursor.
+  ".cm-content": {
+    padding: "12px var(--dendrite-code-inset-right, 0) 12px var(--dendrite-code-inset-left, 0)",
+  },
   ".cm-line": { padding: "0 16px" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--dendrite-text)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
-import { type EditorHandle } from "../editor";
-import { formatValue } from "../format";
-import { outputRows, type PortRow } from "../port-rows";
-import { useEditor } from "./context";
-import { useObservable } from "./hooks";
+import { type EditorHandle } from "../../../session/editor";
+import { formatValue } from "../../../ports/format";
+import { outputRows, type PortRow } from "../../../ports/port-rows";
+import { useEditor } from "../../context";
+import { useObservable } from "../../hooks";
 import { Pane, type PaneProps } from "./Pane";
 import { AddPort, PortDeclaration, PortProblems, UndoStrip } from "./PortFields";
 import { type PortEdits, usePortEdits } from "./usePortEdits";
@@ -15,16 +15,21 @@ import { type PortEdits, usePortEdits } from "./usePortEdits";
 // declaring one still runs - it is a warning, not an error - so it is listed too, marked.
 // Declaring is what buys a type check and a required/desired contract, not permission.
 
-export function Outputs({ title, className, style }: PaneProps) {
+export interface OutputsProps extends PaneProps {
+  /** The declaration affordances - rename, type, add, remove - where the layer allows them. Default true. */
+  declarations?: boolean;
+}
+
+export function Outputs({ declarations = true, ...pane }: OutputsProps) {
   const { editor } = useEditor();
   return (
-    <Pane title={title} defaultTitle="Outputs" kind="outputs" className={className} style={style}>
-      {editor ? <OutputList editor={editor} /> : null}
+    <Pane {...pane} defaultTitle="Outputs" kind="outputs">
+      {editor ? <OutputList editor={editor} declarations={declarations} /> : null}
     </Pane>
   );
 }
 
-function OutputList({ editor }: { editor: EditorHandle }) {
+function OutputList({ editor, declarations }: { editor: EditorHandle; declarations: boolean }) {
   const { instance } = editor;
   const { outputs, error, stale } = useObservable(instance.outputs);
   const ports = useObservable(instance.ports);
@@ -55,6 +60,7 @@ function OutputList({ editor }: { editor: EditorHandle }) {
         <OutputRow
           key={`${row.layerId}/${row.name}`}
           row={row}
+          editable={declarations && row.editable}
           produced={outputs?.has(row.name) ?? false}
           value={outputs?.get(row.name)}
           edits={edits}
@@ -69,19 +75,21 @@ function OutputList({ editor }: { editor: EditorHandle }) {
           <code className="dendrite-output-value">{formatValue(outputs?.get(name))}</code>
         </div>
       ))}
-      {edits.undo ? <UndoStrip undo={edits.undo} /> : null}
-      {edits.canAdd ? <AddPort label="Add output" onClick={edits.add} /> : null}
+      {declarations && edits.undo ? <UndoStrip undo={edits.undo} /> : null}
+      {declarations && edits.canAdd ? <AddPort label="Add output" onClick={edits.add} /> : null}
     </>
   );
 }
 
 function OutputRow({
   row,
+  editable,
   produced,
   value,
   edits,
 }: {
   row: PortRow;
+  editable: boolean;
   produced: boolean;
   value: unknown;
   edits: PortEdits;
@@ -89,7 +97,7 @@ function OutputRow({
   return (
     <div className="dendrite-output-row">
       <div className="dendrite-port-head">
-        {row.editable ? (
+        {editable ? (
           <PortDeclaration row={row} edits={edits} />
         ) : (
           <>
@@ -100,7 +108,7 @@ function OutputRow({
       </div>
       {/* An em dash, not a blank: the declaration exists, the program just never assigned it. */}
       <code className="dendrite-output-value">{produced ? formatValue(value) : "—"}</code>
-      {row.editable ? <PortProblems messages={edits.problems(row)} /> : null}
+      {editable ? <PortProblems messages={edits.problems(row)} /> : null}
     </div>
   );
 }
@@ -116,6 +124,6 @@ const Empty = ({ compiled }: { compiled: boolean }) =>
     <p className="dendrite-empty">
       <span className="dendrite-empty-title">Nothing to run</span>
       <br />
-      Fix the errors under diagnostics.
+      Fix the errors marked in the code.
     </p>
   );

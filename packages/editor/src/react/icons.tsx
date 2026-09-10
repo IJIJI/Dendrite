@@ -18,9 +18,17 @@ export type IconName =
   | "moon"
   | "monitor"
   | "plus"
-  | "trash";
+  | "trash"
+  | "external";
 
 const glyphs: Record<IconName, ReactNode> = {
+  // arrow-up-right: opens elsewhere (the playground)
+  external: (
+    <>
+      <path d="M7 7h10v10" />
+      <path d="M7 17 17 7" />
+    </>
+  ),
   // undo-2 / redo-2
   undo: (
     <>

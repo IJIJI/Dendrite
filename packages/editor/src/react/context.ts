@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 
-import { type EditorHandle } from "../editor";
+import { type CodeOptions } from "../code/cm";
+import { type EditorHandle } from "../session/editor";
 
 //? The compound components' shared state: the mounted editor (null until <Editor.Canvas/>
 // has mounted it), the mount error if createEditor threw, and - for the canvas only - the
@@ -9,8 +10,8 @@ import { type EditorHandle } from "../editor";
 export interface EditorContextValue {
   editor: EditorHandle | null;
   error: unknown;
-  /** Internal: called by <Editor.Canvas/> with its element; returns the disposer. */
-  attach(parent: HTMLElement): () => void;
+  /** Internal: called by <Editor.Canvas/> with its element and code options; returns the disposer. */
+  attach(parent: HTMLElement, code: CodeOptions): () => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

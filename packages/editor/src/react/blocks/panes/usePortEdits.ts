@@ -8,8 +8,8 @@ import {
   Type,
 } from "@dendrite-lang/core";
 
-import { carryValue } from "../carry-value";
-import { declaredNames, editableLayer, layerPorts, type PortRow } from "../port-rows";
+import { carryValue } from "../../../session/carry-value";
+import { declaredNames, editableLayer, layerPorts, type PortRow } from "../../../ports/port-rows";
 import {
   addInput,
   addOutput,
@@ -20,7 +20,7 @@ import {
   uniqueName,
   updateInput,
   updateOutput,
-} from "../ports-edit";
+} from "../../../ports/ports-edit";
 
 //? The declaration verbs both port panes need, over one instance and one kind of port.
 // Nothing here validates: every verb builds new Ports and hands them to setLayer, which

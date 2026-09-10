@@ -6,7 +6,7 @@ import { createSubject, type Observable } from "./observable";
 // preference lives in localStorage so a reload keeps it - the one thing the editor persists on
 // its own, because it is a UI preference, not document data. A host with its own theme setting
 // never calls this: it writes the attribute itself and hides the toggle
-// (<Editor.TopBar themeToggle={false}/>), and nothing is stored on its behalf.
+// (leave `Editor.items.theme` out of the bar), and nothing is stored on its behalf.
 
 export type ThemeMode = "auto" | "light" | "dark";
 

@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import Live from "../../../../components/Live";
+
 The playground's presets and the repository's example programs, each rendered live so its inputs can be changed on the page. This page will grow one section per example.
 
 The first of them, the grader, in outline - the full version runs live below once this page
@@ -15,3 +17,26 @@ is written:
 let passing = $score >= 60
 output grade = If(passing, "Pass", "Fail")
 ```
+
+## The editor, larger
+
+The same program in the compact layout: the code with its inputs, outputs and diagnostics
+beside it, everything editable. It is what a host embeds when a reader should be able to work
+in the page rather than read one program.
+
+<Live
+  client:only="react"
+  layout="compact"
+  source={`// Edit the program, or change $threshold - only what depends on it recomputes.
+let scores = [4, 8, 15, 16, 23]
+let high   = Filter(scores, item => item > $threshold)
+output count = Length(high)
+output any   = Some(scores, item => item > $threshold)`}
+  ports={{
+    inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }],
+    outputs: [
+      { name: "count", type: { kind: "name", name: "number" } },
+      { name: "any", type: { kind: "name", name: "boolean" } },
+    ],
+  }}
+/>

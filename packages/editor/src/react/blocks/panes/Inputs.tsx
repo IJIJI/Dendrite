@@ -1,11 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { type EditorHandle } from "../editor";
-import { formatValue } from "../format";
-import { type WidgetSpec, widgetsFor } from "../port-rows";
-import { useEditor } from "./context";
-import { cx } from "./cx";
-import { editorKey, useObservable } from "./hooks";
+import { type EditorHandle } from "../../../session/editor";
+import { formatValue } from "../../../ports/format";
+import { type WidgetSpec, widgetsFor } from "../../../ports/port-rows";
+import { useEditor } from "../../context";
+import { cx } from "../../cx";
+import { editorKey, useObservable } from "../../hooks";
 import { Pane, type PaneProps } from "./Pane";
 import { AddPort, PortDeclaration, PortProblems, UndoStrip } from "./PortFields";
 import { type PortEdits, usePortEdits } from "./usePortEdits";
@@ -22,35 +22,53 @@ import { type PortEdits, usePortEdits } from "./usePortEdits";
 //
 // Whether a DECLARATION may be edited is the layer's policy, not this prop - except that a
 // wholly read-only pane (`readOnly` as a bare `true`) is a host saying "display only", so
-// it hides the declaration affordances too.
+// it hides the declaration affordances too, as `declarations={false}` does on its own:
+// values settable, declarations shown but not touched (a documented example).
 
 export type ReadOnly = boolean | ((name: string) => boolean);
 
 export interface InputsProps extends PaneProps {
   /** Show values as text instead of fields: `true` for every input, or a predicate by name. */
   readOnly?: ReadOnly;
+  /** The declaration affordances - rename, type, add, remove - where the layer allows them. Default true. */
+  declarations?: boolean;
 }
 
 const isReadOnly = (readOnly: ReadOnly, name: string): boolean =>
   typeof readOnly === "function" ? readOnly(name) : readOnly;
 
-export function Inputs({ readOnly = false, title, className, style }: InputsProps) {
+export function Inputs({ readOnly = false, declarations = true, ...pane }: InputsProps) {
   const { editor } = useEditor();
   return (
-    <Pane title={title} defaultTitle="Inputs" kind="inputs" className={className} style={style}>
-      {editor ? <InputList key={editorKey(editor)} editor={editor} readOnly={readOnly} /> : null}
+    <Pane {...pane} defaultTitle="Inputs" kind="inputs">
+      {editor ? (
+        <InputList
+          key={editorKey(editor)}
+          editor={editor}
+          readOnly={readOnly}
+          declarations={declarations}
+        />
+      ) : null}
     </Pane>
   );
 }
 
-function InputList({ editor, readOnly }: { editor: EditorHandle; readOnly: ReadOnly }) {
+function InputList({
+  editor,
+  readOnly,
+  declarations,
+}: {
+  editor: EditorHandle;
+  readOnly: ReadOnly;
+  declarations: boolean;
+}) {
   const { instance } = editor;
   const values = useObservable(instance.values);
   const ports = useObservable(instance.ports);
   const diagnostics = useObservable(instance.diagnostics);
   const widgets = useMemo(() => widgetsFor(ports), [ports]);
   const edits = usePortEdits(instance, ports, diagnostics, "inputs");
-  const declaring = readOnly !== true;
+  const declaring = declarations && readOnly !== true;
 
   return (
     <>
@@ -70,7 +88,7 @@ function InputList({ editor, readOnly }: { editor: EditorHandle; readOnly: ReadO
           />
         ))
       )}
-      {edits.undo ? <UndoStrip undo={edits.undo} /> : null}
+      {declaring && edits.undo ? <UndoStrip undo={edits.undo} /> : null}
       {declaring && edits.canAdd ? <AddPort label="Add input" onClick={edits.add} /> : null}
     </>
   );

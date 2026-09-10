@@ -12,8 +12,11 @@ yarn workspace dendrite-docs typecheck  # astro check
 ```
 
 The site bundles the language and editor SOURCE through Vite aliases (`astro.config.ts`), so
-edits to either package show up here without a package build. Live examples open in the
-playground at `PUBLIC_PLAYGROUND_URL` (`http://localhost:5173/` when unset).
+edits to either package show up here without a package build - except in the config itself,
+which loads before the aliases exist: the remark plugin highlights through the editor's
+published entry, so run `yarn workspace @dendrite-lang/editor run build` once after cloning and
+after changing what that plugin imports (`yarn build` at the root does it in order). Live
+examples open in the playground at `PUBLIC_PLAYGROUND_URL` (`http://localhost:5173/` when unset).
 
 ## Where things are
 

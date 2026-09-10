@@ -233,7 +233,7 @@ hover range. Tune them in the playground and settle them.
 **Why deferred:** they are usable; the palette and surfaces came first.
 
 **What it requires:** trial values via DevTools on the variables and the constants in
-`packages/editor/src/cm.ts`, then mirror the result in `brand/dendrite-tokens.css`
+`packages/editor/src/code/cm.ts`, then mirror the result in `brand/dendrite-tokens.css`
 (`--dn-selection`, `--dn-editor-active-line`).
 
 ---
@@ -280,34 +280,128 @@ Collected 2026-09-09 when the scaffold went up, for the content pass:
 
 ---
 
-## Editor — the example layout: read-only code, settable inputs, live outputs
+## Editor — the layouts: Minimal · Compact · Full — DONE 2026-09-10
 
-**What (sharpened 2026-09-09):** a layout preset for a documented example - the program,
-read-only; the inputs, settable; the outputs, live; one "open in playground" affordance. No
-declarations, no diagnostics, no menus. The PHP manual's "example + output" as a live block,
-where the reader changes the inputs. This may well be the only editor the docs need; the
-more equipped, editable embed (compact layout + enlarge-to-page) stays on the table. Either
-way **each is a layout the editor ships**, chosen by the host - a config, not a fork.
+**What landed** (five commits, `.claude/plans` "the editor's layouts"): three presets on one
+`LayoutConfig` (`code` = `editable` + `gutters`, `declarations`, `end`, `topBar`), each with its
+own defaults, nothing read-only by default; the top bar as one item model (menus, actions,
+elements, and the editor's own controls as `Editor.items` a host lists or leaves out - no
+`themeToggle`); `Editor.Actions` as the cluster in a bar or in a code block's corner;
+`documentUrl` as the one open-in-playground shape; a collapsible `Pane` (`<details>`) that
+Diagnostics fills with a count and never opens by itself; `Editor.Source` + `sourceParts` /
+`sourceHtml` so a static block and a live Minimal one share markup and stylesheet. The docs
+run Minimal in the hero (read-only, settable inputs, `→` lines) and Compact on the splash; the
+reference's examples are static blocks with a build-time open link.
 
-**Why deferred:** the docs site's first island (the splash) runs the full editor and shows
-what is wrong with that in a small box: the share and undo/redo controls sit at different
-heights outside a top bar that holds nothing else, and 24rem does not fit the default
-layout. Left in place as the test case for this work.
+**Round two, the same day:** the actions cluster is `actions` + `actionsAt`, six generic spots
+(the bar's start or end, floating over the code's start or end, a strip above the side panes,
+the end of Minimal's input strip), each preset supporting its own subset with its own default
+and a `bar-*` spot falling back when there is no bar; the input strip is a wrapping grid
+(`inputs: "row" | "column"`, cells at least `--dendrite-inline-min`), the code takes
+`--dendrite-code-min-height`; `Editor.Source` is the code block alone and the docs' `DenCode`
+renders it on the server. The landing is one editable Minimal block beside the wordmark; the
+Compact one moved to the examples page. What the entry below
+called "the example layout" is `MinimalLayout`; the "compact + enlarge-to-page" embed is
+`CompactLayout` without the enlarge, which waits for a host that wants it.
 
-**The design is to be decided.** Open: whether the code is a read-only canvas (CodeMirror
-`EditorState.readOnly` - keeps highlighting and selection) or static spans via `styledRanges`
-(lighter, no CodeMirror on the page); outputs beside or under the code; where "open in
-playground" sits with no bar; whether the reference pages should render this instead of
-`DenCode` + the derived output text (probably not - the text is instant and searchable).
+---
 
-**What it requires:** `Editor.ExampleLayout` (or a name to be chosen) in
-`packages/editor/src/react/`; `readOnly` on the canvas; the inputs pane as it is (values
-editable, declarations not - `readOnly` for declarations is already the layer policy);
-`Live` in `apps/docs` switching to it; a height that follows content rather than a fixed
-box.
+## Editor — documenting the configs, with a layout configurator in the docs
 
-**Driving need:** the language docs' examples and the examples page; the splash island as
-the smoke test.
+**What:** a docs page per preset and one for `LayoutConfig`, and a configurator: controls for
+each option that render the preset live and print the JSX to paste.
+
+**Why deferred:** the presets landed with their README table; the docs' content pass comes
+first, and the configurator is a docs island like `Live` once the content exists.
+
+**Driving need:** host developers picking a preset without reading the source.
+
+---
+
+## Editor — drill down on `LayoutConfig`
+
+**What:** revisit the shape as a whole once real hosts use it: flat vs nested (the top bar
+pieces hosts reach for, `title` and `start`, broken out of `topBar`?), whether `code` and
+`declarations` belong on the canvas and the panes or on the layout, what a host overrides
+most, and whether the presets need any config at all beyond defaults.
+
+**Why deferred:** decided nested and whole on 2026-09-10 to ship; the answer needs usage.
+
+**Driving need:** Beacon embedding the editor; the docs' configurator.
+
+---
+
+## Docs — the remark highlighting plugin as a package
+
+**What:** `@dendrite-lang/remark-den`: the ```den fence and `{:den}` inline plugin in
+`apps/docs/src/plugins/remark-den.ts`, published, over the editor's `sourceHtml` /
+`sourceParts`, so any Markdown site highlights Dendrite the way the editor does.
+
+**Why deferred:** one consumer; the docs import it as a local file.
+
+**Driving need:** a second site (a blog, Beacon's docs) writing Dendrite in Markdown.
+
+---
+
+## Editor — the stylesheet per group
+
+**What:** `style.css` split into `src/styles/{layout,panes,chrome,tokens}.css`, one per folder of
+`src/react/`, bundled into the published `style.css` by the build (esbuild follows `@import`).
+
+**Why deferred:** at ~800 lines one file with sections that mirror the folders still reads; the
+split pays once the layouts land and the file passes ~1200 lines.
+
+**What it requires:** a CSS entry in `tsup.config.ts`, the `./style.css` export pointing at
+`dist/`, the `@layer dendrite` wrapper kept around the bundle.
+
+---
+
+## Editor — usable on mobile
+
+**What:** the editor on a phone: the panes under the code instead of beside it, touch-sized
+controls, the top bar collapsing its menus, CodeMirror's mobile quirks (virtual keyboard, no
+hover) handled.
+
+**Why deferred:** the Compact layout (panes beside on wide, below on narrow) is the first step and
+lands with the layouts; the rest is its own pass with real devices.
+
+**What it requires:** a breakpoint set in `style.css`, the Full layout adopting the same
+wrap, the port fields' hit targets, a test walk on iOS and Android.
+
+**Driving need:** the docs read on phones; the playground share links open there.
+
+---
+
+## Docs — op examples with inputs, and the reference going live where it helps
+
+**What:** some stdlib examples declare inputs with defaults (`If`, the comparisons, `Filter`,
+`Map`, `Reduce`, `Some`), so the reader changes a value and watches the output move - the PHP
+manual moment. The reference renders such an example with the Minimal layout; a literal-only
+example stays the static block (searchable, JS-free, verified by the build). The same rule
+applies to any docs page: live where an input makes a difference, static otherwise.
+
+**Why deferred:** needs the Minimal layout first, and the static block and the layout must share
+one stylesheet so the two renderings look identical on the same page.
+
+**What it requires:** `den` (or a sibling) taking ports, so an example carries its inputs and
+their `default`s; `stdlib/examples.test.ts` still runs every example with no host; the reference
+component choosing per example; the static block wearing the editor's classes.
+
+**Driving need:** the stdlib reference and the language docs' examples.
+
+---
+
+## Editor — a status bar
+
+**What:** `Editor.StatusBar`, data-driven like the top bar: the editor's own items first
+(diagnostics count with click-to-open, cursor line and column), then the host's - the first
+real one being a link replica's `LinkStatus` (connected, stale, rejected). The Full layout adds
+it as one line.
+
+**Why deferred:** nothing in the playground needs it; the collapsible Diagnostics pane covers the
+Compact layout's one-line summary; the link has no host in this repo yet.
+
+**Driving need:** a host over `@dendrite-lang/link` (Beacon) showing the connection's state.
 
 ---
 
@@ -317,7 +411,7 @@ the smoke test.
 host or user can trade code width for pane width.
 
 **Why deferred:** `Row` / `Column` were built so splitters can be layered on without changing
-their API (`packages/editor/src/react/Layout.tsx`); nothing needs them yet.
+their API (`packages/editor/src/react/layouts/Layout.tsx`); nothing needs them yet.
 
 **What it requires:** a `Splitter` element (or a `resizable` prop on `Row` / `Column`) with
 pointer-event dragging, min sizes, an ARIA `separator` with arrow-key resizing, the resulting size
@@ -334,7 +428,7 @@ written to a variable such as `--dendrite-side-width`, and a decision on persist
 `.cm-panel.cm-search`) and go-to-line (`Ctrl+Alt+G`, `.cm-panel.cm-gotoLine`), plus the lint
 hover tooltip.
 
-**Why deferred:** `dendriteTheme` (`packages/editor/src/cm.ts`) only recolours their surfaces,
+**Why deferred:** `dendriteTheme` (`packages/editor/src/code/cm.ts`) only recolours their surfaces,
 buttons and fields; the layout (inline labels, checkboxes, spacing, close button) is still
 CodeMirror's default.
 
@@ -351,7 +445,7 @@ custom panel via `search({ createPanel })` from `@codemirror/search` (then a dir
 **What:** Render an input whose type is a struct as one control per field, instead of the raw JSON
 box it gets today.
 
-**Why deferred:** `controlFor` (`packages/editor/src/input-widgets.ts`) follows the `extends` chain to
+**Why deferred:** `controlFor` (`packages/editor/src/ports/port-rows.ts`) follows the `extends` chain to
 a primitive and falls back to `json` for everything else, so arrays, functions, opaque types and
 structs all land in the same textarea. That was fine while structs came only from a host. Once a
 port layer can declare its own struct — which it can, as of the ports work — a user will routinely
@@ -704,7 +798,7 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
   wrap their own envelope. See `packages/core/src/language/infra/serialise.ts`.
   **Follow-up:** when a second format version lands, shape `migrate()` as a stepwise chain (one
   entry per retired version, never edited again) like the editor's `applyMigrations` in
-  `packages/editor/src/document.ts` — or move that helper into core and share it.
+  `packages/editor/src/session/document.ts` — or move that helper into core and share it.
 - **`environment.ts` (DONE)** — `createEnvironment` with `parse`/`analyse`/`compile`/`load`/`run`/
   `createRunner`/`createRuntime`. `load(saved)` dispatches on form and always re-analyses
   (`LoadResult` = `CompileResult` + a `stage:"load"` arm). A `register(id, saved)` convenience was

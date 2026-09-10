@@ -2,7 +2,7 @@ import { serialiseSource } from "@dendrite-lang/core";
 import { describe, expect, it } from "vitest";
 
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
-import { decodePayload, encodeDocument } from "./permalink";
+import { decodePayload, documentUrl, encodeDocument } from "./permalink";
 
 const doc = (): EditorDocument => ({
   version: DOCUMENT_VERSION,
@@ -26,6 +26,13 @@ describe("permalink codec", () => {
       version: DOCUMENT_VERSION + 1,
     } as EditorDocument);
     expect(await decodePayload(newer)).toBeNull();
+  });
+
+  it("documentUrl puts the payload in the fragment of a base", async () => {
+    const url = await documentUrl("https://example.test/playground/", doc());
+    const [base, payload] = url.split("#");
+    expect(base).toBe("https://example.test/playground/");
+    expect(await decodePayload(payload!)).toEqual(doc());
   });
 
   it("fails soft on malformed or foreign payloads", async () => {

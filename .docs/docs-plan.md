@@ -43,7 +43,7 @@ it.
 apps/docs/
   astro.config.mjs     starlight(); react(); base = DOCS_BASE ?? "/"; site; the same source aliases as the playground
   src/styles/dendrite.css   --sl-* mapped onto the brand tokens; fonts via @fontsource (Archivo, IBM Plex Mono, Kode Mono)
-  src/components/Live.tsx   <Editor document> + DefaultLayout in a fixed-height box; "open in playground" link
+  src/components/Live.tsx   <Editor document> + DefaultLayout (since 2026-09-10: FullLayout, then the Minimal / Compact presets) in a fixed-height box; "open in playground" link
   src/pages/stdlib/ops.astro   StarlightPage; walks descriptor.ops by category → signature, description, examples
   src/content/docs/
     index.mdx                 the splash

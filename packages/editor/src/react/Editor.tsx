@@ -1,8 +1,9 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { type Connection, ownStack } from "../connection";
-import { type EditorDocument } from "../document";
-import { createEditor, type EditorHandle } from "../editor";
+import { type CodeOptions } from "../code/cm";
+import { type Connection, ownStack } from "../session/connection";
+import { type EditorDocument } from "../session/document";
+import { createEditor, type EditorHandle } from "../session/editor";
 import { EditorContext, type EditorContextValue } from "./context";
 
 //? <Editor>: the provider of the compound components. Holds what to connect to and, once
@@ -44,12 +45,13 @@ export function Editor(props: EditorProps) {
   });
 
   const attach = useCallback(
-    (parent: HTMLElement): (() => void) => {
+    (parent: HTMLElement, code: CodeOptions): (() => void) => {
       try {
         const editor = createEditor(parent, {
           // No connection means the props are the ownStack options, so `document` is there.
           connection:
             connection ?? ownStack({ document: document as EditorDocument, language, layers }),
+          ...code,
           onChange: (doc) => onChangeRef.current?.(doc),
         });
         setMounted({ editor, error: undefined });
