@@ -18,8 +18,11 @@ import { barItems, placeActions } from "./placement";
 export type MinimalSpot = "inputs" | "code-start" | "code-end" | "bar-start" | "bar-end";
 
 export interface MinimalLayoutProps extends LayoutConfig<MinimalSpot> {
-  /** The inputs as one wrapping line of fields, or stacked rows (for multi-line values). */
-  inputs?: "row" | "stacked";
+  /**
+   * The inputs as a grid of `$name = [field]` cells wrapping into rows (`row`, the default;
+   * cells at least `--dendrite-inline-min` wide), or as the pane's stacked rows (`column`).
+   */
+  inputs?: "row" | "column";
 }
 
 export function MinimalLayout({

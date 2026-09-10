@@ -179,6 +179,11 @@
     height: auto;
   }
 
+  /* A host asks for a taller code area that still grows with its content (the landing) */
+  .dendrite-minimal-layout .dendrite-canvas .cm-editor {
+    min-height: var(--dendrite-code-min-height, 0);
+  }
+
   .dendrite-minimal-layout > .dendrite-code + .dendrite-pane {
     border-top: 1px solid var(--dendrite-border);
   }
@@ -463,11 +468,14 @@
     color: var(--dendrite-error);
   }
 
-  /* The inputs in one wrapping line, "$name = [field]" each, as a documented example shows
-     them (a class a host or a layout puts on the pane). The type tag steps aside. */
+  /* The inputs as a grid of "$name = [field]" cells that wrap into rows, as a documented
+     example shows them (a class a host or a layout puts on the pane). Cells are at least
+     --dendrite-inline-min wide (long names get room), auto-fill so a lone field keeps its
+     cell instead of stretching across the strip, the field fills its cell, the type tag
+     steps aside. A multi-line value (the JSON field) takes a whole row. */
   .dendrite-inputs-inline {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--dendrite-inline-min, 12rem), 1fr));
     align-items: center;
     gap: 8px 20px;
   }
@@ -476,11 +484,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     margin: 0;
+  }
+
+  .dendrite-inputs-inline .dendrite-input-row:has(> .dendrite-json-input) {
+    grid-column: 1 / -1;
+    align-items: flex-start;
   }
 
   .dendrite-inputs-inline .dendrite-input-label,
   .dendrite-inputs-inline .dendrite-port-head {
+    flex: none;
     margin: 0;
   }
 
@@ -494,17 +509,17 @@
   }
 
   .dendrite-inputs-inline .dendrite-input-row > input[type="number"],
-  .dendrite-inputs-inline .dendrite-input-row > input[type="text"] {
-    width: 9ch;
-  }
-
-  .dendrite-inputs-inline .dendrite-json-input {
-    width: 16rem;
+  .dendrite-inputs-inline .dendrite-input-row > input[type="text"],
+  .dendrite-inputs-inline .dendrite-json-input,
+  .dendrite-inputs-inline .dendrite-input-value {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
 
   .dendrite-inputs-inline .dendrite-empty,
   .dendrite-inputs-inline .dendrite-port-undo {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
   }
 
   /* Read-only value: a code well */
