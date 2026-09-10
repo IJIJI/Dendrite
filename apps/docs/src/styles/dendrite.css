@@ -61,28 +61,9 @@
   font-size: 0.9em;
 }
 
-/* A Dendrite block (DenCode, a ```den fence): the editor's canvas face on the page's well,
-   and under it what the snippet produces, as the reference page derives it at build time.
-   `pre.den`, not `.den` - inline code carries the class too and keeps Starlight's box. */
-pre.den {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--sl-color-gray-5);
-  border-radius: 2px;
-  background: var(--sl-color-gray-6);
-  font: 400 13px/1.6 var(--sl-font-mono);
-  overflow-x: auto;
-}
-
-pre.den + .produces {
-  margin: 0 0 1.5rem;
-  padding: 0.4rem 1rem;
-  border: 1px solid var(--sl-color-gray-5);
-  border-top: 0;
-  border-radius: 0 0 2px 2px;
-  font: 400 12px/1.6 var(--sl-font-mono);
-  color: var(--sl-color-gray-3);
-}
+/* Dendrite blocks - a ```den fence, DenCode, the reference's examples - are the editor's own
+   static Source markup and wear its stylesheet (customCss loads it); `not-content` keeps
+   Starlight's prose rules off them. Only the inline form is styled here. */
 
 .op .signature code {
   font-size: 0.85em;
@@ -94,13 +75,16 @@ code.den .tok-ident {
   color: inherit;
 }
 
-/* A live example: the real editor in the page. The layout's column fills the box because
-   the box is a flex row. */
+/* A live example: the real editor in the page, on a preset that follows its content. The
+   min-height holds the fold while the client-only island hydrates. */
 .live {
-  display: flex;
-  height: 24rem;
+  min-height: 12rem;
   margin: 1.5rem 0;
-  border: 1px solid var(--sl-color-gray-4);
+}
+
+.sl-markdown-content .live,
+.sl-markdown-content .not-content.dendrite-minimal-layout {
+  margin: 1.5rem 0;
 }
 
 /* A sidebar label that is code (the head script in astro.config.ts marks it): the editor's

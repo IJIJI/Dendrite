@@ -39,7 +39,11 @@ export default defineConfig({
       customCss: ["@dendrite-lang/editor/style.css", "./src/styles/dendrite.css"],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/IJIJI/Dendrite" }],
       // The social links open in a new tab (Starlight's own component, one attribute added).
-      components: { SocialIcons: "./src/components/SocialIcons.astro" },
+      components: {
+        SocialIcons: "./src/components/SocialIcons.astro",
+        // The splash hero: the wordmark as the title, a live Minimal block as the image.
+        Hero: "./src/components/Hero.astro",
+      },
       // Sidebar labels are plain text, so a label that is CODE - `stdlib` - is marked from a
       // script rather than markup; dendrite.css sets it in Kode Mono. Runs before first paint.
       head: [

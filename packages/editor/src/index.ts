@@ -6,6 +6,7 @@
 
 export * from "./observable"; // watch, + Observable, Subject, createSubject re-exported from core
 export * from "./code/tokens"; // styledRanges, lineStartOffsets, toOffset, TokenClass, StyledRange
+export * from "./code/source"; // sourceParts, sourceHtml - a program highlighted for a static rendering
 export * from "./code/cm"; // dendriteHighlighting, toLintDiagnostics (the only CodeMirror-aware module)
 export * from "./ports/port-rows"; // widgetsFor, outputRows, editableLayer - declarations as pane rows
 export * from "./ports/format"; // formatValue - the one value→text rule panes share

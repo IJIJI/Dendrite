@@ -8,10 +8,8 @@ head:
     content: Dendrite - a declarative dataflow language
 template: splash
 hero:
+  # The wordmark and a live block are the Hero override's (src/components/Hero.astro).
   tagline: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
-  image:
-    light: ../../assets/dendrite-wordmark.svg
-    dark: ../../assets/dendrite-wordmark-dark.svg
   actions:
     # Relative, so it works under any base. Frontmatter cannot read env, so the playground
     # link is the deployed URL: a plain link, not the share round trip (the island's "open
@@ -40,12 +38,21 @@ import Live from "../../components/Live";
   </Card>
 </CardGrid>
 
+{/* The editable preset, as a host would embed it: the Compact test case. */}
+
 <Live
   client:only="react"
-  source={`// Change $threshold on the right; only what depends on it recomputes.
+  layout="compact"
+  source={`// Edit the program, or change $threshold; only what depends on it recomputes.
 let scores = [4, 8, 15, 16, 23]
 let high   = Filter(scores, item => item > $threshold)
 output count = Length(high)
 output any   = Some(scores, item => item > $threshold)`}
-  ports={{ inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }], outputs: [] }}
+  ports={{
+    inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }],
+    outputs: [
+      { name: "count", type: { kind: "name", name: "number" } },
+      { name: "any", type: { kind: "name", name: "boolean" } },
+    ],
+  }}
 />

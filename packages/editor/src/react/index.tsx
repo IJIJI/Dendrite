@@ -13,6 +13,7 @@ import { FullLayout } from "./layouts/FullLayout";
 import { Column, Row } from "./layouts/Layout";
 import { MinimalLayout } from "./layouts/MinimalLayout";
 import { Outputs } from "./blocks/panes/Outputs";
+import { Source } from "./blocks/Source";
 import { TopBar } from "./blocks/TopBar";
 
 export const Editor = Object.assign(EditorRoot, {
@@ -22,6 +23,7 @@ export const Editor = Object.assign(EditorRoot, {
   Outputs,
   Diagnostics,
   Actions,
+  Source,
   Row,
   Column,
   MinimalLayout,
@@ -36,6 +38,7 @@ export { Wordmark } from "./brand";
 export { defaultEnd } from "./blocks/Actions";
 export type { EditorProps } from "./Editor";
 export type { CanvasProps } from "./blocks/Canvas";
+export type { SourceProps } from "./blocks/Source";
 export type { PaneProps } from "./blocks/panes/Pane";
 export type { InputsProps, ReadOnly } from "./blocks/panes/Inputs";
 export type { OutputsProps } from "./blocks/panes/Outputs";

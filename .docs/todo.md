@@ -280,34 +280,57 @@ Collected 2026-09-09 when the scaffold went up, for the content pass:
 
 ---
 
-## Editor — the example layout: read-only code, settable inputs, live outputs
+## Editor — the layouts: Minimal · Compact · Full — DONE 2026-09-10
 
-**What (sharpened 2026-09-09):** a layout preset for a documented example - the program,
-read-only; the inputs, settable; the outputs, live; one "open in playground" affordance. No
-declarations, no diagnostics, no menus. The PHP manual's "example + output" as a live block,
-where the reader changes the inputs. This may well be the only editor the docs need; the
-more equipped, editable embed (compact layout + enlarge-to-page) stays on the table. Either
-way **each is a layout the editor ships**, chosen by the host - a config, not a fork.
+**What landed** (five commits, `.claude/plans` "the editor's layouts"): three presets on one
+`LayoutConfig` (`code` = `editable` + `gutters`, `declarations`, `end`, `topBar`), each with its
+own defaults, nothing read-only by default; the top bar as one item model (menus, actions,
+elements, and the editor's own controls as `Editor.items` a host lists or leaves out - no
+`themeToggle`); `Editor.Actions` as the cluster in a bar or in a code block's corner;
+`documentUrl` as the one open-in-playground shape; a collapsible `Pane` (`<details>`) that
+Diagnostics fills with a count and never opens by itself; `Editor.Source` + `sourceParts` /
+`sourceHtml` so a static block and a live Minimal one share markup and stylesheet. The docs
+run Minimal in the hero (read-only, settable inputs, `→` lines) and Compact on the splash; the
+reference's examples are static blocks with a build-time open link. What the entry below
+called "the example layout" is `MinimalLayout`; the "compact + enlarge-to-page" embed is
+`CompactLayout` without the enlarge, which waits for a host that wants it.
 
-**Why deferred:** the docs site's first island (the splash) runs the full editor and shows
-what is wrong with that in a small box: the share and undo/redo controls sit at different
-heights outside a top bar that holds nothing else, and 24rem does not fit the default
-layout. Left in place as the test case for this work.
+---
 
-**The design is to be decided.** Open: whether the code is a read-only canvas (CodeMirror
-`EditorState.readOnly` - keeps highlighting and selection) or static spans via `styledRanges`
-(lighter, no CodeMirror on the page); outputs beside or under the code; where "open in
-playground" sits with no bar; whether the reference pages should render this instead of
-`DenCode` + the derived output text (probably not - the text is instant and searchable).
+## Editor — documenting the configs, with a layout configurator in the docs
 
-**What it requires:** `Editor.ExampleLayout` (or a name to be chosen) in
-`packages/editor/src/react/layouts/`; `readOnly` on the canvas; the inputs pane as it is (values
-editable, declarations not - `readOnly` for declarations is already the layer policy);
-`Live` in `apps/docs` switching to it; a height that follows content rather than a fixed
-box.
+**What:** a docs page per preset and one for `LayoutConfig`, and a configurator: controls for
+each option that render the preset live and print the JSX to paste.
 
-**Driving need:** the language docs' examples and the examples page; the splash island as
-the smoke test.
+**Why deferred:** the presets landed with their README table; the docs' content pass comes
+first, and the configurator is a docs island like `Live` once the content exists.
+
+**Driving need:** host developers picking a preset without reading the source.
+
+---
+
+## Editor — drill down on `LayoutConfig`
+
+**What:** revisit the shape as a whole once real hosts use it: flat vs nested (the top bar
+pieces hosts reach for, `title` and `start`, broken out of `topBar`?), whether `code` and
+`declarations` belong on the canvas and the panes or on the layout, what a host overrides
+most, and whether the presets need any config at all beyond defaults.
+
+**Why deferred:** decided nested and whole on 2026-09-10 to ship; the answer needs usage.
+
+**Driving need:** Beacon embedding the editor; the docs' configurator.
+
+---
+
+## Docs — the remark highlighting plugin as a package
+
+**What:** `@dendrite-lang/remark-den`: the ```den fence and `{:den}` inline plugin in
+`apps/docs/src/plugins/remark-den.ts`, published, over the editor's `sourceHtml` /
+`sourceParts`, so any Markdown site highlights Dendrite the way the editor does.
+
+**Why deferred:** one consumer; the docs import it as a local file.
+
+**Driving need:** a second site (a blog, Beacon's docs) writing Dendrite in Markdown.
 
 ---
 

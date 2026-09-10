@@ -1,14 +1,25 @@
 ---
-// A Dendrite snippet, highlighted by the editor's own lexer rendered to spans at build time
-// (den-parts.ts) - the canvas and the page share one classification. In Markdown the same
-// thing is a ```den fence (remark-den.ts); this component is for .astro templates.
-import { denHtml } from "../lib/den-parts";
+// A Dendrite snippet, highlighted by the editor's own lexer at build time (sourceHtml) in the
+// markup of the editor's static Source block, so it looks exactly like a live MinimalLayout
+// on the same page. `not-content` keeps Starlight's prose rules off it (its markdown.css
+// guards every rule with :not(.not-content *)); the editor's stylesheet does the rest. In
+// Markdown the same thing is a ```den fence (remark-den.ts); this component is for .astro
+// templates. The slot lands in the code's corner (an "open in the playground" link).
+import { sourceHtml } from "@dendrite-lang/editor";
 
 interface Props {
   code: string;
+  /** Set when a corner slot is given: how far the code keeps clear of it (Actions.tsx measures the live one). */
+  inset?: string;
 }
 
-const { code } = Astro.props;
+const { code, inset } = Astro.props;
 ---
 
-<pre class="den"><code set:html={denHtml(code)} /></pre>
+<div class="not-content dendrite-minimal-layout">
+  <div class="dendrite-code" style={inset ? `--dendrite-code-inset-right: ${inset}` : undefined}>
+    <pre class="dendrite-source"><code set:html={sourceHtml(code)} /></pre>
+    <slot />
+  </div>
+  <slot name="after" />
+</div>

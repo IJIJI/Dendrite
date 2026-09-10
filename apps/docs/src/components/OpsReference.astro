@@ -1,7 +1,10 @@
 ---
 // One stdlib segment (an op `category`), from the descriptor at build time: signature,
 // description, and every example - RUN, so each shows what it produces. Derived rather
-// than written: it cannot disagree with reality, because it is reality at build time.
+// than written: it cannot disagree with reality, because it is reality at build time. An
+// example is the editor's static block (DenCode) with the produced values in the outputs
+// pane's own row markup beneath it, so it looks exactly like a live MinimalLayout - and an
+// "open in the playground" link in its corner, the document encoded at build time.
 import {
   createEnvironment,
   createStdlib,
@@ -9,6 +12,7 @@ import {
   type SavedProgram,
   typeToString,
 } from "@dendrite-lang/core";
+import { DOCUMENT_VERSION, documentUrl } from "@dendrite-lang/editor";
 
 import DenCode from "./DenCode.astro";
 
@@ -17,6 +21,9 @@ interface Props {
 }
 
 const { category } = Astro.props;
+
+// The deployed path in CI (PUBLIC_PLAYGROUND_URL), the playground's dev server otherwise.
+const PLAYGROUND: string = import.meta.env.PUBLIC_PLAYGROUND_URL ?? "http://localhost:5173/";
 
 const env = createEnvironment(createStdlib());
 const composed = env.forProgram([], []);
@@ -43,38 +50,83 @@ const signature = (op: OpDefinition): string => {
   return `${span("op", op.name)}${span("punct", "(")}${inputs}${span("punct", ")")} ${span("operator", "->")} ${typeToString(op.output)}`;
 };
 
-// "name = value" per output. Examples are literal-only, so running needs no inputs.
-const produced = (example: SavedProgram): string[] => {
+// [name, value] per output. Examples are literal-only, so running needs no inputs.
+const produced = (example: SavedProgram): [string, string][] => {
   const loaded = pipeline.load(example);
   if (!loaded.ok) return [];
-  return [...pipeline.run(loaded.program, {})].map(
-    ([name, value]) => `${name} = ${JSON.stringify(value)}`,
-  );
+  return [...pipeline.run(loaded.program, {})].map(([name, value]) => [
+    name,
+    JSON.stringify(value),
+  ]);
 };
+
+// The link the live block's "open in playground" would build, built here instead.
+const openUrl = (example: SavedProgram): Promise<string> =>
+  documentUrl(PLAYGROUND, { version: DOCUMENT_VERSION, program: example, inputValues: {} });
+
+const examples = await Promise.all(
+  ops.map(async (op) => ({
+    op,
+    examples: await Promise.all(
+      (op.examples ?? [])
+        .filter((example) => example.form === "code")
+        .map(async (example) => ({
+          source: example.form === "code" ? example.source : "",
+          lines: produced(example),
+          href: await openUrl(example),
+        })),
+    ),
+  })),
+);
 ---
 
 {
-  ops.map((op) => (
+  examples.map(({ op, examples }) => (
     <section class="op">
       <h2 id={op.name}>{op.name}</h2>
       <p class="signature">
         <code class="den" set:html={signature(op)} />
       </p>
       <p>{op.description}</p>
-      {op.examples?.map((example) =>
-        example.form === "code" ? (
-          <>
-            <DenCode code={example.source} />
-            {/* set:text, so no template whitespace can land inside the <pre>. */}
-            <pre
-              class="produces"
-              set:text={produced(example)
-                .map((line) => `→ ${line}`)
-                .join("\n")}
-            />
-          </>
-        ) : null,
-      )}
+      {examples.map(({ source, lines, href }) => (
+        <DenCode code={source} inset="52px">
+          {/* The corner cluster, static: one link. The glyph is icons.tsx' `external`. */}
+          <div class="dendrite-actions">
+            <a
+              class="dendrite-icon-button"
+              href={href}
+              target="_blank"
+              rel="noopener"
+              title="Open in playground"
+              aria-label="Open in playground"
+            >
+              <svg
+                class="dendrite-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="square"
+                stroke-linejoin="miter"
+                aria-hidden="true"
+              >
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg>
+            </a>
+          </div>
+          <div slot="after" class="dendrite-pane dendrite-outputs dendrite-outputs-lines">
+            {lines.map(([name, value]) => (
+              <div class="dendrite-output-row">
+                <div class="dendrite-port-head">
+                  <span class="dendrite-output-name">{name}</span>
+                </div>
+                <code class="dendrite-output-value">{value}</code>
+              </div>
+            ))}
+          </div>
+        </DenCode>
+      ))}
     </section>
   ))
 }

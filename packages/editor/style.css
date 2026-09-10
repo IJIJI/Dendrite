@@ -147,6 +147,22 @@
     min-width: 0;
   }
 
+  /* A program shown, not run (<Editor.Source/>, a docs code block): the canvas' face on a
+     <pre>. Font, line height and padding mirror what dendriteTheme (cm.ts) gives .cm-content,
+     so a static block and a live one are indistinguishable; keep the two in step. */
+  .dendrite-source {
+    margin: 0;
+    padding: 12px var(--dendrite-code-inset-right, 16px) 12px 16px;
+    overflow-x: auto;
+    background: var(--dendrite-bg);
+    color: var(--dendrite-text);
+    font: 400 14px/1.65 var(--dendrite-mono);
+  }
+
+  .dendrite-source > code {
+    font: inherit;
+  }
+
   /* Minimal: a bordered block on the panel surface - the input strip, the code, the lines */
   .dendrite-minimal-layout {
     border: 1px solid var(--dendrite-border);
@@ -668,7 +684,8 @@
     color: var(--dendrite-muted);
   }
 
-  .dendrite-outputs-lines .dendrite-input-type {
+  /* No type or status tags on a line: the value is the point, as in a static block */
+  .dendrite-outputs-lines .dendrite-tag {
     display: none;
   }
 
