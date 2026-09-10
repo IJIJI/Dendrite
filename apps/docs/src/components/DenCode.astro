@@ -1,11 +1,14 @@
 ---
-// A Dendrite snippet, highlighted by the editor's own lexer at build time (sourceHtml) in the
-// markup of the editor's static Source block, so it looks exactly like a live MinimalLayout
-// on the same page. `not-content` keeps Starlight's prose rules off it (its markdown.css
-// guards every rule with :not(.not-content *)); the editor's stylesheet does the rest. In
-// Markdown the same thing is a ```den fence (remark-den.ts); this component is for .astro
-// templates. The slot lands in the code's corner (an "open in the playground" link).
-import { sourceHtml } from "@dendrite-lang/editor";
+// A Dendrite snippet, highlighted by the editor's own lexer at build time: the editor's own
+// static block (Editor.Source), rendered on the server, in the wrapper a MinimalLayout has -
+// so a snippet and a live example look the same on the same page. `not-content` keeps
+// Starlight's prose rules off it (its markdown.css guards every rule with
+// :not(.not-content *)); the editor's stylesheet does the rest. In Markdown the same thing is
+// a ```den fence (remark-den.ts); this component is for .astro templates. The default slot
+// lands in the code's corner (an "open in the playground" link), `after` beneath the code
+// (the values an example produces).
+import { Editor } from "@dendrite-lang/editor/react";
+import type { CSSProperties } from "react";
 
 interface Props {
   code: string;
@@ -14,12 +17,13 @@ interface Props {
 }
 
 const { code, inset } = Astro.props;
+// A React style prop is an object; a custom property is a key like any other.
+const style = inset ? ({ "--dendrite-code-inset-right": inset } as CSSProperties) : undefined;
 ---
 
 <div class="not-content dendrite-minimal-layout">
-  <div class="dendrite-code" style={inset ? `--dendrite-code-inset-right: ${inset}` : undefined}>
-    <pre class="dendrite-source"><code set:html={sourceHtml(code)} /></pre>
+  <Editor.Source code={code} style={style}>
     <slot />
-  </div>
+  </Editor.Source>
   <slot name="after" />
 </div>

@@ -24,7 +24,6 @@ hero:
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
-import Live from "../../components/Live";
 
 <CardGrid stagger>
   <Card title="Declarative" icon="pencil">
@@ -37,22 +36,3 @@ import Live from "../../components/Live";
     The vocabulary is yours to extend. What a program reads and produces is what a host declares.
   </Card>
 </CardGrid>
-
-{/* The editable preset, as a host would embed it: the Compact test case. */}
-
-<Live
-  client:only="react"
-  layout="compact"
-  source={`// Edit the program, or change $threshold; only what depends on it recomputes.
-let scores = [4, 8, 15, 16, 23]
-let high   = Filter(scores, item => item > $threshold)
-output count = Length(high)
-output any   = Some(scores, item => item > $threshold)`}
-  ports={{
-    inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }],
-    outputs: [
-      { name: "count", type: { kind: "name", name: "number" } },
-      { name: "any", type: { kind: "name", name: "boolean" } },
-    ],
-  }}
-/>

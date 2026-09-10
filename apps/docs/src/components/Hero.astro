@@ -14,7 +14,7 @@ import Live from "./Live";
 const { data } = Astro.locals.starlightRoute.entry;
 const { tagline, actions = [] } = data.hero || {};
 
-const source = `// Change $threshold; only what depends on it recomputes.
+const source = `// Edit the program, or change $threshold - only what depends on it recomputes.
 let scores = [4, 8, 15, 16, 23]
 let high   = Filter(scores, item => item > $threshold)
 output count = Length(high)
@@ -30,7 +30,7 @@ const ports = {
 
 <div class="hero">
   <div class="hero-live">
-    <Live client:only="react" source={source} ports={ports} />
+    <Live client:only="react" source={source} ports={ports} codeMinHeight="11rem" />
   </div>
   <div class="sl-flex stack">
     <div class="sl-flex copy">

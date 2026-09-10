@@ -291,7 +291,16 @@ elements, and the editor's own controls as `Editor.items` a host lists or leaves
 Diagnostics fills with a count and never opens by itself; `Editor.Source` + `sourceParts` /
 `sourceHtml` so a static block and a live Minimal one share markup and stylesheet. The docs
 run Minimal in the hero (read-only, settable inputs, `→` lines) and Compact on the splash; the
-reference's examples are static blocks with a build-time open link. What the entry below
+reference's examples are static blocks with a build-time open link.
+
+**Round two, the same day:** the actions cluster is `actions` + `actionsAt`, six generic spots
+(the bar's start or end, floating over the code's start or end, a strip above the side panes,
+the end of Minimal's input strip), each preset supporting its own subset with its own default
+and a `bar-*` spot falling back when there is no bar; the input strip is a wrapping grid
+(`inputs: "row" | "column"`, cells at least `--dendrite-inline-min`), the code takes
+`--dendrite-code-min-height`; `Editor.Source` is the code block alone and the docs' `DenCode`
+renders it on the server. The landing is one editable Minimal block beside the wordmark; the
+Compact one moved to the examples page. What the entry below
 called "the example layout" is `MinimalLayout`; the "compact + enlarge-to-page" embed is
 `CompactLayout` without the enlarge, which waits for a host that wants it.
 
