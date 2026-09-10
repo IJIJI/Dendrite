@@ -152,7 +152,7 @@
      so a static block and a live one are indistinguishable; keep the two in step. */
   .dendrite-source {
     margin: 0;
-    padding: 12px var(--dendrite-code-inset-right, 16px) 12px 16px;
+    padding: 12px var(--dendrite-code-inset-right, 16px) 12px var(--dendrite-code-inset-left, 16px);
     overflow-x: auto;
     background: var(--dendrite-bg);
     color: var(--dendrite-text);
@@ -187,7 +187,25 @@
     border-bottom: 0;
   }
 
-  /* A program with no inputs shows no strip */
+  /* The input strip with the actions at its end (Minimal's `inputs` spot): the strip carries
+     the hairline, the pane inside it fills the width; a program with no inputs hides the
+     pane, and the strip with it unless the actions live there. */
+  .dendrite-minimal-strip {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--dendrite-border);
+  }
+
+  .dendrite-minimal-strip > .dendrite-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    border-bottom: 0;
+  }
+
+  .dendrite-minimal-strip > .dendrite-actions {
+    flex: none;
+    padding: 6px 8px;
+  }
+
   .dendrite-minimal-layout .dendrite-inputs:has(> .dendrite-empty) {
     display: none;
   }
@@ -811,13 +829,15 @@
   }
 
   /* ── Code block ──
-     The canvas (or a static Source) with a cluster floating in its corner; the cluster
-     reports its width to --dendrite-code-inset-right (Actions.tsx), which cm.ts reads. */
+     The canvas (or a static Source) with a cluster floating in a top corner; the cluster
+     reports its width to --dendrite-code-inset-right / -left (Actions.tsx), which cm.ts
+     reads. A descendant selector, not a child one: a static block rendered on a server can
+     wrap the cluster in a slot element. */
   .dendrite-code {
     position: relative;
   }
 
-  .dendrite-code > .dendrite-actions {
+  .dendrite-code .dendrite-actions {
     position: absolute;
     top: 6px;
     right: 6px;
@@ -826,6 +846,19 @@
     background: var(--dendrite-panel);
     border: 1px solid var(--dendrite-border);
     border-radius: var(--dendrite-radius);
+  }
+
+  .dendrite-code .dendrite-actions-start {
+    right: auto;
+    left: 6px;
+  }
+
+  /* The cluster at the top of a side column (Compact's and Full's `side` spot) */
+  .dendrite-side-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--dendrite-border);
   }
 
   /* Ghost buttons on the panel: ink-2 at rest, ink on the well when hovered, pressed on hover */

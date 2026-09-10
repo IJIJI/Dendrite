@@ -59,8 +59,8 @@ function LiveLayout({ layout }: { layout: "minimal" | "compact" }) {
   };
   // No theme toggle: Starlight's is the one, and the editor follows it through color-scheme.
   return layout === "compact" ? (
-    <Editor.CompactLayout end={[Editor.items.undo, Editor.items.redo, open]} />
+    <Editor.CompactLayout actions={[Editor.items.undo, Editor.items.redo, open]} />
   ) : (
-    <Editor.MinimalLayout code={{ editable: false }} end={[open]} />
+    <Editor.MinimalLayout code={{ editable: false }} actions={[open]} />
   );
 }

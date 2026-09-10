@@ -2,7 +2,7 @@ import { type CSSProperties, type ReactNode } from "react";
 
 import { Wordmark } from "../brand";
 import { cx } from "../cx";
-import { Actions, defaultEnd, type TopBarItem } from "./Actions";
+import { Actions, defaultActions, type TopBarItem } from "./Actions";
 
 //? <Editor.TopBar/>: brand · start items · centred title · end items. Both sides are
 // Actions clusters, so anything an item can be (a menu, an icon action, an element, one of
@@ -16,7 +16,7 @@ export interface TopBarProps {
   brand?: ReactNode;
   /** Items after the brand: menus, typically. */
   start?: readonly TopBarItem[];
-  /** Items at the far end. Default: the editor's own controls (`defaultEnd`); listing replaces. */
+  /** Items at the far end. Default: the editor's own controls (`defaultActions`); listing replaces. */
   end?: readonly TopBarItem[];
   className?: string;
   style?: CSSProperties;
@@ -28,7 +28,7 @@ export function TopBar({
   title,
   brand = defaultBrand,
   start = [],
-  end = defaultEnd,
+  end = defaultActions,
   className,
   style,
 }: TopBarProps) {

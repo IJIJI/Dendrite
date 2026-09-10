@@ -35,7 +35,7 @@ export const Editor = Object.assign(EditorRoot, {
 
 export { useEditor } from "./context";
 export { Wordmark } from "./brand";
-export { defaultEnd } from "./blocks/Actions";
+export { defaultActions } from "./blocks/Actions";
 export type { EditorProps } from "./Editor";
 export type { CanvasProps } from "./blocks/Canvas";
 export type { SourceProps } from "./blocks/Source";
@@ -53,6 +53,7 @@ export type {
 } from "./blocks/Actions";
 export type { IconName } from "./icons";
 export type { LayoutProps, LayoutConfig } from "./layouts/Layout";
-export type { MinimalLayoutProps } from "./layouts/MinimalLayout";
-export type { CompactLayoutProps } from "./layouts/CompactLayout";
-export type { FullLayoutProps } from "./layouts/FullLayout";
+export type { ActionsPlacement } from "./layouts/placement";
+export type { MinimalLayoutProps, MinimalSpot } from "./layouts/MinimalLayout";
+export type { CompactLayoutProps, CompactSpot } from "./layouts/CompactLayout";
+export type { FullLayoutProps, FullSpot } from "./layouts/FullLayout";

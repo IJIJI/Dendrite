@@ -4,24 +4,28 @@ import { type CodeOptions } from "../../code/cm";
 import { type TopBarItem } from "../blocks/Actions";
 import { type TopBarProps } from "../blocks/TopBar";
 import { cx } from "../cx";
+import { type ActionsPlacement } from "./placement";
 
 //? <Editor.Row/> / <Editor.Column/>: flex primitives so a host composes a layout without
 // writing CSS. `grow` fills the parent; `size` fixes the basis (width in a Row, height in
 // a Column). Draggable splitters can be layered on later without changing the API.
-// LayoutConfig is what every preset (Minimal, Compact, Full) takes: the same four choices,
-// each preset with its own defaults, so a host switches presets without moving props.
+// LayoutConfig is what every preset (Minimal, Compact, Full) takes: the same choices, each
+// preset with its own defaults and its own subset of spots, so a host switches presets
+// without moving props.
 
-export interface LayoutConfig {
+export interface LayoutConfig<At extends ActionsPlacement = ActionsPlacement> {
   /** The code's own options (`editable`, `gutters`); each preset has its own defaults. */
   code?: CodeOptions;
   /** Declaration affordances in the port panes (rename, type, add, remove); values stay settable. */
   declarations?: boolean;
   /**
-   * The actions cluster: the bar's end when there is a bar, the code's corner otherwise.
-   * Default the editor's own controls (`defaultEnd`). Listing replaces, never merges.
+   * The buttons: the editor's own (`Editor.items`) and the host's. Default the editor's own
+   * controls (`defaultActions`). Listing replaces, never merges.
    */
-  end?: readonly TopBarItem[];
-  /** A top bar, whole; omit for none. Its own `end`, when set, wins over the layout's. */
+  actions?: readonly TopBarItem[];
+  /** Where the buttons render; each preset lists its spots and its default (placement.ts). */
+  actionsAt?: At;
+  /** A top bar, whole; omit for none. Its `start` and `end` are the host's own items. */
   topBar?: TopBarProps;
   className?: string;
   style?: CSSProperties;

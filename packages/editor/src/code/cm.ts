@@ -141,9 +141,12 @@ export const dendriteTheme = EditorView.theme({
   "&": { color: "var(--dendrite-text)", backgroundColor: "var(--dendrite-bg)" },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { fontFamily: "var(--dendrite-mono)", fontSize: "14px", lineHeight: "1.65" },
-  // The right inset is a layout's to set (a corner toolbar over the code): a variable on an
-  // ancestor is the one override this un-layered theme allows. Caret: drawSelection's .cm-cursor.
-  ".cm-content": { padding: "12px var(--dendrite-code-inset-right, 0) 12px 0" },
+  // The side insets are a layout's to set (a cluster floating over the code's corner): a
+  // variable on an ancestor is the one override this un-layered theme allows. Caret:
+  // drawSelection's .cm-cursor.
+  ".cm-content": {
+    padding: "12px var(--dendrite-code-inset-right, 0) 12px var(--dendrite-code-inset-left, 0)",
+  },
   ".cm-line": { padding: "0 16px" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--dendrite-text)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":

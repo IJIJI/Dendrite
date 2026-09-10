@@ -8,28 +8,30 @@ however it likes and owns persistence and routing; the editor owns everything in
 
 ```tsx
 import "@dendrite-lang/editor/style.css";
-import { defaultEnd, Editor } from "@dendrite-lang/editor/react";
+import { defaultActions, Editor } from "@dendrite-lang/editor/react";
 
 <Editor document={doc} language={myLanguage} onChange={(d) => void store.save(d)}>
-  <Editor.FullLayout topBar={{ title, start: [fileMenu] }} end={[...defaultEnd, share]} />
+  <Editor.FullLayout topBar={{ title, start: [fileMenu] }} actions={[...defaultActions, share]} />
 </Editor>;
 ```
 
 Three presets on one scale, every one a composition of the blocks below, every one taking
 the same `LayoutConfig` with its own defaults:
 
-| Preset                    | Arrangement                                                                                                                                                                                                                    | `code.gutters` | `declarations` |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | -------------- |
-| `<Editor.MinimalLayout/>` | the inputs in one line, the code, the outputs as `→ name = value` lines; no Diagnostics pane (squiggles and their hover message instead); the height follows the content. Extends the config with `inputs: "row" \| "stacked"` | `none`         | `false`        |
-| `<Editor.CompactLayout/>` | the code with Inputs and Outputs beside it, below it when narrow (a flex wrap); Diagnostics collapsed to one line; the code follows its content up to `--dendrite-compact-max-height` (24rem)                                  | `compact`      | `true`         |
-| `<Editor.FullLayout/>`    | the playground: a top bar, the code, the three panes stacked beside it, filling its parent                                                                                                                                     | `full`         | `true`         |
+| Preset                    | Arrangement                                                                                                                                                                                                                    | `code.gutters` | `declarations` | `actionsAt` (spots · default)                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | -------------- | -------------------------------------------------------------------------------------------------------------- |
+| `<Editor.MinimalLayout/>` | the inputs in one line, the code, the outputs as `→ name = value` lines; no Diagnostics pane (squiggles and their hover message instead); the height follows the content. Extends the config with `inputs: "row" \| "stacked"` | `none`         | `false`        | `inputs` (the end of the input strip) · `code-start` · `code-end` · `bar-start` · `bar-end` — default `inputs` |
+| `<Editor.CompactLayout/>` | the code with Inputs and Outputs beside it, below it when narrow (a flex wrap); Diagnostics collapsed to one line; the code follows its content up to `--dendrite-compact-max-height` (24rem)                                  | `compact`      | `true`         | `side` (a strip above the panes) · `code-start` · `code-end` · `bar-start` · `bar-end` — default `side`        |
+| `<Editor.FullLayout/>`    | the playground: a top bar, the code, the three panes stacked beside it, filling its parent                                                                                                                                     | `full`         | `true`         | `bar-end` · `bar-start` · `code-start` · `code-end` · `side` — default `bar-end` (`code-end` without a bar)    |
 
 `LayoutConfig`: `code` (`editable`, `gutters` — every preset is editable by default), `declarations`,
-`end` (the actions cluster: the bar's end when there is a bar, the code's corner otherwise;
-default the editor's own controls, `defaultEnd`; listing replaces), `topBar` (whole, `TopBarProps`;
-omit for no bar), `className`, `style`. One rule: the more specific setting wins and nothing
-merges — `topBar.end` over `end` over the default. A preset is only a composition — arrange the
-pieces yourself when none fits:
+`actions` (the buttons: the editor's own and the host's; default the editor's own controls,
+`defaultActions`; listing replaces), `actionsAt` (the spot, from the preset's list above; a
+`bar-*` spot without a `topBar` falls back to the preset's non-bar default; typed per preset, so
+an unsupported spot does not compile), `topBar` (whole, `TopBarProps`; its `start` and `end` are
+the host's own items, and a `bar-*` spot appends the actions after them — the bar's standalone
+default never applies inside a preset), `className`, `style`. A preset is only a composition —
+arrange the pieces yourself when none fits:
 
 ```tsx
 <Editor document={doc} onChange={save}>

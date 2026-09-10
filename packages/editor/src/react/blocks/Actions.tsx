@@ -55,7 +55,7 @@ export const items = {
 } as const satisfies Record<string, BuiltIn>;
 
 /** What a cluster shows when a host lists nothing: the editor's own controls. */
-export const defaultEnd: readonly TopBarItem[] = [items.undo, items.redo, items.theme];
+export const defaultActions: readonly TopBarItem[] = [items.undo, items.redo, items.theme];
 
 export interface ActionsProps {
   items?: readonly TopBarItem[];
@@ -66,7 +66,7 @@ export interface ActionsProps {
 const isBuiltIn = (item: TopBarItem): item is BuiltIn => "item" in item;
 const isMenu = (item: TopBarItem): item is Menu => "items" in item;
 
-export function Actions({ items: list = defaultEnd, className, style }: ActionsProps) {
+export function Actions({ items: list = defaultActions, className, style }: ActionsProps) {
   const editor = useOptionalEditor();
   const ref = useRef<HTMLDivElement>(null);
   // One menu open at a time; hovering another while one is open switches (the desktop
@@ -90,14 +90,16 @@ export function Actions({ items: list = defaultEnd, className, style }: ActionsP
   }, [open]);
 
   // In a code block's corner the cluster floats over the text; tell the code how wide it is
-  // (cm.ts reads the variable) so the first line stays clear of it.
+  // on the side it floats on (cm.ts reads the variable) so the first line stays clear of it.
   useLayoutEffect(() => {
     const el = ref.current;
     const parent = el?.parentElement;
     if (!el || !parent?.classList.contains("dendrite-code")) return;
-    parent.style.setProperty("--dendrite-code-inset-right", `${el.offsetWidth + 8}px`);
+    const side = el.classList.contains("dendrite-actions-start") ? "left" : "right";
+    const variable = `--dendrite-code-inset-${side}`;
+    parent.style.setProperty(variable, `${el.offsetWidth + 8}px`);
     return () => {
-      parent.style.removeProperty("--dendrite-code-inset-right");
+      parent.style.removeProperty(variable);
     };
   });
 
