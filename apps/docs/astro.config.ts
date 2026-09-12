@@ -58,22 +58,25 @@ export default defineConfig({
         // group by itself - so every section names itself here and lists what it holds.
         // Two readers: a USER writes programs (Learn, then stdlib); a HOST DEVELOPER embeds
         // the language (Host developers, which also holds the packages).
+        // Learn is a PATH, in the order a reader meets it: the playground, then worked
+        // programs, then writing one, then what happens when it runs.
         {
           label: "Learn",
           items: [
             "learn/getting-started",
+            // One page for now; it becomes a group when there is more than one example page.
+            "learn/examples",
             {
               label: "Writing programs",
               items: [{ autogenerate: { directory: "learn/writing" } }],
             },
-            {
-              label: "How it works",
-              items: [{ autogenerate: { directory: "learn/how-it-works" } }],
-            },
-            { label: "Examples", items: [{ autogenerate: { directory: "learn/examples" } }] },
+            "learn/how-a-program-runs",
           ],
         },
         { label: "stdlib", items: [{ autogenerate: { directory: "stdlib" } }] },
+        // Its own section, not a corner of Learn: Learn says what you can rely on, this says
+        // why and in what order. A different reader, or the same one later.
+        { label: "How it works", items: [{ autogenerate: { directory: "how-it-works" } }] },
         {
           label: "Host developers",
           items: [
