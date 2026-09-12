@@ -4,43 +4,15 @@ Things deliberately postponed. Each entry notes why it was deferred and what imp
 
 ---
 
-## IMPORTANT — Document the core language (two levels)
+## Document the core language (two levels) — DONE 2026-09-12
 
-**What:** Real documentation of the language itself, in two layers that link to each other.
-
-1. **The chain, in plain terms.** One page a newcomer reads end to end: source text becomes
-   tokens, tokens become a raw program, the analyser turns that into a core program with
-   types resolved and dead outputs dropped, port layers compose into the descriptor it is
-   checked against, and the evaluator walks the result on demand with a per-node cache. Say
-   what each stage is allowed to decide and what it must leave alone. One worked example
-   carried through every stage, the same program from text to output values.
-2. **In depth, per stage.** Lexer and the identifier rule; the Pratt parser kernel and how a
-   grammar registers into it; the analyser passes (reference graph, topological order,
-   poisoning, output validation) and every error and warning kind with an example that
-   triggers it; the type system (structured Type, extends chains, array covariance, function
-   variance, the functions-are-never-any totality guard); ports, layers, policies and
-   composition order; the runtime levels (run, runner, runtime, instance) and what each is
-   for; persistence and the two version axes.
-
-**Why deferred:** Everything written so far is either a design record (`.docs/decisions.md`,
-`analyser-spec.md`) or an architecture map for people already inside the code. There is no
-document that teaches the language to someone who has not read it. The ports refactor changed
-the shape of the chain, so writing this before that work settled would have meant rewriting it.
-
-**What it requires:**
-- A stable pipeline. The ports/instance refactor (plan: ports, layers, program instances) has
-  to land first, including the descriptor split, or half the prose ages out immediately.
-- Decide the home: `packages/core/src/readme.md` is a file layout, not a tutorial. This
-  probably wants `.docs/language/` with one file per stage plus the overview, or a docs site
-  (see *Web documentation site*).
-- Every code sample compiled by a test, so examples cannot rot. The examples folder already
-  does this and should be the source of the worked example.
-- The ops reference (`.docs/ops-reference.md`) becomes the appendix rather than being retyped.
-
-**Driving need:** onboarding anyone, including the author after a break, and any external user
-of `@dendrite-lang/core`. This is the gap between "the code is good" and "the language exists
-for other people". Ranked important rather than deferred-indefinitely: it should be written
-while the refactor is fresh, not years later.
+The docs site now teaches the language (`language-docs-plan.md`, seven commits): **Learn** for
+writing programs, the **stdlib** reference with its conventions, **How it works** for the
+chain in depth - one page per stage, the generated diagnostics catalogue, persistence, a
+glossary - and **Host developers** for embedding it. Every Dendrite sample on the site is loaded
+by `apps/docs/src/content/content.test.ts`; every diagnostic kind is documented and provoked in
+`packages/core/src/language/diagnostics.ts`. What is left before `@dendrite-lang/core@0.1.0` is
+the release itself.
 
 ---
 
@@ -328,6 +300,26 @@ most, and whether the presets need any config at all beyond defaults.
 **Why deferred:** decided nested and whole on 2026-09-10 to ship; the answer needs usage.
 
 **Driving need:** Beacon embedding the editor; the docs' configurator.
+
+---
+
+## Docs — the TypeScript samples are not checked
+
+**What:** the Host developers pages are mostly TypeScript: the setup, the four levels, extending
+the language, both ends of the link. Every one of them was run against core before it was
+written down (2026-09-12), but nothing keeps them honest afterwards. The ` ```den ` samples have
+a test; these do not, and an API rename would leave them quietly wrong - which is exactly how the
+editor README came to import a `defaultEnd` that round two had renamed.
+
+**Why deferred:** the Dendrite samples were the standing requirement; TypeScript samples need a
+different mechanism, and step 7 was writing the pages, not building that.
+
+**What it requires:** move each snippet into a real file under `apps/docs/src/examples/host/`
+that `astro check` typechecks and a test runs, and render it into the page from that file (a
+small component over `?raw`, as the live examples already do) so the page and the checked code
+cannot diverge. The pages become `.mdx`.
+
+**Driving need:** the core API changing before 1.0, which it will.
 
 ---
 

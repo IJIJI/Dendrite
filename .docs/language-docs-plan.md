@@ -1,9 +1,11 @@
 # The language documentation — plan
 
-> The content pass into the site skeleton built 2026-09-09 (`docs-plan.md`), approved
-> 2026-09-12 after two review rounds. The skeleton, the generated stdlib reference and the
-> live example blocks all landed; every prose page is still a one-paragraph stub saying what
-> it will cover, and those stubs are the outline.
+> **Status: DONE 2026-09-12**, seven commits. Built as planned, with three things the plan did
+> not foresee: the sample test caught that `forward_reference` is an ERROR in code (so "order
+> does not matter" was wrong), writing the diagnostics samples showed five kinds that cannot be
+> provoked or are never reported, and `compile()` / `load()` were dropping analysis errors on
+> the ok arm - fixed in core first. Still open from here: the TypeScript samples on the Host
+> developers pages are verified but not guarded by a test (`todo.md`).
 
 ## Context
 
