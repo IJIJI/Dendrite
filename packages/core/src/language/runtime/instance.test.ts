@@ -56,6 +56,30 @@ const record = (instance: ProgramInstance): Snapshot[] => {
   return seen;
 };
 
+describe("diagnostics of a program that runs anyway", () => {
+  // The analyser keeps going after an error and prunes what failed, so a program can run
+  // while something in it is wrong. The error still has to reach the pane, or an editor
+  // shows a program with a type error as clean - which it did, until 2026-09-12.
+  it("publishes an error whose binding was pruned, and keeps running", () => {
+    const { runtime, instance } = setup({
+      program: serialiseSource(
+        `let bad = And(true, "Country")
+${SOURCE}`,
+        DOC,
+      ),
+    });
+    expect(kinds(instance)).toContain("op_input_type_mismatch");
+    expect(
+      instance.diagnostics.get().find((d) => d.kind === "op_input_type_mismatch"),
+    ).toMatchObject({ severity: "error", stage: "analyse" });
+    // Still live: the surviving output never depended on the bad binding. `g` is the
+    // runtime's, `p` the document's.
+    runtime.updateInputs({ g: 2 });
+    instance.setInput("p", 3);
+    expect(outputsOf(instance)).toBe(5);
+  });
+});
+
 describe("createInstance - boot", () => {
   it("publishes all five observables", () => {
     const { instance } = setup();

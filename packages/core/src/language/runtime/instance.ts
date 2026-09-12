@@ -454,8 +454,11 @@ function diagnosticsOf(result: LoadResult): ProgramDiagnostic[] {
     (d: { kind: string; message: string; source?: SourceRef }) =>
       diagnostics.push({ severity, stage, kind: d.kind, message: d.message, source: d.source });
 
-  if (!result.ok) result.errors.forEach(push("error"));
-  if ("warnings" in result) result.warnings.forEach(push("warning"));
+  // Every arm carries both lists, the ok one included: `ok` means a program came out, not
+  // that nothing was wrong with it (environment.ts). Reading either behind a condition is
+  // how every pruned type error went unreported.
+  result.errors.forEach(push("error"));
+  result.warnings.forEach(push("warning"));
   return diagnostics;
 }
 

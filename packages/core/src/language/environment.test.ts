@@ -77,6 +77,9 @@ describe("load - ast form", () => {
     expect(result.ok).toBe(false);
     if (result.ok || result.stage !== "load") throw new Error("expected load failure");
     expect(result.errors[0].kind).toBe("malformed_program");
+    // Every arm carries both lists, so a consumer never branches on which one it holds.
+    // Empty here by construction: this arm fires before lexing.
+    expect(result.warnings).toEqual([]);
   });
 });
 
@@ -185,6 +188,38 @@ describe("load - reserved and versioned forms", () => {
     expect(result.ok).toBe(false);
     if (result.ok || result.stage !== "load") throw new Error("expected load failure");
     expect(result.errors[0].kind).toBe("unsupported_version");
+  });
+});
+
+describe("CompileResult errors on the ok arm", () => {
+  // `ok` means a program came out, not that nothing was wrong with it: analysis collects
+  // every error and only reports ok:false when a REQUIRED output was lost. Dropping the
+  // error list on the ok arm hid every type error whose binding was pruned.
+  it("carries the errors of a program whose bad binding was pruned", () => {
+    const env = makeEnv();
+    const result = env.compile(`let bad = And(true, "Country")
+output out = 1`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.errors.map((e) => e.kind)).toEqual(["op_input_type_mismatch"]);
+    expect(result.warnings.map((w) => w.kind)).toContain("unused_binding");
+  });
+
+  it("carries the errors of a program whose failed output was not required", () => {
+    const env = makeEnv();
+    // `out` is required and fine; `spare` is not in the descriptor at all, so losing it is
+    // no reason to fail the program - but its type error is still an error.
+    const result = env.compile(`output out = 1
+output spare = And(true, "Country")`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.errors.map((e) => e.kind)).toContain("op_input_type_mismatch");
+  });
+
+  it("reports ok:false only when a required output is lost", () => {
+    const env = makeEnv();
+    const result = env.compile(`output out = And(true, "Country")`);
+    expect(result.ok).toBe(false);
   });
 });
 
