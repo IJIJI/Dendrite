@@ -1,0 +1,110 @@
+---
+// Every diagnostic the language can produce, printed from core's own registry
+// (`language/diagnostics.ts`), grouped by the stage a reader meets it at. Nothing here is
+// written by hand: a kind cannot be added to the language without being documented there,
+// and core's test runs every sample on the page, so this cannot describe something the
+// language no longer does.
+import { diagnosticList, type DiagnosticDoc } from "@dendrite-lang/core";
+
+import DenCode from "./DenCode.astro";
+
+const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] = [
+  {
+    stage: "load",
+    title: "Load",
+    blurb: "The stored program itself, before a character of it is read.",
+  },
+  { stage: "parse", title: "Parse", blurb: "The text: what the lexer and the parser make of it." },
+  {
+    stage: "ports",
+    title: "Ports",
+    blurb:
+      "Composing the declarations a program is checked against. These name a layer and a declaration rather than a line.",
+  },
+  {
+    stage: "analyse",
+    title: "Analyse",
+    blurb: "The program against those declarations. Almost everything lives here.",
+  },
+  {
+    stage: "evaluate",
+    title: "Evaluate",
+    blurb:
+      "While the program runs. These do not arrive as diagnostics: an evaluation failure reaches a host on the outputs instead.",
+  },
+];
+
+const source = (entry: (typeof diagnosticList)[number]): string | null =>
+  entry.example?.form === "code" ? entry.example.source : null;
+---
+
+{
+  stages.map(({ stage, title, blurb }) => {
+    const entries = diagnosticList.filter((entry) => entry.stage === stage);
+    return (
+      <section class="stage">
+        <h2 id={stage}>{title}</h2>
+        <p>{blurb}</p>
+        {entries.map((entry) => (
+          <div class="diagnostic">
+            <h3 id={entry.kind}>
+              <code class="kind">{entry.kind}</code>
+              <span class={`severity ${entry.severity}`}>{entry.severity}</span>
+            </h3>
+            <p>{entry.message}</p>
+            {source(entry) ? (
+              <DenCode code={source(entry)!} />
+            ) : (
+              <p class="triggered-by">
+                <strong>What triggers it:</strong> {entry.triggeredBy}
+              </p>
+            )}
+          </div>
+        ))}
+      </section>
+    );
+  })
+}
+
+<style>
+  .diagnostic {
+    margin-block: 1.5rem;
+  }
+
+  .diagnostic h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-block-end: 0.4rem;
+  }
+
+  .kind {
+    font-size: 0.95rem;
+  }
+
+  .severity {
+    padding: 0.05rem 0.4rem;
+    border-radius: 2px;
+    font-family: var(--sl-font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .severity.error {
+    background: var(--sl-color-red-low, #4b1113);
+    color: var(--sl-color-red-high, #f78f8f);
+  }
+
+  .severity.warning {
+    background: var(--sl-color-orange-low, #4a2a0a);
+    color: var(--sl-color-orange-high, #f0b77c);
+  }
+
+  .triggered-by {
+    font-size: 0.95rem;
+    color: var(--sl-color-gray-3);
+  }
+</style>

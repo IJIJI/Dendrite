@@ -1,0 +1,148 @@
+---
+title: "The chain"
+description: "From source text to output values, one program carried through every stage."
+sidebar:
+  order: 1
+---
+
+import Chain from "../../../components/Chain.astro";
+
+_[Learn](../../learn/getting-started/) tells you what you can rely on. This section tells you why, and in what order. None of it is needed to write a program - it is here for when you want to predict what the language will do._
+
+<Chain />
+
+One program, carried the whole way. Every artefact below is the real one, printed by the four
+scripts in `packages/core/examples/3-(code)/`, which run this program stage by stage:
+
+```den inputs="score:number"
+let passing  = $score >= 60
+let spare    = 99
+output grade = If(passing, "Pass", "Fail")
+```
+
+## Lex: characters become tokens
+
+```
+ident:let  ident:passing  punct:=  punct:$  ident:score  punct:>=  number:60
+ident:let  ident:spare  punct:=  number:99
+ident:output  ident:grade  punct:=  ident:If  punct:(  ident:passing  punct:,
+string:Pass  punct:,  string:Fail  punct:)  eof:
+```
+
+Two things in there are worth stopping on.
+
+**`>=` is one token.** The lexer does not know what operators exist; it is handed the operator
+vocabulary of the language it is lexing, taken straight from the grammar's registered operators.
+Add an operator and the lexer needs no edit. Feed the same text to a language with no operators
+and `>=` comes back as two unknown characters.
+
+**`$` and `score` are separate tokens.** The sigil is structural punctuation, and the *parser*
+joins them. This is why `$` cannot appear in a name and why an input is recognisable without
+consulting anything.
+
+`let`, `output` and `If` are all plain `ident` tokens. There are no keywords at this level.
+
+## Parse: tokens become a raw program
+
+The result is a `RawProgram`: two maps, bindings and outputs, name to AST node. No types, no
+resolution, no checking.
+
+```
+let passing  -> operation
+let spare    -> literal
+output grade -> operation
+```
+
+`passing{:den}` being an `operation` is the interesting part. Here is its node:
+
+```json
+{ "kind": "operation", "op": "Not",
+  "inputs": { "a": { "kind": "operation", "op": "LessThan",
+    "inputs": { "a": { "kind": "input", "name": "score" },
+                "b": { "kind": "literal", "value": 60 } } } } }
+```
+
+The operator is **already gone**. `$score >= 60{:den}` became `Not(LessThan($score, 60)){:den}`
+during parsing, because that is what the standard library registered `>=` to mean. There is no
+operator node kind, and nothing after this point can tell that an operator was written. It also
+explains why one operator can expand into two op calls.
+
+Note `"output": { "kind": "name", "name": "any" }` on those nodes in the full dump: a raw node
+carries no inferred type. `any` is the placeholder, not a decision.
+
+What this stage may not do: resolve a name, look up an op, or decide a type. It does not know
+what exists.
+
+## Analyse: the raw program becomes a core program
+
+This is where the work is. Seven passes, in order:
+
+1. **Build the reference graph** - which binding mentions which.
+2. **Topologically sort it**, which is also where a cycle is found.
+3. **Compute reachability** per output: which bindings can each one actually reach.
+4. **Analyse the bindings** in dependency order, resolving types and checking every op call.
+5. **Validate the outputs** against what the descriptor says they must be.
+6. **Prune** the bindings no output reaches.
+7. **Warn** about the ones that were pruned.
+
+For our program the result is:
+
+```
+passing: boolean       dependsOn: [score]
+output grade: string   dependsOn: [score]
+warnings: unused_binding
+```
+
+Three things happened there.
+
+**Types were resolved.** `passing{:den}` is a `boolean`, worked out from `Not{:den}`'s output
+type, not from an annotation. `grade{:den}` is a `string` because `If{:den}` narrows to its
+branch type when both branches agree.
+
+**`dependsOn` was computed.** Both carry `[score]`, the set of inputs each reaches through the
+whole tree beneath it. This set is the entire basis of incremental evaluation, and it is
+computed once, here, statically.
+
+**`spare{:den}` is gone.** No output can reach it, so pass 6 dropped it from the program the
+evaluator will see and pass 7 warned. The program that runs is not the program you wrote; it is
+the part of it that matters.
+
+Two rules this stage keeps:
+
+- **Errors are collected, never thrown.** A failed binding is recorded in `failedBindings` so
+  the names reading it fail cleanly rather than cascading into noise.
+- **Soundness is per output.** Pass 5 decides output by output. One broken output is dropped;
+  `ok` comes back false only if a *required* one was lost, which is the single case where the
+  whole program fails.
+
+The stage needs one thing besides the program: the descriptor it checks against, which is
+[ports and layers](../ports-and-layers/).
+
+## Evaluate: the core program becomes values
+
+```
+score=72 -> { "grade": "Pass" }
+score=45 -> { "grade": "Fail" }
+```
+
+Outputs pull. Asking for `grade{:den}` walks down from its node, and each node consults a cache
+before computing. A node recomputes when the set of changed inputs intersects its `dependsOn`
+and it has no cache entry. [Evaluation](../evaluation/) has the details.
+
+What this stage may not do: report a type error. Everything checkable was checked. What reaches
+it is a runtime failure - a host evaluator throwing, a value that was not the shape its type
+claimed - and those arrive on the outputs, not as diagnostics.
+
+## Why it is four artefacts and not one pass
+
+Each one is a thing you can hold, store, or inspect, which is what makes the language
+embeddable:
+
+- **The source** is what gets saved. Not the AST - see [persistence](../persistence/).
+- **The raw program** is form-agnostic. A graph editor can produce one without any text.
+- **The core program** is what runs, and it is disposable: it is rebuilt from the raw program
+  whenever the descriptor changes, which is how a host adding an op makes old programs
+  re-check rather than silently drift.
+- **The values** are the only thing a host acts on.
+
+**Next:** [The type system](../types/).
