@@ -1,0 +1,6 @@
+// A line total: price by quantity, with shipping waived from three items up.
+let subtotal = $price * $quantity
+let shipping = If($quantity >= 3, 0, 4.95)
+
+output total         = subtotal + shipping
+output freeShipping  = $quantity >= 3

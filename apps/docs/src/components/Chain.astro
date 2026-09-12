@@ -1,0 +1,156 @@
+---
+// The pipeline as a diagram, used by both chain pages: Learn's plain one and How it works'
+// deep one. CSS grid rather than SVG - the row becomes a column on a narrow screen and the
+// arrows turn with it, which SVG would only do by shrinking its text to nothing.
+//
+// The cells are the ARTEFACTS and the steps between them are the VERBS, which is the shape
+// the pipeline actually has: each stage takes the thing on its left and produces the thing
+// on its right, and the two notes say what else it needs to do that.
+interface Step {
+  verb: string;
+  /** What the verb needs besides the artefact to its left. */
+  needs?: string;
+}
+interface Stage {
+  artefact: string;
+  note: string;
+}
+
+const stages: Stage[] = [
+  { artefact: "source text", note: "what you wrote" },
+  { artefact: "raw program", note: "bindings and outputs, untyped" },
+  { artefact: "core program", note: "typed, checked, pruned" },
+  { artefact: "values", note: "one per output" },
+];
+const steps: Step[] = [
+  { verb: "parse" },
+  { verb: "analyse", needs: "against the composed descriptor" },
+  { verb: "evaluate", needs: "with the input values" },
+];
+---
+
+<figure class="chain not-content">
+  <ol class="flow">
+    {
+      stages.map((stage, i) => (
+        <>
+          <li class="stage">
+            <span class="artefact">{stage.artefact}</span>
+            <span class="note">{stage.note}</span>
+          </li>
+          {steps[i] && (
+            <li class="step" aria-label={`then ${steps[i]!.verb}`}>
+              <span class="verb">{steps[i]!.verb}</span>
+              <span class="arrow" aria-hidden="true" />
+              {steps[i]!.needs && <span class="needs">{steps[i]!.needs}</span>}
+            </li>
+          )}
+        </>
+      ))
+    }
+  </ol>
+</figure>
+
+<style>
+  .chain {
+    margin: 1.5rem 0;
+  }
+
+  .flow {
+    display: grid;
+    grid-auto-flow: row;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--sl-color-gray-4);
+    background: var(--sl-color-gray-7);
+  }
+
+  .artefact {
+    font-family: var(--sl-font-mono);
+    font-size: 0.9rem;
+    color: var(--sl-color-white);
+  }
+
+  .note {
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--sl-color-gray-3);
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .verb {
+    font-family: var(--sl-font-mono);
+    font-size: 0.75rem;
+    color: var(--sl-color-accent-high, var(--sl-color-accent));
+  }
+
+  /* The arrow is drawn, not typed: a rule with a head, so it turns with the layout. */
+  .arrow {
+    display: block;
+    width: 1px;
+    height: 1.4rem;
+    background: var(--sl-color-gray-4);
+    position: relative;
+  }
+
+  .arrow::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: -3px;
+    bottom: 0;
+    width: 7px;
+    height: 7px;
+    border-right: 1px solid var(--sl-color-gray-4);
+    border-bottom: 1px solid var(--sl-color-gray-4);
+    transform: rotate(45deg);
+  }
+
+  .needs {
+    max-width: 18ch;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--sl-color-gray-3);
+  }
+
+  /* Wide enough for one row: the stages sit side by side and the arrows lie flat. */
+  @media (min-width: 45rem) {
+    .flow {
+      grid-auto-flow: column;
+      align-items: center;
+    }
+
+    .arrow {
+      width: 1.6rem;
+      height: 1px;
+    }
+
+    .arrow::after {
+      inset-inline-start: auto;
+      inset-inline-end: 0;
+      bottom: -3px;
+      border-right: 0;
+      border-top: 1px solid var(--sl-color-gray-4);
+      border-bottom: 0;
+      border-inline-end: 1px solid var(--sl-color-gray-4);
+    }
+  }
+</style>

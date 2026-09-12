@@ -1,0 +1,95 @@
+---
+title: "Operators and ops"
+description: "Arithmetic, comparison, logic - as operators, and as the ops beneath them."
+sidebar:
+  order: 3
+---
+
+import { orderExample } from "../../../../examples";
+import Live from "../../../../components/Live";
+
+Everything that computes in Dendrite is an **op**: a named function with named inputs, supplied
+by the standard library or by the application you are embedded in. Operators are a second way to
+spell the common ones.
+
+```den
+output sum  = 2 + 3
+output same = Add(2, 3)
+```
+
+Those two lines are the same program. `+{:den}` is not built into the language: the standard
+library registers it as sugar over its own `Add{:den}` op, and the parser rewrites it on the
+way in. Nothing downstream can tell which spelling you used.
+
+## Why that matters
+
+Because it means there is no privileged arithmetic, and nothing to reverse-engineer when you go
+looking for an op that should exist.
+
+`>={:den}` is the clearest case. It has no op of its own:
+
+```den
+output a = $n >= 60
+output b = Not(LessThan($n, 60))
+```
+
+Again, one program. If you go hunting for `GreaterThanOrEqual` in the
+[standard library](../../../stdlib/) you will not find it, and now you know why. An operator can
+desugar into a whole little tree, not just a single call.
+
+The practical upshot: **reach for the operator when it reads better, the op when it reads
+clearer.** `Add(price, tax, shipping){:den}` says "sum these three" better than a chain of
+pluses, because `Add{:den}` is variadic and takes as many as you give it.
+
+## The operators, tightest binding last
+
+| Operators | Meaning | The op beneath |
+| --- | --- | --- |
+| `\|\|` | or, variadic | `Or` |
+| `&&` | and, variadic | `And` |
+| `==` `!=` | equality | `Equals`, `NotEquals` |
+| `<` `>` | comparison | `LessThan`, `GreaterThan` |
+| `<=` `>=` | comparison | `Not(GreaterThan(…))`, `Not(LessThan(…))` |
+| `+` `-` | addition | `Add` (variadic), `Subtract` |
+| `*` `/` | multiplication | `Multiply` (variadic), `Divide` |
+| `!` | not, prefix | `Not` |
+
+Multiplication binds tighter than addition, addition tighter than comparison, comparison tighter
+than `&&{:den}`, and `&&` tighter than `||{:den}` - the ordering you already expect. Brackets
+override it:
+
+```den
+output plain    = 2 + 3 * 4
+output bracketed = (2 + 3) * 4
+```
+
+`plain{:den}` is 14 and `bracketed{:den}` is 20.
+
+## Try it
+
+<Live client:only="react" source={orderExample.source} ports={orderExample.ports} />
+
+`$quantity >= 3{:den}` appears twice here, once inside `If{:den}` and once as an output, and it
+is one comparison written two ways round. Edit the program: swap an operator for its op, add a
+bracket, see the outputs agree.
+
+## Calling an op
+
+An op's inputs have names, and you may pass them positionally or by name:
+
+```den
+output positional = If($ready, "go", "wait")
+output named      = If(condition: $ready, then: "go", else: "wait")
+```
+
+Named arguments cost more to type and pay for themselves on an op with three or four inputs, or
+whenever the order is not obvious. The names are in the
+[standard library reference](../../../stdlib/), which is generated from the ops themselves and so
+cannot be out of date.
+
+Two mistakes worth knowing by name. Pass an input an op does not have and you get
+`unknown_op_input_key{:den}`, a warning: the value is ignored. Leave out one it needs and you
+get `missing_op_input{:den}`, also a warning, with a default filled in for you - which is why a
+half-written program keeps running while you write the rest of it.
+
+**Next:** [Lambdas and lists](../lambdas-and-lists/), where ops start taking functions.

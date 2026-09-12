@@ -1,0 +1,2 @@
+let doubled = $n * 2
+output result = doubled
