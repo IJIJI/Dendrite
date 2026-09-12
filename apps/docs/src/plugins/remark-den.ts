@@ -3,6 +3,8 @@ import type { Code, InlineCode, Root } from "mdast";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 
+import { parseDenMeta } from "./den-meta";
+
 //? Dendrite in Markdown: a ```den fence, or inline code ending in {:den}, highlighted by the
 // editor's own lexer instead of a Shiki grammar. A fence becomes the editor's static Source
 // block (the markup a MinimalLayout's code has, inside `not-content` so Starlight's prose
@@ -43,11 +45,15 @@ const jsxSpans = (code: string): (JsxElement | JsxText)[] =>
       : { type: "text", value: text },
   );
 
-const blockHtml = (code: string): string =>
-  `<div class="not-content dendrite-minimal-layout"><div class="dendrite-code"><pre class="dendrite-source"><code>${sourceHtml(code)}</code></pre></div></div>`;
+// A `fails` sample wears a warning edge, so a reader does not copy it out as working code.
+const blockClass = (meta: string | null | undefined): string =>
+  `not-content dendrite-minimal-layout${parseDenMeta(meta).fails ? " dendrite-fails" : ""}`;
 
-const blockJsx = (code: string): JsxElement =>
-  flow("div", "not-content dendrite-minimal-layout", [
+const blockHtml = (code: string, meta: string | null | undefined): string =>
+  `<div class="${blockClass(meta)}"><div class="dendrite-code"><pre class="dendrite-source"><code>${sourceHtml(code)}</code></pre></div></div>`;
+
+const blockJsx = (code: string, meta: string | null | undefined): JsxElement =>
+  flow("div", blockClass(meta), [
     flow("div", "dendrite-code", [
       flow("pre", "dendrite-source", [
         { type: "mdxJsxTextElement", name: "code", attributes: [], children: jsxSpans(code) },
@@ -60,7 +66,9 @@ export const remarkDen: Plugin<[], Root> = () => (tree, file) => {
 
   visit(tree, "code", (node: Code, index, parent) => {
     if (node.lang !== "den" || !parent || index === undefined) return;
-    const replacement = mdx ? blockJsx(node.value) : { type: "html", value: blockHtml(node.value) };
+    const replacement = mdx
+      ? blockJsx(node.value, node.meta)
+      : { type: "html", value: blockHtml(node.value, node.meta) };
     parent.children.splice(index, 1, replacement as never);
   });
 

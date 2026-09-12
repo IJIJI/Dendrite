@@ -5,6 +5,7 @@ sidebar:
   order: 1
 ---
 
+import { scoresExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
 The playground's presets and the repository's example programs, each rendered live so its inputs can be changed on the page. This page will grow one section per example.
@@ -27,16 +28,6 @@ in the page rather than read one program.
 <Live
   client:only="react"
   layout="compact"
-  source={`// Edit the program, or change $threshold - only what depends on it recomputes.
-let scores = [4, 8, 15, 16, 23]
-let high   = Filter(scores, item => item > $threshold)
-output count = Length(high)
-output any   = Some(scores, item => item > $threshold)`}
-  ports={{
-    inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }],
-    outputs: [
-      { name: "count", type: { kind: "name", name: "number" } },
-      { name: "any", type: { kind: "name", name: "boolean" } },
-    ],
-  }}
+  source={scoresExample.source}
+  ports={scoresExample.ports}
 />

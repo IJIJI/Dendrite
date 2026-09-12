@@ -9,23 +9,13 @@ import { Image } from "astro:assets";
 
 import dark from "../assets/dendrite-wordmark-dark.svg";
 import light from "../assets/dendrite-wordmark.svg";
+import { scoresExample } from "../examples";
 import Live from "./Live";
 
 const { data } = Astro.locals.starlightRoute.entry;
 const { tagline, actions = [] } = data.hero || {};
 
-const source = `// Edit the program, or change $threshold - only what depends on it recomputes.
-let scores = [4, 8, 15, 16, 23]
-let high   = Filter(scores, item => item > $threshold)
-output count = Length(high)
-output any   = Some(scores, item => item > $threshold)`;
-const ports = {
-  inputs: [{ name: "threshold", type: { kind: "name", name: "number" }, default: 10 }],
-  outputs: [
-    { name: "count", type: { kind: "name", name: "number" } },
-    { name: "any", type: { kind: "name", name: "boolean" } },
-  ],
-} as const;
+const { source, ports } = scoresExample;
 ---
 
 <div class="hero">

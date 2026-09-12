@@ -1,0 +1,5 @@
+// Edit the program, or change $threshold - only what depends on it recomputes.
+let scores = [4, 8, 15, 16, 23]
+let high   = Filter(scores, item => item > $threshold)
+output count = Length(high)
+output any   = Some(scores, item => item > $threshold)
