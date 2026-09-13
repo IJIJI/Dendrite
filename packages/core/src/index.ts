@@ -90,6 +90,9 @@ export {
   type LoadError,
 } from "./language/environment";
 
+// ── every diagnostic the language can produce, documented and provoked ───────
+export { diagnostics, diagnosticList, type DiagnosticDoc } from "./language/diagnostics";
+
 // ── parsing surface (lower level; result types needed for parseSource) ───────
 export { tokenise, type Token, type TokenKind, type LexResult } from "./language/parser/lexer";
 export { parse, parseExpression, type ExpressionResult } from "./language/parser/parser";

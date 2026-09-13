@@ -75,6 +75,13 @@ code.den .tok-ident {
   color: inherit;
 }
 
+/* A sample that is on the page to SHOW a diagnostic (a ```den fails fence): a warning edge,
+   so a reader does not copy it out as a working program. */
+.dendrite-fails {
+  border-color: var(--sl-color-orange, #d97706);
+  border-left-width: 2px;
+}
+
 /* A live example: the real editor in the page, on a preset that follows its content. The
    min-height holds the fold while the client-only island hydrates. */
 .live {

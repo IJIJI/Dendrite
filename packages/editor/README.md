@@ -37,7 +37,7 @@ arrange the pieces yourself when none fits:
 <Editor document={doc} onChange={save}>
   <Editor.TopBar
     title="Live tally"
-    end={[...defaultEnd, { icon: "share", label: "Share", onClick }]}
+    end={[...defaultActions, { icon: "share", label: "Share", onClick }]}
   />
   <Editor.Row grow>
     <Editor.Column grow>

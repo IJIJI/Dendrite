@@ -1,0 +1,22 @@
+---
+title: "Every diagnostic"
+description: "Each error and warning the language can report, what it means, and a program that triggers it."
+sidebar:
+  order: 5
+---
+
+import DiagnosticsTable from "../../../components/DiagnosticsTable.astro";
+
+Every kind of error and warning the language can produce, grouped by the stage you meet it at.
+Each one says what it means and, where a program can provoke it, shows one that does.
+
+None of this page is written by hand. It is printed from the language's own registry, a new
+kind does not compile until it is documented there, and a test runs every sample below on every
+build. If an entry disagrees with what you are seeing, the entry is what is wrong, and it is a
+bug.
+
+Two severities, and they mean different things. An **error** stops the output that depends on
+it, and the rest of the program still runs. A **warning** changes nothing: it tells you that
+something is pointless, lossy, or not what you probably meant.
+
+<DiagnosticsTable />

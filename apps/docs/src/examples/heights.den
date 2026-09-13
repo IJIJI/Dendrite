@@ -1,0 +1,6 @@
+// Three lists of heights, rolled up into two numbers.
+let all    = Concat($men, $women, $unknown)
+let tall   = Filter(all, height => height >= $threshold)
+
+output howManyTall = Length(tall)
+output average     = Average(all)

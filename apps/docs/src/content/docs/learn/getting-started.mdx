@@ -1,0 +1,73 @@
+---
+title: "Getting started"
+description: "Open the playground, write three lines, change an input."
+sidebar:
+  order: 1
+---
+
+import { firstExample } from "../../../examples";
+import Live from "../../../components/Live";
+
+_Learn is for writing Dendrite programs. If you are embedding the language in an application of your own, start at [Installation](../../host/installation/) instead._
+
+There is nothing to install. The [playground](https://ijiji.github.io/Dendrite/playground/) runs
+the whole language in your browser: the parser, the type checker and the evaluator, with no
+server behind it.
+
+## Three lines
+
+A Dendrite program is a list of named things. Two words do all the declaring:
+
+```den
+let doubled = $n * 2
+output result = doubled
+```
+
+`let{:den}` names a value. `output{:den}` names a value **and** hands it to whoever is running
+the program. `$n{:den}` is an input: a number that arrives from outside, from the pane beside
+the editor here, from your application when you embed the language.
+
+That is the whole program. Change `$n` below and watch `result` follow.
+
+<Live client:only="react" source={firstExample.source} ports={firstExample.ports} />
+
+## What just happened
+
+Nothing ran when you stopped typing. Nothing ran when you changed the input, either, except
+the parts that needed to.
+
+- `doubled{:den}` reads `$n{:den}`, so a new `$n` makes it stale and it recomputes.
+- `result{:den}` reads `doubled{:den}`, so it recomputes too.
+- Anything that read neither would have been left alone.
+
+That is the whole idea of the language: you declare what depends on what, and the evaluator
+works out what has to happen. You never say *when*.
+
+## There is no "when"
+
+Dendrite has no statements, no sequence, no assignment. A program is not a list of steps to
+perform in order, it is a set of names and what each one is. So:
+
+- **Order does not matter.** You may name `doubled{:den}` after you use it. The analyser sorts
+  it out.
+- **Nothing changes under you.** Within one evaluation a name has one value, computed at most
+  once.
+- **There is no loop.** Iteration is what the list ops are for, and you will meet them shortly.
+
+Take a wrong turn and you hear about it before anything runs. Write `$n && true{:den}` and the
+type checker says so, with the line and column, because `&&{:den}` wants booleans and `$n` is a
+number.
+
+## Where to go next
+
+Two paths from here, depending on what you are doing.
+
+**Writing programs.** Carry on to [Examples](../examples/) for two worked programs you can take
+apart, then [Writing programs](../writing/bindings-and-outputs/) for each piece of the language
+in turn.
+
+**Embedding the language** in an app of your own, so its programs read your data and produce
+values you act on: go to [Installation](../../host/installation/). Come back here when you want
+to know what your users can write.
+
+**Next:** [Examples](../examples/).

@@ -1,0 +1,94 @@
+---
+title: "Lambdas and lists"
+description: "Functions as values, and the list ops that take them."
+sidebar:
+  order: 4
+---
+
+import { heightsExample } from "../../../../examples";
+import Live from "../../../../components/Live";
+
+Dendrite has no loop. It does not need one, because a function is a value you can hand to an op.
+
+```den
+let scores = [4, 8, 15, 16, 23]
+output high = Filter(scores, item => item > 10)
+```
+
+`item => item > 10{:den}` is a lambda: a function of one argument. `Filter{:den}` is an
+ordinary op that happens to take one, the same way `Add{:den}` takes numbers. There is no
+special syntax for iteration and no special node kind in the compiled program.
+
+## The list ops
+
+Six of them, and between them they cover what a loop would have done:
+
+```den
+let items = [4, 8, 15, 16, 23]
+
+output kept    = Filter(items, n => n > 10)
+output doubled = Map(items, n => n * 2)
+output total   = Reduce(items, 0, (sum, n) => sum + n)
+output first   = Find(items, n => n > 10)
+output anyBig  = Some(items, n => n > 10)
+output allBig  = Every(items, n => n > 10)
+```
+
+`Reduce{:den}` is the one to look at twice. It takes the list, a starting value, and a function
+of two arguments called with the accumulator first and the item second - so
+`(sum, n) => sum + n{:den}`, in that order.
+
+Beside these live the ops that do not need a function at all: `Length{:den}`, `Concat{:den}`,
+`Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}`. Reach for those
+first; a lambda you do not need is a lambda someone has to read.
+
+## Closures are real
+
+A lambda can use anything in scope where you wrote it, inputs included:
+
+<Live client:only="react" source={heightsExample.source} ports={heightsExample.ports} />
+
+`height => height >= $threshold{:den}` captures `$threshold{:den}`. Change the threshold and
+the lambda behaves differently, because the closure holds the input rather than a copy of its
+value. This is lexical scope, working the way you expect it to.
+
+A lambda's parameter shadows an outer name of the same name, and only inside the lambda:
+
+```den
+let n = 100
+output sizes = Map([1, 2, 3], n => n * 2)
+```
+
+The `n{:den}` inside is the item, 1 then 2 then 3. The `n` outside is still 100, and is now
+unused, which the analyser will mention.
+
+## Naming a function
+
+A lambda is a value, so it can be bound like any other and applied later:
+
+```den
+let double = n => n * 2
+output four = double(2)
+output list = Map([1, 2, 3], double)
+```
+
+Give a parameter a type when you want to be explicit, and pass an argument by its parameter's
+name when that reads better:
+
+```den
+let adjust = (x: number) => x + 10
+output named = adjust(x: 5)
+```
+
+## Why recursion is impossible
+
+A function cannot call itself, and the language has no way to express it. A name referring to
+itself is a `binding_cycle{:den}`, and self-application cannot be given a type, because a
+function is never accepted where `any{:den}` is expected.
+
+That is deliberate, and it is the reason **every Dendrite program terminates**. There is no
+program a user can write that loops forever inside your application. You pay for it by
+expressing iteration through the ops above rather than by writing your own recursion, which for
+the work this language is for is a trade worth making.
+
+**Next:** [Types in practice](../types/), and what the checker tells you.

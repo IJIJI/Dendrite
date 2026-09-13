@@ -19,7 +19,7 @@ const host: PortLayer = {
       { name: "heights_men", type: Type.array(Type.number) },
       { name: "heights_woman", type: Type.array(Type.number) },
       { name: "heights_unknown", type: Type.array(Type.number) },
-      { name: "treshold", type: Type.number },
+      { name: "threshold", type: Type.number },
     ],
     outputs: [
       { name: "pass_men", type: Type.number },
@@ -64,7 +64,7 @@ const outputs: Map<string, unknown> = env.run(compile_result.program, {
   heights_men: [180, 175, 190],
   heights_woman: [165, 170, 160],
   heights_unknown: [170, 175, 180],
-  treshold: 170,
+  threshold: 170,
 });
 
 for (const [name, value] of outputs) {

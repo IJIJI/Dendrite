@@ -1,9 +1,8 @@
-
-// let heights_men = $heights.men
-// let heights_woman = $heights.woman
-// let heights_unknown = $heights.unknown
+// Three arrays in, two roll-ups out. The host declares each input as number[] in a port
+// layer (1-run.ts); one struct input with .men / .woman / .unknown fields would do the same
+// job once a layer can declare a struct.
 
 let heights_all = Concat($heights_men, $heights_woman, $heights_unknown)
 
-output pass_total = Length(Filter(heights_all, (input: number) => input >= $treshold))
+output pass_total = Length(Filter(heights_all, (input: number) => input >= $threshold))
 output avg_height_total = Average(heights_all)

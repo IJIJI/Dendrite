@@ -29,8 +29,14 @@ export type CompileWarning = ParseWarning | AnalysisWarning;
 
 // Result of compile() = parse + analyse, tagged with the stage that failed. The analyse
 // arm still carries the PARTIAL program (surviving outputs), editors want it.
+//
+// `ok` says ONE thing: a program came out that the runtime can register. It does NOT mean
+// there were no errors. Analysis collects every error and keeps going, and it only reports
+// ok:false when a REQUIRED output was lost - so a program whose bad binding was pruned, or
+// whose failed output was optional, comes back ok:true with those errors on the list. Read
+// `errors` on every arm, or a type error goes unreported (which it was, until 2026-09-12).
 export type CompileResult =
-  | { ok: true; program: CoreProgram; warnings: CompileWarning[] }
+  | { ok: true; program: CoreProgram; errors: AnalysisError[]; warnings: CompileWarning[] }
   | { ok: false; stage: "parse"; errors: ParseError[]; warnings: CompileWarning[] }
   | {
       ok: false;
@@ -47,7 +53,13 @@ export interface LoadError {
   message: string;
 }
 
-export type LoadResult = CompileResult | { ok: false; stage: "load"; errors: LoadError[] };
+// The load arm carries an empty `warnings` for shape, not because a warning could exist:
+// it fires before lexing, so there is nothing to warn about yet. Every arm having both
+// lists is what lets a consumer read them without asking which arm it holds - the branch
+// that used to be there is how errors went unreported.
+export type LoadResult =
+  | CompileResult
+  | { ok: false; stage: "load"; errors: LoadError[]; warnings: CompileWarning[] };
 
 /** The descriptor-bound operations a composed program environment offers. */
 export interface Pipeline {
@@ -101,6 +113,7 @@ const loadFailure = (kind: LoadError["kind"], e: unknown): LoadResult => ({
   ok: false,
   stage: "load",
   errors: [{ kind, message: e instanceof Error ? e.message : String(e) }],
+  warnings: [],
 });
 
 // The one Pipeline implementation, bound to the composed descriptor of one program.
@@ -119,7 +132,9 @@ function pipelineFor(language: Language, descriptor: LanguageDescriptor): Pipeli
         program: result.program,
       };
     }
-    return { ok: true, program: result.program, warnings };
+    // Errors travel on the ok arm too: analysis found them, the surviving outputs are
+    // still sound, and whoever shows diagnostics needs both facts.
+    return { ok: true, program: result.program, errors: result.errors, warnings };
   }
 
   function compile(source: string): CompileResult {

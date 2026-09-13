@@ -1,0 +1,74 @@
+---
+title: "Inputs"
+description: "$name reads a value from outside."
+sidebar:
+  order: 2
+---
+
+import { orderExample } from "../../../../examples";
+import Live from "../../../../components/Live";
+
+A name with a `$` in front of it is an input: a value the program reads but does not compute.
+
+```den
+let subtotal = $price * $quantity
+output total = subtotal
+```
+
+The `$` is not decoration. It is how the parser knows, with no table to consult, that `price`
+comes from outside rather than from a `let{:den}` somewhere else in the file. A plain name is
+always a binding or an output; a `$` name is always an input.
+
+## Who supplies them
+
+Whoever is running the program. In the playground and in the editor on this page, the pane
+beside the code. In an application, the application: it declares which inputs exist and pushes
+values into them as its own state changes.
+
+You do not declare inputs in the program text. You read the ones you were given, and reading one
+that was never declared is an error with a name and a line:
+`unknown_program_input{:den}`.
+
+## Changing one changes what depends on it
+
+<Live client:only="react" source={orderExample.source} ports={orderExample.ports} />
+
+Move `$quantity{:den}` from 2 to 3 and three things happen: `subtotal{:den}` recomputes because
+it reads it, `shipping{:den}` recomputes and drops to zero, and both outputs follow. Move
+`$price{:den}` instead and `shipping{:den}` is left alone entirely, because it never reads
+`$price`.
+
+That is the incremental part of "incremental reactive evaluation", and it is not an
+optimisation bolted on afterwards. Every node in a compiled program carries the set of inputs
+it depends on, and a change recomputes exactly the nodes whose set it intersects.
+
+## Every input has a type
+
+An input is declared with a type, and the checker holds you to it:
+
+```den fails inputs="quantity:number"
+// $quantity is a number; And wants booleans.
+output ok = And($quantity, true)
+```
+
+You will meet `any{:den}` too, which accepts any value and is what a host uses when it genuinely
+does not know. [Types in practice](../types/) covers what that costs you.
+
+## Defaults, and inputs that are not set
+
+An input can carry a default, which is what it holds before anything supplies a value. Without
+one it starts as `null{:den}`, and `null` flows anywhere a value is expected, so a program over
+unset inputs still runs rather than failing.
+
+Two ops exist for exactly this:
+
+```den
+output shown = Default($nickname, "friend")
+output ready = IsSet($nickname)
+```
+
+`Default{:den}` swaps in a fallback when the value is not set; `IsSet{:den}` asks the question
+directly. Reach for them whenever an input is genuinely optional, rather than assuming a value
+is there.
+
+**Next:** [Operators and ops](../operators-and-ops/), and why `+` is not special.

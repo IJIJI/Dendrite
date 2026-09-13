@@ -1,14 +1,17 @@
 // Dendrite grade example (code-editor syntax).
 //
-// Host inputs are referenced with the $ sigil. Operators like >= arrive with
-// slice 4 (the grammar API); until then, ops are written in function form
-// (GreaterThan(...) rather than $score >= 60).
+// Host inputs are referenced with the $ sigil. Operators are sugar over ops, and either
+// form parses: $score > 100 is GreaterThan($score, 100). Some desugar into a composition
+// rather than one op - $score >= 60 is Not(LessThan($score, 60)), no GreaterThanOrEqual
+// needed - which is why the parser has no dedicated node for an operator.
 
 let passing  = $score >= 60
 let grade    = If(passing, "Pass", "Fail")
 
-// Should be pruned by the analyser, as it is unused. There should also be an error for the incorrect type and a warning for the unused bind.
-let madagascar = And(true, "Country") 
+// Deliberately wrong, and it shows three things at once: an op_input_type_mismatch error
+// (And wants booleans), an unused_binding warning (no output reaches it), and pruning (the
+// analyser drops it from the core program). Leave it here.
+let madagascar = And(true, "Country")
 
 let adjust = (x: number) => x + $bonus
 

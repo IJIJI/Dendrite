@@ -52,13 +52,21 @@ shared `errors`/`warnings` arrays.
 
 ## Error / warning kinds
 
-See `analyser/types.ts` for the authoritative lists — errors include `unknown_op`,
-`unknown_program_input`, `binding_cycle`, `undeclared_binding_reference`, `forward_reference`,
-`op_input_type_mismatch`, `program_output_type_mismatch`, `output_depends_on_failed_binding`,
-`lambda_return_type_mismatch`, `app_callee_not_function`, `app_argument_mismatch`,
-`app_argument_type_mismatch`, `missing_required_program_output`; warnings include `unused_binding`,
-`unknown_program_output`, `missing_desired_program_output`, `field_access_on_primitive`,
-`unknown_op_input_key`, `missing_op_input`, `implicit_any_cast`.
+**`language/diagnostics.ts` is the list**, and it is checked two ways: a `satisfies` over every
+kind union (parse, analyse, ports, evaluate, load) means a new kind does not compile until it is
+documented there, and `diagnostics.test.ts` runs each entry's sample to prove it still provokes
+what the entry claims. The docs site prints the same registry.
+
+Three things it records that are not obvious from the unions in `analyser/types.ts`:
+
+- `unknown_type`, `incompatible_field_override`, `missing_evaluator` and `orphan_evaluator` are
+  declared as analysis errors but only ever come from `validateDescriptor`, which runs inside
+  `composeLayers`. The first two reach a host as ports problems; the other two make `attribute`
+  THROW, because a language whose ops have no evaluators is broken before any program exists.
+- `unknown_op` and `lambda_return_type_mismatch` cannot be provoked from source. In code an
+  unknown call is `undeclared_binding_reference`, and there is no syntax for a lambda return
+  annotation - both need an `ast`-form program or a host grammar.
+- `deprecated_syntax` is emitted by nothing.
 
 `getOutputType(node)` returns a node's output `Type` (the array case wraps the element type:
 `Type.array(node.type)`).

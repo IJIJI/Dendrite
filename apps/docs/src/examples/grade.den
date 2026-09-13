@@ -1,0 +1,9 @@
+// A grade from a score, with a bonus added on.
+let passing  = $score >= 60
+let grade    = If(passing, "Pass", "Fail")
+
+let adjusted = $score + $bonus
+let topMark  = adjusted > 100
+
+output result     = If(topMark, "Distinction", grade)
+output finalScore = adjusted

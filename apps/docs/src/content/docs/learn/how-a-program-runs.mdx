@@ -1,0 +1,82 @@
+---
+title: "How a program runs"
+description: "The four things a program becomes, and what each step is allowed to decide."
+sidebar:
+  order: 9
+---
+
+import Chain from "../../../components/Chain.astro";
+
+You have written programs now. This page says what happens to one, in enough detail to predict
+what the language will do and no more.
+
+<Chain />
+
+Four things, three steps between them. Each step takes what is on its left and produces what is
+on its right, and none of them can reach backwards.
+
+## Parse: text becomes a program
+
+The lexer turns your text into tokens and the parser turns those into bindings and outputs. This
+step knows the shape of the language and nothing else: it does not know which ops exist, which
+types exist, or what your application declared.
+
+That is why `$n{:den}` is an input here purely because of the `$` - no table is consulted - and
+why a misspelled op name gets through this step without complaint. What you can rely on: a
+syntax error is reported here, with a position, and nothing further happens.
+
+## Analyse: the program is checked
+
+This is where almost everything happens. The analyser walks the bindings in dependency order
+and works out the type of each one, and it checks every op call against what that op actually
+takes.
+
+It also decides what is worth keeping. A binding no output can reach is dropped. An output
+whose working failed is dropped, and if your application had marked that output *required*, the
+whole program fails to load; if not, the rest carries on without it.
+
+Two things to rely on. **Errors are collected, not thrown at the first one**, so you get the
+full list rather than peeling them off one at a time. And **soundness is per output**: one
+broken result does not stop the others, which is why a half-finished program keeps producing the
+parts that work.
+
+The step needs one thing besides your program: the list of ops, types, inputs and outputs it is
+allowed to use. That list is not fixed by the language. It is assembled from what your
+application declared, and [Ports and layers](../../how-it-works/ports-and-layers/) is where that
+is explained.
+
+## Evaluate: values, on demand
+
+The evaluator does not run your program top to bottom. Outputs pull: asking for an output walks
+only the nodes that output depends on, and each node remembers its last value.
+
+So when an input changes, the recompute covers exactly the nodes that read it, directly or
+through other bindings. Everything else keeps what it had. You saw this on
+[Inputs](../writing/inputs/): move `$price{:den}` and the shipping calculation is not touched.
+
+Two things to rely on. **A binding is computed at most once per evaluation** however many names
+read it. And **the last good program keeps running**: while your text does not compile, the
+values on screen are the ones from the program that did, marked stale rather than hidden, so
+whatever is acting on them has something to act on.
+
+## What each step may not do
+
+Worth stating as plainly as the rest, because it is what makes the chain predictable:
+
+- **Parsing** may not resolve a name or infer a type. It does not know what exists.
+- **Analysis** may not compute a value. It works with types, not numbers.
+- **Evaluation** may not report a type error. Everything checkable was checked already; what
+  reaches it is a runtime failure, and it arrives on the outputs rather than as a diagnostic.
+
+## That is Learn
+
+You can write programs and predict what they do. Two ways on from here:
+
+- **[The standard library](../../stdlib/)** - every op, with its signature and a worked example,
+  generated from the language itself.
+- **[How it works](../../how-it-works/the-chain/)** - the same chain again, one page per step,
+  with the reasons. Learn told you what you can rely on; that section tells you why, and in what
+  order.
+
+And if you want the language inside an application of your own,
+[Host developers](../../host/installation/) starts there.
