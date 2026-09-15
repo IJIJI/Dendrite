@@ -36,7 +36,8 @@
   },
   "files": [
     "dist",
-    "style.css"
+    "style.css",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
   "publishConfig": {
