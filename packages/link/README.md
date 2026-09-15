@@ -4,6 +4,13 @@ Drive a core `ProgramInstance` across a channel. A host **serves** one; an edito
 a replica that _is_ a `ProgramInstance` - five observables, four commands - and cannot be told
 from the local thing. Dendrite owns the message shapes and both ends; the host owns the pipe.
 
+```sh
+npm install @dendrite-lang/link @dendrite-lang/core
+```
+
+`@dendrite-lang/core` is a peer dependency, and both ends must run the same language build.
+📖 **[Documentation](https://ijiji.github.io/Dendrite/host/packages/link/)**
+
 ```ts
 // the host (node, Electron main, a worker - wherever core runs)
 import { serveInstance, webSocketChannel } from "@dendrite-lang/link";

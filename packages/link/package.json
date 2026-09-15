@@ -1,15 +1,26 @@
 {
   "name": "@dendrite-lang/link",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Drive a Dendrite ProgramInstance across a channel: a host serves one, an editor connects a replica. The message shapes are Dendrite's; the pipe is the host's.",
-  "license": "MPL-2.0",
-  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
+  "keywords": [
+    "dendrite",
+    "remote",
+    "websocket",
+    "messageport",
+    "replica",
+    "dataflow"
+  ],
+  "homepage": "https://ijiji.github.io/Dendrite/host/packages/link/",
+  "bugs": {
+    "url": "https://github.com/IJIJI/Dendrite/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/IJIJI/Dendrite.git",
     "directory": "packages/link"
   },
+  "license": "MPL-2.0",
+  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
   "type": "module",
   "exports": {
     ".": {
@@ -18,9 +29,13 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
