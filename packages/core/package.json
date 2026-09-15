@@ -12,7 +12,7 @@
     "logic",
     "node-editor"
   ],
-  "homepage": "https://github.com/IJIJI/Dendrite#readme",
+  "homepage": "https://ijiji.github.io/Dendrite/host/packages/core/",
   "bugs": {
     "url": "https://github.com/IJIJI/Dendrite/issues"
   },
@@ -38,6 +38,9 @@
     "dist"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",

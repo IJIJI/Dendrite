@@ -4,6 +4,14 @@ The Dendrite editor: a **headless core** (document, stores, CodeMirror adapter) 
 **React compound components** under `@dendrite-lang/editor/react`. A host lays the components out
 however it likes and owns persistence and routing; the editor owns everything inside.
 
+```sh
+npm install @dendrite-lang/editor @dendrite-lang/core
+# and react, for the components under @dendrite-lang/editor/react
+```
+
+`@dendrite-lang/core` is a peer dependency: install it once, at the top, so the editor and your
+application share one copy. 📖 **[Documentation](https://ijiji.github.io/Dendrite/host/packages/editor/)**
+
 ## React
 
 ```tsx

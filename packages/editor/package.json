@@ -1,15 +1,27 @@
 {
   "name": "@dendrite-lang/editor",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Dendrite editor: framework-free session, CodeMirror adapter, document model and stores; React compound components under ./react.",
-  "license": "MPL-2.0",
-  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
+  "keywords": [
+    "dendrite",
+    "editor",
+    "codemirror",
+    "react",
+    "dataflow",
+    "dsl",
+    "code-editor"
+  ],
+  "homepage": "https://ijiji.github.io/Dendrite/host/packages/editor/",
+  "bugs": {
+    "url": "https://github.com/IJIJI/Dendrite/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/IJIJI/Dendrite.git",
     "directory": "packages/editor"
   },
+  "license": "MPL-2.0",
+  "author": "IJssel K <ijssel@synapt.nl> (https://synapt.net/)",
   "type": "module",
   "exports": {
     ".": {
@@ -27,6 +39,9 @@
     "style.css"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
