@@ -7,11 +7,11 @@ sidebar:
 
 _Host developers is for embedding the language in an application of your own. If you are writing programs in it, start with [Learn](../../learn/getting-started/)._
 
-:::caution[Not on npm yet]
-`@dendrite-lang/core@0.1.0` is the first release, and this documentation is part of preparing it.
-Until it is published, the packages build from
-[the repository](https://github.com/IJIJI/Dendrite): `yarn` then `yarn build` at the root. The
-commands below are what installing will be once it lands.
+:::note[0.1.0]
+The first release. Before 1.0 a minor version may break the API, and the editor and the link
+depend on core `^0.1.0`, so a minor release of core comes with a release of both. Each package's
+changes are in its changelog:
+[core](https://github.com/IJIJI/Dendrite/blob/main/packages/core/CHANGELOG.md) - [editor](https://github.com/IJIJI/Dendrite/blob/main/packages/editor/CHANGELOG.md) - [link](https://github.com/IJIJI/Dendrite/blob/main/packages/link/CHANGELOG.md)
 :::
 
 ## The packages

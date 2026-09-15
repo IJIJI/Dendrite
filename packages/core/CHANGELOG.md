@@ -1,7 +1,9 @@
 # Changelog
 
-Changes to `@dendrite-lang/core`, newest first. Each version's release date is on its
-[GitHub release](https://github.com/IJIJI/Dendrite/releases), tagged `@dendrite-lang/core@<version>`.
+Changes to `@dendrite-lang/core`, newest first. Every version is tagged
+`@dendrite-lang/core@<version>`; its date is on the
+[GitHub release](https://github.com/IJIJI/Dendrite/releases) that ships it, which covers every
+package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
