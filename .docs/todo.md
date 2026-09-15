@@ -332,17 +332,14 @@ cannot diverge. The pages become `.mdx`.
 
 ---
 
-## Packages — `require()` for editor and link
+## Packages — `require()` for editor and link — FIXED 2026-09-16, ships in the next release
 
-**What:** editor and link are ESM-only, and their `exports` offer only `import`, so
-`require("@dendrite-lang/editor")` fails with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
-clean install, 2026-09-16). Node 22.12+ can `require()` an ES module, but only through an export
-condition it matches: add `"default": "./dist/index.js"` next to `import` in each entry of both
-maps (editor's `.` and `./react`, link's `.`). Core is dual CJS/ESM and needs nothing.
-
-**Why deferred:** found after the release was staged; a patch release, not a blocker.
-
-**Driving need:** a CommonJS host (an Electron main process, an older Node service) using link.
+Editor and link were ESM-only with an `exports` map offering only `import`, so
+`require("@dendrite-lang/editor")` failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
+clean install). A `default` condition beside `import` in each entry (editor's `.` and `./react`,
+link's `.`) fixes it: `require` matches `default`, and Node loads the file as ESM. Checked by
+packing both and loading them from a project outside the repo, by `require` and by `import`. Core
+is dual CJS/ESM and needed nothing. On npm from the next release; both changelogs carry it.
 
 ---
 

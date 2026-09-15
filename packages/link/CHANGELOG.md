@@ -9,6 +9,12 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
 `^0.1.0`: a minor release of core needs a release here too, even if nothing in this package changed.
 
+## Unreleased
+
+- **`require()` works.** The entry gained a `default` export condition beside `import`, so
+  `require("@dendrite-lang/link")` resolves. The package is still ESM, so this needs a Node that
+  can `require()` an ES module (22.12 or later, or 20.19 or later).
+
 ## 0.1.0
 
 The first release.
