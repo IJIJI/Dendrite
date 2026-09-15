@@ -118,10 +118,11 @@ Est. 45 min.
   bumped only one package.
 - No token, no secret: authentication is the OIDC exchange; provenance is automatic.
 
-To confirm while building: that `npm stage publish` accepts a packed tarball path. If it does not,
-the fallback is staging from each package folder, which would ship the `workspace:^` range in
-**devDependencies** unrewritten - harmless to consumers, since dev dependencies are never
-installed from the registry.
+**Confirmed while building (2026-09-15):** `npm stage publish` accepts a Yarn-packed tarball -
+npm 11.19's dry run reports `+ @dendrite-lang/core@0.1.0 (staged)` - so no fallback is needed.
+The staging step was run from the workflow's own text with `npm stage` swapped for its dry run:
+it found exactly the three public packages, packed each outside the repo, and staged all three;
+the skip check was tested both ways, and an empty package list fails the job.
 
 | File | Change |
 |---|---|

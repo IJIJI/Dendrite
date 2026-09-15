@@ -1,0 +1,88 @@
+# Stage every public package whose version npm does not have yet. Nothing goes live from here:
+# a staged version waits on npmjs.com until a maintainer approves it with 2FA.
+#
+# Authentication is npm trusted publishing (OIDC) - there is no token and no secret. Each package
+# must list this repository and this workflow file as a trusted publisher, allowed to stage only.
+# That can only be configured on a package that already exists, so a brand-new package is
+# published once by hand first (.docs/release-plan.md). Provenance is added by npm automatically.
+#
+# One run serves any release: a launch of every package, or a patch to one. Versions already on
+# npm are skipped, so a re-run after a partial failure is safe. A version that is staged but not
+# yet approved cannot be staged again: approve or reject it first.
+name: Stage release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One staging run at a time, and never cancelled halfway: a run cut off between two packages
+# leaves a release half-staged.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    # A fork has no trusted publisher; do not let it try.
+    if: github.repository == 'IJIJI/Dendrite'
+    # Trusted publishing works from GitHub-hosted runners only.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # the OIDC token npm exchanges for publish rights
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Only the public packages, core first: editor and link build their types against it.
+      - name: Build the packages
+        run: yarn workspaces foreach --all --no-private --topological run build
+
+      - name: Test
+        run: yarn test
+
+      # Node 22 ships npm 10. Staging needs npm 11.15 or later, trusted publishing 11.5.1.
+      - name: Install npm 11
+        run: npm install --global npm@^11.15.0 && npm --version
+
+      # Yarn packs, because it rewrites workspace: ranges into real ones; npm stages the tarball,
+      # because trusted publishing is npm's. Packages are read from the workspace, so a new public
+      # package is picked up without editing this file.
+      - name: Stage what npm does not have yet
+        run: |
+          set -euo pipefail
+          packs="${RUNNER_TEMP:-$(mktemp -d)}/packs"
+          mkdir -p "$packs"
+
+          mapfile -t packages < <(
+            yarn workspaces list --json | node -e '
+              const path = require("node:path");
+              const rows = require("node:fs").readFileSync(0, "utf8").trim().split("\n").map(JSON.parse);
+              for (const { location } of rows.sort((a, b) => a.location.localeCompare(b.location))) {
+                const pkg = require(path.resolve(location, "package.json"));
+                if (!pkg.private) console.log(`${pkg.name} ${pkg.version}`);
+              }'
+          )
+          # A process substitution's failure does not trip pipefail, so an empty list would
+          # otherwise pass as a release with nothing to stage.
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "::error::found no public packages to stage"
+            exit 1
+          fi
+
+          for entry in "${packages[@]}"; do
+            read -r name version <<< "$entry"
+            if npm view "$name@$version" version > /dev/null 2>&1; then
+              echo "::notice::$name@$version is already on npm - skipped"
+              continue
+            fi
+            tarball="$packs/${name##*/}-$version.tgz"
+            yarn workspace "$name" pack --out "$tarball" < /dev/null
+            npm stage publish "$tarball" --access public < /dev/null
+            echo "::notice::$name@$version is staged - approve it on npmjs.com"
+          done
