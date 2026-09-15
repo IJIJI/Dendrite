@@ -11,8 +11,17 @@ writing programs, the **stdlib** reference with its conventions, **How it works*
 chain in depth - one page per stage, the generated diagnostics catalogue, persistence, a
 glossary - and **Host developers** for embedding it. Every Dendrite sample on the site is loaded
 by `apps/docs/src/content/content.test.ts`; every diagnostic kind is documented and provoked in
-`packages/core/src/language/diagnostics.ts`. What is left before `@dendrite-lang/core@0.1.0` is
-the release itself.
+`packages/core/src/language/diagnostics.ts`.
+
+---
+
+## The first npm release — DONE 2026-09-15
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` are on npm at **0.1.0**,
+with provenance. A GitHub release starts `.github/workflows/publish.yml`, which stages every
+public package version npm lacks through trusted publishing - no token anywhere - and a
+maintainer approves each with 2FA. The runbook for the next release, and what this one taught,
+are in `release-plan.md`.
 
 ---
 
@@ -320,6 +329,35 @@ small component over `?raw`, as the live examples already do) so the page and th
 cannot diverge. The pages become `.mdx`.
 
 **Driving need:** the core API changing before 1.0, which it will.
+
+---
+
+## Packages — `require()` for editor and link
+
+**What:** editor and link are ESM-only, and their `exports` offer only `import`, so
+`require("@dendrite-lang/editor")` fails with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
+clean install, 2026-09-16). Node 22.12+ can `require()` an ES module, but only through an export
+condition it matches: add `"default": "./dist/index.js"` next to `import` in each entry of both
+maps (editor's `.` and `./react`, link's `.`). Core is dual CJS/ESM and needs nothing.
+
+**Why deferred:** found after the release was staged; a patch release, not a blocker.
+
+**Driving need:** a CommonJS host (an Electron main process, an older Node service) using link.
+
+---
+
+## Packages — Dendrite branding on the READMEs
+
+**What:** the root README opens with the Dendrite wordmark and brand-coloured badges; the three
+package READMEs are plain text, and they are the npm pages. Give each the wordmark header (an
+absolute image URL, since npm does not resolve repo-relative paths), an npm version badge per
+package in the brand colours, and the root README's npm badge switched on for core. The assets are
+in `brand/` (`README-header.md`, `assets/`).
+
+**Why deferred:** the README text had to be right for 0.1.0; the look can follow.
+
+**Driving need:** the npm pages are the first thing a host developer sees. Ships with the next
+release of each package, since npm only updates a README on publish.
 
 ---
 
