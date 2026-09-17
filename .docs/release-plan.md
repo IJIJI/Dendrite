@@ -1,8 +1,10 @@
 # The first release — plan
 
-> **Status: approved 2026-09-15.** Manual release-candidate bootstrap, then CI stages every
-> release through trusted publishing and the maintainer approves it. Replaces a token-based
-> draft that npm's January 2027 token change would have broken.
+> **Status: DONE 2026-09-15.** `@dendrite-lang/core`, `@dendrite-lang/editor` and
+> `@dendrite-lang/link` are on npm at 0.1.0, staged from CI through trusted publishing and
+> approved by hand, with provenance. The plan below is kept as the record; **"Every later
+> release" is the runbook** for the next one, and "What the first release taught" holds what only
+> doing it showed.
 
 ## Context
 
@@ -168,8 +170,48 @@ j. **Me, a commit:** the Installation page loses its "not on npm yet" callout, t
 
 ## Every later release
 
-Bump a package's version and changelog on `dev`, merge, tag, publish a GitHub release. CI stages
-whatever is new; you approve it on npmjs.com. Nothing reaches npm without your 2FA.
+The runbook. Only the packages whose version changed are part of a release.
+
+1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
+   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three.
+2. Merge `dev` into `main`.
+3. On `main`, one tag per changed package: `git tag -a "@dendrite-lang/<name>@<version>" -m "…"`,
+   then push the tags. Tags trigger nothing by themselves.
+4. **One GitHub release per batch**, on core's tag if core is in it, otherwise on the tag of one
+   changed package. The title and body name every package and version in the batch. Publishing the
+   release starts `Stage release`.
+   - **One release per batch is a hard rule, not a preference.** Two releases in one batch would
+     start two workflow runs; the second would try to stage versions the first had already staged,
+     which npm refuses, so it fails.
+5. The workflow builds, tests, and stages every public package version npm does not have yet.
+   Versions already on npm are skipped, so a re-run after a partial failure is safe.
+6. Approve each staged version on npmjs.com with 2FA, **core first**, so a dependent is never live
+   against a core version that is not.
+7. Check: `npm view "@dendrite-lang/<name>" versions dist-tags`, `… dist.attestations.url` for
+   provenance, and one clean install from npm outside the repo.
+
+Nothing reaches npm without 2FA. There is no token anywhere: CI authenticates with the OIDC token
+GitHub gives the run, and each package lists this repo and `publish.yml` as its trusted publisher,
+allowed to **stage only**.
+
+## What the first release taught
+
+Kept because none of it is obvious from the plan.
+
+- **A tarball can lag its metadata.** After approval, core's `0.1.0` metadata was complete while
+  the tarball 404'd for about five minutes, so `npm install` failed. It resolved on its own. Wait
+  and re-check before suspecting the release; a version number can never be reused, so never
+  re-publish to "fix" it.
+- **npm points `latest` at a package's first version**, whatever `--tag` was used. The
+  `0.1.0-rc.0` bootstrap therefore held `latest` until 0.1.0 was approved.
+- **Remove a dist-tag before unpublishing the version it points at**, or the tag dangles.
+- **Editor and link cannot be `require`d.** Their `exports` offer only `import`. Node 22 can
+  `require()` an ES module, but needs a matching condition; a `default` entry would do it (in
+  `.docs/todo.md`).
+- **npm only updates a package's README when that package is published**, so README work ships
+  with the next release of each package, never on its own.
+- **Commands for the user are PowerShell.** A bash `~` in a walkthrough made Yarn write the
+  tarballs into `packages/*/~/`.
 
 ## If something fails
 
@@ -183,10 +225,16 @@ whatever is new; you approve it on npmjs.com. Nothing reaches npm without your 2
 - Root gates after every commit.
 - Step 1: `npm pack --dry-run` lists exactly the intended files.
 - Step 2: the tarballs install and import from outside the repo by `require`, `import` and `tsc`.
-- Step 4: `actionlint`-clean workflow; the pack-and-skip logic run locally against the registry
-  (skip correctly detects a version that exists, e.g. the candidates after step c).
+- Step 4: the pack-and-skip logic run locally against the registry (skip correctly detects a
+  version that exists, and reports a missing one as E404 on npm 10 and 11). actionlint was
+  considered and left out for now.
 - Step 5: `npm view` dist-tags after c and after h; provenance present on 0.1.0; a clean install
   works; the candidates are gone after i; the docs' install commands are true.
+
+**All of it passed on 2026-09-15**: three packages at 0.1.0, `latest` on each, attestations on
+all three, registry tarballs matching their published checksums, and `npm audit signatures`
+verifying every signature. The candidates were unpublished the same evening, well inside npm's
+72-hour window.
 
 ## ADHD recap
 

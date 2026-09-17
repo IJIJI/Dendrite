@@ -29,11 +29,11 @@ program running.
 
 ## React
 
-```tsx
+```tsx continues="../installation"
 import "@dendrite-lang/editor/style.css";
 import { Editor } from "@dendrite-lang/editor/react";
 
-<Editor document={doc} language={myLanguage} onChange={(d) => save(d)}>
+<Editor document={doc} language={language} onChange={(d) => save(d)}>
   <Editor.FullLayout />
 </Editor>;
 ```
@@ -97,7 +97,7 @@ host-fed in one application and user-edited in another.
 import { createEditor, ownStack, watch } from "@dendrite-lang/editor";
 
 const editor = createEditor(element, {
-  connection: ownStack({ document }),
+  connection: ownStack({ document: doc }),
   onChange: (doc) => save(doc),
 });
 

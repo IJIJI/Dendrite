@@ -1,11 +1,19 @@
 # Changelog
 
-Changes to `@dendrite-lang/editor`, newest first. Each version's release date is on its
-[GitHub release](https://github.com/IJIJI/Dendrite/releases), tagged `@dendrite-lang/editor@<version>`.
+Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
+`@dendrite-lang/editor@<version>`; its date is on the
+[GitHub release](https://github.com/IJIJI/Dendrite/releases) that ships it, which covers every
+package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.1.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## Unreleased
+
+- **`require()` works.** Each entry gained a `default` export condition beside `import`, so
+  `require("@dendrite-lang/editor")` and `.../react` resolve. The package is still ESM, so this
+  needs a Node that can `require()` an ES module (22.12 or later, or 20.19 or later).
 
 ## 0.1.0
 

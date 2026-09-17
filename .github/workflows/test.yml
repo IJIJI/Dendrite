@@ -1,11 +1,14 @@
-# The vitest suites (packages/*/src/**/*.test.ts), via the root fan-out script.
+# The vitest suites, via the root fan-out script: packages/*/src/**/*.test.ts, plus the docs'
+# own suite over every sample the site shows.
 name: Test
 
-# Push-only - see lint.yml.
+# PR-only - see lint.yml: a PR surfaces the same runs, so both triggers would double them.
+#
+# Deliberately unfiltered by path, unlike the other gates: the docs suite reads the pages
+# themselves - every Dendrite and TypeScript sample in them - so a Markdown-only change is
+# exactly what it exists to catch.
 on:
   pull_request:
-    paths-ignore:
-      - "**/*.md"
   workflow_dispatch:
 
 permissions:

@@ -7,10 +7,17 @@ sidebar:
 
 A language is a set of registrations. The standard library is one; yours is the standard library
 plus whatever your application needs its programs to say. This page builds three additions end to
-end, and every snippet on it was run against the language before it was written down.
+end, and a test typechecks every snippet on it against the language it extends.
 
 ```ts
-import { BP, createStdlib, elementOf, operationNode, Type } from "@dendrite-lang/core";
+import {
+  BP,
+  createEnvironment,
+  createStdlib,
+  elementOf,
+  operationNode,
+  Type,
+} from "@dendrite-lang/core";
 
 const language = createStdlib();
 ```

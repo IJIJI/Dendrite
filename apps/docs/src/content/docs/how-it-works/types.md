@@ -8,7 +8,7 @@ sidebar:
 A type in Dendrite is a small structure, never a string. Three shapes, and only the first is
 ever registered anywhere:
 
-```ts
+```ts sketch
 { kind: "name", name: "number" }                          // number, string, Bus, …
 { kind: "array", element: Type }                          // number[]
 { kind: "function", params: Type[], returns: Type }       // (number) -> boolean
