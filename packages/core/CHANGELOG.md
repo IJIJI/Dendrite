@@ -9,6 +9,11 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.1.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **The npm page** carries the Dendrite wordmark, and version, docs and licence badges.
+  Nothing in the package itself changed.
+
 ## 0.1.0
 
 The first release.

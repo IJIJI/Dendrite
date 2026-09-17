@@ -312,6 +312,40 @@ most, and whether the presets need any config at all beyond defaults.
 
 ---
 
+## Packages — `require()` for editor and link — FIXED 2026-09-16, ships in the next release
+
+Editor and link were ESM-only with an `exports` map offering only `import`, so
+`require("@dendrite-lang/editor")` failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
+clean install). A `default` condition beside `import` in each entry (editor's `.` and `./react`,
+link's `.`) fixes it: `require` matches `default`, and Node loads the file as ESM. Checked by
+packing both and loading them from a project outside the repo, by `require` and by `import`. Core
+is dual CJS/ESM and needed nothing. On npm from the next release; both changelogs carry it.
+
+---
+
+## Packages — Dendrite branding on the READMEs — DONE 2026-09-17, ships in the next release
+
+The three package READMEs, which are the npm pages, open with the Dendrite wordmark - the same
+logo the root README shows - and three badges:
+the npm version, a docs link and the licence, in the brand's periwinkle on ink. The shared snippet
+is `brand/README-header.md`, which also stopped advertising MIT and an `OWNER` placeholder. The root
+README already carries a version badge per package.
+
+Two things worth knowing next time:
+
+- **The logo is a PNG**, `brand/assets/dendrite-wordmark.png`, rendered from the SVG beside it with
+  sharp (already a dependency) and flattened onto white, which is what the root README's own
+  wordmark carries. npm does not render SVG reliably, and that root wordmark is an SVG on GitHub's
+  user-attachments host, which refuses a request without a browser user agent.
+- **It is hotlinked** from `raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/`, not packed
+  into the tarballs, so the image only resolves once the commit is on `main` - which the release
+  runbook does first anyway.
+
+On npm from the next release: npm refreshes a README only when its package publishes, so core gets a
+version bump for its page alone.
+
+---
+
 ## Docs — the TypeScript samples are checked — DONE 2026-09-17
 
 `apps/docs/src/content/ts-samples.test.ts`, the sibling of `content.test.ts`: every ` ```ts ` and

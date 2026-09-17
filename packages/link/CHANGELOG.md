@@ -14,6 +14,7 @@ break the API or the wire protocol. This package declares `@dendrite-lang/core` 
 - **`require()` works.** The entry gained a `default` export condition beside `import`, so
   `require("@dendrite-lang/link")` resolves. The package is still ESM, so this needs a Node that
   can `require()` an ES module (22.12 or later, or 20.19 or later).
+- **The npm page** carries the Dendrite wordmark, and version, docs and licence badges.
 
 ## 0.1.0
 
