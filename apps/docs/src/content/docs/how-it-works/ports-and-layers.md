@@ -27,7 +27,7 @@ allowed to rename.
 
 ## A layer is data
 
-```ts
+```ts sketch
 { id: "host", ports: { types?, inputs, outputs }, policy: { editable, feeds, persisted } }
 ```
 

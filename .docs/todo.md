@@ -312,49 +312,37 @@ most, and whether the presets need any config at all beyond defaults.
 
 ---
 
-## Docs — the TypeScript samples are not checked
+## Docs — the TypeScript samples are checked — DONE 2026-09-17
 
-**What:** the Host developers pages are mostly TypeScript: the setup, the four levels, extending
-the language, both ends of the link. Every one of them was run against core before it was
-written down (2026-09-12), but nothing keeps them honest afterwards. The ` ```den ` samples have
-a test; these do not, and an API rename would leave them quietly wrong - which is exactly how the
-editor README came to import a `defaultEnd` that round two had renamed.
+`apps/docs/src/content/ts-samples.test.ts`, the sibling of `content.test.ts`: every ` ```ts ` and
+` ```tsx ` fence on the site, typechecked against the packages' **source** through the docs
+tsconfig's `paths`, so a rename in core, the editor or the link fails the test with no build step.
+Proved by renaming a core export and watching every page that uses it fail, each at the page and
+line a reader would open.
 
-**Why deferred:** the Dendrite samples were the standing requirement; TypeScript samples need a
-different mechanism, and step 7 was writing the pages, not building that.
+A page's fences are concatenated in order into one virtual file, because that is what the pages
+already are - Installation imports in its first fence and uses `runtime` in its second - on top of
+`src/examples/host/prelude.ts`, which declares what the *host* brings (`save`, `element`, `wss`)
+and nothing Dendrite provides. Three fence tags steer it:
 
-**What it requires:** move each snippet into a real file under `apps/docs/src/examples/host/`
-that `astro check` typechecks and a test runs, and render it into the page from that file (a
-small component over `?raw`, as the live examples already do) so the page and the checked code
-cannot diverge. The pages become `.mdx`.
+| Tag | Means |
+| --- | --- |
+| `sketch` | not TypeScript: a shape or an outline, skipped |
+| `alone` | its own script, for a fence that is another runtime (the link page's two ends) |
+| `continues="installation"` | this page picks up where that one left off, so it borrows its real code |
 
-**Driving need:** the core API changing before 1.0, which it will.
+It found three samples already broken: `extending-the-language` used a `createEnvironment` it never
+imported, `embedding-core`'s levels snippet used an undefined `layer` and skipped its `.ok` checks,
+and the link page's `Channel` interface used an unimported `Observable`. All three are fixed on the
+page.
 
----
+Not done, and deliberately: the samples are not **run**, so a `// 8` comment beside a call is still
+only a claim. Typechecking is what catches a rename; running would want the file-based route below.
 
-## Packages — `require()` for editor and link — FIXED 2026-09-16, ships in the next release
-
-Editor and link were ESM-only with an `exports` map offering only `import`, so
-`require("@dendrite-lang/editor")` failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
-clean install). A `default` condition beside `import` in each entry (editor's `.` and `./react`,
-link's `.`) fixes it: `require` matches `default`, and Node loads the file as ESM. Checked by
-packing both and loading them from a project outside the repo, by `require` and by `import`. Core
-is dual CJS/ESM and needed nothing. On npm from the next release; both changelogs carry it.
-
----
-
-## Packages — Dendrite branding on the READMEs
-
-**What:** the root README opens with the Dendrite wordmark and brand-coloured badges; the three
-package READMEs are plain text, and they are the npm pages. Give each the wordmark header (an
-absolute image URL, since npm does not resolve repo-relative paths), an npm version badge per
-package in the brand colours, and the root README's npm badge switched on for core. The assets are
-in `brand/` (`README-header.md`, `assets/`).
-
-**Why deferred:** the README text had to be right for 0.1.0; the look can follow.
-
-**Driving need:** the npm pages are the first thing a host developer sees. Ships with the next
-release of each package, since npm only updates a README on publish.
+The file-based mechanism this entry used to describe - every snippet moved into
+`src/examples/host/`, the pages converted to MDX, a component rendering them - was not built. It
+costs six page conversions, a component and 18 files rewritten to stand alone, to buy live errors in
+the editor that `astro check` already gives now that the samples compile.
 
 ---
 

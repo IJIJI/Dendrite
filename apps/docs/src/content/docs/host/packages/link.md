@@ -14,7 +14,7 @@ You own the pipe.**
 
 ## Both ends
 
-```ts
+```ts alone continues="../installation"
 // The host: wherever core runs - node, an Electron main process, a worker.
 import { serveInstance, webSocketChannel } from "@dendrite-lang/link";
 
@@ -24,7 +24,7 @@ wss.on("connection", (socket) => {
 });
 ```
 
-```ts
+```ts alone continues="../installation"
 // The editor: a browser, usually.
 import { connectInstance, webSocketChannel } from "@dendrite-lang/link";
 import { attach } from "@dendrite-lang/editor";
@@ -89,6 +89,8 @@ open, and listing programs are your application's, at your own API, before the c
 A `Channel` is the one thing a host implements:
 
 ```ts
+import { type Observable } from "@dendrite-lang/core";
+
 interface Channel<Out, In> {
   send(message: Out): void;
   onMessage(listener: (message: In) => void): () => void; // returns unsubscribe

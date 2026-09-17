@@ -24,7 +24,7 @@ Everything an instance knows, it publishes. Each is an `Observable`: `get()` for
 | `ports` | the layers as composed, and which layer placed each name |
 | `snapshot` | everything a save would capture: the program, its ports, its values |
 
-```ts
+```ts continues="installation"
 const stop = instance.outputs.subscribe(({ outputs, error, stale }) => {
   if (error) return report(error);
   act(outputs?.get("alert"), { stale });
@@ -101,13 +101,24 @@ a reason, and the lower ones are there when you need less.
 The lower two take a compiled program directly:
 
 ```ts
-const { environment } = env.forProgram([], [layer]); // after checking `.ok`
-const parsed = environment.parse("output doubled = $n * 2");
-const program = environment.analyse(parsed.program).program; // after checking `parsed.ok`
+import { createProgramRunner, type PortLayer, run } from "@dendrite-lang/core";
 
-run(program, environment.descriptor, { n: 4 }).get("doubled"); // 8
+const layer: PortLayer = {
+  id: "sample",
+  policy: Policy.user,
+  ports: { inputs: [{ name: "n", type: Type.number, default: 0 }], outputs: [] },
+};
 
-const runner = createProgramRunner(program, environment.descriptor);
+const composed = env.forProgram([], [layer]);
+if (!composed.ok) throw new Error("those layers do not compose");
+const parsed = composed.environment.parse("output doubled = $n * 2");
+if (!parsed.ok) throw new Error("that program does not parse");
+const { program } = composed.environment.analyse(parsed.program);
+const { descriptor } = composed.environment;
+
+run(program, descriptor, { n: 4 }).get("doubled"); // 8
+
+const runner = createProgramRunner(program, descriptor);
 runner.run({ n: 5 }).get("doubled"); // 10, and only what `n` reaches recomputes next time
 ```
 
