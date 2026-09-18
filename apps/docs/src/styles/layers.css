@@ -1,0 +1,9 @@
+/* Cascade layer order, and it has to be the FIRST stylesheet the site loads: a layer's
+   priority comes from where it is first named, not from specificity.
+   The editor's stylesheet opens with `@layer dendrite`, Starlight's with `@layer starlight.…`,
+   so whichever loads first LOSES - and Starlight's reset is `* { margin: 0 }`, which was
+   quietly cancelling every margin the editor sets on its own blocks (an actions cluster
+   pushed to the right with `margin-inline-start: auto`, the gaps between a pane's rows).
+   Naming them here in the order we want fixes all of it at once: Starlight's layers first,
+   the editor's over them, because the editor's stylesheet owns the editor's blocks. */
+@layer starlight, dendrite;
