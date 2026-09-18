@@ -194,14 +194,13 @@ function print(value: unknown, indent: string): Part[] {
   );
 
   // An operation node reads as its constructor, which is what a host writes.
-  if ("kind" in value && value.kind === "operation") {
-    const node = value as { op: string; inputs: unknown };
+  if ("kind" in value && value.kind === "operation" && "op" in value && "inputs" in value) {
     return [
       t("operationNode", "op"),
       t("(", "punct"),
-      t(`"${node.op}"`, "string"),
+      t(`"${String(value.op)}"`, "string"),
       t(", ", "punct"),
-      ...print(node.inputs, indent),
+      ...print(value.inputs, indent),
       t(")", "punct"),
     ];
   }

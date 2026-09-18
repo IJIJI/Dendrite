@@ -73,7 +73,9 @@ function problemsOf(example: SavedProgram): Problem[] {
       message: problem.message,
     }));
   }
-  if (example.form !== "code") {
+  // A rete graph cannot be loaded yet (unsupported_form); only an ast sample is analysed here.
+  if (example.form === "rete") return [];
+  if (example.form === "ast") {
     const analysed = composed.environment.analyse(deserialise(example));
     return [
       ...analysed.errors.map((e) => ({
