@@ -15,12 +15,7 @@ purpose. Nothing here is a screenshot.
 
 Operators, a condition, and two outputs that share their working.
 
-<Live
-  client:only="react"
-  layout="compact"
-  source={gradeExample.source}
-  ports={gradeExample.ports}
-/>
+<Live client:only="react" source={gradeExample.source} ports={gradeExample.ports} />
 
 Things worth noticing:
 
@@ -36,7 +31,12 @@ Things worth noticing:
 
 Lists, a lambda, and an input the lambda closes over.
 
-<Live client:only="react" source={heightsExample.source} ports={heightsExample.ports} />
+<Live
+  client:only="react"
+  layout="compact"
+  source={heightsExample.source}
+  ports={heightsExample.ports}
+/>
 
 - **`Concat{:den}`, `Filter{:den}`, `Length{:den}` and `Average{:den}` are ordinary ops.** There
   is no list syntax and no loop; iteration is what these are for.
