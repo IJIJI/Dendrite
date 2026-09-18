@@ -384,21 +384,12 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       if (ctx.analysedBindings.has(node.name)) {
         if (ctx.failedBindings.has(node.name)) return errorNode(undefined, node.source); // cascade suppression
 
-        // Lexical order check by declaration index - formatting-independent.
-        // declarationIndex is the source of truth; bindingSourceRefs is for error messages only.
-        // An output is not in that index, so for one the check compares where the two are
-        // written: one rule for the text, whether the line reading a name is a `let` or an
-        // `output`.
-        if (
-          ctx.enforceCodeOrder &&
-          (ctx.currentBindingIndex !== undefined || ctx.currentOutputSource)
-        ) {
+        // Lexical order: the line reading a name must come after the line declaring it. One
+        // index numbers every statement - a binding or an output alike - so this is the same
+        // comparison whichever kind of line is reading. bindingSourceRefs is for messages only.
+        if (ctx.enforceCodeOrder && ctx.currentDeclarationIndex !== undefined) {
           const referencedIndex = ctx.declarationIndex.get(node.name);
-          const declaredLater =
-            ctx.currentBindingIndex !== undefined
-              ? referencedIndex !== undefined && referencedIndex > ctx.currentBindingIndex
-              : writtenAfter(ctx.bindingSourceRefs.get(node.name), ctx.currentOutputSource);
-          if (declaredLater) {
+          if (referencedIndex !== undefined && referencedIndex > ctx.currentDeclarationIndex) {
             const declaredAt = ctx.bindingSourceRefs.get(node.name);
             ctx.errors.push({
               kind: "forward_reference",
@@ -707,15 +698,6 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
   return errors;
 }
 
-/** Whether `declared` is written after `reader` - a later line, or later on the same one. */
-function writtenAfter(declared: SourceRef | undefined, reader: SourceRef | undefined): boolean {
-  if (declared?.kind !== "code" || reader?.kind !== "code") return false;
-  return (
-    declared.line > reader.line ||
-    (declared.line === reader.line && declared.column > reader.column)
-  );
-}
-
 export function analyse(program: RawProgram, descriptor: LanguageDescriptor): AnalysisResult {
   // Pass 1 - reference graph + declaration index + source refs.
   const refGraph = buildReferenceGraph(program);
@@ -740,7 +722,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     localBindings: new Map(),
     declarationIndex: refGraph.declarationIndex,
     bindingSourceRefs: refGraph.bindingSourceRefs,
-    currentBindingIndex: undefined,
+    currentDeclarationIndex: undefined,
     enforceCodeOrder: refGraph.enforceCodeOrder,
     errors,
     warnings,
@@ -750,7 +732,13 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
   analyseBindings(program, order, ctx);
 
   // Pass 4 - validate outputs (output-granular soundness).
-  const { outputMap, ok } = validateOutputs(program, descriptor, ctx, outputReachable);
+  const { outputMap, ok } = validateOutputs(
+    program,
+    descriptor,
+    ctx,
+    outputReachable,
+    refGraph.outputIndex,
+  );
 
   // Pass 4.5 / 5 - prune unreachable bindings and warn on unused ones.
   const prunedBindings = pruneBindings(ctx.analysedBindings, outputMap, outputReachable);
@@ -769,24 +757,24 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
 interface ReferenceGraph {
   bindingNames: Set<string>;
   bindingSourceRefs: Map<string, SourceRef>;
+  /** Each binding's place in the program's text, in one numbering with the outputs'. */
   declarationIndex: Map<string, number>;
+  /** Each output's place, in the same numbering, so an output is checked as a binding is. */
+  outputIndex: Map<string, number>;
   graph: Map<string, Set<string>>; // binding → bindings it references
-  enforceCodeOrder: boolean; // false once any binding lacks a code source (rete/mixed)
+  enforceCodeOrder: boolean; // false once any statement lacks a code source (rete/mixed)
 }
 
-// Pass 1 - one iteration over the bindings: collect names, each binding's source ref +
-// declaration index (for the lexical-order check), the reference graph, and whether
-// code-order should be enforced.
+// Pass 1 - one iteration over the bindings: collect names, each binding's source ref, the
+// reference graph, and whether code order should be enforced; then one declaration order for
+// every statement.
 function buildReferenceGraph(program: RawProgram): ReferenceGraph {
   const bindingNames = new Set(program.bindings.keys());
   const bindingSourceRefs = new Map<string, SourceRef>();
-  const declarationIndex = new Map<string, number>();
   const graph = new Map<string, Set<string>>();
   let enforceCodeOrder = true;
-  let i = 0;
 
   for (const [name, rawNode] of program.bindings) {
-    declarationIndex.set(name, i++);
     if (rawNode.source?.kind === "code") {
       // TODO: Should all editors not enforce lexical order? Rete should be able to compile to it.
       bindingSourceRefs.set(name, rawNode.source);
@@ -795,7 +783,40 @@ function buildReferenceGraph(program: RawProgram): ReferenceGraph {
     }
     graph.set(name, collectRefs(rawNode, bindingNames));
   }
-  return { bindingNames, bindingSourceRefs, declarationIndex, graph, enforceCodeOrder };
+
+  // A program keeps its bindings and its outputs in two maps, so only the text says how they
+  // interleave: every statement, numbered in the order it is written. Bindings keep their own
+  // relative order either way - the parser adds them in text order - so for bindings this is
+  // the same index it always was, with the outputs slotted in between them.
+  type Statement = { name: string; output: boolean; line: number; column: number };
+  const statements: Statement[] = [];
+  for (const [name, node] of program.bindings) {
+    const at = node.source?.kind === "code" ? node.source : { line: 0, column: 0 };
+    statements.push({ name, output: false, line: at.line, column: at.column });
+  }
+  // An output takes part only when order is enforced and it has a place in the text; one that
+  // does not simply goes unchecked, rather than switching the rule off for the bindings.
+  if (enforceCodeOrder) {
+    for (const [name, node] of program.outputs) {
+      if (node.source?.kind !== "code") continue;
+      statements.push({ name, output: true, line: node.source.line, column: node.source.column });
+    }
+    statements.sort((a, b) => a.line - b.line || a.column - b.column);
+  }
+
+  const declarationIndex = new Map<string, number>();
+  const outputIndex = new Map<string, number>();
+  statements.forEach((statement, index) =>
+    (statement.output ? outputIndex : declarationIndex).set(statement.name, index),
+  );
+  return {
+    bindingNames,
+    bindingSourceRefs,
+    declarationIndex,
+    outputIndex,
+    graph,
+    enforceCodeOrder,
+  };
 }
 
 // Pass 2 - DFS topological sort over the reference graph with cycle detection. Each
@@ -873,7 +894,7 @@ function analyseBindings(program: RawProgram, order: string[], ctx: AnalysisCont
     const errorsBefore = ctx.errors.length;
     const cnode = analyseNode(program.bindings.get(name)!, {
       ...ctx,
-      currentBindingIndex: ctx.declarationIndex.get(name),
+      currentDeclarationIndex: ctx.declarationIndex.get(name),
     });
     ctx.analysedBindings.set(name, cnode);
     if (ctx.errors.length > errorsBefore) ctx.failedBindings.add(name);
@@ -888,6 +909,7 @@ function validateOutputs(
   descriptor: LanguageDescriptor,
   ctx: AnalysisContext,
   outputReachable: Map<string, Set<string>>,
+  outputIndex: Map<string, number>,
 ): { outputMap: Map<string, CNode>; ok: boolean } {
   const outputMap = new Map<string, CNode>();
   let okFlag = true;
@@ -924,7 +946,7 @@ function validateOutputs(
 
     // Step 2: Analyse the output node itself.
     const errorsBefore = ctx.errors.length;
-    const cnode = analyseNode(rawNode, { ...ctx, currentOutputSource: rawNode.source });
+    const cnode = analyseNode(rawNode, { ...ctx, currentDeclarationIndex: outputIndex.get(name) });
     if (ctx.errors.length > errorsBefore) {
       if (isKnownOutput && (!def.mode || def.mode === "required")) okFlag = false;
       continue;

@@ -17,6 +17,8 @@ at `^0.1.0`, so a minor release here is always accompanied by a release of both.
 - **Lexical order holds for outputs too.** An output written above the binding it reads is now a
   `forward_reference`, as a binding already was. Evaluation order never depended on it; the text
   rule does, and it was only half enforced. A program that put its outputs first stops compiling.
+  Every statement now has one place in a single declaration order, so `AnalysisContext`'s
+  `currentBindingIndex` is `currentDeclarationIndex`: it numbers outputs too.
 - **An input's diagnostics underline the whole `$name`**, not only the `$`: its source span now
   covers the name.
 - **A variadic input reaches `inferOutput`** as the type its items share, or `any` when they
