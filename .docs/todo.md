@@ -144,6 +144,27 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   whether bare `evaluate`/`run` should pre-check inputs against the descriptor instead.
 - **Result-logging helpers** (from src/readme.md): small utilities to pretty-print outputs /
   diagnostics like the examples hand-roll.
+- **A home for eval state** ([evaluator.ts](../packages/core/src/language/evaluator/evaluator.ts)
+  `updateInput`): `EvalState` is a bag of maps every run type (`run`, the runner, the runtime)
+  builds and updates its own way. Decide whether it wants one small object with the operations on
+  it, or whether the three are different enough to stay apart.
+- **EvalState naming, and scoped caching** ([evaluator/types.ts](../packages/core/src/language/evaluator/types.ts)):
+  review the field names (`nodeCache` vs `bodyScope` vs `localBindings` read as three different
+  ideas of "a cache"), and whether per-lambda-application caching wants its own structure rather
+  than a second WeakMap beside the program's.
+- **Optional values** ([infra/nodes.ts](../packages/core/src/language/infra/nodes.ts)
+  `LiteralValue`): there is no `undefined`. An unset input is `null`, and `null` flows anywhere a
+  value is expected. Decide whether "not set" should be its own thing, or whether every input
+  should always have a default - the Learn page on inputs currently teaches the `null` answer.
+- **More math ops** ([stdlib/index.ts](../packages/core/src/language/stdlib/index.ts)): the
+  arithmetic segment has `Add`, `Subtract`, `Multiply`, `Divide`, `Negate`. Candidates:
+  `Mod` (the Host docs build one as their extension example - if it moves into the stdlib, that
+  page needs a new example), `Min`, `Max`, `Abs`, `Round`, `Floor`, `Ceil`, `Pow`. Add when a
+  program wants one; each is a registration, an evaluator and a documented example.
+- **`PortOrigin.level` as an enum** ([compose.ts](../packages/core/src/language/compose.ts)): a
+  string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
+  exported constant would read better at call sites. Low value - close it unless a third level
+  appears.
 
 ---
 
@@ -563,6 +584,98 @@ the call sites: `TopBar`, `PortFields`, and `.dendrite-icon` in `style.css`.
 
 **Driving need:** consistency across the author's own UIs, and per-icon components read better at
 the call site than `<Icon name="trash" />`.
+
+---
+
+## Learn — the samples step (collecting observations, then one plan)
+
+**What:** the user is working through the Learn section page by page (started 2026-09-18). Their
+observations are collected here and built as ONE step once Learn is done, rather than piecemeal,
+since most of them touch the same files. Decided so far:
+
+- **Live where a sample shows a warning.** The three `den warns` fences left - `let unused = 99`
+  (bindings and outputs), the closure shadowing `n` (lambdas and lists), `Length($whatever)`
+  (types in practice) - become live MinimalLayout editors, **editable** like every live block,
+  with the warning edge. A live block shows the squiggle AND the value the program still makes.
+- **A full colouring pass.** Every inline Dendrite snippet marked `{:den}`: about 40 in Learn are
+  plain today, nearly all of them the symbols table (`>=`, `&&`, `!` and the op names beside
+  them), plus `$price`, `60`, `29.95`. Inline identifiers take the editor's identifier colour -
+  `code.den .tok-ident { color: inherit }` in dendrite.css is what makes them grey today.
+- **One highlighter.** `OpsReference.astro` (op signatures) and `components/diagnostics.ts`
+  (types, declarations) hand-apply `tok-*` spans and escape HTML themselves. Build those as
+  Dendrite-shaped strings - `Add(nodes...: number) -> number`, `Bus { id: number }` - and run
+  them through the editor's `sourceParts`, so every snippet on the site is coloured by the one
+  highlighter the editor uses. Check first that the lexer copes with `{`, `}` and `...`.
+- **A type colour, in type positions.** A new `tok-type` class and `--dendrite-syntax-type` token.
+  The editor's highlighter marks a name as a type when it is a registered type in a type
+  position - after the `:` of a lambda parameter - and an inline snippet that is a type on its
+  own (`number{:den}`) gets it too. NOT every name that matches a type: a binding may share one.
+- **The chain.** On Learn's *How a program runs*: lex, parse, compose, analyse, evaluate - the
+  lexer is missing today, and compose is only a note on an arrow. On How it works' *The chain*:
+  the full version - lex, parse, desugar, compose, analyse, prune, evaluate - with a section
+  diving into each step. `Chain.astro` serves both pages today, so it needs a detail setting.
+- **No dashes as punctuation** in any docs prose: each rewritten by hand as a comma, colon or
+  parentheses. Code, tables and lists untouched.
+
+**Candidate, not decided:** show what every ```den fence produces - its output values, or the
+diagnostic it raises - the way the ops reference and *Every diagnostic* already do, by running
+each fence at build time in `remark-den.ts`. Proposed on 2026-09-17 as "the step to add more
+editors"; it was never written down until now.
+
+**Still to collect:** the rest of the user's Learn observations.
+
+---
+
+## Release — the next version, and why it is 0.2.0
+
+**What:** everything since 0.1.0 is committed on `dev` and not yet on npm. It was going to be
+0.1.1 - `require()` for editor and link, and the branded npm pages - and grew:
+
+- **core:** negative numbers (`Negate`, prefix `-`), lexical order enforced for outputs,
+  whole-`$name` input spans, variadic inputs reaching `inferOutput` (`Concat` typed), and the
+  `AnalysisContext.currentBindingIndex` → `currentDeclarationIndex` rename.
+- **editor:** squiggles painted on mount, output types on a Minimal line, equal Compact columns,
+  Minimal's actions kept right, a `stale` option on layouts and the Outputs pane, `require()`.
+- **link:** `require()`.
+
+**Why 0.2.0, not 0.1.1:** a program with an output above the binding it reads stopped compiling,
+`Negate` is new API, and an exported type lost a field. Pre-1.0 that is a minor. Editor and link
+peer on core `^0.1.0`, so a core 0.2.0 means **all three** go to 0.2.0 and their peer ranges move
+to `^0.2.0` - the coupling the changelogs promise.
+
+**What it requires:** rename each changelog's `Unreleased` to `0.2.0`, bump the three versions and
+the two peer ranges, then the runbook in `release-plan.md`: PR, tags, one GitHub release on core's
+tag, approve the three staged versions core first.
+
+**When:** after the Learn samples step, per the user (2026-09-18).
+
+---
+
+## Docs — squiggles on the diagnostics page's static samples
+
+**What:** every sample on *Every diagnostic* now shows the diagnostic it produces, as a line
+below it. The editor would also underline WHERE: a `SourceRef` carries line, column and length,
+so the exact span is known at build time. Underline it in the static block the way a squiggle
+does.
+
+**Why deferred:** offered on 2026-09-17 and not taken up - on samples one to four lines long the
+message already names the input, field or binding.
+
+**What it requires:** the static block is the editor's `sourceParts`; split the parts at the
+span's offsets and wrap that stretch in a `dendrite-squiggle-error` / `-warning` span. About 40
+lines, best done after the one-highlighter work in the Learn samples step.
+
+---
+
+## Stdlib — `Flatten` cannot type its output
+
+**What:** of the eight stdlib ops with a generic output, `Flatten` is the only one without an
+`inferOutput`, and it cannot have a sound one: `array.flat(depth)` depends on the VALUE of
+`depth`, which `inferOutput` never sees. `Flatten($lists, 1)` over `number[][]` is `number[]`,
+`Flatten($lists, 0)` is still `number[][]`. It stays `any[]`, which is honest.
+
+**If it matters:** literal-aware inference (read `depth` when it is written as a number literal),
+or a separate one-level `Flatten` that can be typed. Neither has a user yet.
 
 ---
 
