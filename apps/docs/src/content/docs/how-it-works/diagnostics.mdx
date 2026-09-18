@@ -8,7 +8,14 @@ sidebar:
 import DiagnosticsTable from "../../../components/DiagnosticsTable.astro";
 
 Every kind of error and warning the language can produce, grouped by the stage you meet it at.
-Each one says what it means and, where a program can provoke it, shows one that does.
+Each one says what it means and, where a program can provoke it, shows one that does, with the
+inputs, outputs and types that program was checked against.
+
+Not everything is provoked by a program. The **Ports** kinds are raised while those declarations
+compose, before a program is read, so those entries show the declarations alone. Two kinds cannot
+be written as text at all - they show the host code that builds the node instead - and the
+**Evaluate** kinds happen while a compiled program runs, so each of those says what brings it
+about.
 
 None of this page is written by hand. It is printed from the language's own registry, a new
 kind does not compile until it is documented there, and a test runs every sample below on every
