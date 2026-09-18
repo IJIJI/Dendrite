@@ -103,6 +103,10 @@ export interface EvaluatorDefinition {
    *   read e.g. `inputTypes.transform.returns` to type its result.
    */
   // TODO: Should the type of variadic inputs not be used as array?
+  /**
+   * The output type, from the inputs' resolved types. A variadic input appears as the type its
+   * items share, or `any` when they disagree - and not at all when it has no items.
+   */
   inferOutput?: (inputTypes: Record<string, Type>) => Type | undefined;
   /**
    * Analysis-time expected-input-type inference, for inputs whose type is generic in

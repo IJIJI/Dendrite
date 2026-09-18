@@ -253,6 +253,14 @@ export function createStdlib(): Language {
     examples: [den`output diff = Subtract(10, 4)`],
   });
   lang.registerOp({
+    name: "Negate",
+    inputs: [{ name: "a", type: Type.number }],
+    output: Type.number,
+    category: "arithmetic",
+    description: "a with its sign flipped. The `-` in front of a value is its symbol.",
+    examples: [den`output below = Negate(14)`, den`output alsoBelow = -14`],
+  });
+  lang.registerOp({
     name: "Multiply",
     inputs: [{ name: "nodes", type: Type.number, variadic: true }],
     output: Type.number,
@@ -422,6 +430,11 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Concat",
     evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
+    // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
+    inferOutput: (inputTypes) => {
+      const arrays = inputTypes["arrays"];
+      return arrays?.kind === "array" ? arrays : undefined;
+    },
   });
 
   lang.registerEvaluator({
@@ -550,6 +563,10 @@ export function createStdlib(): Language {
     evaluate: ({ a, b }) => (a as number) - (b as number),
   });
   lang.registerEvaluator({
+    op: "Negate",
+    evaluate: ({ a }) => -(a as number),
+  });
+  lang.registerEvaluator({
     op: "Multiply",
     evaluate: ({ nodes }) => (nodes as number[]).reduce((a, b) => a * b, 1),
   });
@@ -580,6 +597,9 @@ export function createStdlib(): Language {
   lang.registerInfix("*", BP.MULTIPLY, variadic("Multiply"));
   lang.registerInfix("/", BP.MULTIPLY, bin("Divide"));
   lang.registerPrefix("!", BP.PREFIX, (operand) => operationNode("Not", { a: operand }));
+  // `-` in front of a value, as `!` is: the parser tells it from the infix `-` by position, so
+  // `1 - -14` is Subtract(1, Negate(14)). Without it the language had no negative numbers.
+  lang.registerPrefix("-", BP.PREFIX, (operand) => operationNode("Negate", { a: operand }));
 
   return lang;
 }

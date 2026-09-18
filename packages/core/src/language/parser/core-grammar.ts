@@ -26,6 +26,14 @@ import {
 // statements), plus the productions those handlers use. Installed into a Grammar by
 // installCoreGrammar; extensions (e.g. stdlib operators) register on top.
 
+// One span from the start of `from` to the end of `to`, when both are code on one line - the
+// `$` and the name after it, so a diagnostic about an input underlines the whole input rather
+// than its sigil. Anything else keeps `from`'s span.
+const spanning = (from: Token["source"], to: Token["source"]): Token["source"] =>
+  from.kind === "code" && to.kind === "code" && from.line === to.line
+    ? { ...from, length: to.column + to.length - from.column }
+    : from;
+
 // The four literal nuds differ only in how the raw token text becomes a value.
 const literalNud =
   (convert: (raw: string) => LiteralValue): Nud =>
@@ -211,7 +219,7 @@ export function installCoreGrammar(g: Grammar): void {
   // analyser resolves one from the composed descriptor.
   registerNud(g, "$", (p, t) => {
     const name = p.expect("ident");
-    return { kind: "input", name: name.value, source: t.source };
+    return { kind: "input", name: name.value, source: spanning(t.source, name.source) };
   });
 
   // '(' opens either a parenthesised lambda - (x: T, y) => body, () => body - or a
