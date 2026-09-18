@@ -1,0 +1,250 @@
+# Dendrite — Done
+
+Finished work that used to be a todo or backlog entry, kept because the reasoning in it is not
+recorded anywhere else. The changelogs say what shipped; this says why it was built that way.
+
+---
+
+## Document the core language (two levels) — DONE 2026-09-12
+
+The docs site now teaches the language (`language-docs-plan.md`, seven commits): **Learn** for
+writing programs, the **stdlib** reference with its conventions, **How it works** for the
+chain in depth - one page per stage, the generated diagnostics catalogue, persistence, a
+glossary - and **Host developers** for embedding it. Every Dendrite sample on the site is loaded
+by `apps/docs/src/content/content.test.ts`; every diagnostic kind is documented and provoked in
+`packages/core/src/language/diagnostics.ts`.
+
+---
+
+## The first npm release — DONE 2026-09-15
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` are on npm at **0.1.0**,
+with provenance. A GitHub release starts `.github/workflows/publish.yml`, which stages every
+public package version npm lacks through trusted publishing - no token anywhere - and a
+maintainer approves each with 2FA. The runbook for the next release, and what this one taught,
+are in `release-plan.md`.
+
+---
+
+## Struct field typing — DONE
+
+Implemented: `TypeDefinition.fields?: Record<string, Type>` (field name → type, structured); `registerType`
+config + `extendLanguage` copy it; the analyser's `field` case resolves the struct type, infers a known
+field's type (recursing for nested struct fields → multilevel) and errors on an unknown one
+(`unknown_field`). Types without `fields` keep the permissive fallback (`any`; primitive → warning).
+`fields` duplicates the Zod schema deliberately — explicit is debuggable and version-stable (no Zod
+introspection). Verified end-to-end against the Beacon `Bus` struct (typed `bus.state`/`bus.sources`,
+zero `implicit_any_cast` warnings, `bus.staet` typo caught). Inheritance is wired too: field lookup
+follows the `extends` chain (inherited fields resolve; most-derived override wins), and
+`validateDescriptor` checks each override is compatible with the parent's field
+(`incompatible_field_override`) so a declared `Derived extends Base` is sound.
+
+---
+
+## Editor — the layouts: Minimal · Compact · Full — DONE 2026-09-10
+
+**What landed** (five commits, `.claude/plans` "the editor's layouts"): three presets on one
+`LayoutConfig` (`code` = `editable` + `gutters`, `declarations`, `end`, `topBar`), each with its
+own defaults, nothing read-only by default; the top bar as one item model (menus, actions,
+elements, and the editor's own controls as `Editor.items` a host lists or leaves out - no
+`themeToggle`); `Editor.Actions` as the cluster in a bar or in a code block's corner;
+`documentUrl` as the one open-in-playground shape; a collapsible `Pane` (`<details>`) that
+Diagnostics fills with a count and never opens by itself; `Editor.Source` + `sourceParts` /
+`sourceHtml` so a static block and a live Minimal one share markup and stylesheet. The docs
+run Minimal in the hero (read-only, settable inputs, `→` lines) and Compact on the splash; the
+reference's examples are static blocks with a build-time open link.
+
+**Round two, the same day:** the actions cluster is `actions` + `actionsAt`, six generic spots
+(the bar's start or end, floating over the code's start or end, a strip above the side panes,
+the end of Minimal's input strip), each preset supporting its own subset with its own default
+and a `bar-*` spot falling back when there is no bar; the input strip is a wrapping grid
+(`inputs: "row" | "column"`, cells at least `--dendrite-inline-min`), the code takes
+`--dendrite-code-min-height`; `Editor.Source` is the code block alone and the docs' `DenCode`
+renders it on the server. The landing is one editable Minimal block beside the wordmark; the
+Compact one moved to the examples page. What the entry below
+called "the example layout" is `MinimalLayout`; the "compact + enlarge-to-page" embed is
+`CompactLayout` without the enlarge, which waits for a host that wants it.
+
+---
+
+## Packages — `require()` for editor and link — FIXED 2026-09-16, ships in the next release
+
+Editor and link were ESM-only with an `exports` map offering only `import`, so
+`require("@dendrite-lang/editor")` failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` (found in the 0.1.0
+clean install). A `default` condition beside `import` in each entry (editor's `.` and `./react`,
+link's `.`) fixes it: `require` matches `default`, and Node loads the file as ESM. Checked by
+packing both and loading them from a project outside the repo, by `require` and by `import`. Core
+is dual CJS/ESM and needed nothing. On npm from the next release; both changelogs carry it.
+
+---
+
+## Packages — Dendrite branding on the READMEs — DONE 2026-09-17, ships in the next release
+
+The three package READMEs, which are the npm pages, open with the Dendrite wordmark - the same
+logo the root README shows - and three badges:
+the npm version, a docs link and the licence, in the brand's periwinkle on ink. The shared snippet
+is `brand/README-header.md`, which also stopped advertising MIT and an `OWNER` placeholder. The root
+README already carries a version badge per package.
+
+Two things worth knowing next time:
+
+- **The logo is a PNG**, `brand/assets/dendrite-wordmark.png`, rendered from the SVG beside it with
+  sharp (already a dependency) and flattened onto white, which is what the root README's own
+  wordmark carries. npm does not render SVG reliably, and that root wordmark is an SVG on GitHub's
+  user-attachments host, which refuses a request without a browser user agent.
+- **It is hotlinked** from `raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/`, not packed
+  into the tarballs, so the image only resolves once the commit is on `main` - which the release
+  runbook does first anyway.
+
+On npm from the next release: npm refreshes a README only when its package publishes, so core gets a
+version bump for its page alone.
+
+---
+
+## Docs — the diagnostics page showed the wrong half — DONE 2026-09-17
+
+The page printed each sample's program and dropped its port declarations, so 13 of 47 entries
+showed something that was not the cause - five of them the same innocent `output x = 1`. It now
+prints, from core's registry: a layer's types as text above the sample, the declared inputs above
+the code and the declared outputs below it (the editor's own rows and `tok-*` colours, no gap),
+each sample RUN so an output shows what it produced and an em dash where it produced nothing, and
+a playground link in the corner, the way the ops reference already did it. The five `ports` kinds
+show declarations alone, since they are raised before a program is read.
+
+Twelve analyse samples gained the inputs and outputs they had left the reader to infer, and
+`unknown_op` and `lambda_return_type_mismatch` - which no Dendrite text can express - became real
+`ast` samples the test provokes, shown as the Dendrite they would be if the syntax allowed it
+(marked invalid) and then as the host code that builds them. `DiagnosticDoc.inputs` was deleted:
+nothing had ever set it.
+
+Also: the three `den fails` samples in Learn are live editors now, mounted from
+`src/examples/*.den` with a `fails` flag that `content.test.ts` holds to failing, each opening
+with a comment saying how it fails.
+
+---
+
+## Docs — the TypeScript samples are checked — DONE 2026-09-17
+
+`apps/docs/src/content/ts-samples.test.ts`, the sibling of `content.test.ts`: every ` ```ts ` and
+` ```tsx ` fence on the site, typechecked against the packages' **source** through the docs
+tsconfig's `paths`, so a rename in core, the editor or the link fails the test with no build step.
+Proved by renaming a core export and watching every page that uses it fail, each at the page and
+line a reader would open.
+
+A page's fences are concatenated in order into one virtual file, because that is what the pages
+already are - Installation imports in its first fence and uses `runtime` in its second - on top of
+`src/examples/host/prelude.ts`, which declares what the *host* brings (`save`, `element`, `wss`)
+and nothing Dendrite provides. Three fence tags steer it:
+
+| Tag | Means |
+| --- | --- |
+| `sketch` | not TypeScript: a shape or an outline, skipped |
+| `alone` | its own script, for a fence that is another runtime (the link page's two ends) |
+| `continues="installation"` | this page picks up where that one left off, so it borrows its real code |
+
+It found three samples already broken: `extending-the-language` used a `createEnvironment` it never
+imported, `embedding-core`'s levels snippet used an undefined `layer` and skipped its `.ok` checks,
+and the link page's `Channel` interface used an unimported `Observable`. All three are fixed on the
+page.
+
+The file-based mechanism this entry used to describe - every snippet moved into
+`src/examples/host/`, the pages converted to MDX, a component rendering them - was not built. It
+costs six page conversions, a component and 18 files rewritten to stand alone, to buy live errors in
+the editor that `astro check` already gives now that the samples compile.
+
+---
+
+## Web documentation site — DONE (empty), 2026-09-09
+
+**Built as [docs-plan.md](docs-plan.md):** `apps/docs`, Astro + Starlight, at the root of
+`ijiji.github.io/Dendrite/` with the playground under `/playground/` (one Pages workflow assembles
+both). The stdlib reference is generated from the descriptor, one page per segment, every
+example run. Live examples are React islands importing the editor directly - no iframe mode;
+the docs' own example block is "the example layout" below. What remains is the CONTENT:
+"Document the core language (two levels)" at the top of this file, with the notes from the
+first look at the empty site under "Docs — content notes".
+
+---
+
+## Playground — React switch — DONE
+
+The playground is a React host (`apps/playground/src/App.tsx`) of `@dendrite-lang/editor/react`
+(editor-plan Phase 2, landed 2026-09-05); the vanilla shell is deleted. Deciding factor: Beacon is
+React, and the chrome (panes, type pickers, top bar) is exactly the stateful list/form UI where a
+vanilla shell hurts.
+
+---
+
+## Playground — share links — DONE (document model)
+
+Implemented beyond the original sketch: the session state is a self-contained **document**
+(`{source, surface, values}` with the surface as JSON-safe data), the URL fragment live-holds the
+deflate+base64url payload (Share = copy URL), preset ids (`#tally`) are one-shot entry links that
+convert to payload URLs, and preset loads push history entries (Back restores the previous
+document). See `apps/playground/src/lang/{surface,document,permalink}.ts`.
+
+---
+
+## Playground — user-settable inputs and outputs — DONE
+
+**Delivered 2026-09-07** as [editor-plan.md](editor-plan.md) Phase 3, on layers rather than the
+`SurfaceSpec` sketched below: the document's own `Policy.user` layer is what the panes edit, the
+gate is that layer's `editable` rather than a `surface.userInputs` flag, and `composeLayers` — not
+the editor — judges every change. Declarations travel in share URLs as predicted, through
+`SavedProgram.ports`. What is still missing is listed under "the declaration fields the port panes
+do not expose". The original requirements are kept below for the record.
+
+**What:** UI to declare/edit the language surface (inputs and outputs: name, type, default) from
+the playground itself. **The data structure already exists** — documents carry a `SurfaceSpec`
+(`apps/playground/src/lang/surface.ts`); this feature is "edit `document.surface` → rebuild language →
+recompile", machinery the boot/dispose lifecycle already supports. Declarations travel in share
+URLs automatically.
+
+**Still needs:** a type picker (named/array types over the registered set), add/remove/edit rows
+for inputs+outputs, and validation UX for dangling type references (createEnvironment fail-fast →
+boot_failed rendering exists). A concrete step toward the editor era — the same UI generalises to
+the Rete side's port configuration.
+
+---
+
+## Parser & Lexer — DONE
+
+The entire parser/lexer worklist is implemented and green: lexer, expression core, `let`/`output`
+statements, calls, arrows + higher-order (since collapsed into ordinary ops with function-typed
+inputs), and the **grammar-registration API with operators**. The grammar lives in the parser layer
+(kernel `parser.ts` + `grammar.ts` registration API + `core-grammar.ts` + `precedence.ts`); operators
+are stdlib-registered sugar over ops; the lexer's operator vocabulary is single-sourced from
+`grammar.operatorTokens` (no lexer↔parser desync). Source→RawProgram is `parseSource` (formerly
+`compile`).
+
+### Doc fixes
+
+- _(Done)_ The `.docs/` set (CLAUDE.md, architecture.md, analyser-spec.md, decisions.md,
+  ops-reference.md) and `packages/core/src/readme.md` were brought current with the structured-`Type`, first-class
+  function, parser/grammar-split, and `createStdlib`/`parseSource` reality.
+
+---
+
+## Docs — content notes from the first look at the empty site — DONE with the content pass, 2026-09-12
+
+Collected 2026-09-09 when the scaffold went up, for the content pass:
+
+- **The chain wants a block diagram first**, prose second. The brand sheet
+  (`brand/brand-sheet.html`) has a block style to reuse; inline SVG in the MDX, themed
+  through the `--sl-*` tokens so it flips with the site.
+- **Learn is a path, not a reference:** getting started (playground, no install) → writing
+  programs with the base operators → how the language works → the full stdlib. The sidebar
+  is already in that order; the content must read that way too, each page ending in "next".
+- **Two readers.** Learn + stdlib are for someone writing programs; Host developers is for
+  someone embedding the language, and it owns Installation (every package, every option)
+  and the packages. Say this on the splash and at the top of each section's first page.
+- **stdlib** is printed as code, one page per segment (generated), the index explaining the
+  conventions (variadic inputs, `any`, function-typed inputs) and, once core has it, how a
+  host picks segments.
+- **A glossary** only once terms accumulate across pages; not as a stub.
+- **Code samples in the site's own colours:** highlight Dendrite through the editor's
+  `styledRanges` (the same lexer the canvas uses) rendered to spans at build time, rather
+  than a second grammar for Shiki. Landed with the ops reference.
+
+Reversed since (2026-09-18): pages no longer end in a **Next:** link. Starlight's own
+pagination already says it, so the links were removed from every page.

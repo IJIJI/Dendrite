@@ -5,13 +5,13 @@
 > does not matter" was wrong), writing the diagnostics samples showed five kinds that cannot be
 > provoked or are never reported, and `compile()` / `load()` were dropping analysis errors on
 > the ok arm - fixed in core first. Still open from here: the TypeScript samples on the Host
-> developers pages are verified but not guarded by a test (`todo.md`).
+> developers pages are verified but not guarded by a test (`done.md`, where that is now fixed).
 
 ## Context
 
 `@dendrite-lang/core@0.1.0` should ship documented, and nothing written so far teaches the
 language: `.docs/` holds design records and an architecture map for someone already inside the
-code. This is the gap `todo.md` marks IMPORTANT — "the code is good" versus "the language
+code. This is the gap the todo marked IMPORTANT — "the code is good" versus "the language
 exists for other people". The site skeleton, the generated stdlib reference and the live
 example blocks all landed on 2026-09-09 through 09-12; every prose page is still a
 one-paragraph stub saying what it will cover. Those stubs are the outline: each already
@@ -41,12 +41,12 @@ generated from core.
 
 | Point | Decision | Why |
 |---|---|---|
-| The chain, twice | a plain page ending Learn, the deep one per stage in How it works | the two-layer ask in `todo.md`; the rule above stops the overlap |
+| The chain, twice | a plain page ending Learn, the deep one per stage in How it works | the two-layer ask in the todo; the rule above stops the overlap |
 | Section URLs | `learn/how-it-works/*` **moves** to `how-it-works/*` | nothing links there yet, so the move costs one commit now and never again; keeping the old path buys nothing |
 | The diagram | one `<Chain/>` component in **CSS grid**: five labelled stage cells with arrow cells between them, `↓` when it stacks, plus one line showing where port layers join | responsive for free; the earlier note said inline SVG, but SVG text goes tiny on a phone. SVG is the fallback if the port-layer join reads badly |
 | The worked example | `grade.den`, already carried through every stage by the four scripts in `packages/core/examples/3-(code)/` | real output per stage, and the scripts keep it honest |
 | Live sources | the programs behind `<Live>` move into `apps/docs/src/examples/*.den`, imported with `?raw` | the review is right that JSX props are invisible to a fence test; as files they are globbed by the same test, and a page reads `<Live source={grade} />` |
-| Samples | every ` ```den ` fence **and** every `src/examples/*.den` loaded by a test; a fence tagged ` ```den fails ` is asserted to produce errors instead | the `todo.md` requirement, and the diagnostics pages need broken samples on purpose |
+| Samples | every ` ```den ` fence **and** every `src/examples/*.den` loaded by a test; a fence tagged ` ```den fails ` is asserted to produce errors instead | the todo's requirement, and the diagnostics pages need broken samples on purpose |
 | Fence ports | the test collects `$names` from the sample and declares each as `any`; ` ```den inputs="score:number" ` overrides when the type matters | a sample using `$score` cannot load against a descriptor with no inputs, so the ports have to come from somewhere |
 | Diagnostics | one registry in core over all five families, keyed by **(stage, kind)**, with a message and a triggering example each | 49 union members live as scattered string literals, and `unknown_type` / `incompatible_field_override` each appear in two families, so the kind alone is not a key |
 | Live blocks | editable, one per page at the moment it teaches; every other sample static | pages stay fast, and Pagefind indexes static code but not islands |
@@ -232,7 +232,7 @@ Est. 1 day.
 Source material: `architecture.md`'s execution-levels table and linking section; the editor and
 link READMEs are already written for this reader and mostly need trimming into pages.
 
-Then: `@dendrite-lang/core@0.1.0`, and `todo.md`'s "Document the core language" closes.
+Then: `@dendrite-lang/core@0.1.0`, and "Document the core language" closes (`done.md`).
 
 Est. 1 day.
 

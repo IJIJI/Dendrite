@@ -11,7 +11,7 @@
 > `createRemoteInstance` sketch is `connectInstance`; the `setLayer` change landed first, as its
 > own commit. Apply stays the host's (`live.setProgram(editor.getDocument().program)`), so the
 > link never needs a "draft" — it serves whichever instance the server chooses. The envelope's
-> `revision` field is decided (optional, no bump). `.docs/todo.md` carries the short version.
+> `revision` field is decided (optional, no bump). `.docs/backlog.md` carries the short version.
 
 ## Context
 
@@ -165,4 +165,4 @@ createRemoteInstance(channel: Channel, id: string): ProgramInstance;
 - A rete (graph) editing mode.
 - Multi-document or workspace editing.
 - Collaborative editing beyond detecting a conflict via the revision.
-- Validation of values at the boundary — its own entry in `todo.md`, and independent of this.
+- Validation of values at the boundary — its own entry in `backlog.md`, and independent of this.
