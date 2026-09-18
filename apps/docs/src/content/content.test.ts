@@ -45,14 +45,25 @@ function pipelineFor(ports: Ports, label: string) {
   return composed.environment;
 }
 
-/** Parse then analyse, and report every error either stage found. */
-function errorsIn(source: string, ports: Ports, label: string): string[] {
+/** Parse then analyse, and report every error and every warning either stage found. */
+function problemsIn(
+  source: string,
+  ports: Ports,
+  label: string,
+): { errors: string[]; warnings: string[] } {
   const pipeline = pipelineFor(ports, label);
   const parsed = pipeline.parse(source);
-  if (!parsed.ok) return parsed.errors.map((e) => `${e.kind}: ${e.message}`);
+  const parseWarnings = parsed.warnings.map((w) => `${w.kind}: ${w.message}`);
+  if (!parsed.ok) {
+    return { errors: parsed.errors.map((e) => `${e.kind}: ${e.message}`), warnings: parseWarnings };
+  }
   const analysed = pipeline.analyse(parsed.program);
-  return analysed.errors.map((e: AnalysisError) => `${e.kind}: ${e.message}`);
+  return {
+    errors: analysed.errors.map((e: AnalysisError) => `${e.kind}: ${e.message}`),
+    warnings: [...parseWarnings, ...analysed.warnings.map((w) => `${w.kind}: ${w.message}`)],
+  };
 }
+
 
 /** `number`, `string[]`, `any` - what an `inputs="…"` tag may name. */
 function typeFromLabel(label: string): Type {
@@ -94,6 +105,8 @@ interface Sample {
   ports: Ports;
   /** The sample is meant NOT to compile - it shows a diagnostic. */
   fails: boolean;
+  /** The sample is meant to compile WITH a warning - it shows one. */
+  warns: boolean;
 }
 
 const FENCE = /^```den([^\n]*)\n([\s\S]*?)^```/gm;
@@ -117,6 +130,7 @@ async function fenceSamples(): Promise<Sample[]> {
         source,
         ports: portsFor(source, meta.inputs),
         fails: meta.fails,
+        warns: meta.warns,
       });
     }
   }
@@ -131,21 +145,31 @@ describe("the Dendrite samples in the pages", () => {
   });
 
   it.for(fences.map((s) => [s.label, s] as const))("%s", ([, sample]) => {
-    const errors = errorsIn(sample.source, sample.ports, sample.label);
+    const { errors, warnings } = problemsIn(sample.source, sample.ports, sample.label);
     if (sample.fails) {
       // Tagged ```den fails: it is on the page to show a diagnostic, so it must produce one.
       expect(errors, "a `fails` sample that compiles is no longer showing anything").not.toEqual(
         [],
       );
+      return;
+    }
+    expect(errors).toEqual([]);
+    if (sample.warns) {
+      expect(warnings, "a `warns` sample that is clean is no longer showing anything").not.toEqual(
+        [],
+      );
     } else {
-      expect(errors).toEqual([]);
+      // A warning a reader was not told about is one they copy out with the code.
+      expect(warnings, "an untagged sample warns - fix it, or tag it `warns`").toEqual([]);
     }
   });
 });
 
 describe("the programs the live blocks mount", () => {
   it.for(Object.entries(examples))("%s", ([name, example]) => {
-    const errors = errorsIn(example.source, example.ports, name);
+    const { errors, warnings } = problemsIn(example.source, example.ports, name);
+    // A live example that is not there to fail must be warning-free, as a fence must.
+    if (!example.fails) expect(warnings, `${name} warns`).toEqual([]);
     if (example.fails) {
       // Marked `fails`: it is mounted to SHOW a diagnostic, so it must produce one.
       expect(errors, "a `fails` example that compiles is no longer showing anything").not.toEqual(

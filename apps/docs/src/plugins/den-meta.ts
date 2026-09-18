@@ -5,6 +5,7 @@
 //
 //   ```den                       an ordinary sample: it must compile
 //   ```den fails                 it is here to SHOW a diagnostic: it must NOT compile
+//   ```den warns                 it is here to show a WARNING: it compiles, and it must warn
 //   ```den inputs="score:number" it declares its inputs, for when the type is the point
 //                                (the default is `any` per `$name`, which would swallow
 //                                the very error a type sample means to show)
@@ -12,6 +13,8 @@
 export interface DenMeta {
   /** The sample is on the page to show a diagnostic. */
   fails: boolean;
+  /** The sample is on the page to show a warning; every other sample must be warning-free. */
+  warns: boolean;
   /** The inputs it declares, `"score:number, bonus:number"`, if it declares any. */
   inputs?: string;
 }
@@ -20,6 +23,7 @@ export function parseDenMeta(meta: string | null | undefined): DenMeta {
   const words = (meta ?? "").trim();
   return {
     fails: words.split(/\s+/).includes("fails"),
+    warns: words.split(/\s+/).includes("warns"),
     inputs: /inputs="([^"]*)"/.exec(words)?.[1],
   };
 }

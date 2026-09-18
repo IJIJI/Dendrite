@@ -76,10 +76,26 @@ code.den .tok-ident {
   color: inherit;
 }
 
-/* A sample that is on the page to SHOW a diagnostic (a ```den fails fence): a warning edge,
-   so a reader does not copy it out as a working program. */
+/* A diagnostic's name in prose (`forward_reference{:den}`): its severity's colour, the one the
+   editor's squiggles use, so an error reads as one before it is explained. */
+code.den-diag-error {
+  color: var(--dendrite-error);
+}
+
+code.den-diag-warning {
+  color: var(--dendrite-warning);
+}
+
+/* A sample that is on the page to SHOW a diagnostic: an edge in that diagnostic's colour -
+   the error colour for a ```den fails fence (or a live block marked fails), the warning colour
+   for a ```den warns one - so a reader does not copy either out as a working program. */
 .dendrite-fails {
-  border-color: var(--sl-color-orange, #d97706);
+  border-color: var(--dendrite-error);
+  border-left-width: 2px;
+}
+
+.dendrite-warns {
+  border-color: var(--dendrite-warning);
   border-left-width: 2px;
 }
 
