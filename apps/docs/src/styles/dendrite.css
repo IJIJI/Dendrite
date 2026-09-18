@@ -40,6 +40,7 @@
   --sl-color-gray-4: #4a4644; /* dark-4 */
   --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
   --sl-color-gray-6: #2c2a29; /* dark-2: nav and sidebar */
+  --sl-color-gray-7: #141312; /* dark-0: a well below the page (the chain's cards) */
   --sl-color-black: #201e1d; /* dark-1: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
