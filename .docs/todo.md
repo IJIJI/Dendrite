@@ -136,9 +136,9 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 - **collectRefs lambda shadow tests** (analyser `collectRefs`): the param-stripping recursion works,
   but edge coverage is thin (nested shadowing, param shadowing a binding used elsewhere in the same
   expression).
-- **Variadic input types in inferOutput** ([registry.ts](../packages/core/src/language/infra/registry.ts)
-  `EvaluatorDefinition`): variadic inputs are excluded from `inputTypes` entirely — should they be
-  passed as the element type, the array type, or stay excluded? Decide + document.
+- ~~**Variadic input types in inferOutput**~~ — DECIDED 2026-09-18: a variadic input reaches
+  `inferOutput` as the type its items share, or `any` when they disagree, and not at all when it
+  has none. Documented on `inferOutput` in registry.ts; `Concat` is the first op to use it.
 - **Eval error surface review** ([evaluator/types.ts](../packages/core/src/language/evaluator/types.ts)):
   `input_not_set` only fires at eval; runner/runtime seed defaults so it mostly can't happen — decide
   whether bare `evaluate`/`run` should pre-check inputs against the descriptor instead.
@@ -563,6 +563,72 @@ the call sites: `TopBar`, `PortFields`, and `.dendrite-icon` in `style.css`.
 
 **Driving need:** consistency across the author's own UIs, and per-icon components read better at
 the call site than `<Icon name="trash" />`.
+
+---
+
+## Language — type annotations on bindings
+
+**What:** `let total: number = $price * $quantity`. A lambda parameter can carry a type today
+(`(n: number) => n * 2`), a binding cannot: its type is always inferred. The docs met the gap
+twice on 2026-09-18 - a lambda bound on its own has nothing to infer its parameter from, and
+the only fix was to annotate the lambda, not the binding.
+
+**Why deferred:** the analyser infers every binding's type already, so an annotation is a check
+rather than a necessity. It earns its place as documentation a reader can trust, and as the
+thing that stops an `any` spreading.
+
+**What it requires:** the `let` statement in core-grammar.ts takes an optional `: Type` after
+the name (the same type parser lambda parameters use); `RawProgram` keeps it beside the node;
+the analyser checks the inferred type against it with `isCompatible` and reports a new
+`binding_type_mismatch`, which the diagnostics registry then documents. A rete program would
+carry it as node metadata.
+
+**Driving need:** any program that reads an `any` input and wants to stop the `any` there.
+
+---
+
+## Docs — samples with list and JSON inputs
+
+**What:** an input holding a list or a structure renders in MinimalLayout's input strip as a
+JSON field, and on the Examples roll-up three of them (`$left`, `$centre`, `$right`) crowd the
+strip into something that reads as data entry rather than a program. Find a better layout for
+a sample whose inputs are lists: a stacked Inputs pane, a Compact preset, or values shown
+read-only until clicked.
+
+**Why deferred:** raised 2026-09-18 alongside the Compact entry below, which it overlaps with -
+the answer may just be "use Compact for these", once Compact is actually compact.
+
+**Driving need:** the lambdas-and-lists page and the roll-up example.
+
+---
+
+## Naming — the API still says "operator" where the docs say "symbol"
+
+**What:** on 2026-09-18 the docs' vocabulary settled on **operator** (an **op**, for short) for a
+named function like `Add`, and **symbol** for the `+` that spells it. The public API predates
+that: `registerInfix` / `registerPrefix` are fine (they name a position, not a concept), but
+`grammar.operatorTokens`, the editor's `tok-operator` class and the `--dendrite-syntax-operator`
+theming variable all mean *symbol*.
+
+**Why deferred:** each is public - a host reads `operatorTokens`, a theme sets the variable -
+so renaming them is a breaking change, best done once, at a minor release, with the old names
+kept as aliases for a version.
+
+**What it requires:** `symbolTokens` beside `operatorTokens` (deprecated); `tok-symbol` beside
+`tok-operator`; `--dendrite-syntax-symbol` falling back to the old variable. Then drop the old
+names at the release after.
+
+---
+
+## Diagnostics — an `implicit_any_cast` names the op's input, not the reader's expression
+
+**What:** `height >= 10` over an `any` height reports "Input 'a' is 'any' typed - 'number'
+expected". `a` is `LessThan`'s input, two desugarings deep - a name the reader never wrote. The
+squiggle is in the right place; the message points at the wrong thing.
+
+**What it requires:** the message names the expression when it is a ref or an input
+(`'height' is 'any' ...`), and the op and input only when it is not. The analyser has the node
+in hand at the check, so it is a message change plus a look at what `checkCompat` is passed.
 
 ---
 
