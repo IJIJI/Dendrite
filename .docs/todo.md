@@ -346,6 +346,28 @@ version bump for its page alone.
 
 ---
 
+## Docs — the diagnostics page showed the wrong half — DONE 2026-09-17
+
+The page printed each sample's program and dropped its port declarations, so 13 of 47 entries
+showed something that was not the cause - five of them the same innocent `output x = 1`. It now
+prints, from core's registry: a layer's types as text above the sample, the declared inputs above
+the code and the declared outputs below it (the editor's own rows and `tok-*` colours, no gap),
+each sample RUN so an output shows what it produced and an em dash where it produced nothing, and
+a playground link in the corner, the way the ops reference already did it. The five `ports` kinds
+show declarations alone, since they are raised before a program is read.
+
+Twelve analyse samples gained the inputs and outputs they had left the reader to infer, and
+`unknown_op` and `lambda_return_type_mismatch` - which no Dendrite text can express - became real
+`ast` samples the test provokes, shown as the Dendrite they would be if the syntax allowed it
+(marked invalid) and then as the host code that builds them. `DiagnosticDoc.inputs` was deleted:
+nothing had ever set it.
+
+Also: the three `den fails` samples in Learn are live editors now, mounted from
+`src/examples/*.den` with a `fails` flag that `content.test.ts` holds to failing, each opening
+with a comment saying how it fails.
+
+---
+
 ## Docs — the TypeScript samples are checked — DONE 2026-09-17
 
 `apps/docs/src/content/ts-samples.test.ts`, the sibling of `content.test.ts`: every ` ```ts ` and
@@ -544,6 +566,64 @@ the call site than `<Icon name="trash" />`.
 
 ---
 
+## Core — what an instance hands a host when a program fails
+
+**What:** two related knobs an instance does not have. Today a failed compile leaves the last
+good outputs in place, marked `stale: true`, and that is not a choice: a host that would rather
+be handed nothing has to filter `stale` itself, and a host that would rather be handed a known
+fallback per output has nowhere to declare one.
+
+- **Keep the last good outputs, or not.** `createInstance(runtime, { stale: false })` would clear
+  them instead, so `outputs.outputs` is empty while the program does not compile. The editor
+  already has the display half of this (`stale` on a layout and on the Outputs pane, added
+  2026-09-17), which was enough for the docs; this is the data half, for a host acting on values
+  rather than showing them.
+- **A fallback per output.** `OutputDefinition.fallback?: unknown` - what this output holds when
+  the program cannot produce it, whether because it did not compile or because evaluation threw.
+  A tally that must always name a state, a light that must default to off: today the host writes
+  that `??` at every read instead.
+
+**Why deferred:** raised while making the documented samples read the same before and after an
+edit (2026-09-17), which the editor's display option covered. Neither has a host asking yet -
+Beacon is the one that will, since its outputs drive hardware.
+
+**What it requires:** the stale decision lives where an entry keeps its last good result
+(`runtime/entry.ts`); the flag has to travel through `createInstance` and be honoured on the
+`link` replica too, or a local and a remote instance stop behaving alike - which is the one
+promise `link` makes. A fallback needs `validateDescriptor` to check it against the output's
+declared type, and a decision about what `stale` even means once a fallback exists (probably:
+the fallback is not stale, it is the declared answer). Both want a test per arm.
+
+**Driving need:** Beacon: a host that acts on outputs continuously and cannot act on nothing.
+
+---
+
+## Editor — Compact is not compact enough
+
+**What:** the three presets are meant to be a scale - Minimal, Compact, Full - but Compact reads
+as Full with fewer gutters. Side by side it is a code column and a side column holding Inputs,
+Outputs and Diagnostics, which is Full's arrangement; the differences are `gutters="compact"`
+against `"full"`, a Diagnostics pane collapsed to a counting line, and a height cap. A host
+choosing Compact wants *the details of Full in less room*, and today it mostly gets Full's
+footprint.
+
+**Why deferred:** found while fixing the column heights (2026-09-17). It is a design question -
+what Compact leaves out - not a bug, and the presets have no second consumer yet to argue from
+(the docs and the playground are the only two).
+
+**What it requires:** decide what Compact drops or folds, then build it. Candidates, cheapest
+first: the panes as summaries rather than lists (an inputs strip like Minimal's, outputs as
+lines, Diagnostics as the one line it already is); the side column becoming a row under the code
+below a threshold, which the wrap already half does; declaration affordances off by default
+(`declarations = true` today, Full's value); one pane at a time behind a tab strip. Whatever it
+becomes, the three presets should be visibly a scale when put on one page - which is the check:
+mount all three over the same document in the docs and look at them together.
+
+**Driving need:** the docs' Examples page uses Compact for the roll-up and Minimal for the grade;
+they should not look like the same editor. Also the layout configurator, once it exists.
+
+---
+
 ## Editor — the declaration fields the port panes do not expose
 
 **What:** Phase 3's rows carry a name and a type and nothing else. `InputDefinition.trigger` and
@@ -561,9 +641,14 @@ the pane and `addType` / `updateType` / `removeType` in `ports-edit.ts` — plus
 struct needs, which is the same shape as the struct-input widget above. Note that a persisted layer
 refuses a `schema`, so a user-declared type carries shape only and validates through `extends`.
 
+**Done since (2026-09-17):** an output LINE now carries its declared type, so a MinimalLayout
+reads `result: number = 10`. The rest of the list stands.
+
 **Driving need:** the type one is the real one — it unblocks the struct-input widget and is the
 natural next thing a user reaches for after "add an input". `mode` follows a user who wants to be
-told when they delete an output the rest of their program relied on.
+told when they delete an output the rest of their program relied on. And the diagnostics page:
+it prints declarations as static pane rows precisely because no pane shows a layer's types, a
+`required` output or a trigger - the day they do, that page can mount real editors instead.
 
 ---
 
