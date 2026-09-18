@@ -1,7 +1,7 @@
 import { indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
 import { setDiagnostics } from "@codemirror/lint";
 import { EditorView, keymap } from "@codemirror/view";
-import { type ProgramInstance, serialiseSource } from "@dendrite-lang/core";
+import { type ProgramDiagnostic, type ProgramInstance, serialiseSource } from "@dendrite-lang/core";
 
 import { type CodeOptions, codeExtensions, toLintDiagnostics } from "../code/cm";
 import { lineStartOffsets, toOffset } from "../code/tokens";
@@ -104,14 +104,21 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
     ],
   });
 
+  const paintDiagnostics = (diagnostics: readonly ProgramDiagnostic[]): void =>
+    view.dispatch(setDiagnostics(view.state, toLintDiagnostics(currentSource(), diagnostics)));
+
   const subscriptions = [
-    instance.diagnostics.subscribe((diagnostics) =>
-      view.dispatch(setDiagnostics(view.state, toLintDiagnostics(currentSource(), diagnostics))),
-    ),
+    instance.diagnostics.subscribe(paintDiagnostics),
     // Everything a save would capture - the source, the ports, the input values - arrives
     // here, and nowhere else: a host pushing its own values leaves the snapshot silent.
     instance.snapshot.subscribe(scheduleChange),
   ];
+
+  // An Observable reports CHANGES only, so a program that was already broken when the editor
+  // mounted - a documented sample, a saved program that no longer compiles - would carry no
+  // squiggles until the first keystroke, and the editor would look happy about a program it
+  // had already rejected.
+  paintDiagnostics(instance.diagnostics.get());
 
   return {
     instance,
