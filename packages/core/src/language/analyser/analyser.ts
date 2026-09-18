@@ -221,7 +221,7 @@ function validateInputs(
       // Missing-input placeholder: carries declared type and type default.
       // Warning, not error - binding does NOT fail. Distinct from error placeholders.
       if (opInput.variadic) {
-        // Variadic absent → empty array. Not added to inputTypes (same as populated variadic).
+        // Variadic absent → empty array, and no type in inputTypes: there is nothing to share.
         analysedInputs[name] = [];
         ctx.warnings.push({
           kind: "missing_op_input",
@@ -274,7 +274,15 @@ function validateInputs(
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
       }
       analysedInputs[name] = cItems;
-      // variadic NOT added to inputTypes - inferOutput/inferInputTypes must not rely on it
+      // A variadic input reaches inferOutput as the type its items share - `number[]` for
+      // Concat($a, $b) over two number lists - or `any` when they disagree. Without it an op
+      // like Concat could only ever say `any[]`, and every lambda over its result got an
+      // `any` parameter: an implicit_any_cast on code that is perfectly well typed.
+      const itemTypes = cItems.filter((ci) => ci.kind !== "error").map(getOutputType);
+      if (itemTypes.length > 0) {
+        const [first] = itemTypes as [Type, ...Type[]];
+        inputTypes[name] = itemTypes.every((t) => typesEqual(t, first)) ? first : Type.any;
+      }
     } else if (name in rawInputs) {
       // Refine the expected type (generic function inputs) and contextually type an
       // inline lambda's untyped params from it before analysing the body.
@@ -378,9 +386,19 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
 
         // Lexical order check by declaration index - formatting-independent.
         // declarationIndex is the source of truth; bindingSourceRefs is for error messages only.
-        if (ctx.enforceCodeOrder && ctx.currentBindingIndex !== undefined) {
+        // An output is not in that index, so for one the check compares where the two are
+        // written: one rule for the text, whether the line reading a name is a `let` or an
+        // `output`.
+        if (
+          ctx.enforceCodeOrder &&
+          (ctx.currentBindingIndex !== undefined || ctx.currentOutputSource)
+        ) {
           const referencedIndex = ctx.declarationIndex.get(node.name);
-          if (referencedIndex !== undefined && referencedIndex > ctx.currentBindingIndex) {
+          const declaredLater =
+            ctx.currentBindingIndex !== undefined
+              ? referencedIndex !== undefined && referencedIndex > ctx.currentBindingIndex
+              : writtenAfter(ctx.bindingSourceRefs.get(node.name), ctx.currentOutputSource);
+          if (declaredLater) {
             const declaredAt = ctx.bindingSourceRefs.get(node.name);
             ctx.errors.push({
               kind: "forward_reference",
@@ -689,6 +707,15 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
   return errors;
 }
 
+/** Whether `declared` is written after `reader` - a later line, or later on the same one. */
+function writtenAfter(declared: SourceRef | undefined, reader: SourceRef | undefined): boolean {
+  if (declared?.kind !== "code" || reader?.kind !== "code") return false;
+  return (
+    declared.line > reader.line ||
+    (declared.line === reader.line && declared.column > reader.column)
+  );
+}
+
 export function analyse(program: RawProgram, descriptor: LanguageDescriptor): AnalysisResult {
   // Pass 1 - reference graph + declaration index + source refs.
   const refGraph = buildReferenceGraph(program);
@@ -897,7 +924,7 @@ function validateOutputs(
 
     // Step 2: Analyse the output node itself.
     const errorsBefore = ctx.errors.length;
-    const cnode = analyseNode(rawNode, ctx);
+    const cnode = analyseNode(rawNode, { ...ctx, currentOutputSource: rawNode.source });
     if (ctx.errors.length > errorsBefore) {
       if (isKnownOutput && (!def.mode || def.mode === "required")) okFlag = false;
       continue;

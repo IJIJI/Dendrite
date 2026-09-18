@@ -73,6 +73,11 @@ export interface AnalysisContext {
   declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
   bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)
   currentBindingIndex: number | undefined; // index of binding being analysed; undefined when analysing outputs
+  /**
+   * Where the output being analysed is written, for its half of the lexical-order check. An
+   * output is not in the binding declaration index, so it is ordered by position instead.
+   */
+  currentOutputSource?: SourceRef;
   enforceCodeOrder: boolean; // true for code editor, false for rete/mixed
   errors: AnalysisError[];
   warnings: AnalysisWarning[];

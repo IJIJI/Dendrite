@@ -11,8 +11,19 @@ at `^0.1.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Negative numbers.** There were none: `-14` was a syntax error anywhere. A new `Negate` op,
+  with a prefix `-` as its symbol, the way `!` is `Not`'s - so `1 - -14` is
+  `Subtract(1, Negate(14))`.
+- **Lexical order holds for outputs too.** An output written above the binding it reads is now a
+  `forward_reference`, as a binding already was. Evaluation order never depended on it; the text
+  rule does, and it was only half enforced. A program that put its outputs first stops compiling.
+- **An input's diagnostics underline the whole `$name`**, not only the `$`: its source span now
+  covers the name.
+- **A variadic input reaches `inferOutput`** as the type its items share, or `any` when they
+  disagree - the open question on variadic inputs, decided. `Concat` uses it: two `number[]`
+  make a `number[]`, so a lambda over the result is typed instead of `any`, and the
+  `implicit_any_cast` it used to cause is gone.
 - **The npm page** carries the Dendrite wordmark, and version, docs and licence badges.
-  Nothing in the package itself changed.
 
 ## 0.1.0
 
