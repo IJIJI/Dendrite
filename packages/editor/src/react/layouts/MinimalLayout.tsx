@@ -28,6 +28,7 @@ export interface MinimalLayoutProps extends LayoutConfig<MinimalSpot> {
 export function MinimalLayout({
   code,
   declarations = false,
+  stale = true,
   actions = defaultActions,
   actionsAt = "inputs",
   topBar,
@@ -55,7 +56,12 @@ export function MinimalLayout({
         pane
       )}
       <CodeBlock code={code} gutters="none" spot={spot} actions={actions} />
-      <Outputs title={null} declarations={declarations} className="dendrite-outputs-lines" />
+      <Outputs
+        title={null}
+        declarations={declarations}
+        stale={stale}
+        className="dendrite-outputs-lines"
+      />
     </Column>
   );
 }

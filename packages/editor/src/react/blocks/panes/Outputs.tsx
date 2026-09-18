@@ -18,20 +18,38 @@ import { type PortEdits, usePortEdits } from "./usePortEdits";
 export interface OutputsProps extends PaneProps {
   /** The declaration affordances - rename, type, add, remove - where the layer allows them. Default true. */
   declarations?: boolean;
+  /**
+   * Show the last good values while the program does not compile, marked stale. Default true,
+   * which is what a host acting on outputs wants. `false` shows nothing for them instead, for
+   * a place where the point is the program rather than the values it used to produce - a
+   * documented sample reads the same before and after an edit that way.
+   */
+  stale?: boolean;
 }
 
-export function Outputs({ declarations = true, ...pane }: OutputsProps) {
+export function Outputs({ declarations = true, stale = true, ...pane }: OutputsProps) {
   const { editor } = useEditor();
   return (
     <Pane {...pane} defaultTitle="Outputs" kind="outputs">
-      {editor ? <OutputList editor={editor} declarations={declarations} /> : null}
+      {editor ? <OutputList editor={editor} declarations={declarations} showStale={stale} /> : null}
     </Pane>
   );
 }
 
-function OutputList({ editor, declarations }: { editor: EditorHandle; declarations: boolean }) {
+function OutputList({
+  editor,
+  declarations,
+  showStale,
+}: {
+  editor: EditorHandle;
+  declarations: boolean;
+  showStale: boolean;
+}) {
   const { instance } = editor;
-  const { outputs, error, stale } = useObservable(instance.outputs);
+  const { outputs: produced, error, stale } = useObservable(instance.outputs);
+  // Stale values the host does not want shown are dropped here, not in the instance: what it
+  // holds is the truth, this is one pane's view of it.
+  const outputs = stale && !showStale ? null : produced;
   const ports = useObservable(instance.ports);
   const diagnostics = useObservable(instance.diagnostics);
   const declared = useMemo(() => outputRows(ports), [ports]);
@@ -47,7 +65,7 @@ function OutputList({ editor, declarations }: { editor: EditorHandle; declaratio
       {error ? <p className="dendrite-runtime-error">{`${error.kind}: ${error.message}`}</p> : null}
       {/* Stale = the program these came from is no longer the one in the editor. They stay
           on screen because they are what a host is still acting on. */}
-      {stale ? (
+      {stale && showStale ? (
         <p className="dendrite-output-stale">
           <span className="dendrite-tag dendrite-tag-stale">stale</span>
           Showing the last program that ran.

@@ -19,6 +19,12 @@ export interface LayoutConfig<At extends ActionsPlacement = ActionsPlacement> {
   /** Declaration affordances in the port panes (rename, type, add, remove); values stay settable. */
   declarations?: boolean;
   /**
+   * Show the last good outputs while the program does not compile, marked stale. Default true.
+   * `false` leaves them out, for a place where the program is the point (a documented sample,
+   * which then reads the same before and after an edit).
+   */
+  stale?: boolean;
+  /**
    * The buttons: the editor's own (`Editor.items`) and the host's. Default the editor's own
    * controls (`defaultActions`). Listing replaces, never merges.
    */
