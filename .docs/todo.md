@@ -620,6 +620,19 @@ names at the release after.
 
 ---
 
+## Core — `AnalysisContext` is public, and should not be
+
+**What:** `packages/core/src/index.ts` re-exports everything in `analyser/types.ts`, which
+includes `AnalysisContext` - the analyser's working state (the scope, the failed bindings, the
+declaration index). No host builds one or reads one; it is in the published `.d.ts` by accident,
+and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`, 2026-09-18) is
+technically a breaking change for nobody.
+
+**What it requires:** export the result and diagnostic types by name instead of `export *`, and
+leave `AnalysisContext` internal. Do it at the same minor release as the operator-naming aliases.
+
+---
+
 ## Diagnostics — an `implicit_any_cast` names the op's input, not the reader's expression
 
 **What:** `height >= 10` over an `any` height reports "Input 'a' is 'any' typed - 'number'
