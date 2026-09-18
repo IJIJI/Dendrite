@@ -75,7 +75,7 @@ instance.outputs.get().outputs?.get("alert"); // true
 
 ## What each one is for
 
-**The language** is what programs are allowed to say: the types, the ops, the operators.
+**The language** is what programs are allowed to say: the types, the operators (ops, for short), the symbols.
 `createStdlib()` is the standard library; `createLanguage()` is the bare core grammar with nothing
 in it, for a host that wants to build its own vocabulary from zero. Either one can be extended, and
 [Extending the language](../extending-the-language/) is how.
@@ -104,5 +104,3 @@ drive it. [Embedding core](../embedding-core/) is about living with one.
 | an input | `type`, `default` | the default is what the input holds before anything is pushed |
 | | `trigger` | a discrete event: fired, evaluated, then reset to its default |
 | an output | `mode` | `required`, `desired`, or omitted for optional |
-
-**Next:** [Embedding core](../embedding-core/).

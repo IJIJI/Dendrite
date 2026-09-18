@@ -20,7 +20,7 @@ A language has a table of named types. `number{:den}`, `string{:den}`, `boolean{
 `any{:den}` and `null{:den}` are in it from the start; a host adds its own.
 
 Arrays and functions are not in any table. They are **structural**: `number[]{:den}` means
-exactly "array whose element is `number`", and two of them are the same type if their elements
+exactly "array whose element is `number{:den}`", and two of them are the same type if their elements
 are. There is no registration step, no `T[]` generated per `T`, and no list of "all the array
 types" - which is what makes `string[][]{:den}` and
 `((number) -> boolean)[]{:den}` cost nothing to have.
@@ -33,16 +33,16 @@ named types. `Bus{:den}` is `Bus` because it is called `Bus`.
 Everything that asks "does this value fit there" calls `isCompatible`, and nothing re-implements
 it. It is the single extension point for subtyping, and its rules are these.
 
-**`any` is data-only, in both directions.** A data value flows into `any{:den}`, and an `any`
+**`any{:den}` is data-only, in both directions.** A data value flows into `any{:den}`, and an `any{:den}`
 flows into any data type. The second direction is the unsound one and it is deliberate: it is
 what lets a host say "I do not know what this is" without stopping the program. Each crossing
 raises an `implicit_any_cast{:den}` warning so you can see where you traded the check away.
 
-**A function is never `any`.** This is the one exception to the rule above and it carries a lot
+**A function is never `any{:den}`.** This is the one exception to the rule above and it carries a lot
 of weight. See below.
 
-**`null` flows anywhere a data value is expected.** An unset input holds `null{:den}`, so a
-program over unset inputs still compiles. It is the same trade as `any` and it is why
+**`null{:den}` flows anywhere a data value is expected.** An unset input holds `null{:den}`, so a
+program over unset inputs still compiles. It is the same trade as `any{:den}` and it is why
 `Default{:den}` and `IsSet{:den}` exist.
 
 **Arrays are covariant.** `number[]{:den}` fits `any[]{:den}`, because reading is all you can do
@@ -51,15 +51,15 @@ to bite on.
 
 **Functions are contravariant in their parameters and covariant in their return.** A function
 accepting `any{:den}` fits where one accepting `number{:den}` is wanted, because it accepts
-more; one returning `number` fits where `any` is wanted, because it promises more. The ordinary
-rule, and the reason `Filter{:den}` can hand your lambda a `number` when its signature says
-`any`.
+more; one returning `number{:den}` fits where `any{:den}` is wanted, because it promises more. The ordinary
+rule, and the reason `Filter{:den}` can hand your lambda a `number{:den}` when its signature says
+`any{:den}`.
 
 **`extends` makes a chain.** A named type may extend another, and compatibility walks up the
 chain. A struct field may be narrowed in the extending type but not made incompatible, which is
 what `incompatible_field_override{:den}` catches.
 
-## Why a function is never `any`
+## Why a function is never `any{:den}`
 
 This single rule is what makes every Dendrite program terminate.
 
@@ -107,6 +107,4 @@ produced. Where those differ, the analyser is right.
 No generics, no unions, no intersections, no optional fields. The type system is as small as it
 can be while checking what programs in this language actually do, and every rule above exists
 because something needed it.
-
-**Next:** [Ports and layers](../ports-and-layers/), which is where the types a program may use
 come from.

@@ -8,7 +8,7 @@ sidebar:
 _These pages are for writing programs. Building on the library, or replacing parts of it, is under [Host developers](../host/extending-the-language/)._
 
 The standard library is a language: the primitive types, the ops every application has, and the
-operators that are sugar over them. It is what you get before your application adds anything of
+symbols that are sugar over them. It is what you get before your application adds anything of
 its own.
 
 The pages beside this one are **generated from the library itself**, one per segment, each op
@@ -25,14 +25,14 @@ Every entry leads with one, and it is the real one, printed from the op:
 
 The name, then each input with its type, then what comes out. Those input names are the ones you
 use when you pass arguments by name rather than in order, which
-[Operators and ops](../learn/writing/operators-and-ops/) covers. The rest of this page is the
+[Operators and symbols](../learn/writing/operators-and-symbols/) covers. The rest of this page is the
 parts of a signature that are not obvious on sight.
 
 ## Variadic inputs
 
 A signature ending in `...{:den}` takes as many values as you give it:
 
-```den
+```den inputs="a:boolean, b:boolean, c:boolean"
 output sum   = Add(1, 2, 3, 4)
 output any   = Or($a, $b, $c)
 output joined = Concat([1, 2], [3], [4, 5])
@@ -42,10 +42,10 @@ output joined = Concat([1, 2], [3], [4, 5])
 ops work this way: `And{:den}`, `Or{:den}`, `Xor{:den}`, `Add{:den}`, `Multiply{:den}` and
 `Concat{:den}`.
 
-The operator form of a variadic op takes two at a time, so `1 + 2 + 3{:den}` nests where
+The symbol form of a variadic op takes two at a time, so `1 + 2 + 3{:den}` nests where
 `Add(1, 2, 3){:den}` does not. Same answer; the op form says "sum these" more directly.
 
-## `any` in a signature
+## `any{:den}` in a signature
 
 An input typed `any{:den}` accepts any data value. `Length(list: any[]){:den}` takes a list of
 anything, `Equals(a: any, b: any){:den}` compares anything with anything.
@@ -87,7 +87,7 @@ output big = Filter(items, item => item > 10)
 There is nothing special about those ops. A function is a value in this language, so an op
 taking one is an ordinary op, and you can hand it a lambda written in place or a name bound
 earlier. What the signature does not show is that the parameter type is worked out for you: the
-`item{:den}` above is a `number` because `items` is a list of numbers, so you rarely need to
+`item{:den}` above is a `number{:den}` because `items` is a list of numbers, so you rarely need to
 annotate it.
 
 [Lambdas and lists](../learn/writing/lambdas-and-lists/) covers writing them.
@@ -118,6 +118,4 @@ Everything here is the floor, not the ceiling. An application embedding Dendrite
 own types and its own ops, and those behave exactly like these: same call syntax, same checking,
 same reference format if it generates one. You cannot tell from a program whether `Filter{:den}`
 came from the standard library or from the application, and that is the point.
-
-**Next:** the segment pages beside this one, or [How it works](../how-it-works/the-chain/) for
 what happens to a program that uses them.

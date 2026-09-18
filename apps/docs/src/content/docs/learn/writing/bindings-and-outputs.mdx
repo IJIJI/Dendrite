@@ -83,7 +83,7 @@ The consequences are worth stating plainly:
 A `let{:den}` that no output can reach does nothing, so the analyser says so and drops it from
 the program it hands the evaluator:
 
-```den
+```den warns
 let used   = 1 + 1
 let unused = 99
 output answer = used
@@ -102,5 +102,3 @@ rest are optional. Declare an output nobody asked for and it is dropped with a w
 That contract is the subject of [Ports and layers](../../../how-it-works/ports-and-layers/), under
 How it works. For now: the names you may produce come from outside, and the editor shows you
 which ones.
-
-**Next:** [Inputs](../inputs/), the values that arrive from outside.

@@ -115,12 +115,12 @@ export const quantityExample: Example = {
   fails: true,
 };
 
-/** The same mistake as `quantity`, on the page about types rather than about inputs. */
+/** A string where a number belongs - a different mistake from `quantity`'s, on purpose. */
 export const mismatchExample: Example = {
   source: mismatch,
   ports: {
     inputs: [{ name: "score", type: Type.number, default: 72 }],
-    outputs: [{ name: "ok", type: Type.boolean }],
+    outputs: [{ name: "total", type: Type.number }],
   },
   fails: true,
 };

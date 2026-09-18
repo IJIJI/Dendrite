@@ -21,7 +21,7 @@ The lexer turns your text into tokens and the parser turns those into bindings a
 step knows the shape of the language and nothing else: it does not know which ops exist, which
 types exist, or what your application declared.
 
-That is why `$n{:den}` is an input here purely because of the `$` - no table is consulted - and
+That is why `$n{:den}` is an input here purely because of the `${:den}` - no table is consulted - and
 why a misspelled op name gets through this step without complaint. What you can rely on: a
 syntax error is reported here, with a position, and nothing further happens.
 

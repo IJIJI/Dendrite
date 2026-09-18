@@ -99,5 +99,3 @@ The same evaluator sits under four entry points, and they differ only in what th
 They are deliberately not unified into one configurable thing. Each is the smallest surface for
 its job, and a host that needs one does not carry the others' state.
 [Embedding core](../../host/embedding-core/) is the page for choosing between them.
-
-**Next:** [Every diagnostic](../diagnostics/).

@@ -54,7 +54,7 @@ value. This is lexical scope, working the way you expect it to.
 
 A lambda's parameter shadows an outer name of the same name, and only inside the lambda:
 
-```den
+```den warns
 let n = 100
 output sizes = Map([1, 2, 3], n => n * 2)
 ```
@@ -67,7 +67,7 @@ unused, which the analyser will mention.
 A lambda is a value, so it can be bound like any other and applied later:
 
 ```den
-let double = n => n * 2
+let double = (n: number) => n * 2
 output four = double(2)
 output list = Map([1, 2, 3], double)
 ```
@@ -90,5 +90,3 @@ That is deliberate, and it is the reason **every Dendrite program terminates**. 
 program a user can write that loops forever inside your application. You pay for it by
 expressing iteration through the ops above rather than by writing your own recursion, which for
 the work this language is for is a trade worth making.
-
-**Next:** [Types in practice](../types/), and what the checker tells you.

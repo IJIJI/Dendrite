@@ -124,5 +124,3 @@ runner.run({ n: 5 }).get("doubled"); // 10, and only what `n` reaches recomputes
 
 They are deliberately separate rather than one object with options. Each is the smallest thing that
 does its job, and a host that needs a runner does not carry a runtime's state.
-
-**Next:** [Extending the language](../extending-the-language/).

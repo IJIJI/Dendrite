@@ -18,18 +18,13 @@ server behind it.
 
 A Dendrite program is a list of named things. Two words do all the declaring:
 
-```den
-let doubled = $n * 2
-output result = doubled
-```
+<Live client:only="react" source={firstExample.source} ports={firstExample.ports} />
 
 `let{:den}` names a value. `output{:den}` names a value **and** hands it to whoever is running
-the program. `$n{:den}` is an input: a number that arrives from outside, from the pane beside
-the editor here, from your application when you embed the language.
+the program. `$n{:den}` is an input: a number that arrives from outside, from the field above
+the code here, from your application when you embed the language.
 
-That is the whole program. Change `$n` below and watch `result` follow.
-
-<Live client:only="react" source={firstExample.source} ports={firstExample.ports} />
+That is the whole program. Change `$n{:den}` and watch `result{:den}` follow.
 
 ## What just happened
 
@@ -48,8 +43,12 @@ works out what has to happen. You never say *when*.
 Dendrite has no statements, no sequence, no assignment. A program is not a list of steps to
 perform in order, it is a set of names and what each one is. So:
 
-- **Order does not matter.** You may name `doubled{:den}` after you use it. The analyser sorts
-  it out.
+- **The order things run in is not yours to manage.** The analyser reads what depends on what
+  and evaluates in that order, whatever order the lines are in.
+- **The text still reads top to bottom.** A name is declared on a line above the one that uses
+  it. That is *lexical order* - the order of the text, as opposed to the order things are
+  evaluated in - and it is a rule for whoever reads the program, not for how it runs.
+  [Bindings and outputs](../writing/bindings-and-outputs/#declare-before-you-use) says more.
 - **Nothing changes under you.** Within one evaluation a name has one value, computed at most
   once.
 - **There is no loop.** Iteration is what the list ops are for, and you will meet them shortly.
@@ -69,5 +68,3 @@ in turn.
 **Embedding the language** in an app of your own, so its programs read your data and produce
 values you act on: go to [Installation](../../host/installation/). Come back here when you want
 to know what your users can write.
-
-**Next:** [Examples](../examples/).

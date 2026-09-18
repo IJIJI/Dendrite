@@ -18,7 +18,7 @@ Three forms can be stored, and they are the three ways a program can be authored
 | `ast` | the raw program as plain records | code that builds a program directly |
 
 The one that is *not* on that list is the core program, and that is the decision. An AST loses
-the comments, the whitespace and the operator surface: reload `$score >= 60{:den}` from a tree
+the comments, the whitespace and the symbol surface: reload `$score >= 60{:den}` from a tree
 and you get `Not(LessThan($score, 60)){:den}` back, which is the same program and not the same
 document. So the authoring artefact is what is kept, and the analysed form is rebuilt.
 
@@ -54,7 +54,7 @@ Two different things can change shape, so there are two versions and they are in
 
 **The format version** is on the saved program, and it belongs to core. When the shape of a
 `SavedProgram` changes, the number goes up and `migrate` brings older blobs forward. A blob
-from a newer version than the running build fails with `unsupported_version` rather than being
+from a newer version than the running build fails with `unsupported_version{:den}` rather than being
 guessed at.
 
 **The envelope version** belongs to whoever wraps a program in their own document. The editor
@@ -64,6 +64,4 @@ nothing about it.
 
 Keeping them apart means a host can change its own document shape without touching the language,
 and core can change the program format without knowing what anyone wrapped it in.
-
-**Next:** [the glossary](../glossary/), for anything above that was a word you had to take on
 trust.

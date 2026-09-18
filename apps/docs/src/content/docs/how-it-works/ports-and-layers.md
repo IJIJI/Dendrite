@@ -6,7 +6,7 @@ sidebar:
 ---
 
 A language in Dendrite declares **no inputs and no outputs**. It has types, ops, evaluators and
-operators - a vocabulary - and nothing about what any particular program talks to.
+symbols - a vocabulary - and nothing about what any particular program talks to.
 
 What a program reads and produces arrives separately, as **port layers**, and they compose onto
 the vocabulary to make the descriptor the analyser actually checks against.
@@ -99,5 +99,3 @@ no document to fix.
 Provenance comes out of composition: for every name, which layer placed it. That is what lets
 the editor grey out the declarations a user may not touch, attribute a refused rename to the
 right row, and tell you that `score` came from the host rather than from your document.
-
-**Next:** [Evaluation](../evaluation/).

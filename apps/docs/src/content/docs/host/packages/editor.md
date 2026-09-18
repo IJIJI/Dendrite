@@ -125,5 +125,3 @@ link made today opens next year.
 fights. Every colour is a `--dendrite-*` variable: override those and you have rethemed it, with no
 need for the brand. It follows the system's light or dark setting, or a host forces one with
 `data-dendrite-theme` on the root element. Fonts are not loaded for you.
-
-**Next:** [@dendrite-lang/link](../link/).

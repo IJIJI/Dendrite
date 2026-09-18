@@ -14,7 +14,7 @@ _[Learn](../../learn/getting-started/) tells you what you can rely on. This sect
 One program, carried the whole way. Every artefact below is the real one, printed by the four
 scripts in `packages/core/examples/3-(code)/`, which run this program stage by stage:
 
-```den inputs="score:number"
+```den warns inputs="score:number"
 let passing  = $score >= 60
 let spare    = 99
 output grade = If(passing, "Pass", "Fail")
@@ -31,13 +31,13 @@ string:Pass  punct:,  string:Fail  punct:)  eof:
 
 Two things in there are worth stopping on.
 
-**`>=` is one token.** The lexer does not know what operators exist; it is handed the operator
-vocabulary of the language it is lexing, taken straight from the grammar's registered operators.
-Add an operator and the lexer needs no edit. Feed the same text to a language with no operators
+**`>=` is one token.** The lexer does not know what symbols exist; it is handed the symbol
+vocabulary of the language it is lexing, taken straight from the grammar's registered symbols.
+Add a symbol and the lexer needs no edit. Feed the same text to a language with no symbols
 and `>=` comes back as two unknown characters.
 
-**`$` and `score` are separate tokens.** The sigil is structural punctuation, and the *parser*
-joins them. This is why `$` cannot appear in a name and why an input is recognisable without
+**`${:den}` and `score` are separate tokens.** The sigil is structural punctuation, and the *parser*
+joins them. This is why `${:den}` cannot appear in a name and why an input is recognisable without
 consulting anything.
 
 `let`, `output` and `If` are all plain `ident` tokens. There are no keywords at this level.
@@ -62,13 +62,13 @@ output grade -> operation
                 "b": { "kind": "literal", "value": 60 } } } } }
 ```
 
-The operator is **already gone**. `$score >= 60{:den}` became `Not(LessThan($score, 60)){:den}`
+The symbol is **already gone**. `$score >= 60{:den}` became `Not(LessThan($score, 60)){:den}`
 during parsing, because that is what the standard library registered `>=` to mean. There is no
-operator node kind, and nothing after this point can tell that an operator was written. It also
-explains why one operator can expand into two op calls.
+symbol node kind, and nothing after this point can tell that a symbol was written. It also
+explains why one symbol can expand into two op calls.
 
 Note `"output": { "kind": "name", "name": "any" }` on those nodes in the full dump: a raw node
-carries no inferred type. `any` is the placeholder, not a decision.
+carries no inferred type. `any{:den}` is the placeholder, not a decision.
 
 What this stage may not do: resolve a name, look up an op, or decide a type. It does not know
 what exists.
@@ -95,8 +95,8 @@ warnings: unused_binding
 
 Three things happened there.
 
-**Types were resolved.** `passing{:den}` is a `boolean`, worked out from `Not{:den}`'s output
-type, not from an annotation. `grade{:den}` is a `string` because `If{:den}` narrows to its
+**Types were resolved.** `passing{:den}` is a `boolean{:den}`, worked out from `Not{:den}`'s output
+type, not from an annotation. `grade{:den}` is a `string{:den}` because `If{:den}` narrows to its
 branch type when both branches agree.
 
 **`dependsOn` was computed.** Both carry `[score]`, the set of inputs each reaches through the
@@ -144,5 +144,3 @@ embeddable:
   whenever the descriptor changes, which is how a host adding an op makes old programs
   re-check rather than silently drift.
 - **The values** are the only thing a host acts on.
-
-**Next:** [The type system](../types/).

@@ -19,12 +19,12 @@ outputs is declared outside the program; see *port layer*.
 **Input** - a value the program reads but does not compute, written `$name{:den}`. Supplied by
 the host, or by a user typing into a pane.
 
-**Op** - a named function with named inputs and one output. Everything that computes is one.
+**Op** - short for **operator**: a named function with named inputs and one output. Everything that computes is one.
 Supplied by the standard library or by the host.
 
-**Operator** - surface syntax for an op, registered alongside it. `+{:den}` is sugar for
-`Add{:den}`. Operators are rewritten during parsing and leave no trace afterwards, and one
-operator may expand into more than one op call.
+**Symbol** - surface syntax for an op, registered alongside it. `+{:den}` is the symbol for
+`Add{:den}`. Symbols are rewritten during parsing and leave no trace afterwards, and one
+symbol may expand into more than one op call.
 
 **Lambda** - a function written inline, `item => item > 10{:den}`. A value like any other, with
 real lexical closure over what surrounded it.
@@ -44,10 +44,10 @@ to itself, and a function is never accepted where `any{:den}` is expected. See
 **Structural type** - an array or a function type, built from other types rather than
 registered. Two are the same type when their parts are.
 
-**`any`** - accepts any *data* value, in both directions, and never a function. The escape hatch
+**`any{:den}`** - accepts any *data* value, in both directions, and never a function. The escape hatch
 a host uses when it does not know a value's type. Each crossing warns.
 
-**`null`** - the value an unset input holds, accepted wherever a data value is expected, so a
+**`null{:den}`** - the value an unset input holds, accepted wherever a data value is expected, so a
 program over unset inputs still runs.
 
 **`extends`** - a named type declaring a parent. Compatibility walks the chain.
@@ -58,7 +58,7 @@ their return.
 
 ## The chain
 
-**Vocabulary** - what a language has: types, ops, evaluators, operators. Deliberately *not*
+**Vocabulary** - what a language has: types, ops, evaluators, symbols. Deliberately *not*
 inputs and outputs.
 
 **Descriptor** - what a program is actually checked against: a vocabulary with port layers

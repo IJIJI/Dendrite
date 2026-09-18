@@ -11,8 +11,8 @@ in a browser, in node, in a worker. The only runtime dependency is `zod`, for ty
 ## The exports, by what you are doing
 
 **Building a language.** `createStdlib`, `createLanguage`, `extendLanguage`, `extendStdlib`, and the
-`Language` they return with its `register*` methods. `BP` for operator precedence, `operationNode`
-for building an op node from an operator. [Extending the language](../../extending-the-language/)
+`Language` they return with its `register*` methods. `BP` for symbol precedence, `operationNode`
+for building an op node from a symbol. [Extending the language](../../extending-the-language/)
 walks through them.
 
 **Running programs.** `createEnvironment` is the usual entry point, and everything else hangs off
@@ -41,7 +41,7 @@ exported: extend a language through its `register*` methods instead.
 ## How the pieces fit
 
 ```
-createStdlib()             a Language: types, ops, evaluators, operators
+createStdlib()             a Language: types, ops, evaluators, symbols
   └ createEnvironment()    that language with its pipeline
       ├ forProgram()       a pipeline bound to a composed descriptor: parse, analyse, run, load
       └ createRuntime()    many programs, global layers, shared input values
@@ -60,5 +60,3 @@ Two rules keep that stack honest:
 
 Both ESM and CommonJS, with types. The package's `exports` map points `import` at the ESM build and
 `require` at the CommonJS one, so either works without configuration.
-
-**Next:** [@dendrite-lang/editor](../editor/).
