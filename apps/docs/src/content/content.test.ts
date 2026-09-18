@@ -145,7 +145,15 @@ describe("the Dendrite samples in the pages", () => {
 
 describe("the programs the live blocks mount", () => {
   it.for(Object.entries(examples))("%s", ([name, example]) => {
-    expect(errorsIn(example.source, example.ports, name)).toEqual([]);
+    const errors = errorsIn(example.source, example.ports, name);
+    if (example.fails) {
+      // Marked `fails`: it is mounted to SHOW a diagnostic, so it must produce one.
+      expect(errors, "a `fails` example that compiles is no longer showing anything").not.toEqual(
+        [],
+      );
+    } else {
+      expect(errors).toEqual([]);
+    }
   });
 });
 

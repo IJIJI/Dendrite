@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-import { orderExample } from "../../../../examples";
+import { orderExample, quantityExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
 A name with a `$` in front of it is an input: a value the program reads but does not compute.
@@ -46,10 +46,12 @@ it depends on, and a change recomputes exactly the nodes whose set it intersects
 
 An input is declared with a type, and the checker holds you to it:
 
-```den fails inputs="quantity:number"
-// $quantity is a number; And wants booleans.
-output ok = And($quantity, true)
-```
+<Live
+  client:only="react"
+  fails
+  source={quantityExample.source}
+  ports={quantityExample.ports}
+/>
 
 You will meet `any{:den}` too, which accepts any value and is what a host uses when it genuinely
 does not know. [Types in practice](../types/) covers what that costs you.

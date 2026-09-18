@@ -1,9 +1,12 @@
 import { type Ports, Type } from "@dendrite-lang/core";
 
 import first from "./first.den?raw";
+import forward from "./forward.den?raw";
 import grade from "./grade.den?raw";
 import heights from "./heights.den?raw";
+import mismatch from "./mismatch.den?raw";
 import order from "./order.den?raw";
+import quantity from "./quantity.den?raw";
 import scores from "./scores.den?raw";
 
 //? The programs the site runs live, as `.den` files rather than strings in a page: one
@@ -17,6 +20,12 @@ export interface Example {
   source: string;
   /** What it reads and produces, as the page declares it. */
   ports: Ports;
+  /**
+   * The example is on the site to SHOW a diagnostic, so it must NOT compile - the same
+   * contract a ```den fails fence carries, and `content.test.ts` holds it to it. Each one
+   * opens with a comment saying how it fails, since a live editor says it in a squiggle.
+   */
+  fails?: boolean;
 }
 
 const numbers = (...names: string[]) => names.map((name) => ({ name, type: Type.number }));
@@ -89,6 +98,33 @@ export const heightsExample: Example = {
   },
 };
 
+/** Read above the line that declares it: a rule about the text, not about the language. */
+export const forwardExample: Example = {
+  source: forward,
+  ports: { inputs: [], outputs: [{ name: "report", type: Type.number }] },
+  fails: true,
+};
+
+/** A number handed to an op that wanted booleans, with the input declared on the page. */
+export const quantityExample: Example = {
+  source: quantity,
+  ports: {
+    inputs: [{ name: "quantity", type: Type.number, default: 4 }],
+    outputs: [{ name: "ok", type: Type.boolean }],
+  },
+  fails: true,
+};
+
+/** The same mistake as `quantity`, on the page about types rather than about inputs. */
+export const mismatchExample: Example = {
+  source: mismatch,
+  ports: {
+    inputs: [{ name: "score", type: Type.number, default: 72 }],
+    outputs: [{ name: "ok", type: Type.boolean }],
+  },
+  fails: true,
+};
+
 /** Every example, for the test that loads them all. */
 export const examples: Record<string, Example> = {
   first: firstExample,
@@ -96,4 +132,7 @@ export const examples: Record<string, Example> = {
   scores: scoresExample,
   grade: gradeExample,
   heights: heightsExample,
+  forward: forwardExample,
+  quantity: quantityExample,
+  mismatch: mismatchExample,
 };
