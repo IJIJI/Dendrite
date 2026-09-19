@@ -14,6 +14,12 @@ of core needs a release here too, even if nothing in this package changed.
 - **`require()` works.** Each entry gained a `default` export condition beside `import`, so
   `require("@dendrite-lang/editor")` and `.../react` resolve. The package is still ESM, so this
   needs a Node that can `require()` an ES module (22.12 or later, or 20.19 or later).
+- **Types have a colour.** A registered type's name is highlighted as a type where a type is
+  written: after a `:` or `->`, among a function type's parameters, or as a type written on its own
+  (`number[]`). A binding that shares a type's name stays an identifier. It is a new `tok-type`
+  class with a `--dendrite-syntax-type` token (a muted teal) for themes to override, and
+  `TokenClass` gains `"type"`: code with an exhaustive `switch` over it has a case to add. Known
+  limit: in `If(then: number)`, a binding called `number` passed by name reads as the type.
 - **A program that was already broken shows it on mount.** An `Observable` reports changes
   only, so an editor mounted over a program that does not compile - a documented sample, a
   saved program that no longer does - painted no squiggles until the first keystroke. The
