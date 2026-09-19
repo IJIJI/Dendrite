@@ -13,7 +13,7 @@ import { type Ports, type SavedAstProgram, type Type } from "@dendrite-lang/core
 // Both come out as the editor's own token classes (`tok-*`) and, for the declarations, its
 // pane rows, so an entry looks like the MinimalLayout it would be if the page mounted a live
 // editor per sample - which would put ~670 kB of JavaScript on a reference page that today
-// ships none. The same trick OpsReference.astro uses for its signatures and produced values.
+// ships none. The same trick OpsReference.astro uses for its produced values.
 
 /** A stretch of text with one of the editor's token classes, or none. */
 export interface Part {
@@ -43,11 +43,11 @@ export const partsHtml = (parts: Part[]): string =>
 /** The same parts as plain text. */
 export const partsText = (parts: Part[]): string => parts.map((part) => part.text).join("");
 
-/** A type as the editor colours one: the name is an identifier, the rest punctuation. */
+/** A type as the editor colours one: the name in the type colour, the rest punctuation. */
 function typeParts(type: Type): Part[] {
   switch (type.kind) {
     case "name":
-      return [t(type.name, "ident")];
+      return [t(type.name, "type")];
     case "array":
       return [...typeParts(type.element), t("[]", "punct")];
     case "function":
@@ -86,8 +86,8 @@ export interface Declarations {
 
 /** `Bus { id: number }`, `Child extends Parent { id: string }`, or a bare `Reading`. */
 function typeDefinitionParts(definition: NonNullable<Ports["types"]>[number]): Part[] {
-  const parts: Part[] = [t(definition.name, "ident")];
-  if (definition.extends) parts.push(t(" extends ", "keyword"), t(definition.extends, "ident"));
+  const parts: Part[] = [t(definition.name, "type")];
+  if (definition.extends) parts.push(t(" extends ", "keyword"), t(definition.extends, "type"));
   const fields = Object.entries(definition.fields ?? {});
   if (fields.length > 0) {
     parts.push(t(" { ", "punct"));

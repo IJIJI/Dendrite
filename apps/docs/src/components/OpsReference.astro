@@ -12,7 +12,7 @@ import {
   type SavedProgram,
   typeToString,
 } from "@dendrite-lang/core";
-import { DOCUMENT_VERSION, documentUrl } from "@dendrite-lang/editor";
+import { DOCUMENT_VERSION, documentUrl, sourceHtml } from "@dendrite-lang/editor";
 
 import DenCode from "./DenCode.astro";
 
@@ -33,21 +33,13 @@ const pipeline = composed.environment;
 const ops = [...env.language.descriptor.ops.values()].filter((op) => op.category === category);
 if (ops.length === 0) throw new Error(`no stdlib ops in category '${category}'`);
 
-// The signature is not Dendrite source (`->`, `nodes...`), so it wears the editor's token
-// classes by hand: the op in the op colour, names as identifiers, types as text, the rest
-// as punctuation.
-const span = (cls: string, text: string): string => `<span class="tok-${cls}">${text}</span>`;
+// The signature, written the way Dendrite writes a function type, and coloured by the editor's
+// own highlighter: the op, its parameter names, their types, all as the code editor shows them.
 const signature = (op: OpDefinition): string => {
   const inputs = op.inputs
-    .map(
-      (input) =>
-        span("ident", input.name) +
-        (input.variadic ? span("punct", "...") : "") +
-        span("punct", ": ") +
-        typeToString(input.type),
-    )
-    .join(span("punct", ", "));
-  return `${span("op", op.name)}${span("punct", "(")}${inputs}${span("punct", ")")} ${span("operator", "->")} ${typeToString(op.output)}`;
+    .map((input) => `${input.name}${input.variadic ? "..." : ""}: ${typeToString(input.type)}`)
+    .join(", ");
+  return sourceHtml(`${op.name}(${inputs}) -> ${typeToString(op.output)}`, env.language);
 };
 
 // [name, value] per output. Examples are literal-only, so running needs no inputs.

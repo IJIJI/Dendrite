@@ -50,7 +50,14 @@ describe("declarationsOf", () => {
       ["needed", "number", ["required"]],
     ]);
     // Every type is coloured with the editor's own token classes, never bare text.
-    expect(declarations.inputs[0]!.type[0]!.cls).toBe("ident");
+    // A host type (`Bus`) too, which the stdlib-only highlighter could not know.
+    expect(declarations.inputs[0]!.type[0]!.cls).toBe("type");
+    // A definition's own name and its parent are types; `extends` is a keyword.
+    expect(declarations.types[2]!.slice(0, 3)).toEqual([
+      { text: "Child", cls: "type" },
+      { text: " extends ", cls: "keyword" },
+      { text: "Bus", cls: "type" },
+    ]);
   });
 
   it("knows an empty layer from no layer at all", () => {
