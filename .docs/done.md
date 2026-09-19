@@ -5,6 +5,46 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Learn — the samples step — DONE 2026-09-19
+
+The user's observations on the Learn section (2026-09-18), built as one step in six commits. The
+plan's reasoning, kept here because the code does not say it:
+
+- **A type colour, in the editor.** A registered type's name is `tok-type` (a **muted teal**,
+  `--dendrite-syntax-type`) where a type is written: after `:` or `->`, among a function type's
+  parameters, or when the whole snippet is a type (`number[]{:den}` in prose). A binding sharing a
+  type's name stays an identifier. **Known ceiling**, pinned by `tokens.test.ts`: a named
+  argument's `:` looks like an annotation's, so in `If(then: number)` a binding called `number`
+  reads as the type. Fixing it needs the parser.
+- **One highlighter for Dendrite written as source.** The ops reference builds each signature as
+  a string and runs it through `sourceHtml`. The diagnostics page **keeps** `typeParts` and
+  `typeDefinitionParts`, with their classes corrected: they walk a real `Type`, so they know that
+  a host type (`Bus`) is a type, which the stdlib-only highlighter cannot. Printing a type to a
+  string for the lexer to guess back would be Primitive Obsession, and would lose that.
+- **The colouring pass.** 84 inline snippets marked `{:den}` (74 found by a classifier, 10 by
+  hand), and inline names take the editor's identifier colour. **Host-only names stay plain**
+  (`Reading`, `Mod`, `Last`, `%`): a wrong colour is worse than none. The TypeScript half is its
+  own todo, with the classifier's list.
+- **Three warning samples, live.** `unused.den`, `shadowed.den`, `whatever.den`, with a `warns`
+  flag held by `content.test.ts` like `fails`. They declare real output types, not the fences'
+  derived `any`, so an output line reads `answer: number = 2`. `$whatever` defaults to
+  `[1, 2, 3]`, or the block would open on `Length(null)`. Checking them corrected two claims:
+  shadowing raises nothing (only `unused_binding`), and `Length` of a number is `undefined`, not
+  a runtime error (backlog: "Value validation at the boundary").
+- **The chain in five steps**: lex, parse, compose, analyse, evaluate. **Desugar** and **prune**
+  are substeps, drawn nested under parse and analyse, because neither leaves an artefact:
+  desugaring happens as the parser reads, and pruning is the analyser's last passes. *The chain*
+  opens each section with its own piece of the diagram (`<Chain step>`), so the sections and the
+  overview cannot disagree. On a wide screen the chain is two rows of three artefacts, breaking
+  after the raw program; one row of eleven cells did not fit the content column.
+- **Dashes.** Prose rewritten where a dash stood in for an em dash. The rule, as the user put it
+  afterwards: a dash that reads naturally may stay (`.docs/CLAUDE.md`, *Working in this repo*).
+
+Found on the way and recorded: the input-defaults bug (`todo.md`), an `any` value never checked
+at runtime and the compose stage's two names (`backlog.md`).
+
+---
+
 ## Document the core language (two levels) — DONE 2026-09-12
 
 The docs site now teaches the language (`language-docs-plan.md`, seven commits): **Learn** for
