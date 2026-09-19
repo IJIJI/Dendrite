@@ -46,8 +46,8 @@ perform in order, it is a set of names and what each one is. So:
 - **The order things run in is not yours to manage.** The analyser reads what depends on what
   and evaluates in that order, whatever order the lines are in.
 - **The text still reads top to bottom.** A name is declared on a line above the one that uses
-  it. That is *lexical order* - the order of the text, as opposed to the order things are
-  evaluated in - and it is a rule for whoever reads the program, not for how it runs.
+  it. That is *lexical order* (the order of the text, as opposed to the order things are
+  evaluated in), and it is a rule for whoever reads the program, not for how it runs.
   [Bindings and outputs](../writing/bindings-and-outputs/#declare-before-you-use) says more.
 - **Nothing changes under you.** Within one evaluation a name has one value, computed at most
   once.

@@ -54,7 +54,7 @@ This is not the op being careless. It is the op saying it does not care, which i
 `Length{:den}` counts without looking inside. What you lose is the check. Pass `Length{:den}` a
 list of strings and nothing complains, because nothing needed to.
 
-Where an op *can* be more precise, it is - which is the next convention.
+Where an op *can* be more precise, it is, which is the next convention.
 
 ## Some output types depend on the inputs
 

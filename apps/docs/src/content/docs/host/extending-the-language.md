@@ -1,6 +1,6 @@
 ---
 title: "Extending the language"
-description: "Register a type, an op, an evaluator, a symbol - and make an op's types follow its inputs."
+description: "Register a type, an op, an evaluator, a symbol, and make an op's types follow its inputs."
 sidebar:
   order: 3
 ---
@@ -80,7 +80,7 @@ complete programs a test can load. The standard library's own reference is gener
 these fields.
 
 An evaluator gets its inputs already evaluated and returns a value. It should not throw for ordinary
-bad input - return something sensible - because a throw becomes a `host_error{:den}` on the program's
+bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
 outputs.
 
 ## A symbol as sugar

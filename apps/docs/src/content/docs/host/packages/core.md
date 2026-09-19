@@ -30,7 +30,7 @@ tagged template for tests and examples, and `SavedProgram` is the union of the f
 through `environment.load`, which always re-analyses.
 
 **Reading problems.** `diagnostics` and `diagnosticList` are the registry of every kind the language
-can report, with a message and a triggering program each - the same one the
+can report, with a message and a triggering program each. It is the same one the
 [diagnostics page](../../../how-it-works/diagnostics/) prints. `ProgramDiagnostic` is the shape an
 instance publishes.
 

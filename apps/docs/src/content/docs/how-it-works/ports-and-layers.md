@@ -6,7 +6,7 @@ sidebar:
 ---
 
 A language in Dendrite declares **no inputs and no outputs**. It has types, ops, evaluators and
-symbols - a vocabulary - and nothing about what any particular program talks to.
+symbols (a vocabulary) and nothing about what any particular program talks to.
 
 What a program reads and produces arrives separately, as **port layers**, and they compose onto
 the vocabulary to make the descriptor the analyser actually checks against.
@@ -33,9 +33,9 @@ allowed to rename.
 
 Three fields of policy, and core reads them as fields. It never branches on a layer's *kind*:
 
-- **`editable`** - may a UI change these declarations?
-- **`feeds`** - who supplies the values, host code or a user typing them?
-- **`persisted`** - is the layer saved with the program, or rebuilt by the host?
+- **`editable`**: may a UI change these declarations?
+- **`feeds`**: who supplies the values, host code or a user typing them?
+- **`persisted`**: is the layer saved with the program, or rebuilt by the host?
 
 Two combinations are common enough to have names. `Policy.host` is not editable, host-fed and
 not persisted: a contract made in code. `Policy.user` is editable, user-fed and persisted: the
@@ -47,7 +47,7 @@ concept.
 
 Layers stack, and composition walks them in order. **The first layer to claim a name keeps it.**
 A later layer claiming the same name is a problem, and the problem is blamed on the *later*
-layer - it is the one that arrived to find the name taken.
+layer: it is the one that arrived to find the name taken.
 
 That is `shadowed_name{:den}`, and the absence of an override rule is the decision. If a later
 layer could win, nothing would be able to rely on what it declared: a host's contract could be
@@ -91,7 +91,7 @@ own integrity check, which is where a declaration naming an unregistered type
 
 That check also catches two things that are not a layer's fault at all: an op registered with no
 evaluator, and an evaluator registered for no op. Those mean the *language* is broken before any
-program exists, so composition throws rather than reporting - there is no program to blame, and
+program exists, so composition throws rather than reporting: there is no program to blame, and
 no document to fix.
 
 ## What the editor shows you

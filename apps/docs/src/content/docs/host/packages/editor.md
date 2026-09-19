@@ -112,8 +112,8 @@ connection. Render your own panes from them.
 ## Saving, and sharing
 
 The editor never touches storage. It hands you a document through `onChange`; where it goes is your
-decision. Three stores are included for the common cases - `MemoryStore`, `LocalStorageStore`,
-`UrlStore` - and `documentUrl(base, doc)` turns a document into a link, which is how "open in the
+decision. Three stores are included for the common cases (`MemoryStore`, `LocalStorageStore`,
+`UrlStore`), and `documentUrl(base, doc)` turns a document into a link, which is how "open in the
 playground" works everywhere on this site.
 
 A document is core's snapshot with a version on the outside, and it migrates forward on load, so a

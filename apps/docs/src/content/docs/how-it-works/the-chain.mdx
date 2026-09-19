@@ -7,7 +7,7 @@ sidebar:
 
 import Chain from "../../../components/Chain.astro";
 
-_[Learn](../../learn/getting-started/) tells you what you can rely on. This section tells you why, and in what order. None of it is needed to write a program - it is here for when you want to predict what the language will do._
+_[Learn](../../learn/getting-started/) tells you what you can rely on. This section tells you why, and in what order. None of it is needed to write a program: it is here for when you want to predict what the language will do._
 
 <Chain detail="full" />
 
@@ -120,7 +120,7 @@ under another name. [Ports and layers](../ports-and-layers/) has the rules it en
 
 This is where the work is. Seven passes, in order:
 
-1. **Build the reference graph** - which binding mentions which.
+1. **Build the reference graph**: which binding mentions which.
 2. **Topologically sort it**, which is also where a cycle is found.
 3. **Compute reachability** per output: which bindings can each one actually reach.
 4. **Analyse the bindings** in dependency order, resolving types and checking every op call.
@@ -187,8 +187,8 @@ before computing. A node recomputes when the set of changed inputs intersects it
 and it has no cache entry. [Evaluation](../evaluation/) has the details.
 
 What this stage may not do: report a type error. Everything checkable was checked. What reaches
-it is a runtime failure - a host evaluator throwing, a value that was not the shape its type
-claimed - and those arrive on the outputs, not as diagnostics. They are listed under
+it is a runtime failure (a host evaluator throwing, a value that was not the shape its type
+claimed), and those arrive on the outputs, not as diagnostics. They are listed under
 [Evaluate](../diagnostics/#evaluate).
 
 ## Why it is separate artefacts and not one pass
@@ -196,7 +196,7 @@ claimed - and those arrive on the outputs, not as diagnostics. They are listed u
 Each one is a thing you can hold, store, or inspect, which is what makes the language
 embeddable:
 
-- **The source** is what gets saved. Not the AST - see [persistence](../persistence/).
+- **The source** is what gets saved. Not the AST (see [persistence](../persistence/)).
 - **The raw program** is form-agnostic. A graph editor can produce one without any text.
 - **The core program** is what runs, and it is disposable: it is rebuilt from the raw program
   whenever the descriptor changes, which is how a host adding an op makes old programs

@@ -1,6 +1,6 @@
 ---
 title: "Operators and symbols"
-description: "Arithmetic, comparison, logic - as symbols, and as the operators beneath them."
+description: "Arithmetic, comparison, logic: as symbols, and as the operators beneath them."
 sidebar:
   order: 3
 ---
@@ -8,7 +8,7 @@ sidebar:
 import { orderExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
-Everything that computes in Dendrite is an **operator** - an **op**, for short: a named function
+Everything that computes in Dendrite is an **operator** (an **op**, for short): a named function
 with named inputs, supplied by the standard library or by the application you are embedded in.
 **Symbols** are a second way to spell the common ones.
 
@@ -56,7 +56,7 @@ pluses, because `Add{:den}` is variadic and takes as many as you give it.
 | `-{:den}` | negate, prefix | `Negate{:den}` |
 
 Multiplication binds tighter than addition, addition tighter than comparison, comparison tighter
-than `&&{:den}`, and `&&{:den}` tighter than `||{:den}` - the ordering you already expect. Brackets
+than `&&{:den}`, and `&&{:den}` tighter than `||{:den}`: the ordering you already expect. Brackets
 override it:
 
 ```den
@@ -90,5 +90,5 @@ cannot be out of date.
 
 Two mistakes worth knowing by name. Pass an input an op does not have and you get
 `unknown_op_input_key{:den}`, a warning: the value is ignored. Leave out one it needs and you
-get `missing_op_input{:den}`, also a warning, with a default filled in for you - which is why a
+get `missing_op_input{:den}`, also a warning, with a default filled in for you, which is why a
 half-written program keeps running while you write the rest of it.

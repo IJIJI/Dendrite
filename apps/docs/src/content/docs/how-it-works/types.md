@@ -22,7 +22,7 @@ A language has a table of named types. `number{:den}`, `string{:den}`, `boolean{
 Arrays and functions are not in any table. They are **structural**: `number[]{:den}` means
 exactly "array whose element is `number{:den}`", and two of them are the same type if their elements
 are. There is no registration step, no `T[]` generated per `T`, and no list of "all the array
-types" - which is what makes `string[][]{:den}` and
+types", which is what makes `string[][]{:den}` and
 `((number) -> boolean)[]{:den}` cost nothing to have.
 
 It also means a type's identity is structural all the way down for those two, and nominal for
@@ -63,7 +63,7 @@ what `incompatible_field_override{:den}` catches.
 
 This single rule is what makes every Dendrite program terminate.
 
-Self-application is the shape recursion needs - a function that takes itself. To type it, you
+Self-application is the shape recursion needs: a function that takes itself. To type it, you
 need somewhere for "a function" to fit loosely, and the only candidate is `any{:den}`. Close
 that door and the shape is untypable: there is no way to write the fixed-point combinator that
 would let a lambda reach itself.

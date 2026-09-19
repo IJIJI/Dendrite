@@ -88,7 +88,7 @@ export const diagnostics = {
     severity: "error",
     message: "The stored blob is not a program: its shape, or its ports, did not survive.",
     triggeredBy:
-      "Loading hand-edited or truncated JSON - an `ast` form with a node kind that does not exist, or a `ports` key that is not ports.",
+      "Loading hand-edited or truncated JSON: an `ast` form with a node kind that does not exist, or a `ports` key that is not ports.",
   },
 
   // ── parse: the text ──────────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ export const diagnostics = {
   orphan_evaluator: {
     stage: "ports",
     severity: "error",
-    message: "An evaluator was registered for an op that does not exist - usually a typo.",
+    message: "An evaluator was registered for an op that does not exist, usually a typo.",
     triggeredBy:
       "A `registerEvaluator` whose `op` name matches nothing. Like a missing evaluator, this throws when the language composes.",
   },
@@ -242,7 +242,7 @@ export const diagnostics = {
     severity: "error",
     message: "A call names an op the language does not have.",
     builtAsGraph:
-      "As text, `Nope(1)` is a call on an unknown NAME - an undeclared_binding_reference - because only a node built without the parser names an op. This one needs a stored `ast` program, or a host operator that desugars to an op nobody registered.",
+      "As text, `Nope(1)` is a call on an unknown NAME (an undeclared_binding_reference), because only a node built without the parser names an op. This one needs a stored `ast` program, or a host operator that desugars to an op nobody registered.",
     asIfText: "output x = Nope(1)",
     example: ast(
       {
@@ -517,14 +517,14 @@ export const diagnostics = {
     severity: "error",
     message: "A field was read from a value that does not have it.",
     triggeredBy:
-      "A host pushing a value that does not match the struct type its input was declared with - nothing validates a pushed value against its type yet.",
+      "A host pushing a value that does not match the struct type its input was declared with. Nothing validates a pushed value against its type yet.",
   },
   host_error: {
     stage: "evaluate",
     severity: "error",
     message: "An op's own evaluator threw.",
     triggeredBy:
-      "Any `registerEvaluator` function that raises - a host op reaching for something that is not there. The op's name and the original message come with it.",
+      "Any `registerEvaluator` function that raises: a host op reaching for something that is not there. The op's name and the original message come with it.",
   },
   evaluator_not_found: {
     stage: "evaluate",

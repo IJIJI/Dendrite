@@ -80,7 +80,7 @@ instance.outputs.get().stale; // true - the last good values are still there
 
 The broken program is reported and **not** run. The previous program keeps running, and its outputs
 stay available with `stale: true`. The moment a program compiles again, the flag clears. Decide what
-stale means for your application - keep acting, pause, grey out - but you will not be handed blanks.
+stale means for your application (keep acting, pause, grey out), but you will not be handed blanks.
 
 An error the analyser found in a binding no output reads does not stop anything at all: it is
 reported, the binding is pruned, and the outputs run. Only a lost `required` output fails a program

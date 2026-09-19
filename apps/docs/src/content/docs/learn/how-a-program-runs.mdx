@@ -31,7 +31,7 @@ and nothing else: it does not know which ops exist, which types exist, or what y
 declared. It does rewrite every symbol into the op it stands for as it reads, so
 `$price * $quantity{:den}` is already `Multiply($price, $quantity){:den}` when it leaves.
 
-That is why `$n{:den}` is an input here purely because of the `${:den}` - no table is consulted - and
+That is why `$n{:den}` is an input here purely because of the `${:den}` (no table is consulted), and
 why a misspelled op name gets through this step without complaint. What you can rely on: a
 syntax error is reported here, with a position, and nothing further happens.
 
@@ -90,9 +90,9 @@ Worth stating as plainly as the rest, because it is what makes the chain predict
 
 You can write programs and predict what they do. Two ways on from here:
 
-- **[The standard library](../../stdlib/)** - every op, with its signature and a worked example,
+- **[The standard library](../../stdlib/)**: every op, with its signature and a worked example,
   generated from the language itself.
-- **[How it works](../../how-it-works/the-chain/)** - the same chain again, one page per step,
+- **[How it works](../../how-it-works/the-chain/)**: the same chain again, one page per step,
   with the reasons. Learn told you what you can rely on; that section tells you why, and in what
   order.
 

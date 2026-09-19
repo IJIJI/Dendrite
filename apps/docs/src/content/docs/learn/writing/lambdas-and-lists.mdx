@@ -35,7 +35,7 @@ output allBig  = Every(items, n => n > 10)
 ```
 
 `Reduce{:den}` is the one to look at twice. It takes the list, a starting value, and a function
-of two arguments called with the accumulator first and the item second - so
+of two arguments called with the accumulator first and the item second, so
 `(sum, n) => sum + n{:den}`, in that order.
 
 Beside these live the ops that do not need a function at all: `Length{:den}`, `Concat{:den}`,

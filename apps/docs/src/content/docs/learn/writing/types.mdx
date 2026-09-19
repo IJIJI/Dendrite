@@ -29,7 +29,7 @@ and the two that behave specially, `any{:den}` and `null{:den}`.
 Lists are written with `[]{:den}` after the element type, so `number[]{:den}` is a list of
 numbers and `string[][]{:den}` a list of lists of strings. Functions are written with an arrow:
 `(number) -> boolean{:den}` is what `Filter{:den}` wants for its predicate. Neither of those is
-registered anywhere - they are built out of other types as you need them, which is why there is
+registered anywhere: they are built out of other types as you need them, which is why there is
 no list of "all the array types".
 
 An application can add named types of its own, with fields and with a parent type they extend.
