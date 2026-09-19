@@ -31,7 +31,7 @@ That is the whole program. Change `$n{:den}` and watch `result{:den}` follow.
 Nothing ran when you stopped typing. Nothing ran when you changed the input, either, except
 the parts that needed to.
 
-- `doubled{:den}` reads `$n{:den}`, so a new `$n` makes it stale and it recomputes.
+- `doubled{:den}` reads `$n{:den}`, so a new `$n{:den}` makes it stale and it recomputes.
 - `result{:den}` reads `doubled{:den}`, so it recomputes too.
 - Anything that read neither would have been left alone.
 
@@ -54,7 +54,7 @@ perform in order, it is a set of names and what each one is. So:
 - **There is no loop.** Iteration is what the list ops are for, and you will meet them shortly.
 
 Take a wrong turn and you hear about it before anything runs. Write `$n && true{:den}` and the
-type checker says so, with the line and column, because `&&{:den}` wants booleans and `$n` is a
+type checker says so, with the line and column, because `&&{:den}` wants booleans and `$n{:den}` is a
 number.
 
 ## Where to go next

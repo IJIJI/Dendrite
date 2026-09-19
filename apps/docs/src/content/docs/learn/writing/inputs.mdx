@@ -15,7 +15,7 @@ let subtotal = $price * $quantity
 output total = subtotal
 ```
 
-The `${:den}` is not decoration. It is how the parser knows, with no table to consult, that `price`
+The `${:den}` is not decoration. It is how the parser knows, with no table to consult, that `price{:den}`
 comes from outside rather than from a `let{:den}` somewhere else in the file. A plain name is
 always a binding or an output; a `${:den}` name is always an input.
 
@@ -36,7 +36,7 @@ that was never declared is an error with a name and a line:
 Move `$quantity{:den}` from 2 to 3 and three things happen: `subtotal{:den}` recomputes because
 it reads it, `shipping{:den}` recomputes and drops to zero, and both outputs follow. Move
 `$price{:den}` instead and `shipping{:den}` is left alone entirely, because it never reads
-`$price`.
+`$price{:den}`.
 
 That is the incremental part of "incremental reactive evaluation", and it is not an
 optimisation bolted on afterwards. Every node in a compiled program carries the set of inputs

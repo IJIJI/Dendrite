@@ -45,18 +45,18 @@ pluses, because `Add{:den}` is variadic and takes as many as you give it.
 
 | Symbols | Meaning | The op beneath |
 | --- | --- | --- |
-| `\|\|` | or, variadic | `Or` |
-| `&&` | and, variadic | `And` |
-| `==` `!=` | equality | `Equals`, `NotEquals` |
-| `<` `>` | comparison | `LessThan`, `GreaterThan` |
-| `<=` `>=` | comparison | `Not(GreaterThan(…))`, `Not(LessThan(…))` |
-| `+` `-` | addition | `Add` (variadic), `Subtract` |
-| `*` `/` | multiplication | `Multiply` (variadic), `Divide` |
-| `!` | not, prefix | `Not` |
-| `-` | negate, prefix | `Negate` |
+| `\|\|{:den}` | or, variadic | `Or{:den}` |
+| `&&{:den}` | and, variadic | `And{:den}` |
+| `=={:den}` `!={:den}` | equality | `Equals{:den}`, `NotEquals{:den}` |
+| `<{:den}` `>{:den}` | comparison | `LessThan{:den}`, `GreaterThan{:den}` |
+| `<={:den}` `>={:den}` | comparison | `Not(GreaterThan(…)){:den}`, `Not(LessThan(…)){:den}` |
+| `+{:den}` `-{:den}` | addition | `Add{:den}` (variadic), `Subtract{:den}` |
+| `*{:den}` `/{:den}` | multiplication | `Multiply{:den}` (variadic), `Divide{:den}` |
+| `!{:den}` | not, prefix | `Not{:den}` |
+| `-{:den}` | negate, prefix | `Negate{:den}` |
 
 Multiplication binds tighter than addition, addition tighter than comparison, comparison tighter
-than `&&{:den}`, and `&&` tighter than `||{:den}` - the ordering you already expect. Brackets
+than `&&{:den}`, and `&&{:den}` tighter than `||{:den}` - the ordering you already expect. Brackets
 override it:
 
 ```den

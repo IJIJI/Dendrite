@@ -18,7 +18,7 @@ output total = subtotal + shipping
 ```
 
 Three names, one of them public. Whoever runs this program asks for `total{:den}` and gets
-`29.95`. They cannot ask for `subtotal{:den}`: that is working, not a result.
+`29.95{:den}`. They cannot ask for `subtotal{:den}`: that is working, not a result.
 
 ## A binding is a value, not a recipe
 
@@ -61,8 +61,8 @@ let summary   = Length(items)
 output report = summary
 ```
 
-A **cycle** is a different matter and always an error. If `a{:den}` reads `b{:den}` and `b`
-reads `a`, neither has a value in any order, and you get a `binding_cycle{:den}` before
+A **cycle** is a different matter and always an error. If `a{:den}` reads `b{:den}` and `b{:den}`
+reads `a{:den}`, neither has a value in any order, and you get a `binding_cycle{:den}` before
 anything runs. That is also why a name cannot refer to itself, and why every Dendrite program
 finishes.
 

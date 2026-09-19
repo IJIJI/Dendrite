@@ -34,7 +34,7 @@ language.registerType("Reading", {
 ```
 
 Now an input can be declared as a `Reading`, and the analyser checks field access against those
-fields. A program reading `$reading.room` gets a `string{:den}`. A program reading `$reading.nope` gets
+fields. A program reading `$reading.room{:den}` gets a `string{:den}`. A program reading `$reading.nope{:den}` gets
 `unknown_field{:den}` before it runs.
 
 A type may also `extends` another named type, which makes it compatible wherever its parent is
@@ -97,8 +97,8 @@ was used. The lexer needs no edit, because it takes its symbol vocabulary from t
 
 `BP` is the precedence ladder, and using its tiers is what keeps independent additions agreeing
 with each other: `BP.MULTIPLY` binds tighter than `BP.ADD`, which binds tighter than comparison, and
-so on. A build function can return a whole tree, which is how the standard library's `>=` becomes
-`Not(LessThan(…))`. `registerPrefix` does the same for a prefix symbol.
+so on. A build function can return a whole tree, which is how the standard library's `>={:den}` becomes
+`Not(LessThan(…)){:den}`. `registerPrefix` does the same for a prefix symbol.
 
 ## Types that follow the inputs
 
@@ -124,7 +124,7 @@ language.registerEvaluator({
 of each input and returns the output type, or `undefined` to fall back to the declared `output`.
 
 Its partner is `inferInputTypes`, for an input whose expected type depends on the others. It is how
-`Filter` tells your lambda its parameter is the list's element type: it returns the expected types,
+`Filter{:den}` tells your lambda its parameter is the list's element type: it returns the expected types,
 overriding the static ones, for inputs declared **after** the ones they depend on. Use it whenever
 an op takes a function over something else it was given.
 
@@ -147,4 +147,4 @@ library, which has neither `%` nor `Last`. Your own editor, built from your lang
 
 The editor highlights your ops like its own, because it reads the same language. The diagnostics
 catalogue covers your additions too, since a mistake in a call to `Mod` is the same
-`op_input_type_mismatch{:den}` as a mistake in a call to `Add`.
+`op_input_type_mismatch{:den}` as a mistake in a call to `Add{:den}`.

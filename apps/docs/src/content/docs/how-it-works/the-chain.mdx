@@ -31,16 +31,16 @@ string:Pass  punct:,  string:Fail  punct:)  eof:
 
 Two things in there are worth stopping on.
 
-**`>=` is one token.** The lexer does not know what symbols exist; it is handed the symbol
+**`>={:den}` is one token.** The lexer does not know what symbols exist; it is handed the symbol
 vocabulary of the language it is lexing, taken straight from the grammar's registered symbols.
 Add a symbol and the lexer needs no edit. Feed the same text to a language with no symbols
-and `>=` comes back as two unknown characters.
+and `>={:den}` comes back as two unknown characters.
 
-**`${:den}` and `score` are separate tokens.** The sigil is structural punctuation, and the *parser*
+**`${:den}` and `score{:den}` are separate tokens.** The sigil is structural punctuation, and the *parser*
 joins them. This is why `${:den}` cannot appear in a name and why an input is recognisable without
 consulting anything.
 
-`let`, `output` and `If` are all plain `ident` tokens. There are no keywords at this level.
+`let{:den}`, `output{:den}` and `If{:den}` are all plain `ident` tokens. There are no keywords at this level.
 
 ## Parse: tokens become a raw program
 
@@ -63,7 +63,7 @@ output grade -> operation
 ```
 
 The symbol is **already gone**. `$score >= 60{:den}` became `Not(LessThan($score, 60)){:den}`
-during parsing, because that is what the standard library registered `>=` to mean. There is no
+during parsing, because that is what the standard library registered `>={:den}` to mean. There is no
 symbol node kind, and nothing after this point can tell that a symbol was written. It also
 explains why one symbol can expand into two op calls.
 

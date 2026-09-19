@@ -38,7 +38,7 @@ output any   = Or($a, $b, $c)
 output joined = Concat([1, 2], [3], [4, 5])
 ```
 
-`Add(nodes...: number){:den}` means one input called `nodes` that swallows every argument. Six
+`Add(nodes...: number){:den}` means one input called `nodes{:den}` that swallows every argument. Six
 ops work this way: `And{:den}`, `Or{:den}`, `Xor{:den}`, `Add{:den}`, `Multiply{:den}` and
 `Concat{:den}`.
 
@@ -87,7 +87,7 @@ output big = Filter(items, item => item > 10)
 There is nothing special about those ops. A function is a value in this language, so an op
 taking one is an ordinary op, and you can hand it a lambda written in place or a name bound
 earlier. What the signature does not show is that the parameter type is worked out for you: the
-`item{:den}` above is a `number{:den}` because `items` is a list of numbers, so you rarely need to
+`item{:den}` above is a `number{:den}` because `items{:den}` is a list of numbers, so you rarely need to
 annotate it.
 
 [Lambdas and lists](../learn/writing/lambdas-and-lists/) covers writing them.
@@ -99,12 +99,12 @@ these pages up.
 
 | Segment | What is in it |
 | --- | --- |
-| [logic](./logic/) | `And`, `Or`, `Xor`, `Not` |
-| [comparison](./comparison/) | `Equals`, `NotEquals`, `LessThan`, `GreaterThan` |
-| [control](./control/) | `If`, `Default`, `IsSet` |
-| [array](./array/) | `Length`, `Concat`, `Includes`, `Average`, `Min`, `Max`, `Flatten` |
-| [arithmetic](./arithmetic/) | `Add`, `Subtract`, `Multiply`, `Divide` |
-| [list](./list/) | `Filter`, `Map`, `Reduce`, `Find`, `Some`, `Every` |
+| [logic](./logic/) | `And{:den}`, `Or{:den}`, `Xor{:den}`, `Not{:den}` |
+| [comparison](./comparison/) | `Equals{:den}`, `NotEquals{:den}`, `LessThan{:den}`, `GreaterThan{:den}` |
+| [control](./control/) | `If{:den}`, `Default{:den}`, `IsSet{:den}` |
+| [array](./array/) | `Length{:den}`, `Concat{:den}`, `Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}` |
+| [arithmetic](./arithmetic/) | `Add{:den}`, `Subtract{:den}`, `Multiply{:den}`, `Divide{:den}` |
+| [list](./list/) | `Filter{:den}`, `Map{:den}`, `Reduce{:den}`, `Find{:den}`, `Some{:den}`, `Every{:den}` |
 
 Today an application takes the whole library or none of it. The segments are the seam along
 which that will change, so that an application which never touches a list need not carry the

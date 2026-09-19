@@ -98,4 +98,4 @@ no document to fix.
 
 Provenance comes out of composition: for every name, which layer placed it. That is what lets
 the editor grey out the declarations a user may not touch, attribute a refused rename to the
-right row, and tell you that `score` came from the host rather than from your document.
+right row, and tell you that `score{:den}` came from the host rather than from your document.
