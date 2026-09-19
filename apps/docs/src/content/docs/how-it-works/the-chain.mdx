@@ -9,7 +9,7 @@ import Chain from "../../../components/Chain.astro";
 
 _[Learn](../../learn/getting-started/) tells you what you can rely on. This section tells you why, and in what order. None of it is needed to write a program - it is here for when you want to predict what the language will do._
 
-<Chain />
+<Chain detail="full" />
 
 One program, carried the whole way. Every artefact below is the real one, printed by the four
 scripts in `packages/core/examples/3-(code)/`, which run this program stage by stage:
@@ -21,6 +21,8 @@ output grade = If(passing, "Pass", "Fail")
 ```
 
 ## Lex: characters become tokens
+
+<Chain step="lex" />
 
 ```
 ident:let  ident:passing  punct:=  punct:$  ident:score  punct:>=  number:60
@@ -42,7 +44,14 @@ consulting anything.
 
 `let{:den}`, `output{:den}` and `If{:den}` are all plain `ident` tokens. There are no keywords at this level.
 
+What this step reports: `unknown_character{:den}` and `unterminated_string{:den}`, and two warnings,
+`unterminated_comment{:den}` and `invalid_escape{:den}`. They are listed under
+[Parse on *Every diagnostic*](../diagnostics/#parse), because the lexer runs inside
+`parseSource`: a host never calls it on its own.
+
 ## Parse: tokens become a raw program
+
+<Chain step="parse" />
 
 The result is a `RawProgram`: two maps, bindings and outputs, name to AST node. No types, no
 resolution, no checking.
@@ -52,6 +61,23 @@ let passing  -> operation
 let spare    -> literal
 output grade -> operation
 ```
+
+Note `"output": { "kind": "name", "name": "any" }` on those nodes in the full dump: a raw node
+carries no inferred type. `any{:den}` is the placeholder, not a decision.
+
+What this stage may not do: resolve a name, look up an op, or decide a type. It does not know
+what exists.
+
+What it reports: `syntax_error{:den}`, `unexpected_token{:den}`, `unexpected_end{:den}` and
+`duplicate_binding{:den}`, and the warning `deprecated_syntax{:den}`, all under
+[Parse](../diagnostics/#parse).
+
+## Desugar: symbols become op calls
+
+<Chain step="desugar" />
+
+Desugaring is not a pass of its own. It happens as the parser reads, which is why it leaves no
+artefact of its own behind: the raw program the parser hands on is already desugared.
 
 `passing{:den}` being an `operation` is the interesting part. Here is its node:
 
@@ -67,13 +93,30 @@ during parsing, because that is what the standard library registered `>={:den}` 
 symbol node kind, and nothing after this point can tell that a symbol was written. It also
 explains why one symbol can expand into two op calls.
 
-Note `"output": { "kind": "name", "name": "any" }` on those nodes in the full dump: a raw node
-carries no inferred type. `any{:den}` is the placeholder, not a decision.
+Desugaring reports nothing of its own. A symbol used on the wrong values is reported later,
+by the analyser, as a mistake in a call to the op it became.
 
-What this stage may not do: resolve a name, look up an op, or decide a type. It does not know
-what exists.
+## Compose: the descriptor is assembled
+
+<Chain step="compose" />
+
+The analyser checks a program against a **descriptor**: every op, type, input and output the
+program may use. Composing builds it, and it is the one step that does not read the program at
+all. It starts from the language's vocabulary and adds the port layers in order, the host's and
+then the document's, checking each against everything before it. The same layers give the same
+descriptor for every program.
+
+For our program that is one layer declaring `$score{:den}` as a `number{:den}` and `grade{:den}`
+as an output. The scripts do not print it: it is a map of the whole vocabulary, not something
+this program made.
+
+What it reports: the seven kinds under [Ports](../diagnostics/#ports), from `invalid_name{:den}`
+to `orphan_evaluator{:den}`. *Every diagnostic* calls this stage **ports**; it is the same step
+under another name. [Ports and layers](../ports-and-layers/) has the rules it enforces.
 
 ## Analyse: the raw program becomes a core program
+
+<Chain step="analyse" />
 
 This is where the work is. Seven passes, in order:
 
@@ -93,7 +136,7 @@ output grade: string   dependsOn: [score]
 warnings: unused_binding
 ```
 
-Three things happened there.
+Two things happened there, and a third that is the next section.
 
 **Types were resolved.** `passing{:den}` is a `boolean{:den}`, worked out from `Not{:den}`'s output
 type, not from an annotation. `grade{:den}` is a `string{:den}` because `If{:den}` narrows to its
@@ -103,10 +146,6 @@ branch type when both branches agree.
 whole tree beneath it. This set is the entire basis of incremental evaluation, and it is
 computed once, here, statically.
 
-**`spare{:den}` is gone.** No output can reach it, so pass 6 dropped it from the program the
-evaluator will see and pass 7 warned. The program that runs is not the program you wrote; it is
-the part of it that matters.
-
 Two rules this stage keeps:
 
 - **Errors are collected, never thrown.** A failed binding is recorded in `failedBindings` so
@@ -115,10 +154,28 @@ Two rules this stage keeps:
   `ok` comes back false only if a *required* one was lost, which is the single case where the
   whole program fails.
 
-The stage needs one thing besides the program: the descriptor it checks against, which is
-[ports and layers](../ports-and-layers/).
+The stage needs one thing besides the program: the descriptor that compose assembled.
+
+What it reports: everything under [Analyse](../diagnostics/#analyse), the largest group by far,
+from `unknown_op{:den}` to `implicit_any_cast{:den}`.
+
+## Prune: what no output reaches is dropped
+
+<Chain step="prune" />
+
+Pruning is the analyser's last two passes, not a step after it, so the core program comes out
+already pruned.
+
+**`spare{:den}` is gone.** No output can reach it, so pass 6 dropped it from the program the
+evaluator will see and pass 7 warned. The program that runs is not the program you wrote; it is
+the part of it that matters.
+
+What it reports: `unused_binding{:den}`, a warning, once per binding it dropped. Nothing is an
+error here: a binding nobody reads cannot break anything.
 
 ## Evaluate: the core program becomes values
+
+<Chain step="evaluate" />
 
 ```
 score=72 -> { "grade": "Pass" }
@@ -131,9 +188,10 @@ and it has no cache entry. [Evaluation](../evaluation/) has the details.
 
 What this stage may not do: report a type error. Everything checkable was checked. What reaches
 it is a runtime failure - a host evaluator throwing, a value that was not the shape its type
-claimed - and those arrive on the outputs, not as diagnostics.
+claimed - and those arrive on the outputs, not as diagnostics. They are listed under
+[Evaluate](../diagnostics/#evaluate).
 
-## Why it is four artefacts and not one pass
+## Why it is separate artefacts and not one pass
 
 Each one is a thing you can hold, store, or inspect, which is what makes the language
 embeddable:

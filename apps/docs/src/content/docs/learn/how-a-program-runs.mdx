@@ -1,6 +1,6 @@
 ---
 title: "How a program runs"
-description: "The four things a program becomes, and what each step is allowed to decide."
+description: "What a program becomes, step by step, and what each step is allowed to decide."
 sidebar:
   order: 9
 ---
@@ -12,18 +12,39 @@ what the language will do and no more.
 
 <Chain />
 
-Four things, three steps between them. Each step takes what is on its left and produces what is
-on its right, and none of them can reach backwards.
+Five steps. Each takes what is on its left and produces what is on its right, and none of them
+can reach backwards.
 
-## Parse: text becomes a program
+## Lex: text becomes tokens
 
-The lexer turns your text into tokens and the parser turns those into bindings and outputs. This
-step knows the shape of the language and nothing else: it does not know which ops exist, which
-types exist, or what your application declared.
+The lexer cuts your text into tokens: names, numbers, strings and symbols. It knows which symbols
+the language has, so `>={:den}` comes out as one token rather than two characters, and that is
+all it knows. A word is a word to it, whether it is `let{:den}`, `If{:den}` or a name of yours.
+
+What you can rely on: a string with no closing quote, or a character the language has no use
+for, is reported here, with a position.
+
+## Parse: tokens become a program
+
+The parser turns the tokens into bindings and outputs. This step knows the shape of the language
+and nothing else: it does not know which ops exist, which types exist, or what your application
+declared. It does rewrite every symbol into the op it stands for as it reads, so
+`$price * $quantity{:den}` is already `Multiply($price, $quantity){:den}` when it leaves.
 
 That is why `$n{:den}` is an input here purely because of the `${:den}` - no table is consulted - and
 why a misspelled op name gets through this step without complaint. What you can rely on: a
 syntax error is reported here, with a position, and nothing further happens.
+
+## Compose: what the program may use
+
+Checking a program needs a list of everything it may use: the ops and types of the language,
+and the inputs and outputs your application declared. That list is not fixed by the language.
+It arrives in layers, one from the language and more from your application, and composing them
+into one is this step.
+
+It reads what was declared, never what you wrote, so a clash between declarations (two layers
+claiming the same name) is reported here, before your code is looked at.
+[Ports and layers](../../how-it-works/ports-and-layers/) is where the layers are explained.
 
 ## Analyse: the program is checked
 
@@ -39,11 +60,6 @@ Two things to rely on. **Errors are collected, not thrown at the first one**, so
 full list rather than peeling them off one at a time. And **soundness is per output**: one
 broken result does not stop the others, which is why a half-finished program keeps producing the
 parts that work.
-
-The step needs one thing besides your program: the list of ops, types, inputs and outputs it is
-allowed to use. That list is not fixed by the language. It is assembled from what your
-application declared, and [Ports and layers](../../how-it-works/ports-and-layers/) is where that
-is explained.
 
 ## Evaluate: values, on demand
 
@@ -63,7 +79,9 @@ whatever is acting on them has something to act on.
 
 Worth stating as plainly as the rest, because it is what makes the chain predictable:
 
+- **Lexing** may not decide what a word means. `let{:den}` and `If{:den}` are both just words.
 - **Parsing** may not resolve a name or infer a type. It does not know what exists.
+- **Composing** may not read your code. It sees what was declared, never what was written.
 - **Analysis** may not compute a value. It works with types, not numbers.
 - **Evaluation** may not report a type error. Everything checkable was checked already; what
   reaches it is a runtime failure, and it arrives on the outputs rather than as a diagnostic.

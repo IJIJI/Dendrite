@@ -102,12 +102,21 @@ by hand. Code, tables and lists are exempt.
 ## Pipeline
 
 ```
-source ──parseSource──▶ RawProgram ──analyse──▶ CoreProgram ──evaluate──▶ Map<string, unknown>
+source ──lex──▶ tokens ──parse──▶ RawProgram ──analyse──▶ CoreProgram ──evaluate──▶ Map<string, unknown>
+                                                  ▲
+         vocabulary + port layers ──compose──▶ LanguageDescriptor
 ```
 
+The docs draw the same five steps (lex, parse, compose, analyse, evaluate), with **desugar** as a
+substep of parse and **prune** as a substep of analyse (`apps/docs/src/components/Chain.astro`).
+
 - **`parseSource(source, language)`** — lex + parse → RawProgram (no analysis).
-- **`analyse`** is always explicit — not hidden inside runner/runtime.
-- **No desugar phase** — the pull-based evaluator handles what desugaring would optimise.
+- **Desugar happens inside parsing, not as a pass:** a symbol (`>=`) becomes its op call(s) as
+  the parser reads. There is no separate desugar phase over the tree.
+- **Compose** (`composeLayers`) builds the descriptor from the vocabulary and the port layers; it
+  never reads the program. *Every diagnostic* and `DiagnosticDoc.stage` call it `"ports"`.
+- **`analyse`** is always explicit — not hidden inside runner/runtime. **Prune** is its last
+  passes (`pruneBindings`, `warnUnusedBindings`), so a CoreProgram is already pruned.
 - **Store RawProgram**, not CoreProgram — re-analyse on load so descriptor changes surface errors.
 
 ---
