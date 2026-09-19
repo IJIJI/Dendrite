@@ -713,6 +713,13 @@ what a type even is before the check could be designed once for both levels.
   host rebuilds each boot). The exception is the layer an instance persists, which is saved as
   JSON; a type there carries shape only and inherits validation through `extends`.
 
+- **The other boundary: a value that crosses an `any`.** An `implicit_any_cast` is a warning,
+  and nothing checks the value at runtime either: with `$whatever: any` holding 5,
+  `Length($whatever)` is `5.length`, so an output declared `number` holds `undefined` and no
+  error is raised (found 2026-09-19; *Types in practice* now says so). A check where an `any`
+  meets a concrete input, with a runtime error as the channel, would close it; it is the same
+  cost question as above, per op call rather than per pushed value.
+
 **Driving need:** a host pushing a struct that does not match its declaration is currently
 invisible until something downstream misbehaves.
 

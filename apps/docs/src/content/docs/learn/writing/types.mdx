@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-import { mismatchExample } from "../../../../examples";
+import { mismatchExample, whateverExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
 Every value in Dendrite has a type, and the checker runs before anything else does. A string
@@ -56,13 +56,17 @@ less, and you will notice the difference the first time you pass it somewhere fu
 be. A value of any data type flows into it, and a value of type `any{:den}` flows into any data type,
 which means:
 
-```den warns inputs="whatever:any"
-output length = Length($whatever)
-```
+<Live
+  client:only="react"
+  warns
+  source={whateverExample.source}
+  ports={whateverExample.ports}
+/>
 
-That compiles whatever `$whatever{:den}` is declared as, `any{:den}` included. If it turns out
-to hold a number at runtime, `Length{:den}` fails then, and the failure is reported as a
-runtime error on the outputs rather than as a diagnostic.
+That compiles, with a warning where the `any{:den}` meets `Length{:den}`. Here `$whatever{:den}`
+holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
+`length{:den}` shows `undefined`, which is not a number at all, because the one check that
+would have caught it is the one `any{:den}` gave up.
 
 So `any{:den}` is an escape hatch with a cost: you trade the check for the flexibility. When you see
 an `implicit_any_cast{:den}` warning, that is the checker telling you where the trade happened,

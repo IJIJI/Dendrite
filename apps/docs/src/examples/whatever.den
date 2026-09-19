@@ -1,0 +1,2 @@
+// Warns: $whatever is `any`, so Length takes it on trust.
+output length = Length($whatever)

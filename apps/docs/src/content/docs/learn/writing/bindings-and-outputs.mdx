@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-import { forwardExample } from "../../../../examples";
+import { forwardExample, unusedExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
 A program is a set of names. `let{:den}` makes a name for your own use; `output{:den}` makes one
@@ -83,14 +83,16 @@ The consequences are worth stating plainly:
 A `let{:den}` that no output can reach does nothing, so the analyser says so and drops it from
 the program it hands the evaluator:
 
-```den warns
-let used   = 1 + 1
-let unused = 99
-output answer = used
-```
+<Live
+  client:only="react"
+  warns
+  source={unusedExample.source}
+  ports={unusedExample.ports}
+/>
 
 `unused{:den}` gets an `unused_binding{:den}` warning and is pruned. Nothing breaks; you are
-just told, because an unreachable binding is usually a typo or a leftover.
+just told, because an unreachable binding is usually a typo or a leftover. Read it in
+`answer{:den}`, or delete its line, and the warning goes.
 
 ## Outputs the host asked for
 

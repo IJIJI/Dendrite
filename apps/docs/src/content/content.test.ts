@@ -168,8 +168,14 @@ describe("the Dendrite samples in the pages", () => {
 describe("the programs the live blocks mount", () => {
   it.for(Object.entries(examples))("%s", ([name, example]) => {
     const { errors, warnings } = problemsIn(example.source, example.ports, name);
-    // A live example that is not there to fail must be warning-free, as a fence must.
-    if (!example.fails) expect(warnings, `${name} warns`).toEqual([]);
+    // A live example must warn exactly when it is marked `warns`, as a fence must.
+    if (example.warns) {
+      expect(warnings, "a `warns` example that is clean is no longer showing anything").not.toEqual(
+        [],
+      );
+    } else if (!example.fails) {
+      expect(warnings, `${name} warns`).toEqual([]);
+    }
     if (example.fails) {
       // Marked `fails`: it is mounted to SHOW a diagnostic, so it must produce one.
       expect(errors, "a `fails` example that compiles is no longer showing anything").not.toEqual(

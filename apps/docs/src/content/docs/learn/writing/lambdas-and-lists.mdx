@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-import { heightsExample } from "../../../../examples";
+import { heightsExample, shadowedExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
 Dendrite has no loop. It does not need one, because a function is a value you can hand to an op.
@@ -54,13 +54,16 @@ value. This is lexical scope, working the way you expect it to.
 
 A lambda's parameter shadows an outer name of the same name, and only inside the lambda:
 
-```den warns
-let n = 100
-output sizes = Map([1, 2, 3], n => n * 2)
-```
+<Live
+  client:only="react"
+  warns
+  source={shadowedExample.source}
+  ports={shadowedExample.ports}
+/>
 
 The `n{:den}` inside is the item, 1 then 2 then 3. The `n{:den}` outside is still 100, and is now
-unused, which the analyser will mention.
+unused: the `unused_binding{:den}` warning on it is the analyser saying so. The shadowing
+itself is allowed, and raises nothing.
 
 ## Naming a function
 

@@ -8,6 +8,9 @@ import mismatch from "./mismatch.den?raw";
 import order from "./order.den?raw";
 import quantity from "./quantity.den?raw";
 import scores from "./scores.den?raw";
+import shadowed from "./shadowed.den?raw";
+import unused from "./unused.den?raw";
+import whatever from "./whatever.den?raw";
 
 //? The programs the site runs live, as `.den` files rather than strings in a page: one
 // definition wherever an example appears twice, and `content.test.ts` loads every one of
@@ -26,6 +29,11 @@ export interface Example {
    * opens with a comment saying how it fails, since a live editor says it in a squiggle.
    */
   fails?: boolean;
+  /**
+   * The example is on the site to show a WARNING: it compiles, and it must warn - a
+   * ```den warns fence's contract. Like a `fails` one, it opens with a comment saying why.
+   */
+  warns?: boolean;
 }
 
 const numbers = (...names: string[]) => names.map((name) => ({ name, type: Type.number }));
@@ -125,6 +133,33 @@ export const mismatchExample: Example = {
   fails: true,
 };
 
+/** A binding no output reaches: it warns, and the analyser drops it. */
+export const unusedExample: Example = {
+  source: unused,
+  ports: { inputs: [], outputs: numbers("answer") },
+  warns: true,
+};
+
+/** A lambda parameter that shadows a binding, which is left unread. */
+export const shadowedExample: Example = {
+  source: shadowed,
+  ports: { inputs: [], outputs: [{ name: "sizes", type: Type.array(Type.number) }] },
+  warns: true,
+};
+
+/**
+ * An `any` input handed to an op that wants a list. The default is a list, so the block opens
+ * on a value; typing a number into it shows what `any` let through.
+ */
+export const whateverExample: Example = {
+  source: whatever,
+  ports: {
+    inputs: [{ name: "whatever", type: Type.any, default: [1, 2, 3] }],
+    outputs: numbers("length"),
+  },
+  warns: true,
+};
+
 /** Every example, for the test that loads them all. */
 export const examples: Record<string, Example> = {
   first: firstExample,
@@ -135,4 +170,7 @@ export const examples: Record<string, Example> = {
   forward: forwardExample,
   quantity: quantityExample,
   mismatch: mismatchExample,
+  unused: unusedExample,
+  shadowed: shadowedExample,
+  whatever: whateverExample,
 };
