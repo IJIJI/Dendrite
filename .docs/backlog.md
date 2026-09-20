@@ -6,30 +6,13 @@ What is being done next is in `todo.md`.
 
 ---
 
-## Explicit conversion ops
-
-**What:** Type-conversion ops in the core language — `ToBool`, `ToNumber`, `ToString`, and any others that prove useful.
-
-**Why deferred:** Implicit coercion (e.g. number→boolean) was rejected because it undermines the soundness model and would require inserting conversion nodes (a desugar-like rewrite Dendrite deliberately lacks). Explicit conversion ops are the sound alternative — the program author writes the conversion where they want it, it is visible in the program, and the type checker stays honest.
-
-**What it requires:**
-- Register ops in `index.ts` (core):
-  - `ToBool(value: any) → boolean` — evaluator maps `0`/`''`/`null`/`false` → false, else true. Decide the exact truthiness rule explicitly rather than relying on JS `Boolean()`.
-  - `ToNumber(value: any) → number` — evaluator maps `false`→0, `true`→1, numeric strings→number, else error or default 0 (decide).
-  - `ToString(value: any) → string` — evaluator stringifies.
-- No analyser changes needed — these are ordinary ops with fixed output types.
-- Tests for each conversion's evaluator behaviour and the edge cases (null, empty string, non-numeric string).
-
-**Driving need:** `ToString` has one now: text cannot hold a number without it, and a template literal's hole calls it (see "Language — template literals" below). Picked up 2026-09-20, together with the first string ops.
-
----
-
 ## Language — do we want implicit casting?
 
 **What:** a question, not a decision. Today the answer is **no**: implicit coercion (a number
 read as a boolean, say) was rejected because it undermines the soundness model and would need
-conversion nodes inserted by a rewrite the language deliberately lacks ("Explicit conversion ops"
-above is the sound alternative, and it is being built). Three things now lean on the question:
+conversion nodes inserted by a rewrite the language deliberately lacks. The sound alternative is
+built: `ToString`, `ToNumber` and `ToBool` (2026-09-20, `done.md`). Three things now lean on the
+question:
 
 - **A template literal's hole calls `ToString` itself** (decided 2026-09-20, entry below). Argued
   not to be the rejected coercion: the reader wrote the template, the conversion is visible in
@@ -52,9 +35,9 @@ how much the language does without being asked.
 
 ## Language — strings and arrays, interchangeable
 
-**Why this exists:** a Dendrite program cannot build a string at all today. `Concat` is arrays
-only and `Add` is numbers only, so `"Hello, " + name` has no expression in the language. A `Join`
-op is planned next and closes that gap; what is recorded here is what the user wants beyond it.
+**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
+`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
+recorded here is what the user wants beyond it: text and lists working as one thing.
 
 **The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
 **with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
@@ -146,7 +129,7 @@ label came out wrong. A label for a person wants `1, 2`, or a struct's fields sp
 dropped: a list plainly is representable as text, and a `null` would blank a label with no
 signal.
 
-**What it requires:** for a list the explicit way already exists once `Join` lands,
+**What it requires:** for a list the explicit way exists,
 `Join(Map(items, n => ToString(n)), ", ")`, so the question is only whether `ToString` should do
 that itself. A struct has no route at all: nothing in the language enumerates fields, which is
 its own feature (see "struct literals" below for the neighbouring gap).
@@ -185,7 +168,7 @@ above.
 
 **Why deferred:** the largest of the string pieces, and the only one that changes the language's
 shape. It is sugar, so it desugars in the parser like every symbol does: `` `Hi ${n}` `` becomes
-`Join(["Hi ", ToString(n)])`, which needs `Join` and `ToString` to exist first.
+`Join(["Hi ", ToString(n)])`. Both ops exist since 2026-09-20, so nothing blocks it but its size.
 
 **What it requires:**
 - **The lexer** reads a string that contains expressions: a new token form, and nested `${ }`

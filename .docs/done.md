@@ -36,6 +36,64 @@ warning samples; `instance.test.ts` pins it with a program that cannot compile.
 
 ---
 
+## Stdlib — conversion and string ops — DONE 2026-09-20
+
+Until now a Dendrite program could not build a string at all, and could not convert a value on
+purpose either. Two new categories, ten ops, in two commits. They ship in the next **minor**
+(0.3.0): new ops are new API, as `Negate` was for 0.2.0.
+
+**Conversion: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own
+(implicit coercion was rejected: it needs a rewrite the language lacks), so these are the sound
+alternative, and each rule was decided rather than inherited from JavaScript:
+
+- **`ToNumber` gives `null`, not a throw and not `0`.** The alternatives other languages use are
+  an exception (Python), a poisoned `NaN` (JavaScript) or an optional (Swift's `Int("abc")` is
+  `nil`, Kotlin's `toIntOrNull()`, Elm's `Maybe`, Rust's `Result`). The optional is the modern
+  answer, and `null` plus `Default` IS that here: the language has no `Result` type and `null`
+  already means "no value". A `0` would be a guess indistinguishable from a real zero. A
+  two-argument `ToNumber(value, fallback)` was dropped: it duplicates `Default`.
+- **Text counts only as a plain decimal.** The plan said "trimmed and parsed", but `Number()`
+  alone takes `""` (as 0), `"0x10"` (as 16) and `"Infinity"`, which is exactly the inheritance to
+  avoid. So a regex: optional sign, digits, fraction, exponent.
+- **`ToBool` is false for an empty list**, which JavaScript calls true. Lists are first-class
+  here and "is there anything in it" is the question a program asks.
+- **`ToString` of a list or a struct is its JSON.** The op must return something for them (the
+  type system cannot say "primitives only" without unions), and JSON is total and what you want
+  when a label came out wrong. `null` was weighed and dropped: it would blank a label silently.
+  A friendlier form is in the backlog.
+- `ToNumber` is typed `number` and can return `null`. Not a lie: `null` flows anywhere a data
+  value is expected, and `Find` already does the same.
+
+**String: `Join`, `Upper`, `Lower`, `Trim`, `Contains`, `StartsWith`, `EndsWith`.**
+
+- **`Join(parts: string[], separator?)`, not a variadic builder.** It takes a list because text
+  is built the way everything else is here, and because it is what a template literal will
+  desugar into. Its separator is the **first op input declared `required: false`**: the analyser
+  already skipped the `missing_op_input` warning for that and the evaluator only resolves inputs
+  that are present, so it cost nothing new. Both halves are pinned by a test, and the host guide
+  documents the flag, which it never had.
+- **One rule for "a value as text"**, `toText`, shared by `ToString` and every string op. It
+  replaced seven null guards and a second rule inside `ToString` that would have drifted, and it
+  is why `Join(["n = ", 1])` is `"n = 1"` rather than a throw or `[object Object]`.
+- **`Contains`, not `Includes`.** `Includes` asks whether a list holds an item. Keeping them apart
+  is what lets text one day be read as a list of letters without changing this op (backlog:
+  "strings and arrays, interchangeable").
+- **Case is never locale-dependent**, or the same program would give different text per host.
+- **The handful was picked by the Speculative Generality guard**: Beacon's labels are the only
+  named consumer, so `Replace`, `Split` and `Slice` went to the backlog.
+- **No operator for joining text.** Both `+` and `++` were weighed and both are the
+  implicit-casting question in miniature (backlog).
+
+**Found while building:** the reference page printed `separator: string` with nothing to say it
+may be left out, since no op had an optional input before. `OpsReference.astro` now prints
+`separator?: string`, and the stdlib index explains `?` beside `nodes...`.
+
+**Written in `createStdlib`'s existing two-band style on purpose**, though it is a Long Method:
+the user's call was one restructure later (now the first entry in `todo.md`) over two shapes side
+by side now.
+
+---
+
 ## Docs — inline TypeScript in the site's own colours — DONE 2026-09-20
 
 Inline `…{:ts}` code on Host and How it works is highlighted by Shiki, on the Night Owl pair

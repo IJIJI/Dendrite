@@ -21,6 +21,17 @@ in that same style ON PURPOSE (2026-09-20), so this restructure meets one shape,
 the user). Decide whether per-op selection has a named consumer before building it: per category
 has one (Beacon choosing its vocabulary), per op does not yet.
 
+**What adding two categories taught it (2026-09-20):** a new category is **Shotgun Surgery**,
+six edits in five files: an op block in `createStdlib`, an evaluator block a screen below it, a
+`describe` in `evaluator.test.ts`, a docs page (three lines, generated from the descriptor), a
+**hand-written row** in `apps/docs/src/content/docs/stdlib/index.md`, and a changelog line. The
+row is the avoidable one: that table could be generated from the descriptor the way the pages
+are, and then a category is complete the moment its ops are registered. Do that here.
+
+Two helpers now sit at module level in `stdlib/index.ts` and belong to their categories when the
+file splits: `DECIMAL` (what `ToNumber` accepts as text) and `toText` (a value as text, shared by
+`ToString` and every string op, so they stay together or share a module).
+
 **The original entry:**
 
 **What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
