@@ -6,22 +6,6 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## Bug — a live block that does not compile ignores its input defaults
-
-**What:** a live example whose program fails to compile shows each input at its type's seed
-value, not the default its ports declare: `$quantity` on *Inputs* reads 0, not 4, and `$score` on
-*Types in practice* reads 0, not 72. A program that compiles shows its defaults (`$price` 12.5).
-Found 2026-09-19 while checking the live warning samples.
-
-**What it requires:** find the layer that drops the default: the instance's seeding when a
-program has no compiled entry (`runtime/entry.ts`, `seed.ts`), or the editor's Inputs pane reading
-values only from a compiled program. Then a test on that layer for a failing program with a
-declared default. The fix may change what a host sees too, so check `link`'s replica.
-
-**When:** before the 0.2.0 release, since it shows on the Learn pages.
-
----
-
 ## Release — the next version, and why it is 0.2.0
 
 **What:** everything since 0.1.0 is committed on `dev` and not yet on npm. It was going to be

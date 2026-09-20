@@ -25,6 +25,11 @@ at `^0.1.0`, so a minor release here is always accompanied by a release of both.
   disagree - the open question on variadic inputs, decided. `Concat` uses it: two `number[]`
   make a `number[]`, so a lambda over the result is typed instead of `any`, and the
   `implicit_any_cast` it used to cause is gone.
+- **A program that does not compile still holds its declared input defaults.** An instance seeded
+  its values only after a successful compile, so an input declared `default: 4` read as its
+  type's seed (`0`) while the program was broken, including on the first mount. Seeding now
+  happens as soon as the layers compose, which is whose business it is. A replica through
+  `@dendrite-lang/link` follows, since it mirrors what the served instance publishes.
 - **The npm page** carries the Dendrite wordmark, and version, docs and licence badges.
 
 ## 0.1.0

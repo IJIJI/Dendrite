@@ -5,6 +5,18 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Bug — a program that does not compile ignored its input defaults — FIXED 2026-09-20
+
+An instance seeded its input values only after a successful compile (`recompile` in
+`runtime/instance.ts` called `seedValues` past the `loaded.ok` gate), so a sample mounted to SHOW
+a diagnostic opened with its types' seeds: `$quantity` read 0 on *Inputs*, not the 4 its ports
+declare. Seeding moved up to run as soon as the layers compose, which is whose business a
+value is: the program decides nothing about what an input holds. A `link` replica follows,
+because it mirrors what the served instance publishes. Found 2026-09-19 while checking the live
+warning samples; `instance.test.ts` pins it with a program that cannot compile.
+
+---
+
 ## Learn — the samples step — DONE 2026-09-19
 
 The user's observations on the Learn section (2026-09-18), built as one step in six commits. The

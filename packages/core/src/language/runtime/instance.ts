@@ -299,6 +299,10 @@ class Instance implements ProgramInstance {
       return;
     }
 
+    // Before the program is loaded: what an input holds is the layers' business, not the
+    // program's, so a program that does not compile still shows its declared defaults.
+    this.seedValues(composed.environment.descriptor);
+
     const loaded = composed.environment.load(this.saved);
     const diagnostics = diagnosticsOf(loaded);
     if (!loaded.ok) {
@@ -309,7 +313,6 @@ class Instance implements ProgramInstance {
     this.compiled = diagnostics;
     this.refusal = [];
     this.publishDiagnostics();
-    this.seedValues(composed.environment.descriptor);
     const ports = flattenPorts(this.layers);
     const values = this.programValues;
     // Settled before re-registering, so the evaluation a replace triggers is published once,
