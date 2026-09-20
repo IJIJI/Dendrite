@@ -9,6 +9,14 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.2.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
+## Unreleased
+
+- **The type colour is a soft cyan**, not the plain ink 0.2.0 shipped. Plain ink was picked
+  against a code canvas, where every other token is coloured; the documentation site colours
+  inline types with the same class, and there plain ink IS the body text, so a type in a sentence
+  read as unmarked prose. The new value stays quieter than the literals and the ops, and comments
+  keep their own step below it.
+
 ## 0.2.0
 
 - **`require()` works.** Each entry gained a `default` export condition beside `import`, so

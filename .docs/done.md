@@ -36,6 +36,27 @@ warning samples; `instance.test.ts` pins it with a program that cannot compile.
 
 ---
 
+## Editor — the type colour, again — DONE 2026-09-20
+
+The plain ink chosen on 2026-09-19 was judged against editor snippets only. Once the inline
+TypeScript pass put coloured code in the prose, the flaw showed: the docs colour an inline type
+with the same `tok-type` class, and `--dendrite-muted` is exactly Starlight's body-text colour,
+so `number[]` and `any` in a sentence read as unmarked text. It is now a **soft cyan**
+(`oklch(0.55 0.05 198)` light, `oklch(0.76 0.05 198)` dark), a third of the chroma of the cyans
+rejected on 2026-09-19 as too present: quiet on a canvas, visible in a paragraph.
+
+The same reading fixed a second one: an inline snippet nothing highlights (a package name, a
+path, a version range) took Starlight's inline-code colour, which is the body text's grey too.
+Those now take the editor's identifier colour, so a name in a box reads as a name and matches an
+identifier inside a Dendrite snippet. The rule is scoped `:not([class])`, so every highlighted
+snippet keeps its own colours.
+
+**The lesson**: judge a token colour where it will be READ, not only where it was born. The
+editor's palette has two audiences now, a canvas and a paragraph, and the canvas is the
+forgiving one.
+
+---
+
 ## Learn — the samples step — DONE 2026-09-19
 
 The user's observations on the Learn section (2026-09-18), built as one step in six commits. The
@@ -74,7 +95,8 @@ plan's reasoning, kept here because the code does not say it:
   coloured token instead of competing with them. Comments moved down with it, to
   `var(--dendrite-faint)`, and keep the italic they already had, which is what tells them from
   punctuation in the same grey. Keywords were already bold, which the candidate previews had not
-  shown; that is why weight was considered at all.
+  shown; that is why weight was considered at all. **The ink itself was superseded the next
+  day**: see "the type colour, again" above.
 - **Dashes.** Prose rewritten where a dash stood in for an em dash. The rule, as the user put it
   afterwards: a dash that reads naturally may stay (`.docs/CLAUDE.md`, *Working in this repo*).
 

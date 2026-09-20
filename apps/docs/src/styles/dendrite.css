@@ -70,6 +70,14 @@
   font-size: 0.85em;
 }
 
+/* An inline snippet nothing highlights - a package name, a path, a version range - takes the
+   editor's identifier colour rather than Starlight's, which is the body text's own grey: a name
+   in a box should read as a name, and it then matches an identifier inside a Dendrite snippet.
+   `:not([class])` so a highlighted snippet (den, ts, a diagnostic's name) keeps its colours. */
+.sl-markdown-content code:not([class]) {
+  color: var(--dendrite-text);
+}
+
 /* Inline TypeScript (`…{:ts}`), from Shiki: each span carries both themes' colours as custom
    properties, and the page picks one. Starlight sets data-theme on <html>, so the toggle needs
    no re-render. The font-style properties are Night Owl's italics, on comments and keywords. */
