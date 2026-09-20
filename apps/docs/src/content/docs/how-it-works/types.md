@@ -30,7 +30,7 @@ named types. `Bus{:den}` is `Bus` because it is called `Bus`.
 
 ## One function decides compatibility
 
-Everything that asks "does this value fit there" calls `isCompatible`, and nothing re-implements
+Everything that asks "does this value fit there" calls `isCompatible{:ts}`, and nothing re-implements
 it. It is the single extension point for subtyping, and its rules are these.
 
 **`any{:den}` is data-only, in both directions.** A data value flows into `any{:den}`, and an `any{:den}`
@@ -55,7 +55,7 @@ more; one returning `number{:den}` fits where `any{:den}` is wanted, because it 
 rule, and the reason `Filter{:den}` can hand your lambda a `number{:den}` when its signature says
 `any{:den}`.
 
-**`extends` makes a chain.** A named type may extend another, and compatibility walks up the
+**`extends{:ts}` makes a chain.** A named type may extend another, and compatibility walks up the
 chain. A struct field may be narrowed in the extending type but not made incompatible, which is
 what `incompatible_field_override{:den}` catches.
 
@@ -92,10 +92,10 @@ output total = Average(numbers)
 A signature is the general case. An op may narrow it for a particular call, through two hooks a
 host can use as well:
 
-- **`inferInputTypes`** refines what an op expects *from* what it was given. `Filter{:den}` uses
+- **`inferInputTypes{:ts}`** refines what an op expects *from* what it was given. `Filter{:den}` uses
   it to tell you its predicate takes the element type of the list you passed, which is why the
   lambda parameter needs no annotation.
-- **`inferOutput`** computes the concrete output type. `Filter{:den}` returns the list's own
+- **`inferOutput{:ts}`** computes the concrete output type. `Filter{:den}` returns the list's own
   type, `Map{:den}` the return type of your function, `If{:den}` the branch type when both
   branches agree and `any{:den}` when they do not.
 

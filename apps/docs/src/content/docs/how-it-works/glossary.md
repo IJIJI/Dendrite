@@ -50,7 +50,7 @@ a host uses when it does not know a value's type. Each crossing warns.
 **`null{:den}`**: the value an unset input holds, accepted wherever a data value is expected, so a
 program over unset inputs still runs.
 
-**`extends`**: a named type declaring a parent. Compatibility walks the chain.
+**`extends{:ts}`**: a named type declaring a parent. Compatibility walks the chain.
 
 **Covariant, contravariant**: which way a type may vary and stay compatible. Arrays are
 covariant in their element; functions are contravariant in their parameters and covariant in
@@ -67,10 +67,10 @@ composed onto it. Built per program.
 **Raw program**: the parsed program: bindings and outputs as untyped AST nodes. The form that
 gets stored.
 
-**Core program**: the analysed program: types resolved, `dependsOn` computed, unreachable
+**Core program**: the analysed program: types resolved, `dependsOn{:ts}` computed, unreachable
 bindings pruned. What runs, and rebuilt rather than stored.
 
-**`dependsOn`**: per node, the set of input names it reaches. Computed once during analysis;
+**`dependsOn{:ts}`**: per node, the set of input names it reaches. Computed once during analysis;
 the whole basis of incremental evaluation.
 
 **Pruning**: dropping the bindings no output can reach, at the end of analysis. They warn on
@@ -87,7 +87,7 @@ outputs.
 **Port layer**: ports plus an id plus a policy. Layers stack, and the first to claim a name
 keeps it.
 
-**Policy**: three fields on a layer: `editable`, `feeds`, `persisted`. Core reads the fields
+**Policy**: three fields on a layer: `editable{:ts}`, `feeds{:ts}`, `persisted{:ts}`. Core reads the fields
 and never branches on a layer's kind.
 
 **Persisted layer**: the one layer saved with the program: the document's own declarations. At

@@ -14,17 +14,17 @@ React is allowed, so a host that does not use React never loads it.
 
 ## Where the program comes from: a connection
 
-The one decision a host makes is how the editor reaches a program. That is a `Connection`, and there
+The one decision a host makes is how the editor reaches a program. That is a `Connection{:ts}`, and there
 are three ways to get one.
 
 | Connection | The editor gets | Use it when |
 | --- | --- | --- |
-| `ownStack({ document, language?, layers? })` | its own private language, runtime and instance | the editor *is* the application - a playground, a scratchpad |
-| `joinRuntime(language, runtime, { document })` | its own instance, on a runtime the host already runs | a draft beside live programs, seeing the host's real global values |
-| `attach(language, instance)` | an instance the host already has | editing a program that is running for real, locally or through the link |
+| `ownStack({ document, language?, layers? }){:ts}` | its own private language, runtime and instance | the editor *is* the application - a playground, a scratchpad |
+| `joinRuntime(language, runtime, { document }){:ts}` | its own instance, on a runtime the host already runs | a draft beside live programs, seeing the host's real global values |
+| `attach(language, instance){:ts}` | an instance the host already has | editing a program that is running for real, locally or through the link |
 
-Releasing is asymmetric on purpose: the editor tears down **only what it made**. `ownStack` made
-everything, so it disposes everything. `attach` made nothing, so disposing the editor leaves your
+Releasing is asymmetric on purpose: the editor tears down **only what it made**. `ownStack{:ts}` made
+everything, so it disposes everything. `attach{:ts}` made nothing, so disposing the editor leaves your
 program running.
 
 ## React
@@ -38,8 +38,8 @@ import { Editor } from "@dendrite-lang/editor/react";
 </Editor>;
 ```
 
-`<Editor>` takes a `connection`, or `document` as a shorthand for `ownStack`. Pass stable references:
-a new connection, document, language or layers remounts the editor. `onChange` fires debounced, for
+`<Editor>{:ts}` takes a `connection{:ts}`, or `document{:ts}` as a shorthand for `ownStack{:ts}`. Pass stable references:
+a new connection, document, language or layers remounts the editor. `onChange{:ts}` fires debounced, for
 anything a save would capture, and is read through a ref so replacing it does not remount.
 
 ### Three layouts
@@ -49,19 +49,19 @@ configuration and differ in arrangement and defaults.
 
 | Layout | Arrangement |
 | --- | --- |
-| `Editor.MinimalLayout` | the inputs in a strip, the code, the outputs as `→ name = value` lines. No gutter, no diagnostics pane - a problem shows as a squiggle with its message on hover. Its height follows its content |
-| `Editor.CompactLayout` | the code with the inputs and outputs beside it, below it when narrow, and diagnostics collapsed to one counting line |
-| `Editor.FullLayout` | the playground: a top bar, the code, and three panes stacked beside it, filling its parent |
+| `Editor.MinimalLayout{:ts}` | the inputs in a strip, the code, the outputs as `→ name = value` lines. No gutter, no diagnostics pane - a problem shows as a squiggle with its message on hover. Its height follows its content |
+| `Editor.CompactLayout{:ts}` | the code with the inputs and outputs beside it, below it when narrow, and diagnostics collapsed to one counting line |
+| `Editor.FullLayout{:ts}` | the playground: a top bar, the code, and three panes stacked beside it, filling its parent |
 
 The live examples throughout these docs are the first two. What they share:
 
 | Option | Meaning |
 | --- | --- |
-| `code` | `{ editable, gutters }`. Every layout is editable by default; `gutters` is `full`, `compact` (lint dots only) or `none` |
-| `declarations` | whether the panes offer rename, retype, add and remove, where the layer allows it |
-| `actions` | the buttons: the editor's own (`Editor.items.undo`, `.redo`, `.theme`) and yours. Listing replaces |
-| `actionsAt` | where they go. Each layout offers its own spots - the top bar's start or end, the code's corner, the side, the input strip - and a spot a layout cannot show does not compile |
-| `topBar` | a top bar, whole. Omit for none |
+| `code{:ts}` | `{ editable, gutters }{:ts}`. Every layout is editable by default; `gutters{:ts}` is `full{:ts}`, `compact{:ts}` (lint dots only) or `none{:ts}` |
+| `declarations{:ts}` | whether the panes offer rename, retype, add and remove, where the layer allows it |
+| `actions{:ts}` | the buttons: the editor's own (`Editor.items.undo{:ts}`, `.redo{:ts}`, `.theme{:ts}`) and yours. Listing replaces |
+| `actionsAt{:ts}` | where they go. Each layout offers its own spots - the top bar's start or end, the code's corner, the side, the input strip - and a spot a layout cannot show does not compile |
+| `topBar{:ts}` | a top bar, whole. Omit for none |
 
 ### The blocks, when no preset fits
 
@@ -83,12 +83,12 @@ A layout is only a composition of blocks, and the blocks are public:
 </Editor>;
 ```
 
-`Canvas` is the code, and it is required: it is where the program is born. `Inputs`, `Outputs` and
-`Diagnostics` are the panes. `TopBar` and `Actions` hold items. `Row` and `Column` lay them out.
-`Source` renders a program as highlighted static code with no editor behind it, for showing a
+`Canvas{:ts}` is the code, and it is required: it is where the program is born. `Inputs{:ts}`, `Outputs{:ts}` and
+`Diagnostics{:ts}` are the panes. `TopBar{:ts}` and `Actions{:ts}` hold items. `Row{:ts}` and `Column{:ts}` lay them out.
+`Source{:ts}` renders a program as highlighted static code with no editor behind it, for showing a
 program you do not want to run.
 
-`readOnly` on `Inputs` is host policy, deliberately not part of the document: the same program can be
+`readOnly{:ts}` on `Inputs{:ts}` is host policy, deliberately not part of the document: the same program can be
 host-fed in one application and user-edited in another.
 
 ## Headless
@@ -106,14 +106,14 @@ editor.instance.setInput("score", 42);
 editor.dispose();
 ```
 
-`editor.instance` is the same five observables and four commands as any core instance, whatever the
+`editor.instance{:ts}` is the same five observables and four commands as any core instance, whatever the
 connection. Render your own panes from them.
 
 ## Saving, and sharing
 
-The editor never touches storage. It hands you a document through `onChange`; where it goes is your
-decision. Three stores are included for the common cases (`MemoryStore`, `LocalStorageStore`,
-`UrlStore`), and `documentUrl(base, doc)` turns a document into a link, which is how "open in the
+The editor never touches storage. It hands you a document through `onChange{:ts}`; where it goes is your
+decision. Three stores are included for the common cases (`MemoryStore{:ts}`, `LocalStorageStore{:ts}`,
+`UrlStore{:ts}`), and `documentUrl(base, doc){:ts}` turns a document into a link, which is how "open in the
 playground" works everywhere on this site.
 
 A document is core's snapshot with a version on the outside, and it migrates forward on load, so a

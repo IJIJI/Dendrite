@@ -13,9 +13,9 @@ Three forms can be stored, and they are the three ways a program can be authored
 
 | Form | Holds | Written by |
 | --- | --- | --- |
-| `code` | the source text | the code editor |
-| `rete` | an opaque graph blob | the graph editor, when it lands |
-| `ast` | the raw program as plain records | code that builds a program directly |
+| `code{:ts}` | the source text | the code editor |
+| `rete{:ts}` | an opaque graph blob | the graph editor, when it lands |
+| `ast{:ts}` | the raw program as plain records | code that builds a program directly |
 
 The one that is *not* on that list is the core program, and that is the decision. An AST loses
 the comments, the whitespace and the symbol surface: reload `$score >= 60{:den}` from a tree
@@ -24,7 +24,7 @@ document. So the authoring artefact is what is kept, and the analysed form is re
 
 ## Loading re-analyses, always
 
-`load` never trusts what it is given. It parses and analyses from scratch, against the
+`load{:ts}` never trusts what it is given. It parses and analyses from scratch, against the
 descriptor as it is *now*.
 
 That is the point. A host that adds an op, renames an input, or tightens a type does not have to
@@ -37,13 +37,13 @@ a compiled program while it is in use rather than reloading per evaluation.
 
 ## A program carries its own declarations
 
-A saved program has an optional `ports` key: the inputs, outputs and types the *document*
+A saved program has an optional `ports{:ts}` key: the inputs, outputs and types the *document*
 declares for itself, as opposed to the ones its host declares. That is the persisted layer from
 [ports and layers](../ports-and-layers/), travelling with the program it belongs to.
 
-One thing does not survive the trip. A type's `schema`, its runtime validator, is a function,
-and a function does not go through JSON: `JSON.stringify` turns a zod schema into an object that
-revives as nothing, dropping any `.refine` predicate silently. So a layer that is persisted may
+One thing does not survive the trip. A type's `schema{:ts}`, its runtime validator, is a function,
+and a function does not go through JSON: `JSON.stringify{:ts}` turns a zod schema into an object that
+revives as nothing, dropping any `.refine{:ts}` predicate silently. So a layer that is persisted may
 not declare a schema at all, and an instance refuses one rather than saving something that will
 come back broken. A layer type that *extends* a language type inherits the validator without
 carrying it, which is the way round.
@@ -53,12 +53,12 @@ carrying it, which is the way round.
 Two different things can change shape, so there are two versions and they are independent.
 
 **The format version** is on the saved program, and it belongs to core. When the shape of a
-`SavedProgram` changes, the number goes up and `migrate` brings older blobs forward. A blob
+`SavedProgram{:ts}` changes, the number goes up and `migrate{:ts}` brings older blobs forward. A blob
 from a newer version than the running build fails with `unsupported_version{:den}` rather than being
 guessed at.
 
 **The envelope version** belongs to whoever wraps a program in their own document. The editor
-has one, on `EditorDocument`, over the same generic migration chain, because what an editor
+has one, on `EditorDocument{:ts}`, over the same generic migration chain, because what an editor
 saves is a program *plus* its input values plus whatever else that host needs. Core knows
 nothing about it.
 

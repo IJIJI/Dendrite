@@ -47,13 +47,13 @@ consulting anything.
 What this step reports: `unknown_character{:den}` and `unterminated_string{:den}`, and two warnings,
 `unterminated_comment{:den}` and `invalid_escape{:den}`. They are listed under
 [Parse on *Every diagnostic*](../diagnostics/#parse), because the lexer runs inside
-`parseSource`: a host never calls it on its own.
+`parseSource{:ts}`: a host never calls it on its own.
 
 ## Parse: tokens become a raw program
 
 <Chain step="parse" />
 
-The result is a `RawProgram`: two maps, bindings and outputs, name to AST node. No types, no
+The result is a `RawProgram{:ts}`: two maps, bindings and outputs, name to AST node. No types, no
 resolution, no checking.
 
 ```
@@ -142,16 +142,16 @@ Two things happened there, and a third that is the next section.
 type, not from an annotation. `grade{:den}` is a `string{:den}` because `If{:den}` narrows to its
 branch type when both branches agree.
 
-**`dependsOn` was computed.** Both carry `[score]`, the set of inputs each reaches through the
+**`dependsOn{:ts}` was computed.** Both carry `[score]`, the set of inputs each reaches through the
 whole tree beneath it. This set is the entire basis of incremental evaluation, and it is
 computed once, here, statically.
 
 Two rules this stage keeps:
 
-- **Errors are collected, never thrown.** A failed binding is recorded in `failedBindings` so
+- **Errors are collected, never thrown.** A failed binding is recorded in `failedBindings{:ts}` so
   the names reading it fail cleanly rather than cascading into noise.
 - **Soundness is per output.** Pass 5 decides output by output. One broken output is dropped;
-  `ok` comes back false only if a *required* one was lost, which is the single case where the
+  `ok{:ts}` comes back false only if a *required* one was lost, which is the single case where the
   whole program fails.
 
 The stage needs one thing besides the program: the descriptor that compose assembled.
@@ -183,7 +183,7 @@ score=45 -> { "grade": "Fail" }
 ```
 
 Outputs pull. Asking for `grade{:den}` walks down from its node, and each node consults a cache
-before computing. A node recomputes when the set of changed inputs intersects its `dependsOn`
+before computing. A node recomputes when the set of changed inputs intersects its `dependsOn{:ts}`
 and it has no cache entry. [Evaluation](../evaluation/) has the details.
 
 What this stage may not do: report a type error. Everything checkable was checked. What reaches

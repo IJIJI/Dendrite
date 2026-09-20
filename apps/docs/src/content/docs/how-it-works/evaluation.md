@@ -22,7 +22,7 @@ Everything follows from that.
   over literals, a lambda over constants.
 - Changing an input recomputes exactly the nodes whose `dependsOn{:ts}` contains it, and the nodes
   above those, and nothing else.
-- `changedInputs{:ts}` may also be `undefined`, which means "assume everything changed". That is what
+- `changedInputs{:ts}` may also be `undefined{:ts}`, which means "assume everything changed". That is what
   a one-shot `run(){:ts}` passes, and it disables caching for that pass, because there is nothing to
   reuse.
 
@@ -36,7 +36,7 @@ them go stale at different times.
 
 | Store | Keyed by | Lives for |
 | --- | --- | --- |
-| `inputs` | input name | as long as the host keeps pushing values |
+| `inputs{:ts}` | input name | as long as the host keeps pushing values |
 | `nodeCache{:ts}` | the node object | the program, until an input it depends on changes |
 | `bodyScope{:ts}` | the node object | one application of one closure |
 

@@ -6,7 +6,7 @@ sidebar:
 ---
 
 The link drives a program across a channel. The host **serves** an instance. Somewhere else, an
-editor **connects** a replica that *is* a `ProgramInstance` (the same five observables and four
+editor **connects** a replica that *is* a `ProgramInstance{:ts}` (the same five observables and four
 commands) and cannot be told from the local thing.
 
 The split of responsibility is the whole design: **Dendrite owns the message shapes and both ends.
@@ -34,7 +34,7 @@ const replica = await connectInstance(language, webSocketChannel(new WebSocket(u
 ```
 
 Both ends import **the same language**. That is not a formality: a composed descriptor holds
-functions (evaluators, `inferOutput`), and functions do not travel. So the server sends the layers,
+functions (evaluators, `inferOutput{:ts}`), and functions do not travel. So the server sends the layers,
 and the replica composes them with its own copy of the language. The handshake carries a fingerprint
 of the vocabulary, and two builds that disagree are refused with the difference named, rather than
 being silently wrong.
@@ -46,39 +46,39 @@ exactly the shape a network wants. So the protocol is two directions of JSON:
 
 | Direction | Message | Notes |
 | --- | --- | --- |
-| client → server | `hello { protocol, vocabulary }` | on every connect and reconnect. Answered with `state`, or `rejected` |
-| | `setInput` · `fireTrigger` · `setProgram` · `setLayer` | fire and forget, each stamped with a sequence number |
-| server → client | `state` | all five observables at once, so a replica never renders empty |
-| | `diagnostics` · `layers` · `outputs` · `values` · `snapshot` | one per observable, stamped with the last command the server had seen |
+| client → server | `hello { protocol, vocabulary }{:ts}` | on every connect and reconnect. Answered with `state{:ts}`, or `rejected{:ts}` |
+| | `setInput{:ts}` · `fireTrigger{:ts}` · `setProgram{:ts}` · `setLayer{:ts}` | fire and forget, each stamped with a sequence number |
+| server → client | `state{:ts}` | all five observables at once, so a replica never renders empty |
+| | `diagnostics{:ts}` · `layers{:ts}` · `outputs{:ts}` · `values{:ts}` · `snapshot{:ts}` | one per observable, stamped with the last command the server had seen |
 
 ## What makes remote feel local
 
 All of it lives in the replica, so a host does nothing to get it.
 
-- **An input change echoes at once.** `setInput` updates the replica's own `values` immediately,
+- **An input change echoes at once.** `setInput{:ts}` updates the replica's own `values{:ts}` immediately,
   rather than waiting for the round trip, or a dragged slider would fight the network.
-- **Late news is dropped.** A `values` push stamped before your latest command is ignored, so the
+- **Late news is dropped.** A `values{:ts}` push stamped before your latest command is ignored, so the
   slider does not snap back to where it was a moment ago.
-- **A dropped connection goes stale.** Outputs flip to `stale: true` the moment the channel closes,
-  which is exactly what the flag already means. On reconnect the replica says `hello` again and gets
+- **A dropped connection goes stale.** Outputs flip to `stale: true{:ts}` the moment the channel closes,
+  which is exactly what the flag already means. On reconnect the replica says `hello{:ts}` again and gets
   fresh state. Nothing is replayed.
 - **Refusals happen locally.** What a local instance would refuse (an undeclared input, say), the
   replica refuses too, and sends nothing.
 
-A replica also has a `status`: `connected`, `disconnected`, or `rejected`, the last meaning a
+A replica also has a `status{:ts}`: `connected{:ts}`, `disconnected{:ts}`, or `rejected{:ts}`, the last meaning a
 re-handshake was refused because the server now runs a different language, and nothing will move
 again until the page reloads.
 
 ## The server is the trust boundary
 
-Core trusts its caller, on purpose: a host is the host. A client is not. So `serveInstance` enforces
+Core trusts its caller, on purpose: a host is the host. A client is not. So `serveInstance{:ts}` enforces
 what each layer's policy declares, where core itself would not:
 
-- no `setLayer` on a layer that is not `editable`
-- no `setInput` on an input owned by a `feeds: "host"` layer
+- no `setLayer{:ts}` on a layer that is not `editable{:ts}`
+- no `setInput{:ts}` on an input owned by a `feeds: "host"{:ts}` layer
 
 A malformed command, a refused one, or one core throws on is dropped, and reported through
-`onError` so you can see it. Type schemas are stripped before anything is sent, because a schema is a
+`onError{:ts}` so you can see it. Type schemas are stripped before anything is sent, because a schema is a
 graph of functions.
 
 What the link does **not** decide is *who* a client is. Authentication, which program a user may
@@ -86,7 +86,7 @@ open, and listing programs are your application's, at your own API, before the c
 
 ## Adapting your transport
 
-A `Channel` is the one thing a host implements:
+A `Channel{:ts}` is the one thing a host implements:
 
 ```ts
 import { type Observable } from "@dendrite-lang/core";
@@ -100,16 +100,16 @@ interface Channel<Out, In> {
 
 Two come built in:
 
-- **`webSocketChannel(socket)`**: the browser's WebSocket, node's, or `ws`, on either side. JSON
-  frames, `status` from open and close. A send while the socket is not open is **dropped, never
+- **`webSocketChannel(socket){:ts}`**: the browser's WebSocket, node's, or `ws`, on either side. JSON
+  frames, `status{:ts}` from open and close. A send while the socket is not open is **dropped, never
   queued**: an edit fired thirty seconds late into a running system is worse than one that never
   went.
-- **`messagePortChannel(port)`**: a Worker, an iframe, or a `MessageChannel` within one page.
+- **`messagePortChannel(port){:ts}`**: a Worker, an iframe, or a `MessageChannel{:ts}` within one page.
   Structured clone, always connected.
 
 Anything else (server-sent events with a POST back, Electron IPC, a request and response stream)
 is about ten lines of the same shape. A raw WebSocket does not reconnect by itself: wrap a
-reconnecting client in a `Channel` whose `status` flips, and the replica re-handshakes on its own.
+reconnecting client in a `Channel{:ts}` whose `status{:ts}` flips, and the replica re-handshakes on its own.
 
 ## Not yet
 
