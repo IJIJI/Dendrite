@@ -38,6 +38,12 @@ flows into any data type. The second direction is the unsound one and it is deli
 what lets a host say "I do not know what this is" without stopping the program. Each crossing
 raises an `implicit_any_cast{:den}` warning so you can see where you traded the check away.
 
+**Nothing else converts.** There is no coercion between data types: a `number{:den}` is never read
+as a `boolean{:den}`, because that would need a conversion node inserted behind the author's back,
+a rewrite this language does not have. The sound alternative is to convert in the open, with
+`ToString{:den}`, `ToNumber{:den}` and `ToBool{:den}` ([conversion](../../stdlib/conversion/)):
+ordinary ops with fixed output types, so the checker stays honest about what comes out.
+
 **A function is never `any{:den}`.** This is the one exception to the rule above and it carries a lot
 of weight. See below.
 

@@ -135,6 +135,24 @@ question above, so the operator is decided with it rather than ahead of it.
 
 ---
 
+## Stdlib — a friendlier text form for a list or a struct
+
+**What:** `ToString([1, 2])` is `"[1,2]"` and a struct is its JSON. That was chosen on
+2026-09-20 because the op has to return something for them (the type system cannot say
+"primitives only" without unions), and JSON is total, unambiguous, and what you want when a
+label came out wrong. A label for a person wants `1, 2`, or a struct's fields spelled out.
+
+**Why deferred:** a formatting opinion with no consumer asking for it. `null` was weighed and
+dropped: a list plainly is representable as text, and a `null` would blank a label with no
+signal.
+
+**What it requires:** for a list the explicit way already exists once `Join` lands,
+`Join(Map(items, n => ToString(n)), ", ")`, so the question is only whether `ToString` should do
+that itself. A struct has no route at all: nothing in the language enumerates fields, which is
+its own feature (see "struct literals" below for the neighbouring gap).
+
+---
+
 ## Stdlib — the rest of the string ops
 
 **What:** `Replace` (first match or every match: decide), `Split` (by code point when the

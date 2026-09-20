@@ -105,6 +105,7 @@ these pages up.
 | [array](./array/) | `Length{:den}`, `Concat{:den}`, `Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}` |
 | [arithmetic](./arithmetic/) | `Add{:den}`, `Subtract{:den}`, `Multiply{:den}`, `Divide{:den}` |
 | [list](./list/) | `Filter{:den}`, `Map{:den}`, `Reduce{:den}`, `Find{:den}`, `Some{:den}`, `Every{:den}` |
+| [conversion](./conversion/) | `ToString{:den}`, `ToNumber{:den}`, `ToBool{:den}` |
 
 Today an application takes the whole library or none of it. The segments are the seam along
 which that will change, so that an application which never touches a list need not carry the

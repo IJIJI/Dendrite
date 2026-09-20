@@ -19,6 +19,12 @@ const variadic =
   (l: ASTNode, r: ASTNode): ASTNode =>
     operationNode(op, { nodes: [l, r] });
 
+// What ToNumber accepts as text: a plain decimal, with an optional sign, fraction and exponent.
+// `Number()` alone would also take "", "0x10" and "Infinity". Anything else is null rather than
+// a throw or a 0: null is the language's "no value", and `Default(ToNumber(x), 0)` says the
+// fallback aloud.
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
 /**
  * Creates the standard-library language: logic / comparison / control / arithmetic /
  * array ops, general-purpose higher-order list ops, and their operators. Built on the
@@ -365,6 +371,42 @@ export function createStdlib(): Language {
   });
 
   // -------------------------------------------------------------------------
+  // Conversion ops
+  // -------------------------------------------------------------------------
+
+  // The language converts nothing on its own, so a program converts where it means to, in
+  // the open. Each rule is decided here rather than inherited from JavaScript (whose `[]` is
+  // true, whose `Number("")` is 0 and whose `Number("0x10")` is 16).
+
+  lang.registerOp({
+    name: "ToString",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.string,
+    category: "conversion",
+    description: "The value as text. Null gives the empty string, and a list or a struct its JSON.",
+    examples: [den`output label = ToString(42)`],
+  });
+
+  lang.registerOp({
+    name: "ToNumber",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.number,
+    category: "conversion",
+    description:
+      "The value as a number: true is 1, false is 0, and text is read as a decimal number. Anything that is not a number gives null.",
+    examples: [den`output count = ToNumber("42")`, den`output count = Default(ToNumber("n/a"), 0)`],
+  });
+
+  lang.registerOp({
+    name: "ToBool",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.boolean,
+    category: "conversion",
+    description: "False for false, 0, the empty string, null and an empty list. True otherwise.",
+    examples: [den`output hasItems = ToBool([4, 8])`],
+  });
+
+  // -------------------------------------------------------------------------
   // Evaluators - logic ops (fixed output types, no inferOutput needed)
   // -------------------------------------------------------------------------
 
@@ -573,6 +615,44 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Divide",
     evaluate: ({ a, b }) => ((b as number) === 0 ? 0 : (a as number) / (b as number)),
+  });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - conversion ops
+  // -------------------------------------------------------------------------
+
+  lang.registerEvaluator({
+    op: "ToString",
+    evaluate: ({ value }) => {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") return value;
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      return JSON.stringify(value);
+    },
+  });
+
+  lang.registerEvaluator({
+    op: "ToNumber",
+    evaluate: ({ value }) => {
+      if (typeof value === "number") return value;
+      if (typeof value === "boolean") return value ? 1 : 0;
+      if (typeof value !== "string") return null;
+      const text = value.trim();
+      return DECIMAL.test(text) ? Number(text) : null;
+    },
+  });
+
+  lang.registerEvaluator({
+    op: "ToBool",
+    evaluate: ({ value }) =>
+      !(
+        value === false ||
+        value === 0 ||
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        (Array.isArray(value) && value.length === 0)
+      ),
   });
 
   // -------------------------------------------------------------------------

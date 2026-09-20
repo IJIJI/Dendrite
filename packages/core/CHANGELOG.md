@@ -9,6 +9,16 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.2.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **Conversion ops: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own,
+  and until now a program could not convert on purpose either. Each rule is decided here rather
+  than inherited from JavaScript. `ToString` gives the empty string for `null`. `ToNumber` reads
+  text as a plain decimal and gives **`null`** for anything that is not a number, the empty
+  string, `"0x10"` and `"Infinity"` included: a `0` would be a guess indistinguishable from a real
+  zero, so `Default(ToNumber(x), 0)` lets the author write the fallback. `ToBool` is false for
+  `false`, `0`, the empty string, `null` **and an empty list**, which JavaScript calls true.
+
 ## 0.2.0
 
 - **Negative numbers.** There were none: `-14` was a syntax error anywhere. A new `Negate` op,

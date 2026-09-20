@@ -310,3 +310,71 @@ describe("array ops", () => {
     expect(runSource('output out = Includes(["a", "b"], "z")').value).toBe(false);
   });
 });
+
+describe("conversion ops", () => {
+  const value = (src: string) => {
+    const { analysed, value } = runSource(`output out = ${src}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("ToString: text is itself, a number or a boolean is written out", () => {
+    expect(value('ToString("kept")')).toBe("kept");
+    expect(value("ToString(42)")).toBe("42");
+    expect(value("ToString(1.5)")).toBe("1.5");
+    expect(value("ToString(true)")).toBe("true");
+  });
+
+  it("ToString: null is the empty string, and a list is its JSON", () => {
+    expect(value("ToString(null)")).toBe("");
+    expect(value("ToString([1, 2])")).toBe("[1,2]");
+  });
+
+  it("ToNumber: a number is itself, and a boolean is 1 or 0", () => {
+    expect(value("ToNumber(7)")).toBe(7);
+    expect(value("ToNumber(true)")).toBe(1);
+    expect(value("ToNumber(false)")).toBe(0);
+  });
+
+  it("ToNumber: text is read as a plain decimal, trimmed", () => {
+    expect(value('ToNumber("42")')).toBe(42);
+    expect(value('ToNumber(" 12 ")')).toBe(12);
+    expect(value('ToNumber("-1.5")')).toBe(-1.5);
+    expect(value('ToNumber("1e3")')).toBe(1000);
+  });
+
+  it("ToNumber: anything that is not a number is null, never 0 and never a throw", () => {
+    // Each of these is something JavaScript's Number() would turn into a number.
+    expect(value('ToNumber("")')).toBeNull();
+    expect(value('ToNumber("   ")')).toBeNull();
+    expect(value('ToNumber("0x10")')).toBeNull();
+    expect(value('ToNumber("Infinity")')).toBeNull();
+    expect(value('ToNumber("abc")')).toBeNull();
+    expect(value("ToNumber(null)")).toBeNull();
+    expect(value("ToNumber([1])")).toBeNull();
+  });
+
+  it("ToNumber: Default supplies the fallback, written by the author", () => {
+    expect(value('Default(ToNumber("n/a"), 0)')).toBe(0);
+    expect(value('Default(ToNumber("9"), 0)')).toBe(9);
+  });
+
+  it("ToBool: false for false, 0, the empty string, null and an empty list", () => {
+    for (const falsy of ["false", "0", '""', "null", "[]"]) {
+      expect(value(`ToBool(${falsy})`), falsy).toBe(false);
+    }
+  });
+
+  it('ToBool: true otherwise, the text "false" and a list holding a 0 included', () => {
+    for (const truthy of ["true", "1", "-1", '"false"', '"0"', "[0]"]) {
+      expect(value(`ToBool(${truthy})`), truthy).toBe(true);
+    }
+  });
+
+  it("types its result, so a conversion can feed a typed input without a warning", () => {
+    const { analysed, value: sum } = runSource('output out = Add(ToNumber("2"), 3)');
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    expect(sum).toBe(5);
+  });
+});
