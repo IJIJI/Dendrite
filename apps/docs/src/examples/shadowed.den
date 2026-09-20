@@ -1,0 +1,3 @@
+// Warns: the lambda's `n` shadows this one, so nothing reads it.
+let n = 100
+output sizes = Map([1, 2, 3], n => n * 2)

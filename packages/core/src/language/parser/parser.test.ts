@@ -69,6 +69,14 @@ describe("identifier & input classification", () => {
     });
   });
 
+  it("an input's span covers the whole `$name`, so its diagnostics underline all of it", () => {
+    const desc = withInput("quantity", "number");
+    expect(parse("  $quantity", desc).node).toMatchObject({
+      kind: "input",
+      source: { kind: "code", line: 1, column: 3, length: 9 },
+    });
+  });
+
   it("a bare name stays a ref even when an input shares the name (no shadowing)", () => {
     const desc = withInput("sourceBus");
     expect(parse("sourceBus", desc).node).toMatchObject({ kind: "ref", name: "sourceBus" });
@@ -459,6 +467,27 @@ describe("operators", () => {
           { kind: "operation", op: "Not", inputs: { a: { kind: "ref", name: "a" } } },
           { kind: "ref", name: "b" },
         ],
+      },
+    });
+  });
+
+  it("prefix -: -14 → Negate(14), wherever a value can start", () => {
+    const negate = (a: object) => ({ kind: "operation", op: "Negate", inputs: { a } });
+    expect(parse("-14").node).toMatchObject(negate({ value: 14 }));
+    expect(parse("(-14)").node).toMatchObject(negate({ value: 14 }));
+    expect(parse("1 == -14").node).toMatchObject({
+      op: "Equals",
+      inputs: { a: { value: 1 }, b: negate({ value: 14 }) },
+    });
+  });
+
+  it("- is both symbols: 1 - -14 → Subtract(1, Negate(14))", () => {
+    expect(parse("1 - -14").node).toMatchObject({
+      kind: "operation",
+      op: "Subtract",
+      inputs: {
+        a: { value: 1 },
+        b: { kind: "operation", op: "Negate", inputs: { a: { value: 14 } } },
       },
     });
   });

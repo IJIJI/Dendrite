@@ -1,10 +1,16 @@
 import { type Ports, Type } from "@dendrite-lang/core";
 
 import first from "./first.den?raw";
+import forward from "./forward.den?raw";
 import grade from "./grade.den?raw";
 import heights from "./heights.den?raw";
+import mismatch from "./mismatch.den?raw";
 import order from "./order.den?raw";
+import quantity from "./quantity.den?raw";
 import scores from "./scores.den?raw";
+import shadowed from "./shadowed.den?raw";
+import unused from "./unused.den?raw";
+import whatever from "./whatever.den?raw";
 
 //? The programs the site runs live, as `.den` files rather than strings in a page: one
 // definition wherever an example appears twice, and `content.test.ts` loads every one of
@@ -17,6 +23,17 @@ export interface Example {
   source: string;
   /** What it reads and produces, as the page declares it. */
   ports: Ports;
+  /**
+   * The example is on the site to SHOW a diagnostic, so it must NOT compile - the same
+   * contract a ```den fails fence carries, and `content.test.ts` holds it to it. Each one
+   * opens with a comment saying how it fails, since a live editor says it in a squiggle.
+   */
+  fails?: boolean;
+  /**
+   * The example is on the site to show a WARNING: it compiles, and it must warn - a
+   * ```den warns fence's contract. Like a `fails` one, it opens with a comment saying why.
+   */
+  warns?: boolean;
 }
 
 const numbers = (...names: string[]) => names.map((name) => ({ name, type: Type.number }));
@@ -89,6 +106,60 @@ export const heightsExample: Example = {
   },
 };
 
+/** Read above the line that declares it: a rule about the text, not about the language. */
+export const forwardExample: Example = {
+  source: forward,
+  ports: { inputs: [], outputs: [{ name: "report", type: Type.number }] },
+  fails: true,
+};
+
+/** A number handed to an op that wanted booleans, with the input declared on the page. */
+export const quantityExample: Example = {
+  source: quantity,
+  ports: {
+    inputs: [{ name: "quantity", type: Type.number, default: 4 }],
+    outputs: [{ name: "ok", type: Type.boolean }],
+  },
+  fails: true,
+};
+
+/** A string where a number belongs - a different mistake from `quantity`'s, on purpose. */
+export const mismatchExample: Example = {
+  source: mismatch,
+  ports: {
+    inputs: [{ name: "score", type: Type.number, default: 72 }],
+    outputs: [{ name: "total", type: Type.number }],
+  },
+  fails: true,
+};
+
+/** A binding no output reaches: it warns, and the analyser drops it. */
+export const unusedExample: Example = {
+  source: unused,
+  ports: { inputs: [], outputs: numbers("answer") },
+  warns: true,
+};
+
+/** A lambda parameter that shadows a binding, which is left unread. */
+export const shadowedExample: Example = {
+  source: shadowed,
+  ports: { inputs: [], outputs: [{ name: "sizes", type: Type.array(Type.number) }] },
+  warns: true,
+};
+
+/**
+ * An `any` input handed to an op that wants a list. The default is a list, so the block opens
+ * on a value; typing a number into it shows what `any` let through.
+ */
+export const whateverExample: Example = {
+  source: whatever,
+  ports: {
+    inputs: [{ name: "whatever", type: Type.any, default: [1, 2, 3] }],
+    outputs: numbers("length"),
+  },
+  warns: true,
+};
+
 /** Every example, for the test that loads them all. */
 export const examples: Record<string, Example> = {
   first: firstExample,
@@ -96,4 +167,10 @@ export const examples: Record<string, Example> = {
   scores: scoresExample,
   grade: gradeExample,
   heights: heightsExample,
+  forward: forwardExample,
+  quantity: quantityExample,
+  mismatch: mismatchExample,
+  unused: unusedExample,
+  shadowed: shadowedExample,
+  whatever: whateverExample,
 };

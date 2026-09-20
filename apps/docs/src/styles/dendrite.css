@@ -40,6 +40,7 @@
   --sl-color-gray-4: #4a4644; /* dark-4 */
   --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
   --sl-color-gray-6: #2c2a29; /* dark-2: nav and sidebar */
+  --sl-color-gray-7: #141312; /* dark-0: a well below the page (the chain's cards) */
   --sl-color-black: #201e1d; /* dark-1: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
@@ -69,16 +70,26 @@
   font-size: 0.85em;
 }
 
-/* Inline Dendrite (`…{:den}` in Markdown, and the signatures): Starlight's inline-code
-   box, the tokens' own colours inside it. */
-code.den .tok-ident {
-  color: inherit;
+/* A diagnostic's name in prose (`forward_reference{:den}`): its severity's colour, the one the
+   editor's squiggles use, so an error reads as one before it is explained. */
+code.den-diag-error {
+  color: var(--dendrite-error);
 }
 
-/* A sample that is on the page to SHOW a diagnostic (a ```den fails fence): a warning edge,
-   so a reader does not copy it out as a working program. */
+code.den-diag-warning {
+  color: var(--dendrite-warning);
+}
+
+/* A sample that is on the page to SHOW a diagnostic: an edge in that diagnostic's colour -
+   the error colour for a ```den fails fence (or a live block marked fails), the warning colour
+   for a ```den warns one - so a reader does not copy either out as a working program. */
 .dendrite-fails {
-  border-color: var(--sl-color-orange, #d97706);
+  border-color: var(--dendrite-error);
+  border-left-width: 2px;
+}
+
+.dendrite-warns {
+  border-color: var(--dendrite-warning);
   border-left-width: 2px;
 }
 

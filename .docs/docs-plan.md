@@ -1,7 +1,7 @@
 # The documentation site — plan
 
 > **Status: built 2026-09-09** (`apps/docs`, Astro 7 + Starlight 0.42), empty - the language
-> CONTENT is written afterwards, page by page, into the skeleton; that plan is `todo.md`,
+> CONTENT is written afterwards, page by page, into the skeleton; that plan is `done.md`,
 > "Document the core language (two levels)", and the notes from the first look at the empty
 > site are there under "Docs — content notes". What settled while building, beyond this plan:
 > op examples are `SavedProgram`s written with a `den` tagged template (multi-line, dedented,
@@ -11,7 +11,7 @@
 > per segment; the config is `astro.config.ts` with the unified Markdown processor declared;
 > images pass through (no sharp); sections are Learn (a path) · `stdlib` · Host developers
 > (with Installation and the packages) · Contribute. The docs' example block (read-only code,
-> settable inputs, live outputs) is `todo.md`, "the example layout".
+> settable inputs, live outputs) is `done.md`, "the example layout".
 
 ## Context
 
@@ -67,7 +67,7 @@ var: `http://localhost:5173/` in dev, `/Dendrite/playground/` in CI.
 | 4 | ci: one Pages workflow | `pages.yml` replaces `playground.yml`: build both apps, assemble `site/` (docs at root, `playground/` beside), path filters for both apps and every package; retire `.github/pages/index.html`; README link unchanged | deploy from `main`; both URLs walked | 2 h |
 | 5 | editor: the embed | `compact` layout + enlarge-to-page + responsive CSS; `<Live>` switches to it | editor tests; browser at docs and playground | ½ day |
 
-Then the content: `todo.md`, "Document the core language", page by page into the skeleton -
+Then the content: `done.md`, "Document the core language", page by page into the skeleton -
 and `@dendrite-lang/core@0.1.0` after it.
 
 ## Verification

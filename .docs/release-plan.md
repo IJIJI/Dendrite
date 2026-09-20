@@ -207,7 +207,7 @@ Kept because none of it is obvious from the plan.
 - **Remove a dist-tag before unpublishing the version it points at**, or the tag dangles.
 - **Editor and link cannot be `require`d.** Their `exports` offer only `import`. Node 22 can
   `require()` an ES module, but needs a matching condition; a `default` entry would do it (in
-  `.docs/todo.md`).
+  `.docs/todo.md` then; fixed since, see `done.md`).
 - **npm only updates a package's README when that package is published**, so README work ships
   with the next release of each package, never on its own.
 - **Commands for the user are PowerShell.** A bash `~` in a walkthrough made Yarn write the

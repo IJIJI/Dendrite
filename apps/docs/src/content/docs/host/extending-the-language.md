@@ -1,6 +1,6 @@
 ---
 title: "Extending the language"
-description: "Register a type, an op, an evaluator, an operator - and make an op's types follow its inputs."
+description: "Register a type, an op, an evaluator, a symbol, and make an op's types follow its inputs."
 sidebar:
   order: 3
 ---
@@ -34,8 +34,8 @@ language.registerType("Reading", {
 ```
 
 Now an input can be declared as a `Reading`, and the analyser checks field access against those
-fields. A program reading `$reading.room` gets a `string`. A program reading `$reading.nope` gets
-`unknown_field` before it runs.
+fields. A program reading `$reading.room{:den}` gets a `string{:den}`. A program reading `$reading.nope{:den}` gets
+`unknown_field{:den}` before it runs.
 
 A type may also `extends` another named type, which makes it compatible wherever its parent is
 expected, and may narrow a field it inherits but not change it to something incompatible. And it
@@ -80,10 +80,10 @@ complete programs a test can load. The standard library's own reference is gener
 these fields.
 
 An evaluator gets its inputs already evaluated and returns a value. It should not throw for ordinary
-bad input - return something sensible - because a throw becomes a `host_error` on the program's
+bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
 outputs.
 
-## An operator as sugar
+## A symbol as sugar
 
 ```ts
 language.registerInfix("%", BP.MULTIPLY, (left, right) =>
@@ -91,14 +91,14 @@ language.registerInfix("%", BP.MULTIPLY, (left, right) =>
 );
 ```
 
-`7 % 2{:den}` now parses, and it becomes `Mod(7, 2){:den}` during parsing. There is no operator
+`7 % 2{:den}` now parses, and it becomes `Mod(7, 2){:den}` during parsing. There is no symbol
 node: the build function returns an op node, and nothing after the parser can tell which spelling
-was used. The lexer needs no edit, because it takes its operator vocabulary from the grammar.
+was used. The lexer needs no edit, because it takes its symbol vocabulary from the grammar.
 
 `BP` is the precedence ladder, and using its tiers is what keeps independent additions agreeing
 with each other: `BP.MULTIPLY` binds tighter than `BP.ADD`, which binds tighter than comparison, and
-so on. A build function can return a whole tree, which is how the standard library's `>=` becomes
-`Not(LessThan(…))`. `registerPrefix` does the same for a unary operator.
+so on. A build function can return a whole tree, which is how the standard library's `>={:den}` becomes
+`Not(LessThan(…)){:den}`. `registerPrefix` does the same for a prefix symbol.
 
 ## Types that follow the inputs
 
@@ -120,11 +120,11 @@ language.registerEvaluator({
 });
 ```
 
-`Last([10, 20, 30]){:den}` is now a `number`, not an `any`. `inferOutput` is handed the resolved type
+`Last([10, 20, 30]){:den}` is now a `number{:den}`, not an `any{:den}`. `inferOutput` is handed the resolved type
 of each input and returns the output type, or `undefined` to fall back to the declared `output`.
 
 Its partner is `inferInputTypes`, for an input whose expected type depends on the others. It is how
-`Filter` tells your lambda its parameter is the list's element type: it returns the expected types,
+`Filter{:den}` tells your lambda its parameter is the list's element type: it returns the expected types,
 overriding the static ones, for inputs declared **after** the ones they depend on. Use it whenever
 an op takes a function over something else it was given.
 
@@ -147,6 +147,4 @@ library, which has neither `%` nor `Last`. Your own editor, built from your lang
 
 The editor highlights your ops like its own, because it reads the same language. The diagnostics
 catalogue covers your additions too, since a mistake in a call to `Mod` is the same
-`op_input_type_mismatch` as a mistake in a call to `Add`.
-
-**Next:** [the packages](../packages/core/).
+`op_input_type_mismatch{:den}` as a mistake in a call to `Add{:den}`.

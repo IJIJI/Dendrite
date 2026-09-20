@@ -21,19 +21,32 @@ export type LiveProps = Program & {
   editable?: boolean;
   /** A taller code area that still grows with its content (`--dendrite-code-min-height`). */
   codeMinHeight?: string;
+  /**
+   * The program is here to SHOW a diagnostic: the warning edge a ```den fails fence wears, and
+   * no stale outputs, so the block reads the same on the page as it does after an edit.
+   */
+  fails?: boolean;
+  /**
+   * The program is here to show a WARNING: the edge a ```den warns fence wears. It compiles, so
+   * its outputs are real ones and stay on screen as usual.
+   */
+  warns?: boolean;
 };
 
 export default function Live(props: LiveProps) {
   // Memoised on the VALUES, never on `props` (a fresh object each render would remount the
   // editor every time). A new program or source is a new document, which remounts on purpose.
-  const { program, source, ports, layout, editable, codeMinHeight } = props as Partial<{
-    program: SavedProgram;
-    source: string;
-    ports: Ports;
-    layout: "minimal" | "compact";
-    editable: boolean;
-    codeMinHeight: string;
-  }>;
+  const { program, source, ports, layout, editable, codeMinHeight, fails, warns } =
+    props as Partial<{
+      program: SavedProgram;
+      source: string;
+      ports: Ports;
+      layout: "minimal" | "compact";
+      editable: boolean;
+      codeMinHeight: string;
+      fails: boolean;
+      warns: boolean;
+    }>;
   const document = useMemo<EditorDocument>(
     () => ({
       version: DOCUMENT_VERSION,
@@ -45,17 +58,26 @@ export default function Live(props: LiveProps) {
   const style = codeMinHeight
     ? ({ "--dendrite-code-min-height": codeMinHeight } as CSSProperties)
     : undefined;
+  const edge = fails ? " dendrite-fails" : warns ? " dendrite-warns" : "";
   return (
-    <div className="live not-content" style={style}>
+    <div className={`live not-content${edge}`} style={style}>
       <Editor document={document}>
-        <LiveLayout layout={layout ?? "minimal"} editable={editable ?? true} />
+        <LiveLayout layout={layout ?? "minimal"} editable={editable ?? true} stale={!fails} />
       </Editor>
     </div>
   );
 }
 
 // Inside <Editor>, so it can reach the mounted editor - the playground's own Host pattern.
-function LiveLayout({ layout, editable }: { layout: "minimal" | "compact"; editable: boolean }) {
+function LiveLayout({
+  layout,
+  editable,
+  stale,
+}: {
+  layout: "minimal" | "compact";
+  editable: boolean;
+  stale: boolean;
+}) {
   const { editor } = useEditor();
   const open: TopBarAction = {
     icon: "external",
@@ -70,8 +92,8 @@ function LiveLayout({ layout, editable }: { layout: "minimal" | "compact"; edita
   // No theme toggle: Starlight's is the one, and the editor follows it through color-scheme.
   const actions = editable ? [Editor.items.undo, Editor.items.redo, open] : [open];
   return layout === "compact" ? (
-    <Editor.CompactLayout code={{ editable }} actions={actions} />
+    <Editor.CompactLayout code={{ editable }} actions={actions} stale={stale} />
   ) : (
-    <Editor.MinimalLayout code={{ editable }} actions={actions} />
+    <Editor.MinimalLayout code={{ editable }} actions={actions} stale={stale} />
   );
 }

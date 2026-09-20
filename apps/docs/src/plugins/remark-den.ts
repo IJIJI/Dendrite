@@ -1,3 +1,4 @@
+import { diagnostics } from "@dendrite-lang/core";
 import { sourceHtml, sourceParts } from "@dendrite-lang/editor";
 import type { Code, InlineCode, Root } from "mdast";
 import type { Plugin } from "unified";
@@ -45,9 +46,13 @@ const jsxSpans = (code: string): (JsxElement | JsxText)[] =>
       : { type: "text", value: text },
   );
 
-// A `fails` sample wears a warning edge, so a reader does not copy it out as working code.
-const blockClass = (meta: string | null | undefined): string =>
-  `not-content dendrite-minimal-layout${parseDenMeta(meta).fails ? " dendrite-fails" : ""}`;
+// A `fails` sample wears an error edge and a `warns` one a warning edge, so a reader does not
+// copy either out as working code without knowing what it says.
+const blockClass = (meta: string | null | undefined): string => {
+  const { fails, warns } = parseDenMeta(meta);
+  const edge = fails ? " dendrite-fails" : warns ? " dendrite-warns" : "";
+  return `not-content dendrite-minimal-layout${edge}`;
+};
 
 const blockHtml = (code: string, meta: string | null | undefined): string =>
   `<div class="${blockClass(meta)}"><div class="dendrite-code"><pre class="dendrite-source"><code>${sourceHtml(code)}</code></pre></div></div>`;
@@ -75,14 +80,25 @@ export const remarkDen: Plugin<[], Root> = () => (tree, file) => {
   visit(tree, "inlineCode", (node: InlineCode, index, parent) => {
     if (!INLINE.test(node.value) || !parent || index === undefined) return;
     const code = node.value.replace(INLINE, "");
+    // A diagnostic's name reads in its severity's colour - `forward_reference{:den}` is an
+    // error the moment it is on the page - taken from core's registry, so a kind that
+    // changes severity changes colour with it.
+    const severity = (diagnostics as Record<string, { severity: string } | undefined>)[code]
+      ?.severity;
+    const className = severity ? `den den-diag den-diag-${severity}` : "den";
     const replacement = mdx
       ? ({
           type: "mdxJsxTextElement",
           name: "code",
-          attributes: [attr("class", "den")],
-          children: jsxSpans(code),
+          attributes: [attr("class", className)],
+          children: severity ? [{ type: "text", value: code }] : jsxSpans(code),
         } satisfies JsxElement)
-      : { type: "html", value: `<code class="den">${sourceHtml(code)}</code>` };
+      : {
+          type: "html",
+          value: severity
+            ? `<code class="${className}">${code}</code>`
+            : `<code class="den">${sourceHtml(code)}</code>`,
+        };
     parent.children.splice(index, 1, replacement as never);
   });
 };

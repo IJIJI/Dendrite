@@ -1,15 +1,29 @@
 ---
 // The pipeline as a diagram, used by both chain pages: Learn's plain one and How it works'
-// deep one. CSS grid rather than SVG - the row becomes a column on a narrow screen and the
-// arrows turn with it, which SVG would only do by shrinking its text to nothing.
+// deep one. CSS rather than SVG - the row wraps, and becomes a column on a narrow screen with
+// the arrows turning with it, which SVG would only do by shrinking its text to nothing.
 //
 // The cells are the ARTEFACTS and the steps between them are the VERBS, which is the shape
-// the pipeline actually has: each stage takes the thing on its left and produces the thing
-// on its right, and the two notes say what else it needs to do that.
+// the pipeline actually has: each step takes the thing on its left and produces the thing
+// on its right, and its note says what else it needs to do that.
+//
+// `detail="full"` adds the two substeps, drawn nested under their parent step: desugaring
+// happens as the parser reads, and pruning is the analyser's last pass, so neither leaves an
+// artefact of its own. `step` draws one step's piece of the same diagram - what goes in, the
+// verb, what comes out - for the section about that step; a substep's piece is its parent's,
+// with the substep marked.
+interface Props {
+  detail?: "learn" | "full";
+  /** A step or a substep: `lex`, `parse`, `desugar`, `compose`, `analyse`, `prune`, `evaluate`. */
+  step?: string;
+}
+
 interface Step {
   verb: string;
   /** What the verb needs besides the artefact to its left. */
   needs?: string;
+  /** Part of this step, shown on the full diagram only. */
+  substep?: { verb: string; note: string };
 }
 interface Stage {
   artefact: string;
@@ -18,31 +32,52 @@ interface Stage {
 
 const stages: Stage[] = [
   { artefact: "source text", note: "what you wrote" },
+  { artefact: "tokens", note: "words and symbols, no meaning yet" },
   { artefact: "raw program", note: "bindings and outputs, untyped" },
+  { artefact: "raw program + descriptor", note: "and everything it may use" },
   { artefact: "core program", note: "typed, checked, pruned" },
   { artefact: "values", note: "one per output" },
 ];
 const steps: Step[] = [
-  { verb: "parse" },
-  { verb: "analyse", needs: "against the composed descriptor" },
-  { verb: "evaluate", needs: "with the input values" },
+  { verb: "lex", needs: "the language's symbols" },
+  { verb: "parse", substep: { verb: "desugar", note: "symbols into op calls" } },
+  { verb: "compose", needs: "the language and the port layers" },
+  { verb: "analyse", substep: { verb: "prune", note: "what no output reaches" } },
+  { verb: "evaluate", needs: "the input values" },
 ];
+
+const { detail = "learn", step } = Astro.props;
+const at = step ? steps.findIndex((s) => s.verb === step || s.substep?.verb === step) : -1;
+if (step && at < 0) throw new Error(`<Chain step="${step}">: no such step`);
+// The whole chain, or the one piece: the stage before the step, the step, the stage after.
+const shown = step ? { stages: stages.slice(at, at + 2), steps: [steps[at]!] } : { stages, steps };
+const substeps = detail === "full" || step !== undefined;
+// The whole chain is too long for one row, so on a wide screen it breaks after this stage into
+// two rows of three artefacts: the text's half, then the program's.
+const BREAK_AFTER = "raw program";
 ---
 
-<figure class="chain not-content">
+<figure class:list={["chain", "not-content", { piece: step }]}>
   <ol class="flow">
     {
-      stages.map((stage, i) => (
+      shown.stages.map((stage, i) => (
         <>
           <li class="stage">
             <span class="artefact">{stage.artefact}</span>
             <span class="note">{stage.note}</span>
           </li>
-          {steps[i] && (
-            <li class="step" aria-label={`then ${steps[i]!.verb}`}>
-              <span class="verb">{steps[i]!.verb}</span>
+          {!step && stage.artefact === BREAK_AFTER && <li class="break" aria-hidden="true" />}
+          {shown.steps[i] && (
+            <li class="step" aria-label={`then ${shown.steps[i]!.verb}`}>
+              <span class="verb">{shown.steps[i]!.verb}</span>
               <span class="arrow" aria-hidden="true" />
-              {steps[i]!.needs && <span class="needs">{steps[i]!.needs}</span>}
+              {shown.steps[i]!.needs && <span class="needs">{shown.steps[i]!.needs}</span>}
+              {substeps && shown.steps[i]!.substep && (
+                <span class:list={["substep", { current: shown.steps[i]!.substep!.verb === step }]}>
+                  <span class="verb">↳ {shown.steps[i]!.substep!.verb}</span>
+                  <span class="needs">{shown.steps[i]!.substep!.note}</span>
+                </span>
+              )}
             </li>
           )}
         </>
@@ -57,10 +92,9 @@ const steps: Step[] = [
   }
 
   .flow {
-    display: grid;
-    grid-auto-flow: row;
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
-    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -124,18 +158,54 @@ const steps: Step[] = [
   }
 
   .needs {
-    max-width: 18ch;
+    max-width: 13ch;
     font-size: 0.7rem;
     line-height: 1.3;
     text-align: center;
     color: var(--sl-color-gray-3);
   }
 
-  /* Wide enough for one row: the stages sit side by side and the arrows lie flat. */
+  /* A substep sits under its parent's arrow: a step of its own, but inside that one. */
+  .substep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 0.35rem;
+    padding: 0.2rem 0.45rem;
+    border: 1px dashed var(--sl-color-gray-5);
+  }
+
+  .substep.current {
+    border: 1px solid var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+  }
+
+  .break {
+    display: none;
+  }
+
+  /* Wide enough for a row: the stages sit side by side and the arrows lie flat. The whole
+     chain takes two rows, split at `.break`, rather than squeezing eleven cells into one. */
   @media (min-width: 45rem) {
     .flow {
-      grid-auto-flow: column;
-      align-items: center;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: stretch;
+      row-gap: 0.75rem;
+    }
+
+    .stage {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .step {
+      padding-inline: 0.35rem;
+    }
+
+    .break {
+      display: block;
+      flex-basis: 100%;
     }
 
     .arrow {

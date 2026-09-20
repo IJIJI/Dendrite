@@ -21,6 +21,7 @@ export type FullLayoutProps = LayoutConfig<FullSpot>;
 export function FullLayout({
   code,
   declarations = true,
+  stale = true,
   actions = defaultActions,
   actionsAt = "bar-end",
   topBar,
@@ -46,7 +47,7 @@ export function FullLayout({
             </div>
           ) : null}
           <Inputs declarations={declarations} />
-          <Outputs declarations={declarations} />
+          <Outputs declarations={declarations} stale={stale} />
           <Diagnostics />
         </Column>
       </Row>

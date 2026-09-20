@@ -98,11 +98,12 @@ export interface EvaluatorDefinition {
    * input types. Returns undefined to fall back to OpDefinition.output.
    *
    * inputTypes: Record of input name → resolved type of the connected node.
-   *   For variadic inputs, the value is the element type (e.g. boolean, not boolean[]).
+   *   For a variadic input, the type its items share - `boolean` for And(a, b), not
+   *   `boolean[]`; `number[]` for Concat over number lists - or `any` when they disagree, and
+   *   absent when it has no items.
    *   For a function-typed input, the value is the resolved function Type, so an op can
    *   read e.g. `inputTypes.transform.returns` to type its result.
    */
-  // TODO: Should the type of variadic inputs not be used as array?
   inferOutput?: (inputTypes: Record<string, Type>) => Type | undefined;
   /**
    * Analysis-time expected-input-type inference, for inputs whose type is generic in

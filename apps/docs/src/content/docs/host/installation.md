@@ -7,9 +7,9 @@ sidebar:
 
 _Host developers is for embedding the language in an application of your own. If you are writing programs in it, start with [Learn](../../learn/getting-started/)._
 
-:::note[0.1.0]
-The first release. Before 1.0 a minor version may break the API, and the editor and the link
-depend on core `^0.1.0`, so a minor release of core comes with a release of both. Each package's
+:::note[0.2.0]
+Before 1.0 a minor version may break the API, and the editor and the link depend on core
+`^0.2.0`, so a minor release of core comes with a release of both. Each package's
 changes are in its changelog:
 [core](https://github.com/IJIJI/Dendrite/blob/main/packages/core/CHANGELOG.md) - [editor](https://github.com/IJIJI/Dendrite/blob/main/packages/editor/CHANGELOG.md) - [link](https://github.com/IJIJI/Dendrite/blob/main/packages/link/CHANGELOG.md)
 :::
@@ -75,7 +75,7 @@ instance.outputs.get().outputs?.get("alert"); // true
 
 ## What each one is for
 
-**The language** is what programs are allowed to say: the types, the ops, the operators.
+**The language** is what programs are allowed to say: the types, the operators (ops, for short), the symbols.
 `createStdlib()` is the standard library; `createLanguage()` is the bare core grammar with nothing
 in it, for a host that wants to build its own vocabulary from zero. Either one can be extended, and
 [Extending the language](../extending-the-language/) is how.
@@ -104,5 +104,3 @@ drive it. [Embedding core](../embedding-core/) is about living with one.
 | an input | `type`, `default` | the default is what the input holds before anything is pushed |
 | | `trigger` | a discrete event: fired, evaluated, then reset to its default |
 | an output | `mode` | `required`, `desired`, or omitted for optional |
-
-**Next:** [Embedding core](../embedding-core/).

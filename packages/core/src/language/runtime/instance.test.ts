@@ -251,6 +251,16 @@ describe("ProgramInstance - staleness", () => {
     expect(instance.diagnostics.get()).toEqual([]);
   });
 
+  it("seeds the declared defaults even when the program does not compile", () => {
+    // What an input holds is the layers' business: a sample mounted to SHOW a diagnostic still
+    // opens with the values its ports declare, not with its types' seeds.
+    const ports: Ports = { inputs: [{ name: "p", type: Type.number, default: 4 }], outputs: [] };
+    const { instance } = setup({ program: serialiseSource("output out = Nope($p)", ports) });
+
+    expect(instance.diagnostics.get()[0]?.kind).toBe("undeclared_binding_reference");
+    expect(instance.values.get()).toEqual({ p: 4 });
+  });
+
   it("reports an error thrown by the very first evaluation", () => {
     const ports: Ports = { inputs: [{ name: "p", type: Type.number, default: 1 }], outputs: [] };
     const { instance } = setup({ program: serialiseSource("output out = Boom($p)", ports) });

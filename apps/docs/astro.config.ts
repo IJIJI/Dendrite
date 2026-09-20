@@ -36,7 +36,12 @@ export default defineConfig({
       // The editor's stylesheet is global: its .tok-* classes colour every Dendrite snippet
       // on the site (DenCode), and its --dendrite-* tokens follow color-scheme, so the
       // islands and the snippets flip with Starlight's theme.
-      customCss: ["@dendrite-lang/editor/style.css", "./src/styles/dendrite.css"],
+      customCss: [
+        // First, and it matters: it names the cascade layers in order (see the file).
+        "./src/styles/layers.css",
+        "@dendrite-lang/editor/style.css",
+        "./src/styles/dendrite.css",
+      ],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/IJIJI/Dendrite" }],
       // The social links open in a new tab (Starlight's own component, one attribute added).
       components: {

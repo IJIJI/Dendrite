@@ -76,9 +76,12 @@
     --dendrite-syntax-number: light-dark(oklch(0.55 0.13 75), oklch(0.8 0.14 75));
     --dendrite-syntax-string: light-dark(oklch(0.5 0.14 160), oklch(0.8 0.12 160));
     --dendrite-syntax-literal: var(--dendrite-input); /* the same orange, by choice */
+    /* Plain ink, no hue: a type is a kind of value, not a value, so it steps back from every
+       coloured token rather than competing with them. Comments step back one further. */
+    --dendrite-syntax-type: var(--dendrite-muted);
     --dendrite-syntax-operator: light-dark(oklch(0.5 0.15 240), oklch(0.78 0.11 240));
     --dendrite-syntax-punct: var(--dendrite-faint);
-    --dendrite-syntax-comment: var(--dendrite-muted);
+    --dendrite-syntax-comment: var(--dendrite-faint);
   }
 
   :root[data-dendrite-theme="light"] {
@@ -206,8 +209,12 @@
     border-bottom: 0;
   }
 
+  /* The actions keep to the right even when the strip is all they hold: a program with no
+     inputs hides its pane (below), and undo, redo and the host's own buttons should not slide
+     over to the left edge because of it. */
   .dendrite-minimal-strip > .dendrite-actions {
     flex: none;
+    margin-inline-start: auto;
     padding: 6px 8px;
   }
 
@@ -220,6 +227,11 @@
     border: 1px solid var(--dendrite-border);
   }
 
+  /* What the container query above measures: the editor's own width, not the window's. */
+  .dendrite-compact-layout {
+    container-type: inline-size;
+  }
+
   .dendrite-compact-body {
     flex-wrap: wrap;
   }
@@ -227,6 +239,38 @@
   .dendrite-compact-body > .dendrite-code {
     flex: 3 1 28rem;
     max-height: var(--dendrite-compact-max-height, 24rem);
+  }
+
+  /* Side by side, the code sat short beside a taller side - the usual case once Diagnostics
+     has something to say. Two columns in one row are both the height of the row now, and the
+     canvas fills its column: the side carries the same --dendrite-compact-max-height cap the
+     code has, so the row is that tall at most and a long pane scrolls inside it.
+     A container query rather than a viewport one, because an embedded editor's width is its
+     container's: 44rem is exactly where the columns stop fitting (28rem + 16rem of flex
+     basis), so the query and the wrap agree - a wider threshold would leave a band where the
+     columns sit side by side unequal, and the docs' own 45rem content column lands in it.
+     Below it the row wraps, each column is its own line, and the code follows its content. (Full needs none of this: its canvas is not the `flex: none` one Minimal and
+     Compact share, so it already fills its column.) */
+  @container (min-width: 44rem) {
+    /* Both columns carry the same cap, so the row is as tall as the taller content up to it
+       and the shorter column stretches to match - a flex line's cross size with nothing
+       overflowing it. */
+    .dendrite-compact-side {
+      max-height: var(--dendrite-compact-max-height, 24rem);
+    }
+
+    .dendrite-compact-body > .dendrite-code > .dendrite-canvas {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .dendrite-compact-layout .dendrite-compact-body > .dendrite-code .cm-editor {
+      height: 100%;
+    }
+
+    .dendrite-compact-side {
+      overflow: auto;
+    }
   }
 
   .dendrite-compact-side {
@@ -712,14 +756,35 @@
     flex: none;
   }
 
-  .dendrite-outputs-lines .dendrite-output-name::after {
-    content: " =";
+  /* The `=` sits on the VALUE, not after the name, so the declared type can stand between
+     them: `-> total: number = 42`. A row with no value (a static block of declarations, or a
+     declared output the program never assigned) then carries no stray `=`. */
+  .dendrite-outputs-lines .dendrite-output-value::before {
+    content: "= ";
     color: var(--dendrite-muted);
   }
 
-  /* No type or status tags on a line: the value is the point, as in a static block */
-  .dendrite-outputs-lines .dendrite-tag {
+  /* No STATUS tags on a line (stale, undeclared): those belong to a pane with room. The
+     declared type stays - on a line it is what says what the value is supposed to be. */
+  .dendrite-outputs-lines .dendrite-tag:not(.dendrite-input-type) {
     display: none;
+  }
+
+  /* The colon rides on the type, not on the name: a row with no declared type (the ops
+     reference prints one per produced value) then still reads `-> total = 8`. */
+  .dendrite-outputs-lines .dendrite-input-type {
+    background: none;
+    padding-inline: 0;
+    color: var(--dendrite-muted);
+  }
+
+  .dendrite-outputs-lines .dendrite-input-type::before {
+    content: ": ";
+  }
+
+  /* Close the row's own gap, or the colon reads as `result : number`. */
+  .dendrite-outputs-lines .dendrite-input-type {
+    margin-inline-start: -0.5ch;
   }
 
   .dendrite-outputs-lines .dendrite-output-value {
@@ -1021,6 +1086,10 @@
 
   .tok-op {
     color: var(--dendrite-syntax-op);
+  }
+
+  .tok-type {
+    color: var(--dendrite-syntax-type);
   }
 
   .tok-ident {

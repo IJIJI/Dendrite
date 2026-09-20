@@ -13,36 +13,36 @@ purpose. Nothing here is a screenshot.
 
 ## A grade from a score
 
-Operators, a condition, and two outputs that share their working.
+Symbols, a condition, and two outputs that share their working.
 
-<Live
-  client:only="react"
-  layout="compact"
-  source={gradeExample.source}
-  ports={gradeExample.ports}
-/>
+<Live client:only="react" source={gradeExample.source} ports={gradeExample.ports} />
 
 Things worth noticing:
 
-- **`$score >= 60{:den}` is an operator**, and operators are sugar. This one becomes
+- **`>={:den}` in `$score >= 60{:den}` is a symbol**, and symbols are sugar. This one becomes
   `Not(LessThan($score, 60)){:den}`, which is why there is no `GreaterThanOrEqual` op to look
-  up. See [Operators and ops](../writing/operators-and-ops/).
+  up. See [Operators and symbols](../writing/operators-and-symbols/).
 - **`adjusted{:den}` is read twice**, by `topMark{:den}` and by the `finalScore{:den}` output,
   and computed once. A binding is a name for a value, not a macro.
-- **The diagnostics line stays quiet** until you break something. Delete the `60` and it tells
+- **The diagnostics line stays quiet** until you break something. Delete the `60{:den}` and it tells
   you where, before anything runs.
 
 ## A roll-up over three lists
 
 Lists, a lambda, and an input the lambda closes over.
 
-<Live client:only="react" source={heightsExample.source} ports={heightsExample.ports} />
+<Live
+  client:only="react"
+  layout="compact"
+  source={heightsExample.source}
+  ports={heightsExample.ports}
+/>
 
 - **`Concat{:den}`, `Filter{:den}`, `Length{:den}` and `Average{:den}` are ordinary ops.** There
   is no list syntax and no loop; iteration is what these are for.
 - **`height => height >= $threshold{:den}` is a lambda** and a real closure: it captures
   `$threshold{:den}` from around it. Change the threshold and `howManyTall{:den}` moves while
-  `average{:den}` does not, because `average` never reads it.
+  `average{:den}` does not, because `average{:den}` never reads it.
 - **The three lists are separate inputs.** One input holding a record with three fields would
   say the same thing, and will once a layer can declare its own struct types.
 
@@ -51,6 +51,4 @@ Lists, a lambda, and an input the lambda closes over.
 Both programs are in the repository, and both are checked by a test on every build, so they
 cannot drift from the language. Open either in the playground with the corner button, change
 whatever you like, and the URL becomes a link to exactly what you made.
-
-**Next:** [Writing programs](../writing/bindings-and-outputs/), which takes the language a
 piece at a time.

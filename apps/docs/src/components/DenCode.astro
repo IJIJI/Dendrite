@@ -22,6 +22,7 @@ const style = inset ? ({ "--dendrite-code-inset-right": inset } as CSSProperties
 ---
 
 <div class="not-content dendrite-minimal-layout">
+  <slot name="before" />
   <Editor.Source code={code} style={style}>
     <slot />
   </Editor.Source>

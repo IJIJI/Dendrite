@@ -4,9 +4,20 @@
 // written by hand: a kind cannot be added to the language without being documented there,
 // and core's test runs every sample on the page, so this cannot describe something the
 // language no longer does.
-import { diagnosticList, type DiagnosticDoc } from "@dendrite-lang/core";
+import {
+  createEnvironment,
+  createStdlib,
+  defaultValueFor,
+  diagnosticList,
+  type DiagnosticDoc,
+  Policy,
+  deserialise,
+  type SavedProgram,
+} from "@dendrite-lang/core";
+import { DOCUMENT_VERSION, documentUrl, formatValue } from "@dendrite-lang/editor";
 
 import DenCode from "./DenCode.astro";
+import { declarationsOf, hostCodeParts, type Part, partsHtml, type PortLine } from "./diagnostics";
 
 const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] = [
   {
@@ -34,8 +45,137 @@ const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] 
   },
 ];
 
-const source = (entry: (typeof diagnosticList)[number]): string | null =>
+type Entry = (typeof diagnosticList)[number];
+
+// The deployed path in CI (PUBLIC_PLAYGROUND_URL), the playground's dev server otherwise.
+const PLAYGROUND: string = import.meta.env.PUBLIC_PLAYGROUND_URL ?? "http://localhost:5173/";
+
+const env = createEnvironment(createStdlib());
+
+/** What the pipeline actually said about a sample: the line an editor would show. */
+interface Problem {
+  severity: "error" | "warning";
+  kind: string;
+  message: string;
+}
+
+// Every sample run through the pipeline it belongs to, so the page prints the diagnostic core
+// really produces rather than only the registry's description of it - the same guarantee the
+// ops reference gets by running its examples. A `ports` sample fails to compose, a `parse` one
+// fails to parse, and the rest come out of the analyser.
+function problemsOf(example: SavedProgram): Problem[] {
+  const layers = example.ports ? [{ id: "doc", policy: Policy.user, ports: example.ports }] : [];
+  const composed = env.forProgram([], layers);
+  if (!composed.ok) {
+    return composed.problems.map((problem) => ({
+      severity: "error" as const,
+      kind: problem.kind,
+      message: problem.message,
+    }));
+  }
+  // A rete graph cannot be loaded yet (unsupported_form); only an ast sample is analysed here.
+  if (example.form === "rete") return [];
+  if (example.form === "ast") {
+    const analysed = composed.environment.analyse(deserialise(example));
+    return [
+      ...analysed.errors.map((e) => ({
+        severity: "error" as const,
+        kind: e.kind,
+        message: e.message,
+      })),
+      ...analysed.warnings.map((w) => ({
+        severity: "warning" as const,
+        kind: w.kind,
+        message: w.message,
+      })),
+    ];
+  }
+  const parsed = composed.environment.parse(example.source);
+  // Only the failure arm carries errors; warnings ride on both.
+  const parseErrors = parsed.ok ? [] : parsed.errors;
+  const problems: Problem[] = [
+    ...parseErrors.map((e) => ({ severity: "error" as const, kind: e.kind, message: e.message })),
+    ...parsed.warnings.map((w) => ({
+      severity: "warning" as const,
+      kind: w.kind,
+      message: w.message,
+    })),
+  ];
+  if (!parsed.ok) return problems;
+  const analysed = composed.environment.analyse(parsed.program);
+  return [
+    ...problems,
+    ...analysed.errors.map((e) => ({
+      severity: "error" as const,
+      kind: e.kind,
+      message: e.message,
+    })),
+    ...analysed.warnings.map((w) => ({
+      severity: "warning" as const,
+      kind: w.kind,
+      message: w.message,
+    })),
+  ];
+}
+
+// Every sample RUN, the way the ops reference runs its examples: a declared output shows what
+// this program produced for it. Most of these do not compile - that is the point of the page -
+// and a declared output with no value shows a dash, exactly as the editor's pane does.
+function valuesOf(example: SavedProgram): Map<string, unknown> | null {
+  const layers = example.ports ? [{ id: "doc", policy: Policy.user, ports: example.ports }] : [];
+  const composed = env.forProgram([], layers);
+  if (!composed.ok) return null;
+  const loaded = composed.environment.load(example);
+  if (!loaded.ok) return null;
+  // Seeded the way a runtime seeds an instance: a declared input holds its default, or the
+  // zero of its type, so a sample that reads one still runs.
+  const inputs = Object.fromEntries(
+    (example.ports?.inputs ?? []).map((input) => [
+      input.name,
+      defaultValueFor(input, composed.environment.descriptor),
+    ]),
+  );
+  try {
+    return composed.environment.run(loaded.program, inputs);
+  } catch {
+    // An evaluate-stage failure: the program compiled, the run did not finish.
+    return null;
+  }
+}
+
+// Built here rather than in the template: documentUrl is async, and a template cannot await.
+const samples = new Map(
+  await Promise.all(
+    diagnosticList
+      .filter((entry) => entry.example)
+      .map(
+        async (entry) =>
+          [
+            entry.kind,
+            {
+              values: entry.example!.form === "code" ? valuesOf(entry.example!) : null,
+              problems: problemsOf(entry.example!),
+              href:
+                entry.example!.form === "code"
+                  ? await documentUrl(PLAYGROUND, {
+                      version: DOCUMENT_VERSION,
+                      program: entry.example!,
+                      inputValues: {},
+                    })
+                  : undefined,
+            },
+          ] as const,
+      ),
+  ),
+);
+
+const source = (entry: Entry): string | null =>
   entry.example?.form === "code" ? entry.example.source : null;
+
+// A `ports` kind is raised while the declarations compose, before a program is read, so its
+// sample's program is beside the point: those entries show the declarations as text, with no
+// code and no panes to wrap around it.
+const programMatters = (entry: Entry): boolean => entry.stage !== "ports";
 ---
 
 {
@@ -52,13 +192,196 @@ const source = (entry: (typeof diagnosticList)[number]): string | null =>
               <span class={`severity ${entry.severity}`}>{entry.severity}</span>
             </h3>
             <p>{entry.message}</p>
-            {source(entry) ? (
-              <DenCode code={source(entry)!} />
-            ) : (
+            {entry.builtAsGraph ? (
+              <p class="triggered-by">
+                <strong>Not writable as text:</strong> {entry.builtAsGraph}
+              </p>
+            ) : null}
+            {(() => {
+              const declarations = declarationsOf(entry.example?.ports);
+              const program = source(entry);
+              const tokens = (parts: Part[]) =>
+                parts.map((part) =>
+                  part.cls ? <span class={`tok-${part.cls}`}>{part.text}</span> : part.text,
+                );
+              const textRows = (label: string, lines: PortLine[]) => (
+                <dl class="declared-text">
+                  <dt>{label}</dt>
+                  <dd>
+                    {lines.map((line) => (
+                      <div>
+                        {line.name}
+                        <span class="tok-punct">: </span>
+                        {tokens(line.type)}
+                        {line.tags.map((tag) => (
+                          <span class="declared-flag">{tag}</span>
+                        ))}
+                      </div>
+                    ))}
+                  </dd>
+                </dl>
+              );
+
+              // A layer's own types have no pane in the editor, so they sit above the sample
+              // as text, with a gap: they are the vocabulary the rest of it is written in.
+              const types =
+                declarations && declarations.types.length > 0 ? (
+                  <dl class="declared-text">
+                    <dt>declared types</dt>
+                    <dd>
+                      {declarations.types.map((type) => (
+                        <div>{tokens(type)}</div>
+                      ))}
+                    </dd>
+                  </dl>
+                ) : null;
+
+              // Inputs above the code and outputs below it, flush against it the way a
+              // MinimalLayout stacks them - with the declared type on each row, where a live
+              // editor would be showing a value.
+              const inputs =
+                declarations && declarations.inputs.length > 0 ? (
+                  <div class="dendrite-pane dendrite-inputs declared-pane">
+                    {declarations.inputs.map((line) => (
+                      <div class="dendrite-input-row">
+                        <div class="dendrite-input-label">
+                          <span class="dendrite-input-name">{line.name}</span>
+                          <code class="dendrite-tag dendrite-input-type">{tokens(line.type)}</code>
+                          {line.tags.map((tag) => (
+                            <code class="dendrite-tag">{tag}</code>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+
+              const values = samples.get(entry.kind)?.values ?? null;
+              const outputs =
+                declarations && declarations.outputs.length > 0 ? (
+                  <div class="dendrite-pane dendrite-outputs dendrite-outputs-lines declared-pane">
+                    {declarations.outputs.map((line) => (
+                      <div class="dendrite-output-row">
+                        <div class="dendrite-port-head">
+                          <span class="dendrite-output-name">{line.name}</span>
+                          <code class="dendrite-tag dendrite-input-type">{tokens(line.type)}</code>
+                          {line.tags.map((tag) => (
+                            <code class="dendrite-tag">{tag}</code>
+                          ))}
+                        </div>
+                        {/* No value: the declaration exists, this program never assigned
+                            it - which is most of this page. */}
+                        <code class="dendrite-output-value">
+                          {values?.has(line.name) ? (
+                            formatValue(values.get(line.name))
+                          ) : (
+                            <span class="no-value">—</span>
+                          )}
+                        </code>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+
+              if (!programMatters(entry)) {
+                // No program worth showing, so no panes either: the declarations are the sample.
+                return (
+                  <>
+                    <p class="triggered-by">
+                      Raised while these compose, whatever the program says.
+                    </p>
+                    {types}
+                    {declarations && declarations.inputs.length > 0
+                      ? textRows("declared inputs", declarations.inputs)
+                      : null}
+                    {declarations && declarations.outputs.length > 0
+                      ? textRows("declared outputs", declarations.outputs)
+                      : null}
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  {types}
+                  {/* A graph sample: the shape in Dendrite terms first, marked as the
+                      invalid program it is, then the host code that really builds it. */}
+                  {entry.asIfText ? (
+                    <DenCode code={entry.asIfText}>
+                      <Fragment slot="before">
+                        <span class="declared-label as-if">if the syntax allowed it</span>
+                      </Fragment>
+                      <Fragment slot="after">{outputs}</Fragment>
+                    </DenCode>
+                  ) : null}
+                  {entry.example?.form === "ast" ? (
+                    <div class="not-content dendrite-minimal-layout">
+                      <span class="declared-label">as a host builds it</span>
+                      <div class="dendrite-code">
+                        <pre
+                          class="dendrite-source"
+                          set:html={partsHtml(hostCodeParts(entry.example))}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  {program ? (
+                    <DenCode code={program} inset="52px">
+                      {/* The corner cluster, static: one link, as the ops reference has. */}
+                      <div class="dendrite-actions">
+                        <a
+                          class="dendrite-icon-button"
+                          href={samples.get(entry.kind)?.href}
+                          target="_blank"
+                          rel="noopener"
+                          title="Open in playground"
+                          aria-label="Open in playground"
+                        >
+                          <svg
+                            class="dendrite-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.75"
+                            stroke-linecap="square"
+                            stroke-linejoin="miter"
+                            aria-hidden="true"
+                          >
+                            <path d="M7 7h10v10" />
+                            <path d="M7 17 17 7" />
+                          </svg>
+                        </a>
+                      </div>
+                      <Fragment slot="before">{inputs}</Fragment>
+                      <Fragment slot="after">{outputs}</Fragment>
+                    </DenCode>
+                  ) : null}
+                  {declarations?.empty ? (
+                    <p class="triggered-by">Its layer declares no inputs and no outputs.</p>
+                  ) : null}
+                </>
+              );
+            })()}
+            {/* What the pipeline said, in the Diagnostics pane's own rows: the message a
+                reader would actually meet, not this page's description of it. */}
+            {(samples.get(entry.kind)?.problems ?? []).length > 0 ? (
+              <ul class="not-content dendrite-diag-list sample-problems">
+                {samples.get(entry.kind)!.problems.map((problem) => (
+                  <li class={`dendrite-diag dendrite-diag-${problem.severity}`}>
+                    <span class={`dendrite-tag dendrite-tag-${problem.severity}`}>
+                      {problem.severity}
+                    </span>
+                    <span class="dendrite-diag-kind">{problem.kind}</span>
+                    <span class="dendrite-diag-message">{problem.message}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {!entry.example ? (
               <p class="triggered-by">
                 <strong>What triggers it:</strong> {entry.triggeredBy}
               </p>
-            )}
+            ) : null}
           </div>
         ))}
       </section>
@@ -67,8 +390,25 @@ const source = (entry: (typeof diagnosticList)[number]): string | null =>
 }
 
 <style>
+  /* An entry's parts belong to each other - the code, its panes, its diagnostics - so the
+     space between two ENTRIES has to be clearly larger than the space inside one. */
   .diagnostic {
-    margin-block: 1.5rem;
+    margin-block: 2.75rem;
+  }
+
+  .diagnostic + .diagnostic {
+    border-top: 1px solid var(--sl-color-gray-5);
+    padding-block-start: 2.25rem;
+  }
+
+  .diagnostic > p {
+    margin-block: 0.4rem;
+  }
+
+  /* The editor's own blocks bring 1.5rem of prose margin with them; inside an entry they sit
+     against the thing they belong to. */
+  .diagnostic :global(.not-content.dendrite-minimal-layout) {
+    margin-block: 0.45rem;
   }
 
   .diagnostic h3 {
@@ -107,4 +447,64 @@ const source = (entry: (typeof diagnosticList)[number]): string | null =>
     font-size: 0.95rem;
     color: var(--sl-color-gray-3);
   }
+
+  /* Declarations as text: for a `ports` kind, which has no program to wrap panes around,
+     and for a layer's own types, which no pane in the editor shows. */
+  .declared-text {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.1rem 0.9rem;
+    margin-block: 0.5rem;
+    font-family: var(--sl-font-mono);
+    font-size: 0.82rem;
+  }
+
+  .declared-text dt {
+    color: var(--sl-color-gray-3);
+  }
+
+  .declared-text dd {
+    margin: 0;
+  }
+
+  .declared-flag {
+    margin-inline-start: 0.5rem;
+    color: var(--sl-color-gray-3);
+  }
+
+  /* A declared output this program never assigned: the editor's own em dash, muted. */
+  .no-value {
+    color: var(--sl-color-gray-3);
+  }
+
+  /* What the pipeline said, as a pane would list it. */
+  .sample-problems {
+    margin-block: 0.4rem 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The label on the block that is a graph, or the Dendrite it would be. */
+  .declared-label {
+    display: block;
+    padding: 0.35rem 0.7rem 0.1rem;
+    color: var(--sl-color-gray-3);
+    font-family: var(--sl-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* The Dendrite a graph sample would be if the syntax allowed it: the warning edge a
+     ```den fails fence wears, because it is not a program anyone can run. */
+  .diagnostic :global(.dendrite-minimal-layout:has(.as-if)) {
+    border-color: var(--sl-color-orange, #d97706);
+    border-left-width: 2px;
+  }
+
+  .as-if {
+    color: var(--sl-color-orange-high, #f0b77c);
+  }
+
+  /* A declared output with no value: the line's `=` lives on the value, so a row without
+     one ends at its type. */
 </style>

@@ -3,7 +3,7 @@
 Settled 2026-09-04. The canonical plan for growing the playground's framework-free modules into
 `@dendrite-lang/editor` and shipping ONE editor component to every host: the playground, the docs
 embed, and Beacon. Supersedes the "Editor era", "React switch", "user-settable inputs/outputs" and
-"playground lint" entries in `todo.md` (they point here).
+"playground lint" entries in `backlog.md` (they point here).
 
 ---
 
@@ -123,7 +123,7 @@ interface EditorHandle {
 }
 ```
 
-Still to come (`todo.md`): mounting a runtime the editor does not own, and an explicit save
+Still to come (`backlog.md`): mounting a runtime the editor does not own, and an explicit save
 with a dirty flag, which is what a host editor needs instead of the playground's autosave.
 
 - **Presets** `PRESETS.playground` / `docs` / `host` — plain objects a host spreads (Strategy as data).
@@ -213,7 +213,7 @@ playground).
 - **One hook, `usePortEdits`,** holds the verbs both panes need. A row's problems come from TWO
   sources merged: what `setLayer` REFUSED (nothing moved, so it reaches no observable) and the
   `ports` diagnostics a change caused further down. When `setLayer` reports refusals as diagnostics
-  instead — which it must, to cross a wire (`todo.md`) — the local half just goes empty.
+  instead — which it must, to cross a wire (`backlog.md`) — the local half just goes empty.
 - **`typeOptions` degrades to the primitives** when composition failed, and a row's picker always
   contains its own type, so a declaration naming a type the language lost can still be retyped
   rather than only deleted.
@@ -232,7 +232,7 @@ playground).
   while wiring this, fixed first.
 
 **Not exposed, for want of a consumer:** output `mode`, input `trigger` / `default`, and declaring
-TYPES in a layer. That last one is why the struct-input widget stayed in `todo.md`: the picker
+TYPES in a layer. That last one is why the struct-input widget stayed in `backlog.md`: the picker
 offers registered types only, so a user cannot yet declare a struct to need a widget for.
 
 ### Between 3 and 4 — the editor connects, it does not own (landed 2026-09-08)
@@ -241,7 +241,7 @@ Not a phase of this plan but its precondition for every host that is not the pla
 `createEditor` takes a `Connection` (`ownStack` / `joinRuntime` / `attach`) and releases only
 what the connection made; `@dendrite-lang/link` serves a `ProgramInstance` over a `Channel` the
 host implements and connects a replica the editor cannot tell from a local one. Design record:
-`editor-core-plan.md`; result: `architecture.md` "Linking"; what is still open: `todo.md`, "The
+`editor-core-plan.md`; result: `architecture.md` "Linking"; what is still open: `backlog.md`, "The
 editor as a control surface". Walked through in the playground over a `MessageChannel` and over
 a real WebSocket against `packages/link/examples/serve-ws.ts` with a throwaway host patch (not
 committed): a host-pushed global moves the pane, a pane edit reaches the served instance, a
@@ -263,13 +263,13 @@ generated from the descriptor · docs index inherits the hash-forward redirect f
 **Landed 2026-09-09, differently** (`docs-plan.md`): the framework is Astro + Starlight, not
 Docusaurus - Vite reuse, React islands for the editor, zero-JS prose; there is no iframe mode,
 the docs import the editor directly; the ops reference is generated and RUN; nothing forwards
-old root share links (the playground sat at the root for days, not months). What this phase called `PRESETS.docs` is now `todo.md`, "the example
+old root share links (the playground sat at the root for days, not months). What this phase called `PRESETS.docs` is now `backlog.md`, "the example
 layout": read-only code, settable inputs, live outputs, open in playground - a layout the
 editor ships.
 
 ---
 
-## Backlog after this plan (see `todo.md`)
+## Backlog after this plan (see `backlog.md`)
 
 Language service (spans → error nodes → completions → signature help → hover → def/rename) ·
 Rete mode · multi-document (+ `id`/`meta` on the envelope, optional, no bump) · history (Memento —

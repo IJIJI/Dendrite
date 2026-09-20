@@ -7,13 +7,14 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.1.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.2.0`: a minor release of core needs a release here too, even if nothing in this package changed.
 
-## Unreleased
+## 0.2.0
 
 - **`require()` works.** The entry gained a `default` export condition beside `import`, so
   `require("@dendrite-lang/link")` resolves. The package is still ESM, so this needs a Node that
   can `require()` an ES module (22.12 or later, or 20.19 or later).
+- **The npm page** carries the Dendrite wordmark, and version, docs and licence badges.
 
 ## 0.1.0
 

@@ -1,6 +1,6 @@
 ---
-title: "Operators and ops"
-description: "Arithmetic, comparison, logic - as operators, and as the ops beneath them."
+title: "Operators and symbols"
+description: "Arithmetic, comparison, logic: as symbols, and as the operators beneath them."
 sidebar:
   order: 3
 ---
@@ -8,9 +8,9 @@ sidebar:
 import { orderExample } from "../../../../examples";
 import Live from "../../../../components/Live";
 
-Everything that computes in Dendrite is an **op**: a named function with named inputs, supplied
-by the standard library or by the application you are embedded in. Operators are a second way to
-spell the common ones.
+Everything that computes in Dendrite is an **operator** (an **op**, for short): a named function
+with named inputs, supplied by the standard library or by the application you are embedded in.
+**Symbols** are a second way to spell the common ones.
 
 ```den
 output sum  = 2 + 3
@@ -28,34 +28,35 @@ looking for an op that should exist.
 
 `>={:den}` is the clearest case. It has no op of its own:
 
-```den
+```den inputs="n:number"
 output a = $n >= 60
 output b = Not(LessThan($n, 60))
 ```
 
 Again, one program. If you go hunting for `GreaterThanOrEqual` in the
-[standard library](../../../stdlib/) you will not find it, and now you know why. An operator can
+[standard library](../../../stdlib/) you will not find it, and now you know why. A symbol can
 desugar into a whole little tree, not just a single call.
 
-The practical upshot: **reach for the operator when it reads better, the op when it reads
+The practical upshot: **reach for the symbol when it reads better, the op when it reads
 clearer.** `Add(price, tax, shipping){:den}` says "sum these three" better than a chain of
 pluses, because `Add{:den}` is variadic and takes as many as you give it.
 
-## The operators, tightest binding last
+## The symbols, tightest binding last
 
-| Operators | Meaning | The op beneath |
+| Symbols | Meaning | The op beneath |
 | --- | --- | --- |
-| `\|\|` | or, variadic | `Or` |
-| `&&` | and, variadic | `And` |
-| `==` `!=` | equality | `Equals`, `NotEquals` |
-| `<` `>` | comparison | `LessThan`, `GreaterThan` |
-| `<=` `>=` | comparison | `Not(GreaterThan(…))`, `Not(LessThan(…))` |
-| `+` `-` | addition | `Add` (variadic), `Subtract` |
-| `*` `/` | multiplication | `Multiply` (variadic), `Divide` |
-| `!` | not, prefix | `Not` |
+| `\|\|{:den}` | or, variadic | `Or{:den}` |
+| `&&{:den}` | and, variadic | `And{:den}` |
+| `=={:den}` `!={:den}` | equality | `Equals{:den}`, `NotEquals{:den}` |
+| `<{:den}` `>{:den}` | comparison | `LessThan{:den}`, `GreaterThan{:den}` |
+| `<={:den}` `>={:den}` | comparison | `Not(GreaterThan(…)){:den}`, `Not(LessThan(…)){:den}` |
+| `+{:den}` `-{:den}` | addition | `Add{:den}` (variadic), `Subtract{:den}` |
+| `*{:den}` `/{:den}` | multiplication | `Multiply{:den}` (variadic), `Divide{:den}` |
+| `!{:den}` | not, prefix | `Not{:den}` |
+| `-{:den}` | negate, prefix | `Negate{:den}` |
 
 Multiplication binds tighter than addition, addition tighter than comparison, comparison tighter
-than `&&{:den}`, and `&&` tighter than `||{:den}` - the ordering you already expect. Brackets
+than `&&{:den}`, and `&&{:den}` tighter than `||{:den}`: the ordering you already expect. Brackets
 override it:
 
 ```den
@@ -70,14 +71,14 @@ output bracketed = (2 + 3) * 4
 <Live client:only="react" source={orderExample.source} ports={orderExample.ports} />
 
 `$quantity >= 3{:den}` appears twice here, once inside `If{:den}` and once as an output, and it
-is one comparison written two ways round. Edit the program: swap an operator for its op, add a
+is one comparison written two ways round. Edit the program: swap a symbol for its op, add a
 bracket, see the outputs agree.
 
 ## Calling an op
 
 An op's inputs have names, and you may pass them positionally or by name:
 
-```den
+```den inputs="ready:boolean"
 output positional = If($ready, "go", "wait")
 output named      = If(condition: $ready, then: "go", else: "wait")
 ```
@@ -89,7 +90,5 @@ cannot be out of date.
 
 Two mistakes worth knowing by name. Pass an input an op does not have and you get
 `unknown_op_input_key{:den}`, a warning: the value is ignored. Leave out one it needs and you
-get `missing_op_input{:den}`, also a warning, with a default filled in for you - which is why a
+get `missing_op_input{:den}`, also a warning, with a default filled in for you, which is why a
 half-written program keeps running while you write the rest of it.
-
-**Next:** [Lambdas and lists](../lambdas-and-lists/), where ops start taking functions.

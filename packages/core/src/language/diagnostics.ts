@@ -2,7 +2,14 @@ import { type AnalysisErrorKind, type AnalysisWarningKind } from "./analyser/typ
 import { type PortProblem } from "./compose";
 import { type LoadError } from "./environment";
 import { type EvalErrorKind } from "./evaluator/types";
-import { den, type SavedProgram } from "./infra/serialise";
+import { type Ports } from "./infra/ports";
+import {
+  den,
+  type SavedAstProgram,
+  SAVED_PROGRAM_VERSION,
+  type SavedProgram,
+} from "./infra/serialise";
+import { operationNode } from "./infra/nodes";
 import { Type } from "./infra/types";
 import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
 
@@ -26,17 +33,39 @@ export interface DiagnosticDoc {
   severity: "error" | "warning";
   /** What it means, in the terms of whoever has to fix it. One sentence. */
   message: string;
-  /** A program that provokes it. Carries its own `ports` when the declaration is the point. */
+  /** A program that provokes it. Carries its own `ports`: every sample declares what it uses. */
   example?: SavedProgram;
-  /** Input values, for an `evaluate` kind that only fires once the program runs. */
-  inputs?: Record<string, unknown>;
   /** For a kind no program can provoke: what does. */
   triggeredBy?: string;
+  /** For a sample in `ast` form: why no text can express it. */
+  builtAsGraph?: string;
+  /**
+   * For a sample in `ast` form: the Dendrite it would be if the syntax allowed it. NOT a
+   * valid program - it is here so a reader who thinks in Dendrite can see the shape before
+   * reading the host code that really builds it.
+   */
+  asIfText?: string;
 }
 
 const withPorts = (program: SavedProgram, ports: SavedProgram["ports"]): SavedProgram => ({
   ...program,
   ports,
+});
+
+/**
+ * A sample built as a graph rather than written as text. Two kinds need it: the code syntax
+ * cannot name an op that does not exist, and it cannot write a lambda's return annotation, so
+ * only a stored `ast` program carries either. The docs print these as the host code that
+ * builds them.
+ */
+const ast = (
+  program: Pick<SavedAstProgram, "bindings" | "outputs">,
+  ports?: Ports,
+): SavedAstProgram => ({
+  version: SAVED_PROGRAM_VERSION,
+  form: "ast",
+  ...program,
+  ...(ports ? { ports } : {}),
 });
 
 /** Every kind, keyed by the string that appears on the diagnostic. */
@@ -59,7 +88,7 @@ export const diagnostics = {
     severity: "error",
     message: "The stored blob is not a program: its shape, or its ports, did not survive.",
     triggeredBy:
-      "Loading hand-edited or truncated JSON - an `ast` form with a node kind that does not exist, or a `ports` key that is not ports.",
+      "Loading hand-edited or truncated JSON: an `ast` form with a node kind that does not exist, or a `ports` key that is not ports.",
   },
 
   // ── parse: the text ──────────────────────────────────────────────────────────
@@ -202,7 +231,7 @@ export const diagnostics = {
   orphan_evaluator: {
     stage: "ports",
     severity: "error",
-    message: "An evaluator was registered for an op that does not exist - usually a typo.",
+    message: "An evaluator was registered for an op that does not exist, usually a typo.",
     triggeredBy:
       "A `registerEvaluator` whose `op` name matches nothing. Like a missing evaluator, this throws when the language composes.",
   },
@@ -212,46 +241,66 @@ export const diagnostics = {
     stage: "analyse",
     severity: "error",
     message: "A call names an op the language does not have.",
-    triggeredBy:
-      "Not code you can write: `Nope(1)` in source is a call on an unknown NAME, which is an undeclared_binding_reference. This one needs an op node that was built without the parser - a stored `ast` program, or a host operator that desugars to an op nobody registered.",
+    builtAsGraph:
+      "As text, `Nope(1)` is a call on an unknown NAME (an undeclared_binding_reference), because only a node built without the parser names an op. This one needs a stored `ast` program, or a host operator that desugars to an op nobody registered.",
+    asIfText: "output x = Nope(1)",
+    example: ast(
+      {
+        bindings: {},
+        outputs: { x: operationNode("Nope", { a: { kind: "literal", value: 1 } }) },
+      },
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   unknown_program_input: {
     stage: "analyse",
     severity: "error",
     message: "The program reads a `$name` that nothing declared.",
-    example: den`
+    example: withPorts(
+      den`
       output x = $nope
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   binding_cycle: {
     stage: "analyse",
     severity: "error",
     message:
       "Bindings depend on each other in a loop, so none of them has a value. This is also why a name cannot refer to itself, and why every program finishes.",
-    example: den`
+    example: withPorts(
+      den`
       let a = b
       let b = a
       output x = a
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   undeclared_binding_reference: {
     stage: "analyse",
     severity: "error",
     message: "A name that is not a binding, an input, or a lambda parameter.",
-    example: den`
+    example: withPorts(
+      den`
       output x = nope
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   forward_reference: {
     stage: "analyse",
     severity: "error",
     message:
       "In code, a name is used above the line that declares it. A rule about the text, not the language: the same program built as a graph carries no such rule.",
-    example: den`
+    example: withPorts(
+      den`
       let early = late
       let late  = 1
       output x  = early
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   unknown_field: {
     stage: "analyse",
@@ -267,9 +316,12 @@ export const diagnostics = {
     stage: "analyse",
     severity: "error",
     message: "An op input was handed a value of a type it does not accept.",
-    example: den`
+    example: withPorts(
+      den`
       output x = And(true, "Country")
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   program_output_type_mismatch: {
     stage: "analyse",
@@ -297,35 +349,66 @@ export const diagnostics = {
     stage: "analyse",
     severity: "error",
     message: "A lambda's body does not produce what its return annotation promised.",
-    triggeredBy:
-      "A return annotation, which the code syntax has no way to write - only a stored `ast` program carries one. Hand a lambda to an op that wanted a different shape and you get an op_input_type_mismatch on the op's input instead.",
+    builtAsGraph:
+      "The syntax annotates a parameter but not a return, so only a stored `ast` program carries one. Written as text, handing a lambda to an op that wanted another shape is an op_input_type_mismatch on that op's input instead.",
+    asIfText: "let f = (n: number): string => n\noutput x = f(1)",
+    example: ast(
+      {
+        bindings: {
+          f: {
+            kind: "lambda",
+            params: [{ name: "n", type: Type.number }],
+            returnType: Type.string,
+            body: { kind: "ref", name: "n" },
+          },
+        },
+        outputs: {
+          x: {
+            kind: "app",
+            callee: { kind: "ref", name: "f" },
+            positional: [{ kind: "literal", value: 1 }],
+            named: {},
+          },
+        },
+      },
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   app_callee_not_function: {
     stage: "analyse",
     severity: "error",
     message: "Something that is not a function was called.",
-    example: den`
+    example: withPorts(
+      den`
       let n = 1
       output x = n(1)
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   app_argument_mismatch: {
     stage: "analyse",
     severity: "error",
     message: "The arguments do not line up with the function's parameters.",
-    example: den`
+    example: withPorts(
+      den`
       let f = x => x
       output y = f(1, 2)
     `,
+      { inputs: [], outputs: [{ name: "y", type: Type.any }] },
+    ),
   },
   app_argument_type_mismatch: {
     stage: "analyse",
     severity: "error",
     message: "An argument's type does not fit the parameter it resolved to.",
-    example: den`
+    example: withPorts(
+      den`
       let f = (x: number) => x
       output y = f("text")
     `,
+      { inputs: [], outputs: [{ name: "y", type: Type.any }] },
+    ),
   },
   missing_required_program_output: {
     stage: "analyse",
@@ -344,18 +427,24 @@ export const diagnostics = {
     stage: "analyse",
     severity: "warning",
     message: "The program declares an output nobody asked for. It is dropped.",
-    example: den`
+    example: withPorts(
+      den`
       output nobodyWants = 1
     `,
+      { inputs: [], outputs: [] },
+    ),
   },
   unused_binding: {
     stage: "analyse",
     severity: "warning",
     message: "A binding no output can reach. It is dropped from the program that runs.",
-    example: den`
+    example: withPorts(
+      den`
       let spare = 1
       output x = 2
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   missing_desired_program_output: {
     stage: "analyse",
@@ -382,18 +471,24 @@ export const diagnostics = {
     stage: "analyse",
     severity: "warning",
     message: "An argument named for an input the op does not have. It is ignored.",
-    example: den`
+    example: withPorts(
+      den`
       output x = If(condition: true, then: 1, else: 2, nope: 3)
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   missing_op_input: {
     stage: "analyse",
     severity: "warning",
     message:
       "An op input was left out; the type's default stands in. This is why a half-written program keeps running.",
-    example: den`
+    example: withPorts(
+      den`
       output x = If(true, 1)
     `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
   },
   implicit_any_cast: {
     stage: "analyse",
@@ -422,14 +517,14 @@ export const diagnostics = {
     severity: "error",
     message: "A field was read from a value that does not have it.",
     triggeredBy:
-      "A host pushing a value that does not match the struct type its input was declared with - nothing validates a pushed value against its type yet.",
+      "A host pushing a value that does not match the struct type its input was declared with. Nothing validates a pushed value against its type yet.",
   },
   host_error: {
     stage: "evaluate",
     severity: "error",
     message: "An op's own evaluator threw.",
     triggeredBy:
-      "Any `registerEvaluator` function that raises - a host op reaching for something that is not there. The op's name and the original message come with it.",
+      "Any `registerEvaluator` function that raises: a host op reaching for something that is not there. The op's name and the original message come with it.",
   },
   evaluator_not_found: {
     stage: "evaluate",

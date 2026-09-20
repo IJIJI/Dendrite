@@ -1,0 +1,4 @@
+// Fails: `summary` is read on the line above the one that declares it.
+output report = summary
+let summary   = Length(items)
+let items     = [4, 8, 15]

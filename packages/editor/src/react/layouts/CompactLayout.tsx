@@ -22,6 +22,7 @@ export type CompactLayoutProps = LayoutConfig<CompactSpot>;
 export function CompactLayout({
   code,
   declarations = true,
+  stale = true,
   actions = defaultActions,
   actionsAt = "side",
   topBar,
@@ -41,7 +42,7 @@ export function CompactLayout({
             </div>
           ) : null}
           <Inputs declarations={declarations} />
-          <Outputs declarations={declarations} />
+          <Outputs declarations={declarations} stale={stale} />
         </Column>
       </Row>
       <Diagnostics collapsible />

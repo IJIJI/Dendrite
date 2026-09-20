@@ -1,0 +1,4 @@
+// Warns: no output reads `unused`, so the analyser drops it.
+let used   = 1 + 1
+let unused = 99
+output answer = used

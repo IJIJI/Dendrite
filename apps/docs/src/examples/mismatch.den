@@ -1,0 +1,2 @@
+// Fails: "10" is a string, and Add wants numbers.
+output total = Add($score, "10")

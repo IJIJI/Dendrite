@@ -72,7 +72,11 @@ export interface AnalysisContext {
   localBindings: ReadonlyMap<string, Type>; // local scope: lambda params / scoped vars → type; empty at top level
   declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
   bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)
-  currentBindingIndex: number | undefined; // index of binding being analysed; undefined when analysing outputs
+  /**
+   * The place in the text of the statement being analysed - a binding or an output, in one
+   * numbering - for the lexical-order check. Undefined when order is not enforced.
+   */
+  currentDeclarationIndex: number | undefined;
   enforceCodeOrder: boolean; // true for code editor, false for rete/mixed
   errors: AnalysisError[];
   warnings: AnalysisWarning[];

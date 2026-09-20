@@ -1011,6 +1011,54 @@ describe("pruning", () => {
 
 // ─── Forward reference (declaration-index based) ──────────────────────────────
 
+describe("variadic inputs reach inferOutput", () => {
+  it("Concat over number lists is a number list, so a lambda over it is typed", () => {
+    const lang = testLang();
+    lang.registerInput({ name: "a", type: Type.array(Type.number) });
+    lang.registerInput({ name: "b", type: Type.array(Type.number) });
+    lang.registerOutput({ name: "n", type: Type.number });
+    const env = createEnvironment(lang.language);
+    const composed = env.forProgram(
+      [],
+      [
+        {
+          id: "doc",
+          policy: { editable: true, feeds: "user", persisted: true },
+          ports: {
+            inputs: [
+              { name: "a", type: Type.array(Type.number) },
+              { name: "b", type: Type.array(Type.number) },
+            ],
+            outputs: [{ name: "n", type: Type.number }],
+          },
+        },
+      ],
+    );
+    if (!composed.ok) throw new Error("ports do not compose");
+    const parsed = composed.environment.parse(
+      "let all = Concat($a, $b)\nlet tall = Filter(all, height => height >= 10)\noutput n = Length(tall)",
+    );
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = composed.environment.analyse(parsed.program);
+
+    expect(result.errors).toEqual([]);
+    // The warning the docs' roll-up example used to carry.
+    expect(result.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    expect(typeToString(getOutputType(result.program.bindings.get("all")!))).toBe("number[]");
+  });
+
+  it("lists that disagree stay any[]", () => {
+    const lang = testLang();
+    const env = createEnvironment(lang.language);
+    const composed = env.forProgram([], []);
+    if (!composed.ok) throw new Error("does not compose");
+    const parsed = composed.environment.parse('let mixed = Concat([1], ["a"])\noutput x = mixed');
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = composed.environment.analyse(parsed.program);
+    expect(typeToString(getOutputType(result.program.bindings.get("mixed")!))).toBe("any[]");
+  });
+});
+
 describe("forward_reference", () => {
   it("earlier-declared binding refs later-declared → forward_reference", () => {
     const lang = testLang();
@@ -1031,6 +1079,33 @@ describe("forward_reference", () => {
     // Error source points at the reference site (inside b's node)
     const fwdErr = result.errors.find((e) => e.kind === "forward_reference")!;
     expect(fwdErr.source?.kind).toBe("code");
+  });
+
+  it("an output written above the binding it reads → forward_reference, as for a binding", () => {
+    const lang = testLang();
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
+    const at = (line: number) => ({ kind: "code" as const, line, column: 16, length: 1 });
+    const prog: RawProgram = {
+      bindings: new Map([["doubled", { kind: "literal", value: 42, source: at(2) }]]),
+      // output out = doubled   (line 1)
+      // let doubled = 42       (line 2)
+      outputs: new Map([["out", { kind: "ref", name: "doubled", source: at(1) }]]),
+    };
+    const result = analyse(prog, lang.descriptor);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ kind: "forward_reference", name: "doubled" }),
+    );
+  });
+
+  it("an output written below the binding it reads → no forward_reference", () => {
+    const lang = testLang();
+    lang.registerOutput({ name: "out", type: Type.number, mode: "required" });
+    const at = (line: number) => ({ kind: "code" as const, line, column: 16, length: 1 });
+    const prog: RawProgram = {
+      bindings: new Map([["doubled", { kind: "literal", value: 42, source: at(1) }]]),
+      outputs: new Map([["out", { kind: "ref", name: "doubled", source: at(2) }]]),
+    };
+    expect(analyse(prog, lang.descriptor).errors).toHaveLength(0);
   });
 
   it("later-declared binding refs earlier-declared → no forward_reference", () => {

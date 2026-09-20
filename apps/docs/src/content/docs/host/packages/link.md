@@ -6,8 +6,8 @@ sidebar:
 ---
 
 The link drives a program across a channel. The host **serves** an instance. Somewhere else, an
-editor **connects** a replica that *is* a `ProgramInstance` - the same five observables and four
-commands - and cannot be told from the local thing.
+editor **connects** a replica that *is* a `ProgramInstance` (the same five observables and four
+commands) and cannot be told from the local thing.
 
 The split of responsibility is the whole design: **Dendrite owns the message shapes and both ends.
 You own the pipe.**
@@ -34,7 +34,7 @@ const replica = await connectInstance(language, webSocketChannel(new WebSocket(u
 ```
 
 Both ends import **the same language**. That is not a formality: a composed descriptor holds
-functions - evaluators, `inferOutput` - and functions do not travel. So the server sends the layers,
+functions (evaluators, `inferOutput`), and functions do not travel. So the server sends the layers,
 and the replica composes them with its own copy of the language. The handshake carries a fingerprint
 of the vocabulary, and two builds that disagree are refused with the difference named, rather than
 being silently wrong.
@@ -62,7 +62,7 @@ All of it lives in the replica, so a host does nothing to get it.
 - **A dropped connection goes stale.** Outputs flip to `stale: true` the moment the channel closes,
   which is exactly what the flag already means. On reconnect the replica says `hello` again and gets
   fresh state. Nothing is replayed.
-- **Refusals happen locally.** What a local instance would refuse - an undeclared input, say - the
+- **Refusals happen locally.** What a local instance would refuse (an undeclared input, say), the
   replica refuses too, and sends nothing.
 
 A replica also has a `status`: `connected`, `disconnected`, or `rejected`, the last meaning a
@@ -100,14 +100,14 @@ interface Channel<Out, In> {
 
 Two come built in:
 
-- **`webSocketChannel(socket)`** - the browser's WebSocket, node's, or `ws`, on either side. JSON
+- **`webSocketChannel(socket)`**: the browser's WebSocket, node's, or `ws`, on either side. JSON
   frames, `status` from open and close. A send while the socket is not open is **dropped, never
   queued**: an edit fired thirty seconds late into a running system is worse than one that never
   went.
-- **`messagePortChannel(port)`** - a Worker, an iframe, or a `MessageChannel` within one page.
+- **`messagePortChannel(port)`**: a Worker, an iframe, or a `MessageChannel` within one page.
   Structured clone, always connected.
 
-Anything else - server-sent events with a POST back, Electron IPC, a request and response stream -
+Anything else (server-sent events with a POST back, Electron IPC, a request and response stream)
 is about ten lines of the same shape. A raw WebSocket does not reconnect by itself: wrap a
 reconnecting client in a `Channel` whose `status` flips, and the replica re-handshakes on its own.
 
