@@ -5,6 +5,25 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.2.0 on npm — DONE 2026-09-20
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.2.0**, five days
+after the first release. A minor because three things changed rather than added: an output above
+the binding it reads is a `forward_reference`, `Negate` is new API, and `TokenClass` gained
+`"type"`. The runbook in `release-plan.md` held exactly as written, so it taught nothing new:
+bumps on `dev`, PR #15 into `main`, three tags on the merge commit, one GitHub release on core's
+tag, `Stage release` green in 57s, and the three staged versions approved with 2FA, core first.
+
+Checked after approval: `latest` on each package, an attestation on all three, the published peer
+ranges at `^0.2.0`, and a clean install outside the repo where `require()` reaches all three and
+`output out = 1 - -14` evaluates to 15.
+
+One thing worth keeping: **a README image must be on `main` before anyone reads it.** The npm
+wordmark pointed at `raw.githubusercontent.com/.../main/...` while the file existed only on `dev`,
+so the three 0.1.0 npm pages showed a broken image until this release's PR merged.
+
+---
+
 ## Bug — a program that does not compile ignored its input defaults — FIXED 2026-09-20
 
 An instance seeded its input values only after a successful compile (`recompile` in

@@ -213,6 +213,18 @@ Kept because none of it is obvious from the plan.
 - **Commands for the user are PowerShell.** A bash `~` in a walkthrough made Yarn write the
   tarballs into `packages/*/~/`.
 
+## What the second release taught
+
+**0.2.0, 2026-09-20: the runbook above held with nothing added.** Staging ran once, all three
+versions were staged with provenance, and approving them core first published cleanly. Two notes:
+
+- **A README image must be on `main` before anyone reads it.** The npm pages' wordmark pointed at
+  `raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/dendrite-wordmark.png` while the PNG
+  existed only on `dev`, so all three 0.1.0 pages showed a broken image until this release's PR
+  merged. A new asset a README links to belongs in the PR that publishes the README.
+- **Tag names start with `@`, so PowerShell needs them quoted** (`git tag -a "@dendrite-lang/core@0.2.0"`),
+  or a bare `@` is read as splatting.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the

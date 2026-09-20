@@ -6,32 +6,6 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## Release — the next version, and why it is 0.2.0
-
-**What:** everything since 0.1.0 is committed on `dev` and not yet on npm. It was going to be
-0.1.1 - `require()` for editor and link, and the branded npm pages - and grew:
-
-- **core:** negative numbers (`Negate`, prefix `-`), lexical order enforced for outputs,
-  whole-`$name` input spans, variadic inputs reaching `inferOutput` (`Concat` typed), and the
-  `AnalysisContext.currentBindingIndex` → `currentDeclarationIndex` rename.
-- **editor:** a type colour (`tok-type`; `TokenClass` gains `"type"`), squiggles painted on mount, output types on a Minimal line, equal Compact columns,
-  Minimal's actions kept right, a `stale` option on layouts and the Outputs pane, `require()`.
-- **link:** `require()`.
-
-**Why 0.2.0, not 0.1.1:** a program with an output above the binding it reads stopped compiling,
-`Negate` is new API, and an exported type lost a field. Pre-1.0 that is a minor. Editor and link
-peer on core `^0.1.0`, so a core 0.2.0 means **all three** go to 0.2.0 and their peer ranges move
-to `^0.2.0` - the coupling the changelogs promise.
-
-**What it requires:** rename each changelog's `Unreleased` to `0.2.0`, bump the three versions and
-the two peer ranges, then the runbook in `release-plan.md`: PR, tags, one GitHub release on core's
-tag, approve the three staged versions core first.
-
-**When:** next. The Learn samples step it waited for is done (2026-09-19); the input-defaults
-bug above goes first.
-
----
-
 ## Docs — review the rest of the site after Learn
 
 **What:** the user is reading the docs page by page and sending observations. Learn comes first
@@ -39,7 +13,8 @@ bug above goes first.
 developers and the stdlib reference, the same way. The site-wide passes (the colouring, the
 dashes, the chain) already landed with the samples step, so these pages start from them.
 
-**When:** before or alongside the 0.2.0 release.
+**When:** next, alongside the inline TypeScript colouring: the user reads, and the
+observations collect here until there is a section's worth to plan.
 
 ---
 
@@ -116,4 +91,7 @@ beneath it (its output values, or the diagnostic it raises), the way the ops ref
 *Every diagnostic* already do. Proposed 2026-09-17 as "the step to add more editors"; left out
 of the samples step because it was never decided.
 
-**Open question:** do it, or send it to the backlog. Yours to pick.
+**Open question:** do it, or send it to the backlog. Deferred until the site review is done
+(2026-09-20): the observations on How it works, Host and the stdlib reference will show whether
+the static fences there want their values, and the pages that most needed it (the ops reference,
+*Every diagnostic*, the Learn samples) already show theirs.
