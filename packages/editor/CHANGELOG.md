@@ -6,10 +6,10 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.1.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.2.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
-## Unreleased
+## 0.2.0
 
 - **`require()` works.** Each entry gained a `default` export condition beside `import`, so
   `require("@dendrite-lang/editor")` and `.../react` resolve. The package is still ESM, so this

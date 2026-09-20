@@ -7,9 +7,9 @@ sidebar:
 
 _Host developers is for embedding the language in an application of your own. If you are writing programs in it, start with [Learn](../../learn/getting-started/)._
 
-:::note[0.1.0]
-The first release. Before 1.0 a minor version may break the API, and the editor and the link
-depend on core `^0.1.0`, so a minor release of core comes with a release of both. Each package's
+:::note[0.2.0]
+Before 1.0 a minor version may break the API, and the editor and the link depend on core
+`^0.2.0`, so a minor release of core comes with a release of both. Each package's
 changes are in its changelog:
 [core](https://github.com/IJIJI/Dendrite/blob/main/packages/core/CHANGELOG.md) - [editor](https://github.com/IJIJI/Dendrite/blob/main/packages/editor/CHANGELOG.md) - [link](https://github.com/IJIJI/Dendrite/blob/main/packages/link/CHANGELOG.md)
 :::

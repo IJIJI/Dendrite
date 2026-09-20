@@ -7,9 +7,9 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.1.0`, so a minor release here is always accompanied by a release of both.
+at `^0.2.0`, so a minor release here is always accompanied by a release of both.
 
-## Unreleased
+## 0.2.0
 
 - **Negative numbers.** There were none: `-14` was a syntax error anywhere. A new `Negate` op,
   with a prefix `-` as its symbol, the way `!` is `Not`'s - so `1 - -14` is
