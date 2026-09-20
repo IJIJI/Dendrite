@@ -5,6 +5,7 @@ import { defineConfig, passthroughImageService } from "astro/config";
 import { fileURLToPath, URL } from "node:url";
 
 import { remarkDen } from "./src/plugins/remark-den";
+import { remarkTs } from "./src/plugins/remark-ts";
 
 //? The docs site: Starlight at the root, the playground beside it under /playground/ (the
 // Pages workflow assembles the two builds). `.ts` rather than `.mjs` for the same reason the
@@ -19,11 +20,12 @@ export default defineConfig({
   base: process.env.DOCS_BASE ?? "/",
   // Only SVGs so far; the default service wants sharp for nothing.
   image: { service: passthroughImageService() },
-  // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer. Astro 7's
+  // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer, and
+  // `…{:ts}` inline code through Shiki on Expressive Code's own themes. Astro 7's
   // default Markdown processor takes no remark plugins, so the unified pipeline is chosen
   // explicitly - it is the one Starlight's own plugins use. User plugins run before
   // Starlight's Expressive Code, which then leaves them alone.
-  markdown: { processor: unified({ remarkPlugins: [remarkDen] }) },
+  markdown: { processor: unified({ remarkPlugins: [remarkDen, remarkTs] }) },
   integrations: [
     starlight({
       title: "Dendrite",
