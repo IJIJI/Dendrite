@@ -70,6 +70,29 @@
   font-size: 0.85em;
 }
 
+/* An inline snippet nothing highlights - a package name, a path, a version range - takes the
+   editor's identifier colour rather than Starlight's, which is the body text's own grey: a name
+   in a box should read as a name, and it then matches an identifier inside a Dendrite snippet.
+   `:not([class])` so a highlighted snippet (den, ts, a diagnostic's name) keeps its colours. */
+.sl-markdown-content code:not([class]) {
+  color: var(--dendrite-text);
+}
+
+/* Inline TypeScript (`…{:ts}`), from Shiki: each span carries both themes' colours as custom
+   properties, and the page picks one. Starlight sets data-theme on <html>, so the toggle needs
+   no re-render. The font-style properties are Night Owl's italics, on comments and keywords. */
+code.ts span,
+.ts-block span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style, normal);
+}
+
+[data-theme="dark"] code.ts span,
+[data-theme="dark"] .ts-block span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style, normal);
+}
+
 /* A diagnostic's name in prose (`forward_reference{:den}`): its severity's colour, the one the
    editor's squiggles use, so an error reads as one before it is explained. */
 code.den-diag-error {

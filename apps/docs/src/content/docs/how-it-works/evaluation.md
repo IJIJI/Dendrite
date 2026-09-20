@@ -10,7 +10,7 @@ way decides whether it already knows its answer.
 
 ## The recompute rule
 
-Each node in a core program carries `dependsOn`: the set of input names it reaches, computed
+Each node in a core program carries `dependsOn{:ts}`: the set of input names it reaches, computed
 statically by the analyser. Evaluation is handed the set of inputs that changed, and the rule is
 one line:
 
@@ -20,13 +20,13 @@ Everything follows from that.
 
 - A node reading no inputs is computed once and never again. A literal, an arithmetic expression
   over literals, a lambda over constants.
-- Changing an input recomputes exactly the nodes whose `dependsOn` contains it, and the nodes
+- Changing an input recomputes exactly the nodes whose `dependsOn{:ts}` contains it, and the nodes
   above those, and nothing else.
-- `changedInputs` may also be `undefined`, which means "assume everything changed". That is what
-  a one-shot `run()` passes, and it disables caching for that pass, because there is nothing to
+- `changedInputs{:ts}` may also be `undefined{:ts}`, which means "assume everything changed". That is what
+  a one-shot `run(){:ts}` passes, and it disables caching for that pass, because there is nothing to
   reuse.
 
-Because `dependsOn` is a set of *input names*, not of nodes, this is cheap: an intersection of
+Because `dependsOn{:ts}` is a set of *input names*, not of nodes, this is cheap: an intersection of
 two small sets per node, and no graph traversal to work out what is dirty.
 
 ## Three caches, because there are three lifetimes
@@ -36,21 +36,21 @@ them go stale at different times.
 
 | Store | Keyed by | Lives for |
 | --- | --- | --- |
-| `inputs` | input name | as long as the host keeps pushing values |
-| `nodeCache` | the node object | the program, until an input it depends on changes |
-| `bodyScope` | the node object | one application of one closure |
+| `inputs{:ts}` | input name | as long as the host keeps pushing values |
+| `nodeCache{:ts}` | the node object | the program, until an input it depends on changes |
+| `bodyScope{:ts}` | the node object | one application of one closure |
 
-`nodeCache` is a `WeakMap` keyed by node identity, which matters: a node is a stable object in
+`nodeCache{:ts}` is a `WeakMap{:ts}` keyed by node identity, which matters: a node is a stable object in
 the compiled program, so its cache entry dies with the program and nothing has to be cleared by
 hand.
 
-`bodyScope` is the one that is easy to get wrong. A lambda's body is one node, and applying the
+`bodyScope{:ts}` is the one that is easy to get wrong. A lambda's body is one node, and applying the
 lambda to five list items evaluates that same node five times with a different parameter each
-time. Caching those in `nodeCache` would give the second item the first item's answer, so a
-fresh `bodyScope` is created per application and the body caches into that instead. Inside a
-lambda body it is `bodyScope`; outside it is `nodeCache`.
+time. Caching those in `nodeCache{:ts}` would give the second item the first item's answer, so a
+fresh `bodyScope{:ts}` is created per application and the body caches into that instead. Inside a
+lambda body it is `bodyScope{:ts}`; outside it is `nodeCache{:ts}`.
 
-Beside those sits `localBindings`, the lambda's parameters, consulted **before** the program's
+Beside those sits `localBindings{:ts}`, the lambda's parameters, consulted **before** the program's
 own bindings so a parameter shadows a global name of the same name.
 
 ## A binding is computed once per evaluation
@@ -91,10 +91,10 @@ The same evaluator sits under four entry points, and they differ only in what th
 
 | Level | State | For |
 | --- | --- | --- |
-| `run()` | none | one program, once, no caching |
-| `createProgramRunner()` | one program's cache | one program, evaluated repeatedly |
-| `createRuntime()` | many programs, shared global inputs | an application's whole set |
-| `createInstance()` | one program on a runtime, with its own layers and observables | what a host actually holds |
+| `run(){:ts}` | none | one program, once, no caching |
+| `createProgramRunner(){:ts}` | one program's cache | one program, evaluated repeatedly |
+| `createRuntime(){:ts}` | many programs, shared global inputs | an application's whole set |
+| `createInstance(){:ts}` | one program on a runtime, with its own layers and observables | what a host actually holds |
 
 They are deliberately not unified into one configurable thing. Each is the smallest surface for
 its job, and a host that needs one does not carry the others' state.

@@ -30,7 +30,7 @@ npm install @dendrite-lang/core
 ```
 
 Core is a peer dependency of the other two rather than a dependency, and that is load-bearing: two
-copies of core in one bundle would disagree about `instanceof EvalError` and about which
+copies of core in one bundle would disagree about `instanceof EvalError{:ts}` and about which
 descriptor is which. Install core once, at the top.
 
 ## Four things to set up
@@ -76,17 +76,17 @@ instance.outputs.get().outputs?.get("alert"); // true
 ## What each one is for
 
 **The language** is what programs are allowed to say: the types, the operators (ops, for short), the symbols.
-`createStdlib()` is the standard library; `createLanguage()` is the bare core grammar with nothing
+`createStdlib(){:ts}` is the standard library; `createLanguage(){:ts}` is the bare core grammar with nothing
 in it, for a host that wants to build its own vocabulary from zero. Either one can be extended, and
 [Extending the language](../extending-the-language/) is how.
 
 **The environment** binds a language to its pipeline. It is what can parse, compose layers, and
 create runtimes. You make one per language.
 
-**The runtime** holds your side of the contract. Its `layers` declare the inputs you will feed and
+**The runtime** holds your side of the contract. Its `layers{:ts}` declare the inputs you will feed and
 the outputs you expect, and those are **global**: every program registered on this runtime sees
-them, and their values are shared. Mark an output `required` and a program missing it will not
-load; `desired` warns; the default is optional.
+them, and their values are shared. Mark an output `required{:ts}` and a program missing it will not
+load; `desired{:ts}` warns; the default is optional.
 
 **The instance** is one program on that runtime, and it is the object a host actually holds. It
 has its own program-level inputs and outputs, five observables to watch and four commands to
@@ -96,11 +96,11 @@ drive it. [Embedding core](../embedding-core/) is about living with one.
 
 | Call | Option | Meaning |
 | --- | --- | --- |
-| `createRuntime` | `layers` | global port layers, in precedence order: an earlier layer owns a contested name |
-| `createInstance` | `program` | a `SavedProgram`: `serialiseSource(text, ports?)` for code |
-| | `layers` | the program-level layers. Omit it for one editable, persisted `document` layer carrying `program.ports` |
-| | `id` | the program's id on the runtime. Generated if omitted |
-| | `inputValues` | starting values for the persisted layer's inputs |
-| an input | `type`, `default` | the default is what the input holds before anything is pushed |
-| | `trigger` | a discrete event: fired, evaluated, then reset to its default |
-| an output | `mode` | `required`, `desired`, or omitted for optional |
+| `createRuntime{:ts}` | `layers{:ts}` | global port layers, in precedence order: an earlier layer owns a contested name |
+| `createInstance{:ts}` | `program{:ts}` | a `SavedProgram{:ts}`: `serialiseSource(text, ports?){:ts}` for code |
+| | `layers{:ts}` | the program-level layers. Omit it for one editable, persisted `document{:ts}` layer carrying `program.ports{:ts}` |
+| | `id{:ts}` | the program's id on the runtime. Generated if omitted |
+| | `inputValues{:ts}` | starting values for the persisted layer's inputs |
+| an input | `type{:ts}`, `default{:ts}` | the default is what the input holds before anything is pushed |
+| | `trigger{:ts}` | a discrete event: fired, evaluated, then reset to its default |
+| an output | `mode{:ts}` | `required{:ts}`, `desired{:ts}`, or omitted for optional |

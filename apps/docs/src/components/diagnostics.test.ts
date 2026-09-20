@@ -1,7 +1,7 @@
 import { diagnosticList, type Ports, type SavedAstProgram, Type } from "@dendrite-lang/core";
 import { describe, expect, it } from "vitest";
 
-import { declarationsOf, hostCodeParts, partsText } from "./diagnostics";
+import { declarationsOf, hostCode } from "./diagnostics";
 
 //? The two printers behind the diagnostics page. The page is generated from core's registry,
 // so a sample gaining a declaration the printer cannot show would silently vanish from the
@@ -71,7 +71,7 @@ describe("declarationsOf", () => {
   });
 });
 
-describe("hostCodeParts", () => {
+describe("hostCode", () => {
   it("prints an operation node as the constructor a host calls", () => {
     const example: SavedAstProgram = {
       version: 1,
@@ -87,7 +87,7 @@ describe("hostCodeParts", () => {
       },
     };
 
-    expect(partsText(hostCodeParts(example))).toBe(
+    expect(hostCode(example)).toBe(
       [
         "bindings: {},",
         'outputs: { x: operationNode("Nope", { a: { kind: "literal", value: 1 } }) },',
@@ -110,7 +110,7 @@ describe("hostCodeParts", () => {
       outputs: { x: { kind: "ref", name: "f" } },
     };
 
-    const printed = partsText(hostCodeParts(example));
+    const printed = hostCode(example);
     expect(printed).toContain("returnType: Type.string");
     expect(printed).toContain('params: [{ name: "n", type: Type.number }]');
     expect(printed).not.toContain("source");
@@ -126,10 +126,7 @@ describe("every sample in the registry", () => {
         continue;
       }
       if (example.form === "ast") {
-        expect(
-          partsText(hostCodeParts(example)).length,
-          `${entry.kind} printed as nothing`,
-        ).toBeGreaterThan(10);
+        expect(hostCode(example).length, `${entry.kind} printed as nothing`).toBeGreaterThan(10);
         continue;
       }
       expect(example.form, `${entry.kind} is a form the page cannot print`).toBe("code");

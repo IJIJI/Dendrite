@@ -5,6 +5,7 @@ import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 
 import { parseDenMeta } from "./den-meta";
+import { attr, type JsxElement, type JsxText } from "./mdx-jsx";
 
 //? Dendrite in Markdown: a ```den fence, or inline code ending in {:den}, highlighted by the
 // editor's own lexer instead of a Shiki grammar. A fence becomes the editor's static Source
@@ -14,17 +15,6 @@ import { parseDenMeta } from "./den-meta";
 // `html` nodes, so it gets JSX nodes instead - the same tree.
 
 const INLINE = /\{:den\}$/;
-
-type Attribute = { type: "mdxJsxAttribute"; name: string; value: string };
-type JsxText = { type: "text"; value: string };
-type JsxElement = {
-  type: "mdxJsxTextElement" | "mdxJsxFlowElement";
-  name: string;
-  attributes: Attribute[];
-  children: (JsxElement | JsxText)[];
-};
-
-const attr = (name: string, value: string): Attribute => ({ type: "mdxJsxAttribute", name, value });
 
 const flow = (name: string, className: string, children: JsxElement[]): JsxElement => ({
   type: "mdxJsxFlowElement",

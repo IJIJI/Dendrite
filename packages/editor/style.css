@@ -76,9 +76,10 @@
     --dendrite-syntax-number: light-dark(oklch(0.55 0.13 75), oklch(0.8 0.14 75));
     --dendrite-syntax-string: light-dark(oklch(0.5 0.14 160), oklch(0.8 0.12 160));
     --dendrite-syntax-literal: var(--dendrite-input); /* the same orange, by choice */
-    /* Plain ink, no hue: a type is a kind of value, not a value, so it steps back from every
-       coloured token rather than competing with them. Comments step back one further. */
-    --dendrite-syntax-type: var(--dendrite-muted);
+    /* A soft cyan: a type is a kind of value, not a value, so it stays quieter than the
+       literals, but it cannot be the ink itself - in prose (the docs colour inline types with
+       this same class) plain ink is the body text. Comments step back further still. */
+    --dendrite-syntax-type: light-dark(oklch(0.55 0.05 198), oklch(0.76 0.05 198));
     --dendrite-syntax-operator: light-dark(oklch(0.5 0.15 240), oklch(0.78 0.11 240));
     --dendrite-syntax-punct: var(--dendrite-faint);
     --dendrite-syntax-comment: var(--dendrite-faint);

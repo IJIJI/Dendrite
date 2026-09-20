@@ -5,6 +5,25 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.2.0 on npm — DONE 2026-09-20
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.2.0**, five days
+after the first release. A minor because three things changed rather than added: an output above
+the binding it reads is a `forward_reference`, `Negate` is new API, and `TokenClass` gained
+`"type"`. The runbook in `release-plan.md` held exactly as written, so it taught nothing new:
+bumps on `dev`, PR #15 into `main`, three tags on the merge commit, one GitHub release on core's
+tag, `Stage release` green in 57s, and the three staged versions approved with 2FA, core first.
+
+Checked after approval: `latest` on each package, an attestation on all three, the published peer
+ranges at `^0.2.0`, and a clean install outside the repo where `require()` reaches all three and
+`output out = 1 - -14` evaluates to 15.
+
+One thing worth keeping: **a README image must be on `main` before anyone reads it.** The npm
+wordmark pointed at `raw.githubusercontent.com/.../main/...` while the file existed only on `dev`,
+so the three 0.1.0 npm pages showed a broken image until this release's PR merged.
+
+---
+
 ## Bug — a program that does not compile ignored its input defaults — FIXED 2026-09-20
 
 An instance seeded its input values only after a successful compile (`recompile` in
@@ -14,6 +33,57 @@ declare. Seeding moved up to run as soon as the layers compose, which is whose b
 value is: the program decides nothing about what an input holds. A `link` replica follows,
 because it mirrors what the served instance publishes. Found 2026-09-19 while checking the live
 warning samples; `instance.test.ts` pins it with a program that cannot compile.
+
+---
+
+## Docs — inline TypeScript in the site's own colours — DONE 2026-09-20
+
+Inline `…{:ts}` code on Host and How it works is highlighted by Shiki, on the Night Owl pair
+Starlight's Expressive Code uses for its blocks. 239 snippets over 12 pages, in three commits:
+the highlighter, the marking pass, and the one generated block.
+
+- **Two plugins, not one.** `remark-ts.ts` sits beside `remark-den.ts` rather than inside it:
+  the Dendrite one is synchronous and lexer-driven, this one is async and grammar-driven, and
+  merging them would be Divergent Change. What they share (the MDX JSX node shapes) went to
+  `mdx-jsx.ts`, and the highlighter itself to `shiki-ts.ts`, which the diagnostics table also
+  uses.
+- **`structure: "inline"`** gives bare spans, so a snippet drops into a sentence with no `<pre>`
+  to strip. Both themes' colours ride on every span as `--shiki-light` and `--shiki-dark`, and
+  `dendrite.css` picks one from Starlight's `data-theme`: no re-render when the theme flips.
+- **How close the colours came:** dark is identical to a code block (a function name is `#82AAFF`
+  in both). Light is a shade lighter inline (`#4876D6` against Expressive Code's `#3B61B0`),
+  because EC lifts its blocks' contrast. That was the "close is enough" call, made in advance.
+- **What stays plain**, by decision: package names (`zod`, `ws`), paths, URLs, a version range,
+  a glob over method names (`register*`), a `package.json` field, JSON, maths, token kinds
+  (`ident`, `operation`), meta-variables (`T`, `T[]`), and the Dendrite names the docs
+  highlighter would colour wrongly (`Reading`, `Mod`, `Last`, `%`, `GreaterThanOrEqual`).
+- **The generated block.** `hostCodeParts` printed TypeScript token by token with hand-applied
+  classes; it is now `hostCode`, which prints text, and the table highlights it with the same
+  Shiki call. That deleted the printer's `Part` machinery along with `partsHtml`, its `escape`
+  and `partsText`: 103 lines out, 31 in.
+- **Found on the way** (and fixed the same day, above): the type colour and Starlight's own
+  inline-code colour were both the body text's grey.
+
+---
+
+## Editor — the type colour, again — DONE 2026-09-20
+
+The plain ink chosen on 2026-09-19 was judged against editor snippets only. Once the inline
+TypeScript pass put coloured code in the prose, the flaw showed: the docs colour an inline type
+with the same `tok-type` class, and `--dendrite-muted` is exactly Starlight's body-text colour,
+so `number[]` and `any` in a sentence read as unmarked text. It is now a **soft cyan**
+(`oklch(0.55 0.05 198)` light, `oklch(0.76 0.05 198)` dark), a third of the chroma of the cyans
+rejected on 2026-09-19 as too present: quiet on a canvas, visible in a paragraph.
+
+The same reading fixed a second one: an inline snippet nothing highlights (a package name, a
+path, a version range) took Starlight's inline-code colour, which is the body text's grey too.
+Those now take the editor's identifier colour, so a name in a box reads as a name and matches an
+identifier inside a Dendrite snippet. The rule is scoped `:not([class])`, so every highlighted
+snippet keeps its own colours.
+
+**The lesson**: judge a token colour where it will be READ, not only where it was born. The
+editor's palette has two audiences now, a canvas and a paragraph, and the canvas is the
+forgiving one.
 
 ---
 
@@ -55,7 +125,8 @@ plan's reasoning, kept here because the code does not say it:
   coloured token instead of competing with them. Comments moved down with it, to
   `var(--dendrite-faint)`, and keep the italic they already had, which is what tells them from
   punctuation in the same grey. Keywords were already bold, which the candidate previews had not
-  shown; that is why weight was considered at all.
+  shown; that is why weight was considered at all. **The ink itself was superseded the next
+  day**: see "the type colour, again" above.
 - **Dashes.** Prose rewritten where a dash stood in for an em dash. The rule, as the user put it
   afterwards: a dash that reads naturally may stay (`.docs/CLAUDE.md`, *Working in this repo*).
 

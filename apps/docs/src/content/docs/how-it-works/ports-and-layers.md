@@ -33,13 +33,13 @@ allowed to rename.
 
 Three fields of policy, and core reads them as fields. It never branches on a layer's *kind*:
 
-- **`editable`**: may a UI change these declarations?
-- **`feeds`**: who supplies the values, host code or a user typing them?
-- **`persisted`**: is the layer saved with the program, or rebuilt by the host?
+- **`editable{:ts}`**: may a UI change these declarations?
+- **`feeds{:ts}`**: who supplies the values, host code or a user typing them?
+- **`persisted{:ts}`**: is the layer saved with the program, or rebuilt by the host?
 
-Two combinations are common enough to have names. `Policy.host` is not editable, host-fed and
-not persisted: a contract made in code. `Policy.user` is editable, user-fed and persisted: the
-document's own declarations. Anything else is a `Policy.custom` away, and core will not notice
+Two combinations are common enough to have names. `Policy.host{:ts}` is not editable, host-fed and
+not persisted: a contract made in code. `Policy.user{:ts}` is editable, user-fed and persisted: the
+document's own declarations. Anything else is a `Policy.custom{:ts}` away, and core will not notice
 the difference. A capability a host feeds but a user may not rename is just a policy, not a new
 concept.
 
@@ -75,16 +75,16 @@ owner, the runtime. Nothing can be set in two places.
 
 ## At most one persisted layer
 
-An instance refuses more than one layer with `persisted: true`. There is only one document, so
+An instance refuses more than one layer with `persisted: true{:ts}`. There is only one document, so
 there is only one place a saved program's declarations can come from; two would mean a save had
 to choose, and choosing silently is worse than refusing.
 
-The same rule is why a persisted layer may not declare a type with a `schema`: see
+The same rule is why a persisted layer may not declare a type with a `schema{:ts}`: see
 [persistence](../persistence/).
 
 ## Composition can fail, and then nothing runs
 
-`composeLayers` either produces a descriptor or a list of problems. It also runs the descriptor's
+`composeLayers{:ts}` either produces a descriptor or a list of problems. It also runs the descriptor's
 own integrity check, which is where a declaration naming an unregistered type
 (`unknown_type{:den}`) or a struct field clashing with the one it inherits
 (`incompatible_field_override{:den}`) is caught.
