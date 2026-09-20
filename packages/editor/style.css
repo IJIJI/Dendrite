@@ -76,11 +76,12 @@
     --dendrite-syntax-number: light-dark(oklch(0.55 0.13 75), oklch(0.8 0.14 75));
     --dendrite-syntax-string: light-dark(oklch(0.5 0.14 160), oklch(0.8 0.12 160));
     --dendrite-syntax-literal: var(--dendrite-input); /* the same orange, by choice */
-    /* Muted teal: a type is a kind of value, not a value, so it sits quieter than the literals. */
-    --dendrite-syntax-type: light-dark(oklch(0.52 0.07 195), oklch(0.76 0.07 195));
+    /* Plain ink, no hue: a type is a kind of value, not a value, so it steps back from every
+       coloured token rather than competing with them. Comments step back one further. */
+    --dendrite-syntax-type: var(--dendrite-muted);
     --dendrite-syntax-operator: light-dark(oklch(0.5 0.15 240), oklch(0.78 0.11 240));
     --dendrite-syntax-punct: var(--dendrite-faint);
-    --dendrite-syntax-comment: var(--dendrite-muted);
+    --dendrite-syntax-comment: var(--dendrite-faint);
   }
 
   :root[data-dendrite-theme="light"] {

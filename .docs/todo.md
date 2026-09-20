@@ -6,24 +6,6 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## Editor — explore colours for the type token
-
-**What:** the type colour from the samples step (`--dendrite-syntax-type`, a muted teal,
-`oklch(0.52 0.07 195)` light / `oklch(0.76 0.07 195)` dark) is not liked yet (the user,
-2026-09-19). Try more candidates side by side, in both themes, next to the palette it has to sit
-in: keyword magenta (335), op iris (the accent), operator blue (240), input and literal orange,
-number amber (75), string green (160), identifiers in the text colour.
-
-**What it requires:** a comparison of candidates on real snippets (a signature, an annotated
-lambda, a type definition row), the pick made by eye, then one line in
-`packages/editor/style.css` and the comment above it. The done entry's "muted teal" in `done.md`
-is updated with what was picked. Related: the backlog's "Editor — tune the highlight colours",
-which covers the editor's other formula-chosen colours.
-
-**When:** before the PR and the 0.2.0 release, since the colour ships in it.
-
----
-
 ## Bug — a live block that does not compile ignores its input defaults
 
 **What:** a live example whose program fails to compile shows each input at its type's seed
@@ -61,8 +43,8 @@ to `^0.2.0` - the coupling the changelogs promise.
 the two peer ranges, then the runbook in `release-plan.md`: PR, tags, one GitHub release on core's
 tag, approve the three staged versions core first.
 
-**When:** next. The Learn samples step it waited for is done (2026-09-19); the type colour
-and the input-defaults bug above go first.
+**When:** next. The Learn samples step it waited for is done (2026-09-19); the input-defaults
+bug above goes first.
 
 ---
 

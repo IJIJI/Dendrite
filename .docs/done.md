@@ -10,8 +10,8 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 The user's observations on the Learn section (2026-09-18), built as one step in six commits. The
 plan's reasoning, kept here because the code does not say it:
 
-- **A type colour, in the editor.** A registered type's name is `tok-type` (a **muted teal**,
-  `--dendrite-syntax-type`) where a type is written: after `:` or `->`, among a function type's
+- **A type colour, in the editor.** A registered type's name is `tok-type`
+  (`--dendrite-syntax-type`) where a type is written: after `:` or `->`, among a function type's
   parameters, or when the whole snippet is a type (`number[]{:den}` in prose). A binding sharing a
   type's name stays an identifier. **Known ceiling**, pinned by `tokens.test.ts`: a named
   argument's `:` looks like an annotation's, so in `If(then: number)` a binding called `number`
@@ -37,6 +37,13 @@ plan's reasoning, kept here because the code does not say it:
   opens each section with its own piece of the diagram (`<Chain step>`), so the sections and the
   overview cannot disagree. On a wide screen the chain is two rows of three artefacts, breaking
   after the raw program; one row of eleven cells did not fit the content column.
+- **The colour itself: plain ink**, `var(--dendrite-muted)`, picked by eye from about thirty
+  candidates over two rounds (2026-09-20). A muted teal shipped first and read as too present,
+  and so did softer cyans: a type is a kind of value, not a value, so it steps back from every
+  coloured token instead of competing with them. Comments moved down with it, to
+  `var(--dendrite-faint)`, and keep the italic they already had, which is what tells them from
+  punctuation in the same grey. Keywords were already bold, which the candidate previews had not
+  shown; that is why weight was considered at all.
 - **Dashes.** Prose rewritten where a dash stood in for an em dash. The rule, as the user put it
   afterwards: a dash that reads naturally may stay (`.docs/CLAUDE.md`, *Working in this repo*).
 

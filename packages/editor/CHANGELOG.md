@@ -17,9 +17,14 @@ of core needs a release here too, even if nothing in this package changed.
 - **Types have a colour.** A registered type's name is highlighted as a type where a type is
   written: after a `:` or `->`, among a function type's parameters, or as a type written on its own
   (`number[]`). A binding that shares a type's name stays an identifier. It is a new `tok-type`
-  class with a `--dendrite-syntax-type` token (a muted teal) for themes to override, and
-  `TokenClass` gains `"type"`: code with an exhaustive `switch` over it has a case to add. Known
-  limit: in `If(then: number)`, a binding called `number` passed by name reads as the type.
+  class with a `--dendrite-syntax-type` token for themes to override, and `TokenClass` gains
+  `"type"`: code with an exhaustive `switch` over it has a case to add. The colour is plain ink
+  (`--dendrite-muted`), chosen by eye over a teal and a set of cyans: a type is a kind of value,
+  not a value, so it steps back instead of competing with the ops and inputs. Known limit: in
+  `If(then: number)`, a binding called `number` passed by name reads as the type.
+- **Comments are one step fainter**, `--dendrite-faint` rather than `--dendrite-muted`, so they sit
+  below the new type colour. They stay italic, which is what keeps them apart from punctuation,
+  which shares that grey.
 - **A program that was already broken shows it on mount.** An `Observable` reports changes
   only, so an editor mounted over a program that does not compile - a documented sample, a
   saved program that no longer does - painted no squiggles until the first keystroke. The
