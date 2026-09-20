@@ -18,6 +18,14 @@ at `^0.2.0`, so a minor release here is always accompanied by a release of both.
   string, `"0x10"` and `"Infinity"` included: a `0` would be a guess indistinguishable from a real
   zero, so `Default(ToNumber(x), 0)` lets the author write the fallback. `ToBool` is false for
   `false`, `0`, the empty string, `null` **and an empty list**, which JavaScript calls true.
+- **String ops: `Join`, `Upper`, `Lower`, `Trim`, `Contains`, `StartsWith`, `EndsWith`.** A
+  program could not build a string at all: `Concat` is for lists and `Add` for numbers.
+  `Join(parts, separator)` builds one from a list, and its `separator` is optional, the first op
+  input in the library declared `required: false`. Case conversion is never locale-dependent, so
+  a program gives the same text on every host. `Contains` is its own op rather than `Includes`,
+  which asks whether a list holds an item. A `null` text reads as the empty string, and nothing
+  here throws. There is no operator for joining text yet: that waits on whether the language
+  should ever convert a value without being asked.
 
 ## 0.2.0
 

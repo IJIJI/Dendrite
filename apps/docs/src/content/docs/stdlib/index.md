@@ -45,6 +45,10 @@ ops work this way: `And{:den}`, `Or{:den}`, `Xor{:den}`, `Add{:den}`, `Multiply{
 The symbol form of a variadic op takes two at a time, so `1 + 2 + 3{:den}` nests where
 `Add(1, 2, 3){:den}` does not. Same answer; the op form says "sum these" more directly.
 
+An input marked `?` may be left out: `Join(parts: string[], separator?: string){:den}` joins with
+nothing between the parts when it gets no separator. One op has one so far. Leaving out any
+*other* input is a `missing_op_input{:den}` warning, with the type's default standing in.
+
 ## `any{:den}` in a signature
 
 An input typed `any{:den}` accepts any data value. `Length(list: any[]){:den}` takes a list of
@@ -106,6 +110,7 @@ these pages up.
 | [arithmetic](./arithmetic/) | `Add{:den}`, `Subtract{:den}`, `Multiply{:den}`, `Divide{:den}` |
 | [list](./list/) | `Filter{:den}`, `Map{:den}`, `Reduce{:den}`, `Find{:den}`, `Some{:den}`, `Every{:den}` |
 | [conversion](./conversion/) | `ToString{:den}`, `ToNumber{:den}`, `ToBool{:den}` |
+| [string](./string/) | `Join{:den}`, `Upper{:den}`, `Lower{:den}`, `Trim{:den}`, `Contains{:den}`, `StartsWith{:den}`, `EndsWith{:den}` |
 
 Today an application takes the whole library or none of it. The segments are the seam along
 which that will change, so that an application which never touches a list need not carry the

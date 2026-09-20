@@ -25,6 +25,15 @@ const variadic =
 // fallback aloud.
 const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
+// A value as text: the one rule ToString and every string op share, so a null or a number
+// reaching a string op reads the same as it would through ToString, and no op throws on one.
+const toText = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+};
+
 /**
  * Creates the standard-library language: logic / comparison / control / arithmetic /
  * array ops, general-purpose higher-order list ops, and their operators. Built on the
@@ -407,6 +416,93 @@ export function createStdlib(): Language {
   });
 
   // -------------------------------------------------------------------------
+  // String ops
+  // -------------------------------------------------------------------------
+
+  // `separator` is the first optional op input in the library: `required: false` means the
+  // analyser raises no missing_op_input for it, and the evaluator is handed `undefined`.
+  lang.registerOp({
+    name: "Join",
+    inputs: [
+      { name: "parts", type: Type.array(Type.string) },
+      { name: "separator", type: Type.string, required: false },
+    ],
+    output: Type.string,
+    category: "string",
+    description:
+      "The parts as one text, with separator between them. Without a separator they are run together.",
+    examples: [
+      den`output label = Join(["Bus", "7"], " ")`,
+      den`output code = Join(["A", "B", "C"])`,
+    ],
+  });
+
+  lang.registerOp({
+    name: "Upper",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text in upper case.",
+    examples: [den`output shout = Upper("live")`],
+  });
+
+  lang.registerOp({
+    name: "Lower",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text in lower case.",
+    examples: [den`output quiet = Lower("LIVE")`],
+  });
+
+  lang.registerOp({
+    name: "Trim",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text without the spaces at its start and end.",
+    examples: [den`output name = Trim("  cam 1  ")`],
+  });
+
+  // `Contains`, not `Includes`: Includes asks whether a LIST holds an item, and the two stay
+  // apart so that text can one day be read as a list of letters without changing this one.
+  lang.registerOp({
+    name: "Contains",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when part appears in text. An empty part always does.",
+    examples: [den`output isCamera = Contains("CAM 1", "CAM")`],
+  });
+
+  lang.registerOp({
+    name: "StartsWith",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when text begins with part. An empty part always matches.",
+    examples: [den`output isCamera = StartsWith("CAM 1", "CAM")`],
+  });
+
+  lang.registerOp({
+    name: "EndsWith",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when text ends with part. An empty part always matches.",
+    examples: [den`output isFirst = EndsWith("CAM 1", "1")`],
+  });
+
+  // -------------------------------------------------------------------------
   // Evaluators - logic ops (fixed output types, no inferOutput needed)
   // -------------------------------------------------------------------------
 
@@ -623,12 +719,7 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "ToString",
-    evaluate: ({ value }) => {
-      if (value === null || value === undefined) return "";
-      if (typeof value === "string") return value;
-      if (typeof value === "number" || typeof value === "boolean") return String(value);
-      return JSON.stringify(value);
-    },
+    evaluate: ({ value }) => toText(value),
   });
 
   lang.registerEvaluator({
@@ -653,6 +744,42 @@ export function createStdlib(): Language {
         value === undefined ||
         (Array.isArray(value) && value.length === 0)
       ),
+  });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - string ops
+  // -------------------------------------------------------------------------
+
+  // Case is `toUpperCase` / `toLowerCase`, never the locale variants: the same program has to
+  // give the same text on every host.
+  lang.registerEvaluator({
+    op: "Join",
+    evaluate: ({ parts, separator }) =>
+      (Array.isArray(parts) ? parts : []).map(toText).join(toText(separator)),
+  });
+  lang.registerEvaluator({
+    op: "Upper",
+    evaluate: ({ text }) => toText(text).toUpperCase(),
+  });
+  lang.registerEvaluator({
+    op: "Lower",
+    evaluate: ({ text }) => toText(text).toLowerCase(),
+  });
+  lang.registerEvaluator({
+    op: "Trim",
+    evaluate: ({ text }) => toText(text).trim(),
+  });
+  lang.registerEvaluator({
+    op: "Contains",
+    evaluate: ({ text, part }) => toText(text).includes(toText(part)),
+  });
+  lang.registerEvaluator({
+    op: "StartsWith",
+    evaluate: ({ text, part }) => toText(text).startsWith(toText(part)),
+  });
+  lang.registerEvaluator({
+    op: "EndsWith",
+    evaluate: ({ text, part }) => toText(text).endsWith(toText(part)),
   });
 
   // -------------------------------------------------------------------------

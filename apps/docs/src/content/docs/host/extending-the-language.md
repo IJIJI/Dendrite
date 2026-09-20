@@ -79,6 +79,20 @@ Worth filling in while you are here: `category{:ts}` groups the op in a generate
 complete programs a test can load. The standard library's own reference is generated from exactly
 these fields.
 
+An input a caller may leave out is declared `required: false{:ts}`. The analyser then raises no
+`missing_op_input{:den}` for it, and the evaluator is handed `undefined{:ts}`, so it supplies its own
+default. The standard library's `Join{:den}` does this for its separator:
+
+```ts sketch
+inputs: [
+  { name: "parts", type: Type.array(Type.string) },
+  { name: "separator", type: Type.string, required: false },
+],
+```
+
+Without that flag a missing input is a warning, and the type's own default stands in (`0`, the
+empty string, `false`), which is why a half-written call still runs.
+
 An evaluator gets its inputs already evaluated and returns a value. It should not throw for ordinary
 bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
 outputs.

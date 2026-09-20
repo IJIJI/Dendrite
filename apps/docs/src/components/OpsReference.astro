@@ -37,7 +37,11 @@ if (ops.length === 0) throw new Error(`no stdlib ops in category '${category}'`)
 // own highlighter: the op, its parameter names, their types, all as the code editor shows them.
 const signature = (op: OpDefinition): string => {
   const inputs = op.inputs
-    .map((input) => `${input.name}${input.variadic ? "..." : ""}: ${typeToString(input.type)}`)
+    .map((input) => {
+      // `nodes...` swallows every argument; `separator?` may be left out (`required: false`).
+      const mark = input.variadic ? "..." : input.required === false ? "?" : "";
+      return `${input.name}${mark}: ${typeToString(input.type)}`;
+    })
     .join(", ");
   return sourceHtml(`${op.name}(${inputs}) -> ${typeToString(op.output)}`, env.language);
 };

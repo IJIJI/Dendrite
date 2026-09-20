@@ -378,3 +378,78 @@ describe("conversion ops", () => {
     expect(sum).toBe(5);
   });
 });
+
+describe("string ops", () => {
+  const value = (src: string) => {
+    const { analysed, value } = runSource(`output out = ${src}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("Join: with a separator, and run together without one", () => {
+    expect(value('Join(["Bus", "7"], " ")')).toBe("Bus 7");
+    expect(value('Join(["A", "B", "C"])')).toBe("ABC");
+    expect(value("Join([])")).toBe("");
+  });
+
+  it("Join: the separator is optional, so leaving it out warns about nothing", () => {
+    // The first `required: false` op input in the library: both halves are pinned here - the
+    // analyser raises no missing_op_input, and the evaluator copes with `undefined`.
+    const { analysed, value: joined } = runSource('output out = Join(["a", "b"])');
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "missing_op_input")).toEqual([]);
+    expect(joined).toBe("ab");
+  });
+
+  it("Join: takes the separator by name too", () => {
+    expect(value('Join(parts: ["a", "b"], separator: ", ")')).toBe("a, b");
+  });
+
+  it("Join: a list of numbers is a type error, and ToString is the visible fix", () => {
+    const { analysed } = runSource("output out = Join([1, 2])");
+    expect(analysed.errors.map((e) => e.kind)).toContain("op_input_type_mismatch");
+    expect(value('Join([ToString(1), ToString(2)], "-")')).toBe("1-2");
+  });
+
+  it("Join: a MIXED list types as any[], and each part is written out as ToString would", () => {
+    // `["n = ", 1]` shares no item type, so it is `any[]`, which fits `string[]`. The value is
+    // pinned here; that it should WARN is the analyser's business, pinned in analyser.test.ts.
+    expect(value('Join(["n = ", 1])')).toBe("n = 1");
+  });
+
+  it("Join over a Map: where text and lists meet", () => {
+    const { analysed, value: joined } = runSource(
+      'output out = Join(Map(["cam", "mic"], name => Upper(name)), ", ")',
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    expect(joined).toBe("CAM, MIC");
+  });
+
+  it("Upper, Lower and Trim", () => {
+    expect(value('Upper("live")')).toBe("LIVE");
+    expect(value('Lower("LIVE")')).toBe("live");
+    expect(value('Trim("  cam 1  ")')).toBe("cam 1");
+  });
+
+  it("a null text is the empty string, never a throw", () => {
+    expect(value("Upper(null)")).toBe("");
+    expect(value("Trim(null)")).toBe("");
+    expect(value('Contains(null, "a")')).toBe(false);
+  });
+
+  it("Contains, StartsWith and EndsWith, which are case sensitive", () => {
+    expect(value('Contains("CAM 1", "AM")')).toBe(true);
+    expect(value('Contains("CAM 1", "am")')).toBe(false);
+    expect(value('StartsWith("CAM 1", "CAM")')).toBe(true);
+    expect(value('StartsWith("CAM 1", "1")')).toBe(false);
+    expect(value('EndsWith("CAM 1", "1")')).toBe(true);
+    expect(value('EndsWith("CAM 1", "CAM")')).toBe(false);
+  });
+
+  it("an empty part always matches", () => {
+    expect(value('Contains("abc", "")')).toBe(true);
+    expect(value('StartsWith("abc", "")')).toBe(true);
+    expect(value('EndsWith("abc", "")')).toBe(true);
+  });
+});
