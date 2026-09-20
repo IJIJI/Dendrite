@@ -36,6 +36,36 @@ warning samples; `instance.test.ts` pins it with a program that cannot compile.
 
 ---
 
+## Docs — inline TypeScript in the site's own colours — DONE 2026-09-20
+
+Inline `…{:ts}` code on Host and How it works is highlighted by Shiki, on the Night Owl pair
+Starlight's Expressive Code uses for its blocks. 239 snippets over 12 pages, in three commits:
+the highlighter, the marking pass, and the one generated block.
+
+- **Two plugins, not one.** `remark-ts.ts` sits beside `remark-den.ts` rather than inside it:
+  the Dendrite one is synchronous and lexer-driven, this one is async and grammar-driven, and
+  merging them would be Divergent Change. What they share (the MDX JSX node shapes) went to
+  `mdx-jsx.ts`, and the highlighter itself to `shiki-ts.ts`, which the diagnostics table also
+  uses.
+- **`structure: "inline"`** gives bare spans, so a snippet drops into a sentence with no `<pre>`
+  to strip. Both themes' colours ride on every span as `--shiki-light` and `--shiki-dark`, and
+  `dendrite.css` picks one from Starlight's `data-theme`: no re-render when the theme flips.
+- **How close the colours came:** dark is identical to a code block (a function name is `#82AAFF`
+  in both). Light is a shade lighter inline (`#4876D6` against Expressive Code's `#3B61B0`),
+  because EC lifts its blocks' contrast. That was the "close is enough" call, made in advance.
+- **What stays plain**, by decision: package names (`zod`, `ws`), paths, URLs, a version range,
+  a glob over method names (`register*`), a `package.json` field, JSON, maths, token kinds
+  (`ident`, `operation`), meta-variables (`T`, `T[]`), and the Dendrite names the docs
+  highlighter would colour wrongly (`Reading`, `Mod`, `Last`, `%`, `GreaterThanOrEqual`).
+- **The generated block.** `hostCodeParts` printed TypeScript token by token with hand-applied
+  classes; it is now `hostCode`, which prints text, and the table highlights it with the same
+  Shiki call. That deleted the printer's `Part` machinery along with `partsHtml`, its `escape`
+  and `partsText`: 103 lines out, 31 in.
+- **Found on the way** (and fixed the same day, above): the type colour and Starlight's own
+  inline-code colour were both the body text's grey.
+
+---
+
 ## Editor — the type colour, again — DONE 2026-09-20
 
 The plain ink chosen on 2026-09-19 was judged against editor snippets only. Once the inline
