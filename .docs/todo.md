@@ -6,6 +6,40 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
+## Core — the stdlib, configurable per category, maybe per op
+
+**When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from
+the backlog, where it was "the stdlib in segments a host can pick", and widened.
+
+**What changed since it was written:** it now owns a smell as well as a feature. `createStdlib()`
+(`packages/core/src/language/stdlib/index.ts`) is one 600-line function in three bands: every
+`registerOp` by category, every `registerEvaluator` far below, then the symbols. It is a **Long
+Method**, and adding an op is two edits a screen apart. The conversion and string ops were added
+in that same style ON PURPOSE (2026-09-20), so this restructure meets one shape, not two.
+
+**Widened to:** a host picks categories, and **possibly single ops** ("maybe even per method",
+the user). Decide whether per-op selection has a named consumer before building it: per category
+has one (Beacon choosing its vocabulary), per op does not yet.
+
+**The original entry:**
+
+**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
+wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
+lighthouse that never needs list ops does not carry them, and the docs can say "your host
+has these".
+
+**Why deferred:** no host exists yet that wants less than everything; the segment names are
+already the ops' `category`, so the split is mostly mechanical when it comes.
+
+**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
+step over the base) with `createStdlib()` composing all of them; operators registered with
+the segment that owns their op; a test that the composition equals today's stdlib; the docs'
+per-segment pages (already one per `category`) gain "how to include only this".
+
+**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
+
+---
+
 ## Docs — review the rest of the site after Learn
 
 **What:** the user is reading the docs page by page and sending observations. Learn comes first

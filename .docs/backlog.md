@@ -20,7 +20,166 @@ What is being done next is in `todo.md`.
 - No analyser changes needed — these are ordinary ops with fixed output types.
 - Tests for each conversion's evaluator behaviour and the edge cases (null, empty string, non-numeric string).
 
-**Driving need:** none yet. Add when a real program needs to bridge two types and the author would otherwise want implicit coercion.
+**Driving need:** `ToString` has one now: text cannot hold a number without it, and a template literal's hole calls it (see "Language — template literals" below). Picked up 2026-09-20, together with the first string ops.
+
+---
+
+## Language — do we want implicit casting?
+
+**What:** a question, not a decision. Today the answer is **no**: implicit coercion (a number
+read as a boolean, say) was rejected because it undermines the soundness model and would need
+conversion nodes inserted by a rewrite the language deliberately lacks ("Explicit conversion ops"
+above is the sound alternative, and it is being built). Three things now lean on the question:
+
+- **A template literal's hole calls `ToString` itself** (decided 2026-09-20, entry below). Argued
+  not to be the rejected coercion: the reader wrote the template, the conversion is visible in
+  it, and it goes one way only, to a string. But it IS a conversion nobody typed.
+- **An operator for joining strings** (entry below). `"n = " ++ 1` either stringifies the number
+  or is refused, and whichever it does is this question answered for one operator.
+- **A number in a condition.** `If(0, …)` is a type error today, and `ToBool` makes the
+  conversion explicit. A program full of `ToBool(...)` is the cost of the current answer.
+
+**Why deferred:** raised 2026-09-20 while planning the string ops, where it kept coming up from
+different directions. It wants deciding once, as a rule, rather than three times by accident.
+
+**What it requires:** a decision on WHICH direction, if any, is allowed silently (to a string is
+the only one with a case so far); where it happens (a desugaring can do it visibly, the analyser
+cannot without the rewrite); and whether a silent conversion warns. Decided together with the
+string operator and with "strings and arrays, interchangeable" below, since all three are about
+how much the language does without being asked.
+
+---
+
+## Language — strings and arrays, interchangeable
+
+**Why this exists:** a Dendrite program cannot build a string at all today. `Concat` is arrays
+only and `Add` is numbers only, so `"Hello, " + name` has no expression in the language. A `Join`
+op is planned next and closes that gap; what is recorded here is what the user wants beyond it.
+
+**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
+**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
+is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
+(`infra/registry.ts`, the single extension point for subtyping):
+
+> a `string` is compatible with `T[]` when a `string` is compatible with `T`
+
+So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
+string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
+array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
+`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
+already exists, whose `inferOutput` can say "every input was a string, so is the result" while
+its evaluator joins instead of collecting.
+
+**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
+edges are open, and each changes what a program means:
+
+- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
+  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
+  string ops use the name `Contains` and leave `Includes` to arrays.
+- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
+  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
+- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
+  string holds a JS string, not an array. Either every array evaluator handles both, or the
+  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
+  The second keeps every existing op untouched, and is the leaning.
+- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
+  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
+
+One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
+list is expected and never be told, which is the opposite of the explicitness the language chose
+for `any`. That is the price of "nothing to declare", and it is why this sits beside the
+implicit-casting question above.
+
+**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
+`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
+host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
+above.
+
+**The alternatives, all costlier**, kept for the discussion:
+
+| Route | How `Length` accepts both | Cost |
+| --- | --- | --- |
+| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
+| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
+| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
+| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
+
+**Driving need:** Beacon: a tally label is text built from values.
+
+---
+
+## Language — an operator for joining strings (`+` or `++`)
+
+**What:** `"Hello, " + name`, or `"Hello, " ++ name`. Neither exists: text is built with `Join`.
+
+**Why deferred:** both routes were weighed on 2026-09-20 and both run into the implicit-casting
+question above, so the operator is decided with it rather than ahead of it.
+
+- **`++`, as plain sugar over `Join`.** A few lines: `registerInfix("++", BP.ADD, …)` building
+  `Join` over a two-item list. The lexer already sorts operators longest-first, so `++` beats `+`
+  the way `>=` beats `>`. **It waits because of `"n = " ++ 1`.** A list of a string and a number
+  types as `any[]`, which reaches `string[]` through array covariance, so it would stringify the
+  number, unless the desugaring wraps each side in `ToString`, which is implicit casting chosen on
+  purpose. Either way the operator is that question, answered.
+- **`+`, by overloading `Add`.** `+` desugars to `Add(l, r)` in the parser, from two untyped
+  nodes: desugaring is type-blind by design, so it cannot pick `Join` for strings. The route is to
+  teach the OP strings, as most languages overload `+`. About one commit: the variadic branch of
+  `validateInputs` checks each item against the declared type AS it analyses them, before the
+  shared item type is known, so it is reordered (analyse all, compute the shared type, ask
+  `inferInputTypes`, then check), which is how the single-input branch already works; then `Add`
+  gets `inferInputTypes`, `inferOutput` and an evaluator that sums or joins. **It waits because
+  its signature cannot be honest**: with no union types the reference would print
+  `Add(nodes...: number) -> number` for an op that also joins text.
+
+**Driving need:** readability. `Join(["Bus ", ToString(n), " is live"])` is correct and clumsy.
+
+---
+
+## Stdlib — the rest of the string ops
+
+**What:** `Replace` (first match or every match: decide), `Split` (by code point when the
+separator is empty, per the Unicode note above), and a `Slice` that arrays want too.
+
+**Why deferred:** no named consumer. The first handful (`Join`, `Upper`, `Lower`, `Trim`,
+`Contains`, `StartsWith`, `EndsWith`) was picked for Beacon's labels on 2026-09-20 and these were
+left out by the Speculative Generality guard.
+
+**What it requires:** ordinary ops with fixed signatures, an explicit rule each for `null` and
+the empty string, and an entry on the generated `string` reference page, which costs nothing.
+
+---
+
+## Language — template literals
+
+**What:** a string with holes, the way TypeScript writes one:
+
+```
+let name     = "Chris"
+let greeting = `Hello, ${name}`
+```
+
+**Decided (2026-09-20): a hole calls `ToString` itself.** `` `Total: ${n}` `` works with a number
+in the hole. Argued not to be the implicit coercion the project rejected: that rule is about
+values silently changing meaning between number and boolean, with a conversion node the reader
+never wrote. Here the reader wrote the template, the conversion is visible in it, and it goes one
+way only, to a string. It is still the first concrete case under "do we want implicit casting?"
+above.
+
+**Why deferred:** the largest of the string pieces, and the only one that changes the language's
+shape. It is sugar, so it desugars in the parser like every symbol does: `` `Hi ${n}` `` becomes
+`Join(["Hi ", ToString(n)])`, which needs `Join` and `ToString` to exist first.
+
+**What it requires:**
+- **The lexer** reads a string that contains expressions: a new token form, and nested `${ }`
+  with the expression inside lexed as code. A template is structure, not an operator, so it does
+  not come from `grammar.operatorTokens`.
+- **The parser** parses each hole as an expression and builds the `Join`.
+- **The editor's highlighter** (`packages/editor/src/code/tokens.ts`): a string token with code
+  inside it, so the literal parts take the string colour and a hole takes the colours of what it
+  holds. The docs' `{:den}` colouring and `remark-den.ts` follow, since they use the same lexer.
+- **Docs:** a section on *Operators and symbols*, and the desugaring shown on *The chain*.
+
+**Driving need:** the same labels. A formatted string is where `Join` stops being readable.
 
 ---
 
@@ -207,25 +366,6 @@ hover range. Tune them in the playground and settle them.
 **What it requires:** trial values via DevTools on the variables and the constants in
 `packages/editor/src/code/cm.ts`, then mirror the result in `brand/dendrite-tokens.css`
 (`--dn-selection`, `--dn-editor-active-line`).
-
----
-
-## Core — the stdlib in segments a host can pick
-
-**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
-wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
-lighthouse that never needs list ops does not carry them, and the docs can say "your host
-has these".
-
-**Why deferred:** no host exists yet that wants less than everything; the segment names are
-already the ops' `category`, so the split is mostly mechanical when it comes.
-
-**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
-step over the base) with `createStdlib()` composing all of them; operators registered with
-the segment that owns their op; a test that the composition equals today's stdlib; the docs'
-per-segment pages (already one per `category`) gain "how to include only this".
-
-**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
 
 ---
 
