@@ -81,12 +81,14 @@
 /* Inline TypeScript (`…{:ts}`), from Shiki: each span carries both themes' colours as custom
    properties, and the page picks one. Starlight sets data-theme on <html>, so the toggle needs
    no re-render. The font-style properties are Night Owl's italics, on comments and keywords. */
-code.ts span {
+code.ts span,
+.ts-block span {
   color: var(--shiki-light);
   font-style: var(--shiki-light-font-style, normal);
 }
 
-[data-theme="dark"] code.ts span {
+[data-theme="dark"] code.ts span,
+[data-theme="dark"] .ts-block span {
   color: var(--shiki-dark);
   font-style: var(--shiki-dark-font-style, normal);
 }

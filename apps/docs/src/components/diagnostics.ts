@@ -10,10 +10,10 @@ import { type Ports, type SavedAstProgram, type Type } from "@dendrite-lang/core
 // a graph rather than text as the host code that builds it, the only honest way to show a
 // kind the code syntax cannot express.
 //
-// Both come out as the editor's own token classes (`tok-*`) and, for the declarations, its
-// pane rows, so an entry looks like the MinimalLayout it would be if the page mounted a live
-// editor per sample - which would put ~670 kB of JavaScript on a reference page that today
-// ships none. The same trick OpsReference.astro uses for its produced values.
+// The declarations come out as the editor's own token classes (`tok-*`) and its pane rows, so
+// an entry looks like the MinimalLayout it would be if the page mounted a live editor per
+// sample - which would put ~670 kB of JavaScript on a reference page that today ships none.
+// The host code comes out as TypeScript text, for the site's Shiki call to colour.
 
 /** A stretch of text with one of the editor's token classes, or none. */
 export interface Part {
@@ -22,26 +22,6 @@ export interface Part {
 }
 
 const t = (text: string, cls?: string): Part => ({ text, cls });
-
-const width = (parts: Part[]): number => parts.reduce((sum, part) => sum + part.text.length, 0);
-
-const escape = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-/**
- * The parts as HTML, the way the editor's own `sourceHtml` does it. A `<pre>` printing its
- * children cannot be reformatted by a formatter without changing what it shows, so the page
- * hands it one string instead.
- */
-export const partsHtml = (parts: Part[]): string =>
-  parts
-    .map((part) =>
-      part.cls ? `<span class="tok-${part.cls}">${escape(part.text)}</span>` : escape(part.text),
-    )
-    .join("");
-
-/** The same parts as plain text. */
-export const partsText = (parts: Part[]): string => parts.map((part) => part.text).join("");
 
 /** A type as the editor colours one: the name in the type colour, the rest punctuation. */
 function typeParts(type: Type): Part[] {
@@ -138,53 +118,22 @@ const isType = (value: object): value is Type =>
   ("kind" in value && value.kind === "function" && "returns" in value);
 
 /** `Type.number`, `Type.name("Bus")`, `Type.array(Type.number)`. */
-function printType(type: Type): Part[] {
-  const call = (method: string, inner: Part[]): Part[] => [
-    t("Type", "op"),
-    t(".", "punct"),
-    t(method, "ident"),
-    t("(", "punct"),
-    ...inner,
-    t(")", "punct"),
-  ];
+function printType(type: Type): string {
   switch (type.kind) {
     case "name":
-      return TYPE_CONSTANTS.includes(type.name)
-        ? [t("Type", "op"), t(".", "punct"), t(type.name, "ident")]
-        : call("name", [t(`"${type.name}"`, "string")]);
+      return TYPE_CONSTANTS.includes(type.name) ? `Type.${type.name}` : `Type.name("${type.name}")`;
     case "array":
-      return call("array", printType(type.element));
+      return `Type.array(${printType(type.element)})`;
     case "function":
-      return call("fn", [
-        t("[", "punct"),
-        ...type.params.flatMap((param, index) =>
-          index === 0 ? printType(param) : [t(", ", "punct"), ...printType(param)],
-        ),
-        t("], ", "punct"),
-        ...printType(type.returns),
-      ]);
+      return `Type.fn([${type.params.map(printType).join(", ")}], ${printType(type.returns)})`;
   }
 }
 
-const literalParts = (value: unknown): Part[] => {
-  if (typeof value === "string") return [t(JSON.stringify(value), "string")];
-  if (typeof value === "number") return [t(String(value), "number")];
-  if (typeof value === "boolean" || value === null) return [t(String(value), "literal")];
-  return [t(String(JSON.stringify(value)))];
-};
-
 /** A node, an array, or a plain value, as the TypeScript that produces it. */
-function print(value: unknown, indent: string): Part[] {
-  if (value === null || typeof value !== "object") return literalParts(value);
+function print(value: unknown, indent: string): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) {
-    if (value.length === 0) return [t("[]", "punct")];
-    return [
-      t("[", "punct"),
-      ...value.flatMap((item, index) =>
-        index === 0 ? print(item, indent) : [t(", ", "punct"), ...print(item, indent)],
-      ),
-      t("]", "punct"),
-    ];
+    return value.length === 0 ? "[]" : `[${value.map((item) => print(item, indent)).join(", ")}]`;
   }
   if (isType(value)) return printType(value);
 
@@ -195,50 +144,29 @@ function print(value: unknown, indent: string): Part[] {
 
   // An operation node reads as its constructor, which is what a host writes.
   if ("kind" in value && value.kind === "operation" && "op" in value && "inputs" in value) {
-    return [
-      t("operationNode", "op"),
-      t("(", "punct"),
-      t(`"${String(value.op)}"`, "string"),
-      t(", ", "punct"),
-      ...print(value.inputs, indent),
-      t(")", "punct"),
-    ];
+    return `operationNode("${String(value.op)}", ${print(value.inputs, indent)})`;
   }
 
-  if (entries.length === 0) return [t("{}", "punct")];
+  if (entries.length === 0) return "{}";
 
   const inner = `${indent}  `;
-  const pair = (key: string, field: unknown, at: string): Part[] => [
-    t(key, "ident"),
-    t(": ", "punct"),
-    ...print(field, at),
-  ];
-  const oneLine = [
-    t("{ ", "punct"),
-    ...entries.flatMap(([key, field], index) =>
-      index === 0 ? pair(key, field, inner) : [t(", ", "punct"), ...pair(key, field, inner)],
-    ),
-    t(" }", "punct"),
-  ];
-  if (width(oneLine) + indent.length <= 88) return oneLine;
-  return [
-    t("{\n", "punct"),
-    ...entries.flatMap(([key, field]) => [t(inner), ...pair(key, field, inner), t(",\n", "punct")]),
-    t(indent),
-    t("}", "punct"),
-  ];
+  const pair = (key: string, field: unknown, at: string): string => `${key}: ${print(field, at)}`;
+  const oneLine = `{ ${entries.map(([key, field]) => pair(key, field, inner)).join(", ")} }`;
+  if (oneLine.length + indent.length <= 88) return oneLine;
+  return `{
+${entries
+  .map(
+    ([key, field]) => `${inner}${pair(key, field, inner)},
+`,
+  )
+  .join("")}${indent}}`;
 }
 
-/** A sample in `ast` form, as the `bindings` and `outputs` a host hands to `analyse`. */
-export function hostCodeParts(example: SavedAstProgram): Part[] {
-  return [
-    t("bindings", "ident"),
-    t(": ", "punct"),
-    ...print(example.bindings, ""),
-    t(",\n", "punct"),
-    t("outputs", "ident"),
-    t(": ", "punct"),
-    ...print(example.outputs, ""),
-    t(",", "punct"),
-  ];
-}
+/**
+ * A sample in `ast` form, as the `bindings` and `outputs` a host hands to `analyse`: real
+ * TypeScript, so the site's own highlighter colours it (`plugins/shiki-ts.ts`) rather than this
+ * file guessing at token classes.
+ */
+export const hostCode = (example: SavedAstProgram): string =>
+  `bindings: ${print(example.bindings, "")},
+outputs: ${print(example.outputs, "")},`;

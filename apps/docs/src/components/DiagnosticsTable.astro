@@ -17,7 +17,8 @@ import {
 import { DOCUMENT_VERSION, documentUrl, formatValue } from "@dendrite-lang/editor";
 
 import DenCode from "./DenCode.astro";
-import { declarationsOf, hostCodeParts, type Part, partsHtml, type PortLine } from "./diagnostics";
+import { declarationsOf, hostCode, type Part, type PortLine } from "./diagnostics";
+import { tsBlock } from "../plugins/shiki-ts";
 
 const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] = [
   {
@@ -169,6 +170,18 @@ const samples = new Map(
   ),
 );
 
+// The one TypeScript block on the site Expressive Code never sees, because it is generated
+// rather than written in a page: highlighted here, by the same Shiki call inline `{:ts}` uses.
+const hostCodeHtml = new Map(
+  await Promise.all(
+    diagnosticList
+      .flatMap((entry) =>
+        entry.example?.form === "ast" ? [[entry.kind, entry.example] as const] : [],
+      )
+      .map(async ([kind, example]) => [kind, await tsBlock(hostCode(example))] as const),
+  ),
+);
+
 const source = (entry: Entry): string | null =>
   entry.example?.form === "code" ? entry.example.source : null;
 
@@ -317,12 +330,7 @@ const programMatters = (entry: Entry): boolean => entry.stage !== "ports";
                   {entry.example?.form === "ast" ? (
                     <div class="not-content dendrite-minimal-layout">
                       <span class="declared-label">as a host builds it</span>
-                      <div class="dendrite-code">
-                        <pre
-                          class="dendrite-source"
-                          set:html={partsHtml(hostCodeParts(entry.example))}
-                        />
-                      </div>
+                      <div class="dendrite-code" set:html={hostCodeHtml.get(entry.kind)} />
                     </div>
                   ) : null}
                   {program ? (
