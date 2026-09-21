@@ -63,8 +63,8 @@ which means:
   ports={whateverExample.ports}
 />
 
-That compiles, with a warning where the `any{:den}` meets `Length{:den}`. Here `$whatever{:den}`
-holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
+That compiles, with a warning where the `any{:den}` meets `Length{:den}`, and the warning names
+what you wrote: `'$whatever' is 'any' typed`. Here `$whatever{:den}` holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
 `length{:den}` shows `undefined`, which is not a number at all, because the one check that
 would have caught it is the one `any{:den}` gave up.
 

@@ -11,7 +11,7 @@ import {
 import { isCompatible } from "../infra/registry";
 import { Type, typeToString } from "../infra/types";
 import { createStdlib } from "../stdlib";
-import { createLanguage, type Language } from "../language";
+import { createLanguage, type Language, parseSource } from "../language";
 import { createEnvironment } from "../environment";
 import { type Ports } from "../infra/ports";
 import { type LanguageDescriptor } from "../infra/registry";
@@ -1471,5 +1471,158 @@ describe("app (C2)", () => {
     );
     const result = analyse(prog, lang.descriptor);
     expect(result.errors.some((e) => e.kind === "binding_cycle")).toBe(true);
+  });
+});
+
+describe("implicit_any_cast: what it says, and what it sees", () => {
+  // Source text rather than AST nodes: the case in question is a DESUGARING, and only the
+  // parser makes `>=` into Not(LessThan(a, b)).
+  const castsIn = (source: string, inputs: Ports["inputs"] = []) => {
+    const language = createStdlib();
+    const parsed = parseSource(source, language);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    const result = analyse(parsed.program, withPorts(language, { inputs, outputs: [] }));
+    expect(result.errors).toEqual([]);
+    return result.warnings.filter((w) => w.kind === "implicit_any_cast");
+  };
+  const anyInput = (name: string) => [{ name, type: Type.any }];
+
+  it("names the input the reader wrote, and keeps the op input in `name`", () => {
+    const [warning] = castsIn("output out = GreaterThan($val, 0)", anyInput("val"));
+    expect(warning?.message).toBe("'$val' is 'any' typed - 'number' expected");
+    // The field is the attribution (which slot), the message is the sentence. Outside core
+    // only the message travels: ProgramDiagnostic has no `name`.
+    expect(warning?.name).toBe("a");
+  });
+
+  it("names it through a desugaring: `>=` is Not(LessThan(a, b)), and `a` is nobody's word", () => {
+    const [warning] = castsIn("output out = $height >= 10", anyInput("height"));
+    expect(warning?.message).toBe("'$height' is 'any' typed - 'number' expected");
+  });
+
+  it("names a binding", () => {
+    const [warning] = castsIn("let loose = $val\noutput out = loose > 0", anyInput("val"));
+    expect(warning?.message).toContain("'loose' is 'any' typed");
+  });
+
+  it("names the op and its input when the value has no name of its own", () => {
+    const [warning] = castsIn("output out = GreaterThan(Default(null, null), 0)");
+    expect(warning?.message).toBe("Input 'a' of 'GreaterThan' is 'null' typed - 'number' expected");
+  });
+
+  it("says 'null' for a null, which it used to call 'any'", () => {
+    const language = testLang();
+    language.registerOutput({ name: "score", type: Type.number, mode: "required" });
+    const result = analyse(makeProgram({}, { score: lit(null) }), language.descriptor);
+    expect(result.warnings.map((w) => w.message)).toContain(
+      "Output 'score' is 'null' typed - 'number' expected",
+    );
+  });
+
+  it("a lambda's return is not an 'Input'", () => {
+    const language = testLang();
+    language.registerInput({ name: "val", type: Type.any });
+    const program = makeProgram(
+      { f: lambda([{ name: "x", type: Type.any }], ref("x"), Type.number) },
+      { out: ref("f") },
+    );
+    const [warning] = analyse(program, language.descriptor).warnings.filter(
+      (w) => w.kind === "implicit_any_cast",
+    );
+    // The body is the parameter `x`, which the reader did write.
+    expect(warning?.message).toBe("'x' is 'any' typed - 'number' expected");
+    expect(warning?.name).toBe("(lambda return)");
+  });
+
+  it("an application's argument is an 'Argument', not an 'Input'", () => {
+    const language = testLang();
+    const program = makeProgram(
+      { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
+      { out: app(ref("f"), [lit(null)]) },
+    );
+    const [warning] = analyse(program, language.descriptor).warnings.filter(
+      (w) => w.kind === "implicit_any_cast",
+    );
+    expect(warning?.message).toBe("Argument 'x' is 'null' typed - 'number' expected");
+  });
+
+  it("an incompatibility names the SLOT, and reads as a sentence", () => {
+    const language = createStdlib();
+    const parsed = parseSource('output out = And(true, "Country")', language);
+    if (!parsed.ok) throw new Error("parse failed");
+    const result = analyse(parsed.program, withPorts(language, { inputs: [], outputs: [] }));
+    expect(result.errors.map((e) => e.message)).toContain(
+      "Input 'nodes' of 'And' has type 'string', which is not compatible with expected 'boolean'",
+    );
+  });
+
+  // ── the blind spot: an `any` inside a list used to cross without a word ──────
+
+  it("sees an any inside a list: a mixed list into number[]", () => {
+    const [warning] = castsIn('output out = Average([1, "two"])');
+    expect(warning?.message).toBe(
+      "Input 'list' of 'Average' is 'any[]' typed - 'number[]' expected",
+    );
+  });
+
+  it("sees it through a name, and says the name", () => {
+    const [warning] = castsIn("output out = Average($rows)", [
+      { name: "rows", type: Type.array(Type.any) },
+    ]);
+    expect(warning?.message).toBe("'$rows' is 'any[]' typed - 'number[]' expected");
+  });
+
+  it("sees it however deep the lists nest", () => {
+    const language = testLang();
+    language.registerOp({
+      name: "Grid",
+      inputs: [{ name: "cells", type: Type.array(Type.array(Type.number)) }],
+      output: Type.number,
+      category: "test",
+    });
+    language.registerEvaluator({ op: "Grid", evaluate: () => 0 });
+    language.registerInput({ name: "cells", type: Type.array(Type.array(Type.any)) });
+    const program = makeProgram(
+      {},
+      {
+        out: {
+          kind: "operation",
+          op: "Grid",
+          inputs: { cells: { kind: "input", name: "cells" } },
+          output: Type.number,
+        },
+      },
+    );
+    const [warning] = analyse(program, language.descriptor).warnings.filter(
+      (w) => w.kind === "implicit_any_cast",
+    );
+    expect(warning?.message).toBe("'$cells' is 'any[][]' typed - 'number[][]' expected");
+  });
+
+  it("a mixed list into Join warns, and ToString is the clean form", () => {
+    // The pair to evaluator.test.ts's "MIXED list" test, which pins the VALUE ("n = 1").
+    expect(castsIn('output out = Join(["n = ", 1])')).toHaveLength(1);
+    expect(castsIn('output out = Join(["n = ", ToString(1)])')).toEqual([]);
+  });
+
+  it("stays quiet for a list that fits, and where any is what is wanted", () => {
+    expect(castsIn("output out = Average([1, 2, 3])")).toEqual([]);
+    expect(castsIn('output out = Length([1, "two"])')).toEqual([]); // Length takes any[]
+  });
+
+  it("stays quiet for an EMPTY list literal, which has no items to take a type from", () => {
+    expect(castsIn("output out = Average([])")).toEqual([]);
+    expect(castsIn("output out = Join([])")).toEqual([]);
+  });
+
+  it("known ceiling: a NAME bound to an empty list does warn", () => {
+    // Only its type (`any[]`) reaches the check, and a binding cannot be annotated yet
+    // (backlog: type annotations on bindings). Pinned so that fix shows up here.
+    const [warning] = castsIn("let none = []\noutput out = Average(none)");
+    expect(warning?.message).toBe("'none' is 'any[]' typed - 'number[]' expected");
+  });
+
+  it("leaves functions alone: an untyped lambda into Filter is gradual typing, not a cast", () => {
+    expect(castsIn("output out = Filter([1, 2, 3], item => item > 1)")).toEqual([]);
   });
 });

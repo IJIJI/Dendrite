@@ -99,26 +99,75 @@ export function getOutputType(node: CNode): Type {
   }
 }
 
+/** Where a value flows into: how a diagnostic names it, and the value that arrived. */
+interface Slot {
+  /** The diagnostic's `name` field: the op input, the parameter, `(lambda return)`. */
+  name: string;
+  /** How to say the slot in a sentence, for when the value has no name of its own. */
+  label: string;
+  /** The value that arrived. */
+  node: CNode;
+  /** Where the squiggle goes. Not always `node.source`: a lambda's return points at the lambda. */
+  source?: SourceRef;
+}
+
+// What a reader would call this value: the name they wrote, when there is one. `height >= 10`
+// desugars to Not(LessThan(a, b)), so naming the op's input alone points at a name nobody typed.
+function writtenAs(node: CNode): string | undefined {
+  switch (node.kind) {
+    case "ref":
+      return node.name;
+    case "input":
+      return `$${node.name}`;
+    case "field": {
+      const struct = writtenAs(node.struct);
+      return struct ? `${struct}.${node.field}` : undefined;
+    }
+    default:
+      return undefined; // a literal, a list, a lambda, a call: the slot's label says it instead
+  }
+}
+
+// Does an `any` (or a null) cross into something narrower here? Looked for INSIDE a list too:
+// `any[]` fits `number[]` through array covariance, and used to cross without a word. Functions
+// are left out on purpose: an `(any) -> T` lambda where `(number) -> T` is expected is the
+// gradual typing isCompatible allows deliberately, and warning there would flood every Filter.
+function castsAny(actual: Type, expected: Type): boolean {
+  if (actual.kind === "array" && expected.kind === "array") {
+    return castsAny(actual.element, expected.element);
+  }
+  return isAnyOrNull(actual) && !isAny(expected);
+}
+
+// An empty list literal has no items to take a type from, so its element is `any`; warning
+// about it would be crying wolf. Only the LITERAL is recognisable: a name bound to an empty
+// list reaches a check as its type alone, and does warn, until a binding can be annotated.
+const isEmptyListLiteral = (node: CNode): boolean =>
+  node.kind === "array" && node.items.length === 0;
+
 function checkCompat(
   actual: Type,
   expected: Type,
-  name: string,
+  slot: Slot,
   ctx: AnalysisContext,
-  kind: AnalysisErrorKind = "op_input_type_mismatch",
-  source?: SourceRef,
+  kind: AnalysisErrorKind,
 ): void {
+  const { name, source } = slot;
   if (!isCompatible(actual, expected, ctx.descriptor)) {
+    // An incompatibility is about the SLOT: which argument is wrong.
     ctx.errors.push({
       kind,
       name,
-      message: `Input '${name}' type '${typeToString(actual)}' is not compatible with expected '${typeToString(expected)}'`,
+      message: `${slot.label} has type '${typeToString(actual)}', which is not compatible with expected '${typeToString(expected)}'`,
       source,
     });
-  } else if (isAnyOrNull(actual) && !isAny(expected)) {
+  } else if (castsAny(actual, expected) && !isEmptyListLiteral(slot.node)) {
+    // An implicit cast is about the VALUE, so it is named as the reader wrote it.
+    const subject = writtenAs(slot.node);
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,
-      message: `Input '${name}' is 'any' typed - '${typeToString(expected)}' expected`,
+      message: `${subject ? `'${subject}'` : slot.label} is '${typeToString(actual)}' typed - '${typeToString(expected)}' expected`,
       source,
     });
   }
@@ -265,10 +314,9 @@ function validateInputs(
           checkCompat(
             getOutputType(ci),
             opInput.type,
-            name,
+            { name, label: `Input '${name}' of '${opDef.name}'`, node: ci, source: ci.source },
             ctx,
             "op_input_type_mismatch",
-            ci.source,
           );
         // Flatten variadic CNode[] dependsOn - array itself has no .dependsOn
         for (const d of ci.dependsOn) dependsOnAcc.add(d);
@@ -290,7 +338,13 @@ function validateInputs(
       const cnode = analyseNode(withExpectedParams(rawInputs[name] as ASTNode, expectedType), ctx);
       const actualType = getOutputType(cnode);
       if (cnode.kind !== "error")
-        checkCompat(actualType, expectedType, name, ctx, "op_input_type_mismatch", cnode.source);
+        checkCompat(
+          actualType,
+          expectedType,
+          { name, label: `Input '${name}' of '${opDef.name}'`, node: cnode, source: cnode.source },
+          ctx,
+          "op_input_type_mismatch",
+        );
       for (const d of cnode.dependsOn) dependsOnAcc.add(d);
       analysedInputs[name] = cnode;
       inputTypes[name] = actualType;
@@ -508,10 +562,14 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         checkCompat(
           bodyReturn,
           node.returnType,
-          "(lambda return)",
+          {
+            name: "(lambda return)",
+            label: "The lambda's return",
+            node: body,
+            source: node.source,
+          },
           ctx,
           "lambda_return_type_mismatch",
-          node.source,
         );
       }
 
@@ -560,13 +618,13 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       for (let i = 0; i < slots.length; i++) {
         const ca = analyseNode(slots[i]!, ctx);
         if (ca.kind !== "error") {
+          const param = calleeType.paramNames?.[i] ?? `#${i}`;
           checkCompat(
             getOutputType(ca),
             calleeType.params[i],
-            calleeType.paramNames?.[i] ?? `#${i}`,
+            { name: param, label: `Argument '${param}'`, node: ca, source: ca.source },
             ctx,
             "app_argument_type_mismatch",
-            ca.source,
           );
         }
         for (const d of ca.dependsOn) deps.add(d);
@@ -965,11 +1023,11 @@ function validateOutputs(
         if (!def.mode || def.mode === "required") okFlag = false;
         continue;
       }
-      if (isAnyOrNull(actualType) && !isAny(def.type)) {
+      if (castsAny(actualType, def.type) && !isEmptyListLiteral(cnode)) {
         ctx.warnings.push({
           kind: "implicit_any_cast",
           name,
-          message: `Output '${name}' is 'any' typed - '${typeToString(def.type)}' expected`,
+          message: `Output '${name}' is '${typeToString(actualType)}' typed - '${typeToString(def.type)}' expected`,
           source: rawNode.source,
         });
       }
