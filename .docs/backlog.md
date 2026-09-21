@@ -628,31 +628,6 @@ or a separate one-level `Flatten` that can be typed. Neither has a user yet.
 
 ---
 
-## Language — type annotations on bindings
-
-**What:** `let total: number = $price * $quantity`. A lambda parameter can carry a type today
-(`(n: number) => n * 2`), a binding cannot: its type is always inferred. The docs met the gap
-twice on 2026-09-18 - a lambda bound on its own has nothing to infer its parameter from, and
-the only fix was to annotate the lambda, not the binding.
-
-**Why deferred:** the analyser infers every binding's type already, so an annotation is a check
-rather than a necessity. It earns its place as documentation a reader can trust, and as the
-thing that stops an `any` spreading.
-
-**What it requires:** the `let` statement in core-grammar.ts takes an optional `: Type` after
-the name (the same type parser lambda parameters use); `RawProgram` keeps it beside the node;
-the analyser checks the inferred type against it with `isCompatible` and reports a new
-`binding_type_mismatch`, which the diagnostics registry then documents. A rete program would
-carry it as node metadata.
-
-**Driving need:** any program that reads an `any` input and wants to stop the `any` there. Since
-2026-09-21 there is a concrete case with no other remedy: `let none = []` types as `any[]`, and
-`Average(none)` now warns (the `implicit_any_cast` check sees inside a list). An empty LITERAL is
-recognised and stays quiet, but a name bound to one reaches the check as its type alone.
-`let none: number[] = []` is the fix. Weighed together with the casting discussion in `todo.md`.
-
----
-
 ## Docs — samples with list and JSON inputs
 
 **What:** an input holding a list or a structure renders in MinimalLayout's input strip as a
@@ -901,6 +876,10 @@ what a type even is before the check could be designed once for both levels.
   error is raised (found 2026-09-19; *Types in practice* now says so). A check where an `any`
   meets a concrete input, with a runtime error as the channel, would close it; it is the same
   cost question as above, per op call rather than per pushed value.
+
+**Shared machinery (2026-09-21):** the safe cast in `todo.md` (`$rows as number[]`) needs the same
+thing this does, a runtime test of a value against a `Type`. It is built there first, as one
+`valueFits(value, type, descriptor)`, and this entry REUSES it rather than writing a second.
 
 **Driving need:** a host pushing a struct that does not match its declaration is currently
 invisible until something downstream misbehaves.

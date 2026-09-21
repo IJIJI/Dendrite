@@ -68,7 +68,7 @@ now recurses into list elements, and both raise sites use it.
   an untyped lambda into `Filter` is the gradual typing `isCompatible` allows deliberately, and
   warning there would flood every list op.
 - **A named ceiling:** a NAME bound to an empty list does warn, since only its type reaches the
-  check. Pinned by a test, and the fix is "type annotations on bindings" (backlog).
+  check. Pinned by a test, and the fix is a binding annotation (`todo.md`, with the safe cast).
 - **The fallout was measured, then confirmed:** no sample on the site passed a mixed or empty
   list into a typed slot, and all 455 core tests and 78 docs tests passed with the wider warning
   before a single new test was written.

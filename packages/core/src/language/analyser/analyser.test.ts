@@ -1617,7 +1617,7 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
 
   it("known ceiling: a NAME bound to an empty list does warn", () => {
     // Only its type (`any[]`) reaches the check, and a binding cannot be annotated yet
-    // (backlog: type annotations on bindings). Pinned so that fix shows up here.
+    // (`.docs/todo.md`: binding annotations, with the safe cast). Pinned so that fix shows up here.
     const [warning] = castsIn("let none = []\noutput out = Average(none)");
     expect(warning?.message).toBe("'none' is 'any[]' typed - 'number[]' expected");
   });
