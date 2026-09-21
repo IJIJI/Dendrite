@@ -51,6 +51,34 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 ---
 
+## Discuss — explicit casting, `$sources as number[]`
+
+**What:** decide IF and WHEN a program may write `$sources as number[]`. A discussion, not a
+build: the outcome is a decision written here or in the backlog.
+
+**Why now:** the `implicit_any_cast` change of 2026-09-21 made the language louder about `any`
+and gave the author no way to answer back. `Average($rows)` with `rows: any[]` warns, correctly,
+and the only way to quiet it is for the HOST to declare the input narrower: a program author
+cannot say "I know what this is". And a name bound to an empty list warns with no remedy at all.
+
+**What to weigh:**
+
+- **`as` is an assertion, not a conversion.** `ToNumber` changes a value; `as number[]` changes
+  only what the checker believes. Different needs, easily confused.
+- **Does it check at runtime?** An unchecked `as` is a lie the evaluator acts on: `Length` of a
+  number was `undefined` before anyone noticed (*Types in practice* says so). A checked one needs
+  the boundary validation that is already a backlog entry.
+- **Its neighbours**, to be decided together: "type annotations on bindings" (which fixes the
+  empty-list case with no cast at all), "do we want implicit casting?", and "strings and arrays,
+  interchangeable". Four entries circling one question: how a program states or changes a type.
+- **Cost:** `as` is syntax. A keyword or an infix in the Pratt grammar, a node kind or a
+  desugaring, an analyser rule, the editor's highlighter (a type in a NEW type position, which
+  `typePositions` in `packages/editor/src/code/tokens.ts` has to learn), and docs.
+
+**When:** at the end of the current plan (2026-09-20), after the TypeScript samples run.
+
+---
+
 ## Docs — review the rest of the site after Learn
 
 **What:** the user is reading the docs page by page and sending observations. Learn comes first

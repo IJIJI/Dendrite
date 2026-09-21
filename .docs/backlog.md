@@ -612,7 +612,11 @@ the analyser checks the inferred type against it with `isCompatible` and reports
 `binding_type_mismatch`, which the diagnostics registry then documents. A rete program would
 carry it as node metadata.
 
-**Driving need:** any program that reads an `any` input and wants to stop the `any` there.
+**Driving need:** any program that reads an `any` input and wants to stop the `any` there. Since
+2026-09-21 there is a concrete case with no other remedy: `let none = []` types as `any[]`, and
+`Average(none)` now warns (the `implicit_any_cast` check sees inside a list). An empty LITERAL is
+recognised and stays quiet, but a name bound to one reaches the check as its type alone.
+`let none: number[] = []` is the fix. Weighed together with the casting discussion in `todo.md`.
 
 ---
 
@@ -675,18 +679,6 @@ technically a breaking change for nobody.
 
 **What it requires:** export the result and diagnostic types by name instead of `export *`, and
 leave `AnalysisContext` internal. Do it at the same minor release as the operator-naming aliases.
-
----
-
-## Diagnostics — an `implicit_any_cast` names the op's input, not the reader's expression
-
-**What:** `height >= 10` over an `any` height reports "Input 'a' is 'any' typed - 'number'
-expected". `a` is `LessThan`'s input, two desugarings deep - a name the reader never wrote. The
-squiggle is in the right place; the message points at the wrong thing.
-
-**What it requires:** the message names the expression when it is a ref or an input
-(`'height' is 'any' ...`), and the op and input only when it is not. The analyser has the node
-in hand at the check, so it is a message change plus a look at what `checkCompat` is passed.
 
 ---
 

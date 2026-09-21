@@ -36,6 +36,47 @@ warning samples; `instance.test.ts` pins it with a program that cannot compile.
 
 ---
 
+## Diagnostics — an `implicit_any_cast` names what you wrote, and sees inside a list — DONE 2026-09-21
+
+**The message.** `$height >= 10` over an `any` height said *"Input 'a' is 'any' typed"*. `a` is
+an input of the `LessThan` that `>=` desugars to, two levels down: a name nobody typed. The
+squiggle was always right; the sentence pointed at the wrong thing. It now names the value as the
+reader wrote it (an input, a binding, a field access), and names the op and its input only when
+the value has no name of its own.
+
+- **Only the message changed, not the `name` field**, which still holds `"a"`. `ProgramDiagnostic`
+  drops `name`, so outside core the message is the only carrier; the field is the attribution
+  (which slot) and the message is the sentence. One test pins both.
+- **An incompatibility names the slot, a cast names the value.** "Which argument is wrong" is
+  about the slot; "where did I lose the type" is about the value.
+- **`checkCompat` took a `Slot`.** Its `name`, `source` and now the node travelled together at
+  all four call sites, a Data Clump; the parameter object took it from six parameters to five and
+  the dead `kind` default went. The warning branch had also been ignoring `kind`, so a lambda's
+  return called itself an `Input`, and the message said `'any'` for a `null`.
+- **Caught by reading the rendered page, not by a test:** adding the op's name to the old
+  sentence shape gave *"Input 'nodes' of 'And' type 'string'"*, which reads as "'And' type". It
+  is now *"has type 'string', which is not compatible with expected 'boolean'"*, and pinned.
+
+**The blind spot.** The warning fired on a bare `any` only, so an `any[]` reaching a `number[]`,
+compatible through array covariance, crossed **silently**, while *How it works* promised a
+warning at every crossing. Found by accident: a plan for a `++` operator claimed a mixed list
+"warns", the claim was checked against the code, and it was false. One predicate, `castsAny`,
+now recurses into list elements, and both raise sites use it.
+
+- **Narrowed twice, on purpose.** An empty list literal has no items to take a type from, so
+  `Average([])` would cry wolf: the literal is recognised and skipped. Functions are left out:
+  an untyped lambda into `Filter` is the gradual typing `isCompatible` allows deliberately, and
+  warning there would flood every list op.
+- **A named ceiling:** a NAME bound to an empty list does warn, since only its type reaches the
+  check. Pinned by a test, and the fix is "type annotations on bindings" (backlog).
+- **The fallout was measured, then confirmed:** no sample on the site passed a mixed or empty
+  list into a typed slot, and all 455 core tests and 78 docs tests passed with the wider warning
+  before a single new test was written.
+- **It set up a question** rather than answering one: the author now has no way to say "I know
+  what this is". That is the casting discussion in `todo.md`.
+
+---
+
 ## Stdlib — conversion and string ops — DONE 2026-09-20
 
 Until now a Dendrite program could not build a string at all, and could not convert a value on
