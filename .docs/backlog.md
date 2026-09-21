@@ -395,11 +395,44 @@ most, and whether the presets need any config at all beyond defaults.
 
 ---
 
-## Docs — run the TypeScript samples, not only typecheck them
+## Docs — *Embedding core* shows a call that throws
 
-**What:** `ts-samples.test.ts` typechecks every TypeScript fence on the site against the
-packages' source. It does not run them: the samples are not **run**, so a `// 8` comment beside a call is still
-only a claim. Typechecking is what catches a rename; running would want the file-based route below.
+**What:** the page's "Two kinds of input" sample reads:
+
+```ts
+runtime.updateInputs({ temperature: 30 }); // your state, every program
+instance.setInput("limit", 35);            // this program's own input
+```
+
+The instance it continues from (Installation's) declares **no program-level input**, so
+`setInput("limit", 35)` throws `'limit' is not a program-level input of instance …` for anyone
+who copies it. As a two-line contrast it reads fine; as code it does not run.
+
+**Why deferred:** found 2026-09-21 by running the samples (`ts-samples.test.ts`'s `runs` tag).
+The fence is left UNTAGGED on purpose, which is what keeps the suite green, and the page was not
+changed because rewording it belongs with the site review (`todo.md`), not with a test change.
+
+**What it requires:** either the instance gains a `limit` input on that page (a program-level
+layer in the sample, which also teaches what one is), or the sample names an input the chain
+really has. Then the fence is tagged `runs`, and the page's whole script executes.
+
+---
+
+## Docs — a `continues=` chain deeper than one page is assembled in the wrong order
+
+**What:** `assemble()` in `apps/docs/src/content/ts-samples.test.ts` walks a `continues=` chain
+from the page to its parent to its grandparent, and PUSHES each one's fences as it goes, so a
+three-page chain comes out as prelude, parent, grandparent, page: the grandparent's code after
+the parent's that depends on it.
+
+**Why deferred:** latent, not live. Every chain on the site is one page deep (Embedding core and
+the two package pages each continue Installation), so nothing is misordered today. Noticed
+2026-09-21 while adding the `runs` filter, and deliberately left alone: a behaviour change to the
+typecheck has no place in a commit about running samples.
+
+**What it requires:** insert each ancestor's fences in FRONT of what has been collected (or
+collect the chain first and reverse it), plus a test with a three-page chain, which needs either
+a fixture or a third page that genuinely continues a second.
 
 ---
 

@@ -370,11 +370,43 @@ and nothing Dendrite provides. Three fence tags steer it:
 | `sketch` | not TypeScript: a shape or an outline, skipped |
 | `alone` | its own script, for a fence that is another runtime (the link page's two ends) |
 | `continues="installation"` | this page picks up where that one left off, so it borrows its real code |
+| `runs` | executed as well as typechecked, and its `// literal` comments are claims the test checks (2026-09-21, below) |
 
 It found three samples already broken: `extending-the-language` used a `createEnvironment` it never
 imported, `embedding-core`'s levels snippet used an undefined `layer` and skipped its `.ok` checks,
 and the link page's `Channel` interface used an unimported `Observable`. All three are fixed on the
 page.
+
+**They run too, since 2026-09-21.** Typechecking catches a rename; it does not catch a sample
+that compiles and then does the wrong thing, and `// 8` beside a call was a claim, not a fact. A
+fence tagged `runs` is executed, and in it a trailing comment that starts with a literal is
+checked: `run(program, descriptor, { n: 4 }).get("doubled"); // 8`. Four claims on two pages
+(`8`, `10`, and two `true`s). The page stays the single source: nothing is copied into a test
+that could drift from it, and a reader sees no scaffolding.
+
+- **Opt-in per fence, not per page.** A page's fences are one script for the typechecker and not
+  always for a runtime: *Embedding core* shows a `setInput` that throws (backlog). A whitelist in
+  the test was rejected: it is a second list that cannot see the pages, and cannot say "this page
+  runs except that fence".
+- **Executed with what was already there:** `ts.transpileModule` to CommonJS, then
+  `new Function`. TypeScript was already this test's dependency, the transpile hoists the
+  imports, and a two-line `require` shim serves core through Vitest's alias to package SOURCE, as
+  the typecheck does. No temp files, no new dependency, no config change.
+- **Only core-only fences run.** No DOM and no socket here, so the editor and link pages stay
+  typecheck-only, and aliasing them was skipped as config with no consumer.
+- **The prelude's rule:** a name a `runs` fence uses is a value, not a `declare`. `report` and
+  `act` got bodies, and `report` THROWS, so a documented happy path that reports an error fails
+  the test rather than passing quietly.
+- **A canary pins the claim count at four**, counted by where they sit on a page: a claim is a
+  comment, so a rule that stops matching would otherwise be silent, and a `continues=` chain puts
+  Installation's claim in two scripts.
+- **Proved by mutation**, each turning the suite red with a message a reader can act on
+  (`host/embedding-core.md:119: the page says 9, the code gives 8`): a wrong claim on the page,
+  the CODE breaking (`Multiply` made to add), a dropped `runs` tag (the canary), and a happy path
+  reporting an error.
+- **Two ceilings, named in the test's header:** a `runs` fence cannot use top-level `await`, and
+  a claim is a line rule, so one on a multi-line statement is not seen
+  (`ts.getTrailingCommentRanges` is the upgrade path).
 
 The file-based mechanism this entry used to describe - every snippet moved into
 `src/examples/host/`, the pages converted to MDX, a component rendering them - was not built. It
