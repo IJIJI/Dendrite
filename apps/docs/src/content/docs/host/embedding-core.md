@@ -24,7 +24,7 @@ Everything an instance knows, it publishes. Each is an `Observable{:ts}`: `get()
 | `ports{:ts}` | the layers as composed, and which layer placed each name |
 | `snapshot{:ts}` | everything a save would capture: the program, its ports, its values |
 
-```ts continues="installation"
+```ts runs continues="installation"
 const stop = instance.outputs.subscribe(({ outputs, error, stale }) => {
   if (error) return report(error);
   act(outputs?.get("alert"), { stale });
@@ -72,7 +72,7 @@ prefer it for anything that arrives together.
 A user editing a program is nearly always mid-keystroke, and so nearly always invalid. What an
 instance does about that is designed around a host that is acting on its outputs.
 
-```ts
+```ts runs
 instance.setProgram(serialiseSource("output alert = $temperature >"));
 instance.diagnostics.get(); // the parse error
 instance.outputs.get().stale; // true - the last good values are still there
@@ -100,7 +100,7 @@ a reason, and the lower ones are there when you need less.
 
 The lower two take a compiled program directly:
 
-```ts
+```ts runs
 import { createProgramRunner, type PortLayer, run } from "@dendrite-lang/core";
 
 const layer: PortLayer = {

@@ -9,6 +9,35 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.2.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **Conversion ops: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own,
+  and until now a program could not convert on purpose either. Each rule is decided here rather
+  than inherited from JavaScript. `ToString` gives the empty string for `null`. `ToNumber` reads
+  text as a plain decimal and gives **`null`** for anything that is not a number, the empty
+  string, `"0x10"` and `"Infinity"` included: a `0` would be a guess indistinguishable from a real
+  zero, so `Default(ToNumber(x), 0)` lets the author write the fallback. `ToBool` is false for
+  `false`, `0`, the empty string, `null` **and an empty list**, which JavaScript calls true.
+- **String ops: `Join`, `Upper`, `Lower`, `Trim`, `Contains`, `StartsWith`, `EndsWith`.** A
+  program could not build a string at all: `Concat` is for lists and `Add` for numbers.
+  `Join(parts, separator)` builds one from a list, and its `separator` is optional, the first op
+  input in the library declared `required: false`. Case conversion is never locale-dependent, so
+  a program gives the same text on every host. `Contains` is its own op rather than `Includes`,
+  which asks whether a list holds an item. A `null` text reads as the empty string, and nothing
+  here throws. There is no operator for joining text yet: that waits on whether the language
+  should ever convert a value without being asked.
+- **An `implicit_any_cast` names what you wrote.** `$height >= 10` over an `any` height said
+  _"Input 'a' is 'any' typed"_, and `a` is an input of the `LessThan` that `>=` desugars to: a
+  name nobody typed. It now says `'$height' is 'any' typed - 'number' expected`, for an input, a
+  binding or a field access, and names the op and its input (`Input 'a' of 'GreaterThan'`) when
+  the value has no name of its own. A lambda's return and an application's argument no longer
+  call themselves an `Input`, and a `null` is called `'null'`, not `'any'`. Only the message
+  changes: the `name` field still holds the op input.
+- **The warning sees an `any` inside a list.** An `any[]` reaching a `number[]` crossed silently,
+  because only a bare `any` was looked for, so a program passing a mixed list into a typed input
+  **gains a warning**. Nothing stops compiling: it was always the rule, and the docs already
+  promised it. An empty list literal stays quiet, and so does an untyped lambda.
+
 ## 0.2.0
 
 - **Negative numbers.** There were none: `-14` was a syntax error anywhere. A new `Negate` op,

@@ -42,6 +42,25 @@ Beside these live the ops that do not need a function at all: `Length{:den}`, `C
 `Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}`. Reach for those
 first; a lambda you do not need is a lambda someone has to read.
 
+## Text from a list
+
+Text is built the same way everything else is here, from a list. `Join{:den}` takes the parts and,
+if you give it one, what goes between them:
+
+```den
+let sources = ["cam 1", "cam 2", "mic"]
+
+output label  = Join(Map(sources, name => Upper(name)), ", ")
+output packed = Join(sources)
+output status = Join(["Live: ", ToString(Length(sources))])
+```
+
+`label{:den}` is `"CAM 1, CAM 2, MIC"`, and `packed{:den}` runs the parts together because it has
+no separator. `status{:den}` is where a number goes into a sentence: `Join{:den}` wants text, and
+nothing converts on its own, so `ToString{:den}` says it out loud. The rest of the text ops
+(`Trim{:den}`, `Contains{:den}` and their neighbours) are on the [string](../../../stdlib/string/)
+page.
+
 ## Closures are real
 
 A lambda can use anything in scope where you wrote it, inputs included:

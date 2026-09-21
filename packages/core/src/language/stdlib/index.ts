@@ -19,6 +19,21 @@ const variadic =
   (l: ASTNode, r: ASTNode): ASTNode =>
     operationNode(op, { nodes: [l, r] });
 
+// What ToNumber accepts as text: a plain decimal, with an optional sign, fraction and exponent.
+// `Number()` alone would also take "", "0x10" and "Infinity". Anything else is null rather than
+// a throw or a 0: null is the language's "no value", and `Default(ToNumber(x), 0)` says the
+// fallback aloud.
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+// A value as text: the one rule ToString and every string op share, so a null or a number
+// reaching a string op reads the same as it would through ToString, and no op throws on one.
+const toText = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+};
+
 /**
  * Creates the standard-library language: logic / comparison / control / arithmetic /
  * array ops, general-purpose higher-order list ops, and their operators. Built on the
@@ -365,6 +380,129 @@ export function createStdlib(): Language {
   });
 
   // -------------------------------------------------------------------------
+  // Conversion ops
+  // -------------------------------------------------------------------------
+
+  // The language converts nothing on its own, so a program converts where it means to, in
+  // the open. Each rule is decided here rather than inherited from JavaScript (whose `[]` is
+  // true, whose `Number("")` is 0 and whose `Number("0x10")` is 16).
+
+  lang.registerOp({
+    name: "ToString",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.string,
+    category: "conversion",
+    description: "The value as text. Null gives the empty string, and a list or a struct its JSON.",
+    examples: [den`output label = ToString(42)`],
+  });
+
+  lang.registerOp({
+    name: "ToNumber",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.number,
+    category: "conversion",
+    description:
+      "The value as a number: true is 1, false is 0, and text is read as a decimal number. Anything that is not a number gives null.",
+    examples: [den`output count = ToNumber("42")`, den`output count = Default(ToNumber("n/a"), 0)`],
+  });
+
+  lang.registerOp({
+    name: "ToBool",
+    inputs: [{ name: "value", type: Type.any }],
+    output: Type.boolean,
+    category: "conversion",
+    description: "False for false, 0, the empty string, null and an empty list. True otherwise.",
+    examples: [den`output hasItems = ToBool([4, 8])`],
+  });
+
+  // -------------------------------------------------------------------------
+  // String ops
+  // -------------------------------------------------------------------------
+
+  // `separator` is the first optional op input in the library: `required: false` means the
+  // analyser raises no missing_op_input for it, and the evaluator is handed `undefined`.
+  lang.registerOp({
+    name: "Join",
+    inputs: [
+      { name: "parts", type: Type.array(Type.string) },
+      { name: "separator", type: Type.string, required: false },
+    ],
+    output: Type.string,
+    category: "string",
+    description:
+      "The parts as one text, with separator between them. Without a separator they are run together.",
+    examples: [
+      den`output label = Join(["Bus", "7"], " ")`,
+      den`output code = Join(["A", "B", "C"])`,
+    ],
+  });
+
+  lang.registerOp({
+    name: "Upper",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text in upper case.",
+    examples: [den`output shout = Upper("live")`],
+  });
+
+  lang.registerOp({
+    name: "Lower",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text in lower case.",
+    examples: [den`output quiet = Lower("LIVE")`],
+  });
+
+  lang.registerOp({
+    name: "Trim",
+    inputs: [{ name: "text", type: Type.string }],
+    output: Type.string,
+    category: "string",
+    description: "The text without the spaces at its start and end.",
+    examples: [den`output name = Trim("  cam 1  ")`],
+  });
+
+  // `Contains`, not `Includes`: Includes asks whether a LIST holds an item, and the two stay
+  // apart so that text can one day be read as a list of letters without changing this one.
+  lang.registerOp({
+    name: "Contains",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when part appears in text. An empty part always does.",
+    examples: [den`output isCamera = Contains("CAM 1", "CAM")`],
+  });
+
+  lang.registerOp({
+    name: "StartsWith",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when text begins with part. An empty part always matches.",
+    examples: [den`output isCamera = StartsWith("CAM 1", "CAM")`],
+  });
+
+  lang.registerOp({
+    name: "EndsWith",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+    ],
+    output: Type.boolean,
+    category: "string",
+    description: "True when text ends with part. An empty part always matches.",
+    examples: [den`output isFirst = EndsWith("CAM 1", "1")`],
+  });
+
+  // -------------------------------------------------------------------------
   // Evaluators - logic ops (fixed output types, no inferOutput needed)
   // -------------------------------------------------------------------------
 
@@ -573,6 +711,75 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Divide",
     evaluate: ({ a, b }) => ((b as number) === 0 ? 0 : (a as number) / (b as number)),
+  });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - conversion ops
+  // -------------------------------------------------------------------------
+
+  lang.registerEvaluator({
+    op: "ToString",
+    evaluate: ({ value }) => toText(value),
+  });
+
+  lang.registerEvaluator({
+    op: "ToNumber",
+    evaluate: ({ value }) => {
+      if (typeof value === "number") return value;
+      if (typeof value === "boolean") return value ? 1 : 0;
+      if (typeof value !== "string") return null;
+      const text = value.trim();
+      return DECIMAL.test(text) ? Number(text) : null;
+    },
+  });
+
+  lang.registerEvaluator({
+    op: "ToBool",
+    evaluate: ({ value }) =>
+      !(
+        value === false ||
+        value === 0 ||
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        (Array.isArray(value) && value.length === 0)
+      ),
+  });
+
+  // -------------------------------------------------------------------------
+  // Evaluators - string ops
+  // -------------------------------------------------------------------------
+
+  // Case is `toUpperCase` / `toLowerCase`, never the locale variants: the same program has to
+  // give the same text on every host.
+  lang.registerEvaluator({
+    op: "Join",
+    evaluate: ({ parts, separator }) =>
+      (Array.isArray(parts) ? parts : []).map(toText).join(toText(separator)),
+  });
+  lang.registerEvaluator({
+    op: "Upper",
+    evaluate: ({ text }) => toText(text).toUpperCase(),
+  });
+  lang.registerEvaluator({
+    op: "Lower",
+    evaluate: ({ text }) => toText(text).toLowerCase(),
+  });
+  lang.registerEvaluator({
+    op: "Trim",
+    evaluate: ({ text }) => toText(text).trim(),
+  });
+  lang.registerEvaluator({
+    op: "Contains",
+    evaluate: ({ text, part }) => toText(text).includes(toText(part)),
+  });
+  lang.registerEvaluator({
+    op: "StartsWith",
+    evaluate: ({ text, part }) => toText(text).startsWith(toText(part)),
+  });
+  lang.registerEvaluator({
+    op: "EndsWith",
+    evaluate: ({ text, part }) => toText(text).endsWith(toText(part)),
   });
 
   // -------------------------------------------------------------------------

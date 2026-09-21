@@ -38,6 +38,23 @@ flows into any data type. The second direction is the unsound one and it is deli
 what lets a host say "I do not know what this is" without stopping the program. Each crossing
 raises an `implicit_any_cast{:den}` warning so you can see where you traded the check away.
 
+That includes an `any{:den}` **inside a list**. An `any[]{:den}` fits a `number[]{:den}` through the
+covariance below, and it is the same trade one level down, so it warns the same way, however deep
+the lists nest. Two things stay quiet on purpose. An empty list literal has no items to take a
+type from, so `Average([]){:den}` is not a cast. And a function is left alone: an untyped lambda
+handed to `Filter{:den}` is gradual typing the rules below allow, not a value whose type was lost.
+
+The warning names what you wrote. `$height >= 10{:den}` over an `any{:den}` height says
+`'$height' is 'any' typed`, not `Input 'a'`: `a{:den}` is an input of the `LessThan{:den}` that
+`>={:den}` became, and nobody typed it. A value with no name of its own, a call or a literal, is
+named by the op and the input it went into.
+
+**Nothing else converts.** There is no coercion between data types: a `number{:den}` is never read
+as a `boolean{:den}`, because that would need a conversion node inserted behind the author's back,
+a rewrite this language does not have. The sound alternative is to convert in the open, with
+`ToString{:den}`, `ToNumber{:den}` and `ToBool{:den}` ([conversion](../../stdlib/conversion/)):
+ordinary ops with fixed output types, so the checker stays honest about what comes out.
+
 **A function is never `any{:den}`.** This is the one exception to the rule above and it carries a lot
 of weight. See below.
 

@@ -36,6 +36,105 @@ warning samples; `instance.test.ts` pins it with a program that cannot compile.
 
 ---
 
+## Diagnostics — an `implicit_any_cast` names what you wrote, and sees inside a list — DONE 2026-09-21
+
+**The message.** `$height >= 10` over an `any` height said *"Input 'a' is 'any' typed"*. `a` is
+an input of the `LessThan` that `>=` desugars to, two levels down: a name nobody typed. The
+squiggle was always right; the sentence pointed at the wrong thing. It now names the value as the
+reader wrote it (an input, a binding, a field access), and names the op and its input only when
+the value has no name of its own.
+
+- **Only the message changed, not the `name` field**, which still holds `"a"`. `ProgramDiagnostic`
+  drops `name`, so outside core the message is the only carrier; the field is the attribution
+  (which slot) and the message is the sentence. One test pins both.
+- **An incompatibility names the slot, a cast names the value.** "Which argument is wrong" is
+  about the slot; "where did I lose the type" is about the value.
+- **`checkCompat` took a `Slot`.** Its `name`, `source` and now the node travelled together at
+  all four call sites, a Data Clump; the parameter object took it from six parameters to five and
+  the dead `kind` default went. The warning branch had also been ignoring `kind`, so a lambda's
+  return called itself an `Input`, and the message said `'any'` for a `null`.
+- **Caught by reading the rendered page, not by a test:** adding the op's name to the old
+  sentence shape gave *"Input 'nodes' of 'And' type 'string'"*, which reads as "'And' type". It
+  is now *"has type 'string', which is not compatible with expected 'boolean'"*, and pinned.
+
+**The blind spot.** The warning fired on a bare `any` only, so an `any[]` reaching a `number[]`,
+compatible through array covariance, crossed **silently**, while *How it works* promised a
+warning at every crossing. Found by accident: a plan for a `++` operator claimed a mixed list
+"warns", the claim was checked against the code, and it was false. One predicate, `castsAny`,
+now recurses into list elements, and both raise sites use it.
+
+- **Narrowed twice, on purpose.** An empty list literal has no items to take a type from, so
+  `Average([])` would cry wolf: the literal is recognised and skipped. Functions are left out:
+  an untyped lambda into `Filter` is the gradual typing `isCompatible` allows deliberately, and
+  warning there would flood every list op.
+- **A named ceiling:** a NAME bound to an empty list does warn, since only its type reaches the
+  check. Pinned by a test, and the fix is a binding annotation (`todo.md`, with the safe cast).
+- **The fallout was measured, then confirmed:** no sample on the site passed a mixed or empty
+  list into a typed slot, and all 455 core tests and 78 docs tests passed with the wider warning
+  before a single new test was written.
+- **It set up a question** rather than answering one: the author now has no way to say "I know
+  what this is". That is the casting discussion in `todo.md`.
+
+---
+
+## Stdlib — conversion and string ops — DONE 2026-09-20
+
+Until now a Dendrite program could not build a string at all, and could not convert a value on
+purpose either. Two new categories, ten ops, in two commits. They ship in the next **minor**
+(0.3.0): new ops are new API, as `Negate` was for 0.2.0.
+
+**Conversion: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own
+(implicit coercion was rejected: it needs a rewrite the language lacks), so these are the sound
+alternative, and each rule was decided rather than inherited from JavaScript:
+
+- **`ToNumber` gives `null`, not a throw and not `0`.** The alternatives other languages use are
+  an exception (Python), a poisoned `NaN` (JavaScript) or an optional (Swift's `Int("abc")` is
+  `nil`, Kotlin's `toIntOrNull()`, Elm's `Maybe`, Rust's `Result`). The optional is the modern
+  answer, and `null` plus `Default` IS that here: the language has no `Result` type and `null`
+  already means "no value". A `0` would be a guess indistinguishable from a real zero. A
+  two-argument `ToNumber(value, fallback)` was dropped: it duplicates `Default`.
+- **Text counts only as a plain decimal.** The plan said "trimmed and parsed", but `Number()`
+  alone takes `""` (as 0), `"0x10"` (as 16) and `"Infinity"`, which is exactly the inheritance to
+  avoid. So a regex: optional sign, digits, fraction, exponent.
+- **`ToBool` is false for an empty list**, which JavaScript calls true. Lists are first-class
+  here and "is there anything in it" is the question a program asks.
+- **`ToString` of a list or a struct is its JSON.** The op must return something for them (the
+  type system cannot say "primitives only" without unions), and JSON is total and what you want
+  when a label came out wrong. `null` was weighed and dropped: it would blank a label silently.
+  A friendlier form is in the backlog.
+- `ToNumber` is typed `number` and can return `null`. Not a lie: `null` flows anywhere a data
+  value is expected, and `Find` already does the same.
+
+**String: `Join`, `Upper`, `Lower`, `Trim`, `Contains`, `StartsWith`, `EndsWith`.**
+
+- **`Join(parts: string[], separator?)`, not a variadic builder.** It takes a list because text
+  is built the way everything else is here, and because it is what a template literal will
+  desugar into. Its separator is the **first op input declared `required: false`**: the analyser
+  already skipped the `missing_op_input` warning for that and the evaluator only resolves inputs
+  that are present, so it cost nothing new. Both halves are pinned by a test, and the host guide
+  documents the flag, which it never had.
+- **One rule for "a value as text"**, `toText`, shared by `ToString` and every string op. It
+  replaced seven null guards and a second rule inside `ToString` that would have drifted, and it
+  is why `Join(["n = ", 1])` is `"n = 1"` rather than a throw or `[object Object]`.
+- **`Contains`, not `Includes`.** `Includes` asks whether a list holds an item. Keeping them apart
+  is what lets text one day be read as a list of letters without changing this op (backlog:
+  "strings and arrays, interchangeable").
+- **Case is never locale-dependent**, or the same program would give different text per host.
+- **The handful was picked by the Speculative Generality guard**: Beacon's labels are the only
+  named consumer, so `Replace`, `Split` and `Slice` went to the backlog.
+- **No operator for joining text.** Both `+` and `++` were weighed and both are the
+  implicit-casting question in miniature (backlog).
+
+**Found while building:** the reference page printed `separator: string` with nothing to say it
+may be left out, since no op had an optional input before. `OpsReference.astro` now prints
+`separator?: string`, and the stdlib index explains `?` beside `nodes...`.
+
+**Written in `createStdlib`'s existing two-band style on purpose**, though it is a Long Method:
+the user's call was one restructure later (now the first entry in `todo.md`) over two shapes side
+by side now.
+
+---
+
 ## Docs — inline TypeScript in the site's own colours — DONE 2026-09-20
 
 Inline `…{:ts}` code on Host and How it works is highlighted by Shiki, on the Night Owl pair
@@ -271,11 +370,43 @@ and nothing Dendrite provides. Three fence tags steer it:
 | `sketch` | not TypeScript: a shape or an outline, skipped |
 | `alone` | its own script, for a fence that is another runtime (the link page's two ends) |
 | `continues="installation"` | this page picks up where that one left off, so it borrows its real code |
+| `runs` | executed as well as typechecked, and its `// literal` comments are claims the test checks (2026-09-21, below) |
 
 It found three samples already broken: `extending-the-language` used a `createEnvironment` it never
 imported, `embedding-core`'s levels snippet used an undefined `layer` and skipped its `.ok` checks,
 and the link page's `Channel` interface used an unimported `Observable`. All three are fixed on the
 page.
+
+**They run too, since 2026-09-21.** Typechecking catches a rename; it does not catch a sample
+that compiles and then does the wrong thing, and `// 8` beside a call was a claim, not a fact. A
+fence tagged `runs` is executed, and in it a trailing comment that starts with a literal is
+checked: `run(program, descriptor, { n: 4 }).get("doubled"); // 8`. Four claims on two pages
+(`8`, `10`, and two `true`s). The page stays the single source: nothing is copied into a test
+that could drift from it, and a reader sees no scaffolding.
+
+- **Opt-in per fence, not per page.** A page's fences are one script for the typechecker and not
+  always for a runtime: *Embedding core* shows a `setInput` that throws (backlog). A whitelist in
+  the test was rejected: it is a second list that cannot see the pages, and cannot say "this page
+  runs except that fence".
+- **Executed with what was already there:** `ts.transpileModule` to CommonJS, then
+  `new Function`. TypeScript was already this test's dependency, the transpile hoists the
+  imports, and a two-line `require` shim serves core through Vitest's alias to package SOURCE, as
+  the typecheck does. No temp files, no new dependency, no config change.
+- **Only core-only fences run.** No DOM and no socket here, so the editor and link pages stay
+  typecheck-only, and aliasing them was skipped as config with no consumer.
+- **The prelude's rule:** a name a `runs` fence uses is a value, not a `declare`. `report` and
+  `act` got bodies, and `report` THROWS, so a documented happy path that reports an error fails
+  the test rather than passing quietly.
+- **A canary pins the claim count at four**, counted by where they sit on a page: a claim is a
+  comment, so a rule that stops matching would otherwise be silent, and a `continues=` chain puts
+  Installation's claim in two scripts.
+- **Proved by mutation**, each turning the suite red with a message a reader can act on
+  (`host/embedding-core.md:119: the page says 9, the code gives 8`): a wrong claim on the page,
+  the CODE breaking (`Multiply` made to add), a dropped `runs` tag (the canary), and a happy path
+  reporting an error.
+- **Two ceilings, named in the test's header:** a `runs` fence cannot use top-level `await`, and
+  a claim is a line rule, so one on a multi-line statement is not seen
+  (`ts.getTrailingCommentRanges` is the upgrade path).
 
 The file-based mechanism this entry used to describe - every snippet moved into
 `src/examples/host/`, the pages converted to MDX, a component rendering them - was not built. It

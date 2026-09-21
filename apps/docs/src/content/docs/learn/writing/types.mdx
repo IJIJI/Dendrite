@@ -63,8 +63,8 @@ which means:
   ports={whateverExample.ports}
 />
 
-That compiles, with a warning where the `any{:den}` meets `Length{:den}`. Here `$whatever{:den}`
-holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
+That compiles, with a warning where the `any{:den}` meets `Length{:den}`, and the warning names
+what you wrote: `'$whatever' is 'any' typed`. Here `$whatever{:den}` holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
 `length{:den}` shows `undefined`, which is not a number at all, because the one check that
 would have caught it is the one `any{:den}` gave up.
 
@@ -84,6 +84,25 @@ refusing to start.
 
 It will not produce sensible numbers, which is what `Default{:den}` and `IsSet{:den}` are for -
 see [Inputs](../inputs/).
+
+## Converting on purpose
+
+Nothing converts on its own. A number is never read as a boolean, and text that happens to hold
+digits is still text, so the checker's answer always means what it says. When you do want the
+other type, you say so, where you want it:
+
+```den inputs="reading:string"
+let celsius  = Default(ToNumber($reading), 0)
+output label = ToString(celsius * 2)
+output hot   = ToBool(celsius)
+```
+
+`ToNumber{:den}` reads text as a number, and gives `null{:den}` when it is not one: `"n/a"`, the
+empty string, `"12 degrees"`. That is on purpose. A `0` would be a guess you could not tell from a
+real zero, so the fallback is yours to write, with the `Default{:den}` you already know.
+`ToBool{:den}` is false for `false{:den}`, `0{:den}`, the empty string, `null{:den}` and an empty
+list, and true for everything else. The three are on the
+[conversion](../../../stdlib/conversion/) page.
 
 ## Reading a message
 

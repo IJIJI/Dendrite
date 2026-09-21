@@ -310,3 +310,146 @@ describe("array ops", () => {
     expect(runSource('output out = Includes(["a", "b"], "z")').value).toBe(false);
   });
 });
+
+describe("conversion ops", () => {
+  const value = (src: string) => {
+    const { analysed, value } = runSource(`output out = ${src}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("ToString: text is itself, a number or a boolean is written out", () => {
+    expect(value('ToString("kept")')).toBe("kept");
+    expect(value("ToString(42)")).toBe("42");
+    expect(value("ToString(1.5)")).toBe("1.5");
+    expect(value("ToString(true)")).toBe("true");
+  });
+
+  it("ToString: null is the empty string, and a list is its JSON", () => {
+    expect(value("ToString(null)")).toBe("");
+    expect(value("ToString([1, 2])")).toBe("[1,2]");
+  });
+
+  it("ToNumber: a number is itself, and a boolean is 1 or 0", () => {
+    expect(value("ToNumber(7)")).toBe(7);
+    expect(value("ToNumber(true)")).toBe(1);
+    expect(value("ToNumber(false)")).toBe(0);
+  });
+
+  it("ToNumber: text is read as a plain decimal, trimmed", () => {
+    expect(value('ToNumber("42")')).toBe(42);
+    expect(value('ToNumber(" 12 ")')).toBe(12);
+    expect(value('ToNumber("-1.5")')).toBe(-1.5);
+    expect(value('ToNumber("1e3")')).toBe(1000);
+  });
+
+  it("ToNumber: anything that is not a number is null, never 0 and never a throw", () => {
+    // Each of these is something JavaScript's Number() would turn into a number.
+    expect(value('ToNumber("")')).toBeNull();
+    expect(value('ToNumber("   ")')).toBeNull();
+    expect(value('ToNumber("0x10")')).toBeNull();
+    expect(value('ToNumber("Infinity")')).toBeNull();
+    expect(value('ToNumber("abc")')).toBeNull();
+    expect(value("ToNumber(null)")).toBeNull();
+    expect(value("ToNumber([1])")).toBeNull();
+  });
+
+  it("ToNumber: Default supplies the fallback, written by the author", () => {
+    expect(value('Default(ToNumber("n/a"), 0)')).toBe(0);
+    expect(value('Default(ToNumber("9"), 0)')).toBe(9);
+  });
+
+  it("ToBool: false for false, 0, the empty string, null and an empty list", () => {
+    for (const falsy of ["false", "0", '""', "null", "[]"]) {
+      expect(value(`ToBool(${falsy})`), falsy).toBe(false);
+    }
+  });
+
+  it('ToBool: true otherwise, the text "false" and a list holding a 0 included', () => {
+    for (const truthy of ["true", "1", "-1", '"false"', '"0"', "[0]"]) {
+      expect(value(`ToBool(${truthy})`), truthy).toBe(true);
+    }
+  });
+
+  it("types its result, so a conversion can feed a typed input without a warning", () => {
+    const { analysed, value: sum } = runSource('output out = Add(ToNumber("2"), 3)');
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    expect(sum).toBe(5);
+  });
+});
+
+describe("string ops", () => {
+  const value = (src: string) => {
+    const { analysed, value } = runSource(`output out = ${src}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("Join: with a separator, and run together without one", () => {
+    expect(value('Join(["Bus", "7"], " ")')).toBe("Bus 7");
+    expect(value('Join(["A", "B", "C"])')).toBe("ABC");
+    expect(value("Join([])")).toBe("");
+  });
+
+  it("Join: the separator is optional, so leaving it out warns about nothing", () => {
+    // The first `required: false` op input in the library: both halves are pinned here - the
+    // analyser raises no missing_op_input, and the evaluator copes with `undefined`.
+    const { analysed, value: joined } = runSource('output out = Join(["a", "b"])');
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "missing_op_input")).toEqual([]);
+    expect(joined).toBe("ab");
+  });
+
+  it("Join: takes the separator by name too", () => {
+    expect(value('Join(parts: ["a", "b"], separator: ", ")')).toBe("a, b");
+  });
+
+  it("Join: a list of numbers is a type error, and ToString is the visible fix", () => {
+    const { analysed } = runSource("output out = Join([1, 2])");
+    expect(analysed.errors.map((e) => e.kind)).toContain("op_input_type_mismatch");
+    expect(value('Join([ToString(1), ToString(2)], "-")')).toBe("1-2");
+  });
+
+  it("Join: a MIXED list types as any[], and each part is written out as ToString would", () => {
+    // `["n = ", 1]` shares no item type, so it is `any[]`, which fits `string[]`. The value is
+    // pinned here; that it should WARN is the analyser's business, pinned in analyser.test.ts.
+    expect(value('Join(["n = ", 1])')).toBe("n = 1");
+  });
+
+  it("Join over a Map: where text and lists meet", () => {
+    const { analysed, value: joined } = runSource(
+      'output out = Join(Map(["cam", "mic"], name => Upper(name)), ", ")',
+    );
+    expect(analysed.errors).toEqual([]);
+    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    expect(joined).toBe("CAM, MIC");
+  });
+
+  it("Upper, Lower and Trim", () => {
+    expect(value('Upper("live")')).toBe("LIVE");
+    expect(value('Lower("LIVE")')).toBe("live");
+    expect(value('Trim("  cam 1  ")')).toBe("cam 1");
+  });
+
+  it("a null text is the empty string, never a throw", () => {
+    expect(value("Upper(null)")).toBe("");
+    expect(value("Trim(null)")).toBe("");
+    expect(value('Contains(null, "a")')).toBe(false);
+  });
+
+  it("Contains, StartsWith and EndsWith, which are case sensitive", () => {
+    expect(value('Contains("CAM 1", "AM")')).toBe(true);
+    expect(value('Contains("CAM 1", "am")')).toBe(false);
+    expect(value('StartsWith("CAM 1", "CAM")')).toBe(true);
+    expect(value('StartsWith("CAM 1", "1")')).toBe(false);
+    expect(value('EndsWith("CAM 1", "1")')).toBe(true);
+    expect(value('EndsWith("CAM 1", "CAM")')).toBe(false);
+  });
+
+  it("an empty part always matches", () => {
+    expect(value('Contains("abc", "")')).toBe(true);
+    expect(value('StartsWith("abc", "")')).toBe(true);
+    expect(value('EndsWith("abc", "")')).toBe(true);
+  });
+});
