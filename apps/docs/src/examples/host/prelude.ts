@@ -8,6 +8,12 @@
 //
 // src/content/ts-samples.test.ts prepends this to every page it checks, so a name here is in
 // scope in every ```ts fence on the site. `astro check` covers this file too.
+//
+// Most of these are `declare`d: a type to check against, and no value, which is all a sample
+// that is only TYPECHECKED needs. The rule for the rest: **a name a `runs` fence uses is a value,
+// not a `declare`**, because that fence is executed and `undefined(...)` is a TypeError. Two
+// qualify today, `report` and `act`. Give a name a body only when a `runs` fence needs it:
+// `element` with a body would drag a DOM into a suite that runs in node, for nobody.
 
 import { type EditorDocument } from "@dendrite-lang/editor";
 import { type WebSocketLike } from "@dendrite-lang/link";
@@ -23,8 +29,18 @@ export declare function save(document: EditorDocument): void;
 
 /** The host acting on what came out, and on what went wrong. */
 export declare function render(result: unknown): void;
-export declare function report(error: unknown): void;
-export declare function act(value: unknown, state: { stale: boolean }): void;
+
+/**
+ * Real, because a `runs` fence calls it. It THROWS: a documented happy path that ends up
+ * reporting an error has stopped being a happy path, and the test should say so rather than
+ * pass quietly.
+ */
+export function report(error: unknown): void {
+  throw error instanceof Error ? error : new Error(String(error));
+}
+
+/** Real, because a `runs` fence calls it. The host's reaction is not the sample's business. */
+export function act(_value: unknown, _state: { stale: boolean }): void {}
 
 /** Which inputs the host feeds itself, for the panes that must not offer them. */
 export declare const live: Set<string>;
