@@ -21,6 +21,25 @@ import { describe, expect, it } from "vitest";
 // import the same names and are never one file.
 //
 // One program holds every script: the alternative parses core and editor source once each.
+//
+// Typechecking catches a rename. It does not catch a sample that compiles and then does the
+// wrong thing, so a fourth tag, `runs`, EXECUTES a fence, and in an executed fence a trailing
+// comment that starts with a literal is a CLAIM the test checks:
+//
+//     run(program, descriptor, { n: 4 }).get("doubled"); // 8
+//
+// The page is the single source: nothing is copied into a test that could drift from it, and a
+// reader sees no scaffolding. `runs` is opt-in PER FENCE, not per page, because a page's fences
+// are one script for the typechecker and not always for a runtime: Embedding core shows
+// `instance.setInput("limit", 35)` as a contrast, on an instance with no such input, where it
+// throws. Only core-only fences can run: there is no DOM here and no socket, so the editor and
+// link pages stay typecheck-only, and a name a `runs` fence uses must be a real value in the
+// prelude (see its header).
+//
+// Two ceilings, named so they are not rediscovered. A `runs` fence cannot use top-level
+// `await`: the script is transpiled to CommonJS. And a claim is a LINE rule, so one on a
+// multi-line statement is not seen; `ts.getTrailingCommentRanges` on the parsed file is the
+// upgrade path, and this test already has the compiler for it.
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, "../..");
@@ -39,6 +58,8 @@ interface TsMeta {
   alone: boolean;
   /** The page this one continues, relative to it: `installation`, `../installation`. */
   continues?: string;
+  /** Executed as well as typechecked, its `// literal` comments checked as claims. */
+  runs: boolean;
 }
 
 function parseTsMeta(meta: string | null | undefined): TsMeta {
@@ -48,6 +69,7 @@ function parseTsMeta(meta: string | null | undefined): TsMeta {
     sketch: words.includes("sketch"),
     alone: words.includes("alone"),
     continues: /continues="([^"]*)"/.exec(text)?.[1],
+    runs: words.includes("runs"),
   };
 }
 
@@ -55,6 +77,7 @@ interface Fence {
   /** 1-based line in the page where the fence's first line of code sits. */
   line: number;
   code: string;
+  runs: boolean;
 }
 
 /** One script: a page's fences together, or a single `alone` fence. */
@@ -103,6 +126,7 @@ async function tsUnits(): Promise<Unit[]> {
       const fence: Fence = {
         line: text.slice(0, match.index).split("\n").length + 1,
         code: match[3] ?? "",
+        runs: meta.runs,
       };
       const jsx = match[1] === "tsx";
       const continues = meta.continues ? resolveContinues(file, meta.continues, known) : undefined;
@@ -148,8 +172,15 @@ const pageScripts = new Map(
   units.filter((unit) => unit.label === unit.file).map((unit) => [unit.file, unit]),
 );
 
-/** One unit as a single script: the prelude, what it continues, then its own fences. */
-function assemble(unit: Unit): Virtual {
+/**
+ * One unit as a single script: the prelude, what it continues, then its own fences. `"all"` is
+ * what the typechecker sees; `"runs"` keeps only the fences tagged to execute, at every level
+ * of the chain, so a fence that throws by design is never in the script that runs.
+ */
+function assemble(unit: Unit, which: "all" | "runs" = "all"): Virtual {
+  const kept = (fences: Fence[]): Fence[] =>
+    which === "all" ? fences : fences.filter((fence) => fence.runs);
+
   const parts: { label: string; sourceLine: number; text: string }[] = [
     { label: "src/examples/host/prelude.ts", sourceLine: 1, text: prelude },
   ];
@@ -160,13 +191,13 @@ function assemble(unit: Unit): Virtual {
     seen.add(next);
     const parent = pageScripts.get(next);
     if (!parent) throw new Error(`${unit.label}: continues="${next}", which has no TypeScript`);
-    for (const fence of parent.fences) {
+    for (const fence of kept(parent.fences)) {
       parts.push({ label: parent.file, sourceLine: fence.line, text: fence.code });
     }
     next = parent.continues;
   }
 
-  for (const fence of unit.fences) {
+  for (const fence of kept(unit.fences)) {
     parts.push({ label: unit.file, sourceLine: fence.line, text: fence.code });
   }
 
@@ -251,6 +282,79 @@ function problemsIn(virtual: Virtual): string[] {
     return `${locate(virtual, line + 1)}: TS${diagnostic.code}: ${message}`;
   });
 }
+
+// ── the samples that run ───────────────────────────────────────────────────────
+
+/** A claim a page makes in a comment, found and rewritten into a check. */
+interface Claim {
+  /** `host/embedding-core.md:119`: where a reader would look. */
+  where: string;
+  literal: string;
+}
+
+// `expr; // 8`, `expr; // true - and some prose`. The statement must be an expression: a
+// declaration has no value to hold the claim against.
+const CLAIM =
+  /^(\s*)(?!(?:const|let|var|function|class|import|export|return|if|for|while)\b|\/\/)(\S.*?);\s*\/\/\s*(true|false|null|-?\d+(?:\.\d+)?|"(?:[^"\\]|\\.)*")(?![\w.])/;
+
+/** The executable script, with every claim turned into a `__check(...)` the runner supplies. */
+function withClaims(virtual: Virtual): { text: string; claims: Claim[] } {
+  const claims: Claim[] = [];
+  const text = virtual.text
+    .split("\n")
+    .map((line, index) => {
+      const match = CLAIM.exec(line);
+      if (!match) return line;
+      const [, indent, expression, literal] = match;
+      const where = locate(virtual, index + 1);
+      claims.push({ where, literal: literal! });
+      return `${indent}__check(${expression}, ${literal}, ${JSON.stringify(where)});`;
+    })
+    .join("\n");
+  return { text, claims };
+}
+
+// What a sample may import when it runs. Core resolves to package SOURCE through the alias in
+// vitest.config.ts, as the typecheck does through tsconfig `paths`. The editor and the link
+// are not here on purpose: nothing that needs a DOM or a socket is tagged `runs`.
+const runnable: Record<string, unknown> = {
+  "@dendrite-lang/core": await import("@dendrite-lang/core"),
+};
+
+/** Run one script. Throws where the sample throws, or where a claim does not hold. */
+function execute(label: string, source: string): void {
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
+  const require = (id: string): unknown => {
+    if (!(id in runnable)) throw new Error(`${label}: a \`runs\` fence cannot import "${id}"`);
+    return runnable[id];
+  };
+  const check = (actual: unknown, expected: unknown, where: string): void => {
+    if (!Object.is(actual, expected)) {
+      throw new Error(`${where}: the page says ${String(expected)}, the code gives ${String(actual)}`);
+    }
+  };
+  // The point of this test, not an accident: the sample's own text is what runs.
+  new Function("require", "exports", "__check", outputText)(require, {}, check);
+}
+
+const runs = units
+  .filter((unit) => unit.label === unit.file && unit.fences.some((fence) => fence.runs))
+  .map((unit) => ({ unit, ...withClaims(assemble(unit, "runs")) }));
+
+describe("the TypeScript samples that run", () => {
+  it("checks exactly the claims the pages make", () => {
+    // A claim is a COMMENT, so a rule that stops matching is silent. Counted by where they sit
+    // on a page, since a `continues=` chain puts Installation's claim in two scripts.
+    const places = new Set(runs.flatMap((run) => run.claims.map((claim) => claim.where)));
+    expect([...places].sort()).toHaveLength(4);
+  });
+
+  it.for(runs.map((run) => [run.unit.label, run] as const))("%s", ([label, run]) => {
+    expect(() => execute(label, run.text)).not.toThrow();
+  });
+});
 
 describe("the TypeScript samples in the pages", () => {
   it("finds fences to check", () => {

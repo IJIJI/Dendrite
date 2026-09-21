@@ -37,7 +37,7 @@ descriptor is which. Install core once, at the top.
 
 A host that runs programs builds four objects, each from the one before.
 
-```ts
+```ts runs
 import { createEnvironment, createStdlib, Policy, serialiseSource, Type } from "@dendrite-lang/core";
 
 // 1. A language: the vocabulary programs may use.
@@ -68,7 +68,7 @@ const instance = env.createInstance(runtime, {
 
 That program is now live. Push a value and read the result:
 
-```ts
+```ts runs
 runtime.updateInputs({ temperature: 30 });
 instance.outputs.get().outputs?.get("alert"); // true
 ```
