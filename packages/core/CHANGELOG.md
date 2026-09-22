@@ -9,6 +9,18 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **A list op never throws.** `Length(null)`, `Average(null)`, `Includes(null, 1)` and
+  `Filter(null, …)` threw a `TypeError` wrapped as `host_error`, while `Join(null)` was `""` and an
+  unset list input already seeded to `[]`: an accident of `null.length`, not a rule. Every list op
+  now reads a value that is not a list as the empty list, through one shared guard, so
+  `Average(null)` is `0`, `Find(null, …)` is `null`, and `Concat(null, [1])` is `[1]`. The guard
+  is by shape, not by `null` alone, so a value that reaches a list input through `any` is treated
+  the same: `Length(5)` was `undefined` and is `0`, and `Length("abc")`, which was `3` only
+  because a JavaScript string has a `length`, is `0` too. Whether a string should count as a
+  list is a question in its own right, and is answered on purpose later, not by accident here.
+
 ## 0.3.0
 
 - **Conversion ops: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own,

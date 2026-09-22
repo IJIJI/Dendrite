@@ -34,6 +34,11 @@ const toText = (value: unknown): string => {
   return JSON.stringify(value);
 };
 
+// A value as a list: the one rule every list op shares, so a null (or anything that is not a
+// list, reaching the op through `any`) reads as the empty list and no op throws on it. It is
+// the list counterpart of toText, and Join uses both.
+const toList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
 /**
  * Creates the standard-library language: logic / comparison / control / arithmetic /
  * array ops, general-purpose higher-order list ops, and their operators. Built on the
@@ -562,12 +567,12 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Length",
-    evaluate: ({ list }) => (list as unknown[]).length,
+    evaluate: ({ list }) => toList(list).length,
   });
 
   lang.registerEvaluator({
     op: "Concat",
-    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
+    evaluate: ({ arrays }) => toList(arrays).map(toList).flat(),
     // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
     inferOutput: (inputTypes) => {
       const arrays = inputTypes["arrays"];
@@ -577,13 +582,13 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Flatten",
-    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
+    evaluate: ({ array, depth }) => toList(array).flat(depth as number),
   });
 
   lang.registerEvaluator({
     op: "Average",
     evaluate: ({ list }) => {
-      const numbers = list as number[];
+      const numbers = toList(list) as number[];
       return numbers.reduce((sum, n) => sum + n, 0) / numbers.length || 0;
     },
   });
@@ -593,7 +598,7 @@ export function createStdlib(): Language {
     // Empty → 0 (matches Average's convention; the natural "none" for non-negative
     // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
     evaluate: ({ list }) => {
-      const numbers = list as number[];
+      const numbers = toList(list) as number[];
       return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n > m ? n : m));
     },
   });
@@ -603,14 +608,14 @@ export function createStdlib(): Language {
     // Empty → 0 (matches Average's convention; the natural "none" for non-negative
     // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
     evaluate: ({ list }) => {
-      const numbers = list as number[];
+      const numbers = toList(list) as number[];
       return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n < m ? n : m));
     },
   });
 
   lang.registerEvaluator({
     op: "Includes",
-    evaluate: ({ list, value }) => (list as unknown[]).includes(value),
+    evaluate: ({ list, value }) => toList(list).includes(value),
   });
 
   // -------------------------------------------------------------------------
@@ -623,7 +628,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Filter",
     evaluate: ({ list, predicate }) =>
-      (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
+      toList(list).filter((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -635,8 +640,7 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list, transform }) =>
-      (list as unknown[]).map((item) => (transform as FnValue)(item)),
+    evaluate: ({ list, transform }) => toList(list).map((item) => (transform as FnValue)(item)),
     inferInputTypes: (inputTypes) => ({
       transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
     }),
@@ -649,7 +653,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Find",
     evaluate: ({ list, predicate }) =>
-      (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
+      toList(list).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -659,7 +663,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Every",
     evaluate: ({ list, predicate }) =>
-      (list as unknown[]).every((item) => Boolean((predicate as FnValue)(item))),
+      toList(list).every((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -668,7 +672,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Some",
     evaluate: ({ list, predicate }) =>
-      (list as unknown[]).some((item) => Boolean((predicate as FnValue)(item))),
+      toList(list).some((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -677,7 +681,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Reduce",
     evaluate: ({ list, initial, reducer }) =>
-      (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
+      toList(list).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
     inferInputTypes: (inputTypes) => {
       const acc = inputTypes["initial"] ?? Type.any;
       return { reducer: Type.fn([acc, elementOf(inputTypes["list"])], acc) };
@@ -754,8 +758,7 @@ export function createStdlib(): Language {
   // give the same text on every host.
   lang.registerEvaluator({
     op: "Join",
-    evaluate: ({ parts, separator }) =>
-      (Array.isArray(parts) ? parts : []).map(toText).join(toText(separator)),
+    evaluate: ({ parts, separator }) => toList(parts).map(toText).join(toText(separator)),
   });
   lang.registerEvaluator({
     op: "Upper",

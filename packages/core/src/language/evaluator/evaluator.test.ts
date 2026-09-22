@@ -311,6 +311,44 @@ describe("array ops", () => {
   });
 });
 
+// A list op never throws: a null, or anything that is not a list arriving through `any`, reads
+// as the empty list. `null` fits a list type directly; a `5` or an `"abc"` can only reach a list
+// input through an untyped lambda parameter, so that is how they are delivered here.
+describe("a list op reads what is not a list as []", () => {
+  const viaAny = (body: string, arg: string) =>
+    runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;
+  const ops: [string, unknown][] = [
+    ["Length(x)", 0],
+    ["Concat(x, [1])", [1]],
+    ["Flatten(x, 1)", []],
+    ["Average(x)", 0],
+    ["Max(x)", 0],
+    ["Min(x)", 0],
+    ['Includes(x, "a")', false],
+    ["Filter(x, n => true)", []],
+    ["Map(x, n => n)", []],
+    ["Find(x, n => true)", null],
+    ["Every(x, n => false)", true],
+    ["Some(x, n => true)", false],
+    ["Reduce(x, 0, (acc, n) => acc + 1)", 0],
+    ['Join(x, "-")', ""],
+  ];
+
+  for (const [body, empty] of ops) {
+    it(`${body}: null, 5 and "abc" all give the empty-list answer`, () => {
+      expect(viaAny(body, "[]")).toEqual(empty);
+      expect(viaAny(body, "null")).toEqual(empty);
+      expect(viaAny(body, "5")).toEqual(empty);
+      expect(viaAny(body, '"abc"')).toEqual(empty);
+    });
+  }
+
+  it("Concat guards each member, not only the whole", () => {
+    expect(runSource("output out = Concat(null, [1], null)").value).toEqual([1]);
+    expect(viaAny("Concat([0], x)", "5")).toEqual([0]);
+  });
+});
+
 describe("conversion ops", () => {
   const value = (src: string) => {
     const { analysed, value } = runSource(`output out = ${src}`);
