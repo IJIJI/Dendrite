@@ -7,9 +7,9 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.2.0`, so a minor release here is always accompanied by a release of both.
+at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
-## Unreleased
+## 0.3.0
 
 - **Conversion ops: `ToString`, `ToNumber`, `ToBool`.** The language converts nothing on its own,
   and until now a program could not convert on purpose either. Each rule is decided here rather

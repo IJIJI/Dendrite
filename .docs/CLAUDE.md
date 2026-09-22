@@ -81,6 +81,11 @@ drop it with `git rebase --onto origin/dev <merge-sha> dev`.
 `vitest`, because a root-only devDependency is invisible to `yarn workspace <name> run`. One
 package's tests alone: `yarn workspace @dendrite-lang/editor run test`.
 
+**Plans, reviews and answers use plain technical English** (the style of ASD-STE100): short
+sentences with one idea each, active voice, one word for one thing, a verb rather than a noun, no
+phrasal verbs, no semicolons. Keep a hedge: "may fail" stays "may fail". End a long answer with a
+short recap. The site's documentation prose keeps its own voice.
+
 **Docs prose uses no dash where an em dash would go** (an aside, an introduction, a trailing
 thought): a comma, a colon or parentheses instead, rewritten by hand, which is most places. A
 dash that reads naturally may stay. Code and tables are exempt.
