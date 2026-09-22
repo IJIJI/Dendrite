@@ -6,118 +6,6 @@ What is being done next is in `todo.md`.
 
 ---
 
-## Language — do we want implicit casting?
-
-**What:** a question, not a decision. Today the answer is **no**: implicit coercion (a number
-read as a boolean, say) was rejected because it undermines the soundness model and would need
-conversion nodes inserted by a rewrite the language deliberately lacks. The sound alternative is
-built: `ToString`, `ToNumber` and `ToBool` (2026-09-20, `done.md`). Three things now lean on the
-question:
-
-- **A template literal's hole calls `ToString` itself** (decided 2026-09-20, entry below). Argued
-  not to be the rejected coercion: the reader wrote the template, the conversion is visible in
-  it, and it goes one way only, to a string. But it IS a conversion nobody typed.
-- **An operator for joining strings** (entry below). `"n = " ++ 1` either stringifies the number
-  or is refused, and whichever it does is this question answered for one operator.
-- **A number in a condition.** `If(0, …)` is a type error today, and `ToBool` makes the
-  conversion explicit. A program full of `ToBool(...)` is the cost of the current answer.
-
-**Why deferred:** raised 2026-09-20 while planning the string ops, where it kept coming up from
-different directions. It wants deciding once, as a rule, rather than three times by accident.
-
-**What it requires:** a decision on WHICH direction, if any, is allowed silently (to a string is
-the only one with a case so far); where it happens (a desugaring can do it visibly, the analyser
-cannot without the rewrite); and whether a silent conversion warns. Decided together with the
-string operator and with "strings and arrays, interchangeable" below, since all three are about
-how much the language does without being asked.
-
----
-
-## Language — strings and arrays, interchangeable
-
-**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
-`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
-recorded here is what the user wants beyond it: text and lists working as one thing.
-
-**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
-**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
-is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
-(`infra/registry.ts`, the single extension point for subtyping):
-
-> a `string` is compatible with `T[]` when a `string` is compatible with `T`
-
-So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
-string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
-array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
-`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
-already exists, whose `inferOutput` can say "every input was a string, so is the result" while
-its evaluator joins instead of collecting.
-
-**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
-edges are open, and each changes what a program means:
-
-- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
-  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
-  string ops use the name `Contains` and leave `Includes` to arrays.
-- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
-  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
-- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
-  string holds a JS string, not an array. Either every array evaluator handles both, or the
-  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
-  The second keeps every existing op untouched, and is the leaning.
-- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
-  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
-
-One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
-list is expected and never be told, which is the opposite of the explicitness the language chose
-for `any`. That is the price of "nothing to declare", and it is why this sits beside the
-implicit-casting question above.
-
-**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
-`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
-host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
-above.
-
-**The alternatives, all costlier**, kept for the discussion:
-
-| Route | How `Length` accepts both | Cost |
-| --- | --- | --- |
-| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
-| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
-| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
-| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
-
-**Driving need:** Beacon: a tally label is text built from values.
-
----
-
-## Language — an operator for joining strings (`+` or `++`)
-
-**What:** `"Hello, " + name`, or `"Hello, " ++ name`. Neither exists: text is built with `Join`.
-
-**Why deferred:** both routes were weighed on 2026-09-20 and both run into the implicit-casting
-question above, so the operator is decided with it rather than ahead of it.
-
-- **`++`, as plain sugar over `Join`.** A few lines: `registerInfix("++", BP.ADD, …)` building
-  `Join` over a two-item list. The lexer already sorts operators longest-first, so `++` beats `+`
-  the way `>=` beats `>`. **It waits because of `"n = " ++ 1`.** A list of a string and a number
-  types as `any[]`, which reaches `string[]` through array covariance, so it would stringify the
-  number, unless the desugaring wraps each side in `ToString`, which is implicit casting chosen on
-  purpose. Either way the operator is that question, answered.
-- **`+`, by overloading `Add`.** `+` desugars to `Add(l, r)` in the parser, from two untyped
-  nodes: desugaring is type-blind by design, so it cannot pick `Join` for strings. The route is to
-  teach the OP strings, as most languages overload `+`. About one commit: the variadic branch of
-  `validateInputs` checks each item against the declared type AS it analyses them, before the
-  shared item type is known, so it is reordered (analyse all, compute the shared type, ask
-  `inferInputTypes`, then check), which is how the single-input branch already works; then `Add`
-  gets `inferInputTypes`, `inferOutput` and an evaluator that sums or joins. **It waits because
-  its signature cannot be honest**: with no union types the reference would print
-  `Add(nodes...: number) -> number` for an op that also joins text.
-
-**Driving need:** readability. `Join(["Bus ", ToString(n), " is live"])` is correct and clumsy.
-
----
-
 ## Stdlib — a friendlier text form for a list or a struct
 
 **What:** `ToString([1, 2])` is `"[1,2]"` and a struct is its JSON. That was chosen on
@@ -150,40 +38,6 @@ the empty string, and an entry on the generated `string` reference page, which c
 
 ---
 
-## Language — template literals
-
-**What:** a string with holes, the way TypeScript writes one:
-
-```
-let name     = "Chris"
-let greeting = `Hello, ${name}`
-```
-
-**Decided (2026-09-20): a hole calls `ToString` itself.** `` `Total: ${n}` `` works with a number
-in the hole. Argued not to be the implicit coercion the project rejected: that rule is about
-values silently changing meaning between number and boolean, with a conversion node the reader
-never wrote. Here the reader wrote the template, the conversion is visible in it, and it goes one
-way only, to a string. It is still the first concrete case under "do we want implicit casting?"
-above.
-
-**Why deferred:** the largest of the string pieces, and the only one that changes the language's
-shape. It is sugar, so it desugars in the parser like every symbol does: `` `Hi ${n}` `` becomes
-`Join(["Hi ", ToString(n)])`. Both ops exist since 2026-09-20, so nothing blocks it but its size.
-
-**What it requires:**
-- **The lexer** reads a string that contains expressions: a new token form, and nested `${ }`
-  with the expression inside lexed as code. A template is structure, not an operator, so it does
-  not come from `grammar.operatorTokens`.
-- **The parser** parses each hole as an expression and builds the `Join`.
-- **The editor's highlighter** (`packages/editor/src/code/tokens.ts`): a string token with code
-  inside it, so the literal parts take the string colour and a hole takes the colours of what it
-  holds. The docs' `{:den}` colouring and `remark-den.ts` follow, since they use the same lexer.
-- **Docs:** a section on *Operators and symbols*, and the desugaring shown on *The chain*.
-
-**Driving need:** the same labels. A formatted string is where `Join` stops being readable.
-
----
-
 ## Language — struct literals (constructing a struct in a program)
 
 Reading host structs is
@@ -191,6 +45,86 @@ done; *producing* one (`{ a: …, b: … }` in a program) is separate and larger
 record arm in the `Type` union + structural compatibility, and raises the nominal-vs-structural fork.
 No consumer yet (Beacon structs arrive from the host as inputs). Trigger: something must return a
 struct in-language (e.g. multi-field lambda return).
+
+**A template hole is `{…}` (decided 2026-09-21, `types-and-text-plan.md`), and its lexer keeps no
+brace depth because `{` is not a token of the language. A struct literal makes `{` one, so it
+brings the brace depth with it: a hole then ends at the `}` that matches, not the first one.
+
+---
+
+## Language — `+` on text
+
+**What:** `"Hello, " + name`, by teaching `Add` strings, as most languages overload `+`.
+
+**Why deferred:** `++` is the operator being built (`todo.md`), because it is plain sugar over
+`Join`, and `Join` converts its parts, so `"n = " ++ 1` needs no decision. `+` waits on the same
+thing it always did: its signature cannot be honest. With no union types the reference would print
+`Add(nodes...: number) -> number` for an op that also joins text.
+
+**What it requires:** about one commit, recorded when the entry was written (2026-09-20): the
+variadic branch of `validateInputs` analyses all items before it checks them, then `Add` gets
+`inferInputTypes`, `inferOutput` and an evaluator that sums or joins.
+
+---
+
+## Language — a return type on a lambda, `(n: number): string => …`
+
+**What:** the AST has `LambdaNode.returnType` and the analyser checks it (`analyser.ts`, the
+lambda case), but the parser has no syntax for it. A saved `ast` program can carry one; source
+cannot.
+
+**Why deferred:** it was milestone B.2 of `types-and-text-plan.md` and was cut (2026-09-22): no
+named need except completeness. `arrowParamsAhead` would learn `) : Type =>`, which is
+unambiguous, so it is small when a need appears.
+
+---
+
+## Core — a type defines its own text form
+
+**What:** `registerType("Bus", { toText: (bus) => bus.name })`, so `ToString`, `Join` and a
+template hole print a struct the way its author wants, instead of its JSON.
+
+**Why deferred:** raised 2026-09-21 while deciding the `convert` flag. The flag converts leaves
+only, and a struct is refused on purpose, so nothing needs this yet. It is the answer to "a
+friendlier text form for a list or a struct" above that scales: each type owns its rule.
+
+**What it requires:** a `toText?` on `TypeDefinition`, walked up the `extends` chain by
+`Convert.toString`; it cannot travel in a persisted layer (a function, like `schema`).
+
+---
+
+## Core — a flag struct on `OpInput`
+
+**What:** `OpInput` has three booleans, `required`, `variadic` and now `convert`, and some
+combinations are refused (`convert` with `variadic`, `convert` with `required: false`). A struct
+of flags, or a small union of input kinds, would make the refused combinations unrepresentable.
+
+**Why deferred:** raised 2026-09-21. Three booleans and two refused pairs is not yet a smell worth
+a public type change; `validateDescriptor` refuses the pairs when the language composes, so a host
+sees it at start. Revisit when a fourth flag arrives.
+
+---
+
+## Language — smart values — REJECTED 2026-09-21
+
+**What:** a runtime value that carries its own conversions (a number that knows how to be text,
+a string that knows how to be a list), so an op never has to convert.
+
+**Why rejected:** a Dendrite value is plain JSON: it crosses the host boundary, the link, and a
+saved document unchanged. A value with behaviour would not. Conversion belongs to the op that
+needs it (the `convert` flag, `types-and-text-plan.md`), or to the author (`ToString`, `as`).
+
+---
+
+## Language — `If` evaluates both branches, so it cannot guard a read
+
+**What:** `If(IsSet(found), found.name, "none")` evaluates `found.name` whether or not `found`
+is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no laziness.
+
+**Why deferred:** found 2026-09-22 by the second review of the types plan. Milestone N.2 of that
+plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
+remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
+propagation does not cover (an expensive branch, or a read that must throw).
 
 ---
 
@@ -838,51 +772,6 @@ runs, and that runtime should be able to live in the browser (playground) or beh
 
 **Driving need:** Beacon. Core runs the lights whether or not anyone has an editor open; the editor
 is a peripheral that attaches to a running program, edits a draft of it, and applies.
-
----
-
-## Value validation at the boundary (and enums)
-
-**What:** Nothing in core ever checks that a value a host pushes matches the type it was
-declared with. `updateInput("user", "oops")` succeeds, and the program fails later at a field
-access, or quietly computes nonsense. `TypeDefinition.schema` is the slot for the check and
-nothing calls it.
-
-**Why deferred:** it needs a decision about enums first (below), and the ports work had to settle
-what a type even is before the check could be designed once for both levels.
-
-**What it requires:**
-- One place that validates when a value arrives — `instance.setInput`, `runtime.updateInputs`,
-  and the entry's seeding. Cost matters: a live show pushes values at frame rate, so decide
-  whether validation is always on, opt-in per layer, or development-only.
-- **Walk the `extends` chain and apply every ancestor's schema, not just the most derived one.**
-  Static compatibility already walks that chain to let a `Derived` flow where a `Base` is
-  expected; validation has to honour the same claim. It also means a host writing
-  `Grade extends Score extends number` never repeats the parent's rules.
-- A failure needs a channel. A new `ProgramDiagnostic` stage is the natural home, since the
-  panes already render those and a bad value is not an `EvalError`.
-- **Enums want a serialisable form, not a schema.** A list of allowed values on the type
-  travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
-  That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
-  drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
-  and reloaded would accept odd ones. Hence the split settled 2026-09-07: a type may
-  carry a zod schema wherever its declaration is CODE (the language, or a capability layer the
-  host rebuilds each boot). The exception is the layer an instance persists, which is saved as
-  JSON; a type there carries shape only and inherits validation through `extends`.
-
-- **The other boundary: a value that crosses an `any`.** An `implicit_any_cast` is a warning,
-  and nothing checks the value at runtime either: with `$whatever: any` holding 5,
-  `Length($whatever)` is `5.length`, so an output declared `number` holds `undefined` and no
-  error is raised (found 2026-09-19; *Types in practice* now says so). A check where an `any`
-  meets a concrete input, with a runtime error as the channel, would close it; it is the same
-  cost question as above, per op call rather than per pushed value.
-
-**Shared machinery (2026-09-21):** the safe cast in `todo.md` (`$rows as number[]`) needs the same
-thing this does, a runtime test of a value against a `Type`. It is built there first, as one
-`valueFits(value, type, descriptor)`, and this entry REUSES it rather than writing a second.
-
-**Driving need:** a host pushing a struct that does not match its declaration is currently
-invisible until something downstream misbehaves.
 
 ---
 
