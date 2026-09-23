@@ -21,7 +21,16 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
   tighter than every operator and looser than a call or a field, so `1 + $x as number` casts
   `$x`, and `$row.value as number` casts the field. A cast to a name nothing registered is an
   `unknown_type`. `as` is a word, not a symbol, and it stays an ordinary name everywhere but
-  after an expression: `let as = 1` is still a program.
+  after an expression: `let as = 1` is still a program. Two diagnostics of its own: a cast to
+  a function type is an error, `cast_to_function`, because a closure carries no signature and
+  could never be checked; and a cast between two types neither of which fits the other,
+  `"five" as number`, is a warning, `cast_never_fits`, because it is always null, pointless
+  rather than unsound. The `implicit_any_cast` warning on an annotated binding now names its
+  fix: `Use 'as number[]' to check it`.
+- **`registerInfix("as", …)` throws.** The lexer reads letters as an identifier before it reads
+  the operator list, so an operator spelled as a word could never match, and until now it was
+  registered without a word and never fired. It is refused at registration and the message
+  names `registerWordLed`; the reverse, a word-led that is not an identifier, is refused too.
 - **A led can be keyed by a word: `registerWordLed`.** The Pratt kernel looked every token up
   by its kind, so each identifier shared the key `ident` and no word could continue an
   expression without matching all of them. An identifier is now looked up by its text first,

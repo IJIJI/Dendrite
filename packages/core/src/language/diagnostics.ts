@@ -367,6 +367,16 @@ export const diagnostics = {
       output x = n
     `,
   },
+  cast_to_function: {
+    stage: "analyse",
+    severity: "error",
+    message:
+      "A cast to a function type. A function value cannot be checked at runtime, so the cast could never succeed.",
+    example: den`
+      let f = (n: number) => n
+      output x = f as (number) -> boolean
+    `,
+  },
   lambda_return_type_mismatch: {
     stage: "analyse",
     severity: "error",
@@ -511,6 +521,15 @@ export const diagnostics = {
     `,
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
+  },
+  cast_never_fits: {
+    stage: "analyse",
+    severity: "warning",
+    message:
+      "A cast between two types neither of which fits the other, so the result is always null. Allowed, because it is pointless rather than unsound.",
+    example: den`
+      output x = "five" as number
+    `,
   },
   implicit_any_cast: {
     stage: "analyse",

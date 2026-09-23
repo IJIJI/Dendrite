@@ -1667,7 +1667,15 @@ describe("binding annotations: a stated type is checked, and then it is the type
       outputs: [OUT],
     });
     expect(result.errors).toEqual([]);
+    // The annotation's warning names its own fix; the same warning on an op input does not.
     expect(result.warnings.map((w) => w.message)).toEqual([
+      "'$rows' is 'any' typed - 'number[]' expected. Use 'as number[]' to check it",
+    ]);
+    const plain = analyseSource("output out = Average($rows)", {
+      inputs: [{ name: "rows", type: Type.any }],
+      outputs: [OUT],
+    });
+    expect(plain.warnings.map((w) => w.message)).toEqual([
       "'$rows' is 'any' typed - 'number[]' expected",
     ]);
   });
@@ -1726,6 +1734,49 @@ describe("as: the cast has the target type, and its value's dependencies", () =>
       outputs: [OUT],
     });
     expect(result.errors.map((e) => e.kind)).toEqual(["unknown_type"]);
+  });
+
+  it("a cast to a function type is an error: a closure cannot be checked", () => {
+    const result = analyseSource(
+      "let f = (n: number) => n\noutput out = f as (number) -> boolean",
+      {
+        inputs: [],
+        outputs: [OUT],
+      },
+    );
+    expect(result.errors.map((e) => e.kind)).toEqual(["cast_to_function"]);
+    expect(result.warnings.map((w) => w.kind)).toEqual([]);
+  });
+
+  it("a cast that can never fit warns, and one that might does not", () => {
+    const never = analyseSource('output out = "five" as number', { inputs: [], outputs: [OUT] });
+    expect(never.errors).toEqual([]);
+    expect(never.warnings.map((w) => w.message)).toEqual([
+      "The value is 'string' typed and can never fit 'number': this cast is always null",
+    ]);
+    // Named as the reader wrote it, when it has a name.
+    const named = analyseSource("output out = $text as number[]", {
+      inputs: [{ name: "text", type: Type.string }],
+      outputs: [OUT],
+    });
+    expect(named.warnings[0]?.message).toMatch(/^'\$text' is 'string' typed/);
+    // Downward (a supertype to its subtype), upward, from an any: each may fit at runtime.
+    const language = createStdlib();
+    language.registerType("Grade", { extends: "number" });
+    const may = (source: string, inputs: Ports["inputs"]) => {
+      const parsed = parseSource(source, language);
+      if (!parsed.ok) throw new Error("parse failed");
+      return analyse(parsed.program, withPorts(language, { inputs, outputs: [OUT] })).warnings;
+    };
+    expect(may("output out = $n as Grade", [{ name: "n", type: Type.number }])).toEqual([]);
+    expect(may("output out = $g as number", [{ name: "g", type: Type.name("Grade") }])).toEqual([]);
+    expect(may("output out = $x as number", [{ name: "x", type: Type.any }])).toEqual([]);
+  });
+
+  it("an unknown target name is reported alone: no cast_never_fits beside it", () => {
+    const result = analyseSource('output out = "a" as Nope', { inputs: [], outputs: [OUT] });
+    expect(result.errors.map((e) => e.kind)).toEqual(["unknown_type"]);
+    expect(result.warnings).toEqual([]);
   });
 
   it("collectRefs sees through a cast: the binding it reads is ordered first", () => {

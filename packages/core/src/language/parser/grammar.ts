@@ -1,3 +1,4 @@
+import { isIdentifier } from "../infra/identifier";
 import { type ASTNode, type SourceRef } from "../infra/nodes";
 import { type Type } from "../infra/types";
 import { type Token } from "./lexer";
@@ -50,8 +51,26 @@ export const createGrammar = (): Grammar => ({
 
 export const registerNud = (g: Grammar, key: string, nud: Nud): void => void g.nuds.set(key, nud);
 export const registerLed = (g: Grammar, key: string, led: Led): void => void g.leds.set(key, led);
-export const registerWordLed = (g: Grammar, word: string, led: Led): void =>
-  void g.wordLeds.set(word, led);
+// The kernel consults each map for one token kind only, so a handler in the wrong map never
+// fires, silently. The guards make that a throw at registration instead: a word-led must be
+// an identifier, and an operator must not be one (the lexer scans letters as an identifier
+// before it reads the operator list, so `registerInfix("as", …)` could never match).
+export const registerWordLed = (g: Grammar, word: string, led: Led): void => {
+  if (!isIdentifier(word)) {
+    throw new Error(
+      `registerWordLed: '${word}' is not an identifier; use registerLed for a symbol`,
+    );
+  }
+  g.wordLeds.set(word, led);
+};
+
+const assertSymbol = (what: string, token: string): void => {
+  if (isIdentifier(token)) {
+    throw new Error(
+      `${what}: '${token}' is a word, which the lexer reads as an identifier; use registerWordLed`,
+    );
+  }
+};
 
 // Bring a base grammar's entries into an extension's: an entry the extension already has wins,
 // and the operator tokens are a union. The one place that knows every collection a Grammar has,
@@ -88,6 +107,7 @@ export const registerInfix = (
   build: (left: ASTNode, right: ASTNode) => ASTNode,
   rightAssoc = false,
 ): void => {
+  assertSymbol("registerInfix", token);
   g.operatorTokens.add(token);
   registerLed(g, token, {
     bp,
@@ -105,6 +125,7 @@ export const registerPrefix = (
   bp: number,
   build: (operand: ASTNode) => ASTNode,
 ): void => {
+  assertSymbol("registerPrefix", token);
   g.operatorTokens.add(token);
   registerNud(g, token, (p, tok) => {
     const node = build(p.parseExpr(bp));

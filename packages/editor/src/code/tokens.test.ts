@@ -19,6 +19,23 @@ describe("the type colour", () => {
     expect(classOf("let rows: number[] = []", "number")).toBe("type");
   });
 
+  it("colours a cast: `as` as a keyword, its target as a type", () => {
+    expect(classes("output x = $rows as number[]")).toEqual([
+      "output:keyword",
+      "x:ident",
+      "=:punct",
+      "$:input",
+      "rows:input",
+      "as:keyword",
+      "number:type",
+      "[:punct",
+      "]:punct",
+    ]);
+    // `as` is a keyword only by its text, so a binding of that name reads the same way: the
+    // highlighter has no parser, and this is the same ceiling as a binding named `number`.
+    expect(classOf("let as = 1", "as")).toBe("keyword");
+  });
+
   it("colours a signature's return type, after ->", () => {
     expect(classes("Add(nodes...: number) -> number")).toEqual([
       "Add:op",

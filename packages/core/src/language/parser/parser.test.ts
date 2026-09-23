@@ -5,6 +5,7 @@ import { parse as parseProgram, parseExpression } from "./parser";
 import { createStdlib } from "../stdlib";
 import { createLanguage, extendLanguage, type Language } from "../language";
 import { BP } from "./precedence";
+import { type ASTNode } from "../infra/nodes";
 import { Type } from "../infra/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -731,5 +732,23 @@ describe("as: the safe cast", () => {
       kind: "cast",
       value: { kind: "ref", name: "as" },
     });
+  });
+});
+
+// ─── Registration guards ──────────────────────────────────────────────────────
+
+describe("a handler in the wrong map is refused at registration, not ignored", () => {
+  it("a word-led must be an identifier", () => {
+    const lang = createLanguage();
+    const led = { bp: BP.ADD, parse: (_p: unknown, left: ASTNode) => left };
+    expect(() => lang.registerWordLed("+", led)).toThrow(/not an identifier/);
+    expect(() => lang.registerWordLed("plus", led)).not.toThrow();
+  });
+
+  it("an infix or prefix operator must be a symbol, because a word lexes as an identifier", () => {
+    const lang = createLanguage();
+    expect(() => lang.registerInfix("as", BP.ADD, (l) => l)).toThrow(/use registerWordLed/);
+    expect(() => lang.registerPrefix("not", BP.PREFIX, (o) => o)).toThrow(/use registerWordLed/);
+    expect(() => lang.registerInfix("++", BP.ADD, (l) => l)).not.toThrow();
   });
 });

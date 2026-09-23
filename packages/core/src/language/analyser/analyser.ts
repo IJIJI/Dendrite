@@ -120,6 +120,8 @@ interface Slot {
   node: CNode;
   /** Where the squiggle goes. Not always `node.source`: a lambda's return points at the lambda. */
   source?: SourceRef;
+  /** What to do about an implicit cast here, when the slot has an answer of its own. */
+  hint?: string;
 }
 
 // What a reader would call this value: the name they wrote, when there is one. `height >= 10`
@@ -178,7 +180,9 @@ function checkCompat(
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,
-      message: `${subject ? `'${subject}'` : slot.label} is '${typeToString(actual)}' typed - '${typeToString(expected)}' expected`,
+      message:
+        `${subject ? `'${subject}'` : slot.label} is '${typeToString(actual)}' typed - '${typeToString(expected)}' expected` +
+        (slot.hint ? `. ${slot.hint}` : ""),
       source,
     });
   }
@@ -619,6 +623,32 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const value = analyseNode(node.value, ctx);
       if (value.kind === "error") return errorNode(node.type, node.source);
       if (reportUnknownTypes(node.type, ctx, node.source)) return errorNode(undefined, node.source);
+      if (node.type.kind === "function") {
+        // A closure carries no signature, so valueFits cannot check one: the cast would
+        // always give null. An error, because no value could ever pass.
+        ctx.errors.push({
+          kind: "cast_to_function",
+          name: typeToString(node.type),
+          message: `Cannot cast to '${typeToString(node.type)}': a function value cannot be checked at runtime`,
+          source: node.source,
+        });
+        return errorNode(node.type, node.source);
+      }
+      const actual = getOutputType(value);
+      if (
+        !isCompatible(actual, node.type, ctx.descriptor) &&
+        !isCompatible(node.type, actual, ctx.descriptor)
+      ) {
+        // Neither direction fits, so no runtime value can either: the cast is pointless,
+        // not broken. `"5" as number` is always null; an `any` or a supertype is not this.
+        const subject = writtenAs(value);
+        ctx.warnings.push({
+          kind: "cast_never_fits",
+          name: typeToString(node.type),
+          message: `${subject ? `'${subject}'` : "The value"} is '${typeToString(actual)}' typed and can never fit '${typeToString(node.type)}': this cast is always null`,
+          source: node.source,
+        });
+      }
       return { ...node, value, dependsOn: value.dependsOn };
     }
 
@@ -1020,7 +1050,15 @@ function analyseBindings(program: RawProgram, order: string[], ctx: AnalysisCont
       checkCompat(
         getOutputType(cnode),
         annotation,
-        { name, label: `Binding '${name}'`, node: cnode, source: rawNode.source },
+        {
+          name,
+          label: `Binding '${name}'`,
+          node: cnode,
+          source: rawNode.source,
+          // An annotation states a type and checks nothing, so the warning stays; its fix is
+          // the cast, which does check.
+          hint: `Use 'as ${typeToString(annotation)}' to check it`,
+        },
         ctx,
         "binding_type_mismatch",
       );

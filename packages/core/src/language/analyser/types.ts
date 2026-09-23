@@ -22,6 +22,7 @@ export type AnalysisErrorKind =
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
   | "lambda_return_type_mismatch" // Lambda body type incompatible with its return annotation
   | "binding_type_mismatch" // A binding's value is incompatible with the type its annotation states
+  | "cast_to_function" // `as (…) -> T`: a closure carries no signature, so it cannot be checked at runtime
   | "app_callee_not_function" // Application callee is not function-typed
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
   | "app_argument_type_mismatch"; // A resolved application argument has an incompatible type
@@ -51,7 +52,8 @@ export type AnalysisWarningKind =
   | "field_access_on_primitive" // Field access on string/number/boolean typed node
   | "unknown_op_input_key" // Op node passes a key not declared by the op
   | "missing_op_input" // Required OpInput absent — type-default placeholder injected
-  | "implicit_any_cast"; // Any-typed value flows into a narrow expected type
+  | "implicit_any_cast" // Any-typed value flows into a narrow expected type
+  | "cast_never_fits"; // `x as T` where neither type is compatible with the other: always null
 
 export interface AnalysisWarning {
   kind: AnalysisWarningKind;
