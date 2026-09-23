@@ -916,6 +916,37 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
 
 ---
 
+## Parser — `Grammar` is a data bag, and two refactors it could take
+
+**What:** `Grammar` (`parser/grammar.ts`) is four maps and a set. The parser reads them directly
+(`nuds`, `leds`, `wordLeds` through `ledFor`, `statements`), and the editor reads `statements`,
+`operatorTokens` and, since the safe cast, `wordLeds`, for its `keyword` and `operator` classes.
+Adding `wordLeds` (2026-09-23) touched `grammar.ts`, `language.ts` and `parser.ts`;
+`mergeGrammar` was added in the same commit so that `extendLanguage` no longer copies each
+collection by hand, which is the one site a new collection no longer touches. A new entry kind
+still touches `grammar.ts`, the `Language` interface and its factory, and the parser.
+
+**Two options, each with the trigger that would justify it:**
+
+- **The grammar answers, the parser asks.** `nudFor(token)`, `ledFor(token)` and
+  `statementFor(token)` on the grammar, `keyOf` with them, the maps private. The parser then
+  depends on "the handler for this token", not on the storage (Dependency Inversion). Not a
+  smell today: the module header calls `Grammar` a parser-layer artifact, and one data bag with
+  one consumer in the same folder is cohesion. **Trigger:** a third read site in the editor, or a
+  second consumer package.
+- **One `words` map with a role** (`statement` / `infix` / `prefix`), instead of `statements`,
+  `wordLeds` and a future `wordNuds`. Recorded against: the handlers have different signatures,
+  so a union map trades typed lookups for a tag check at every read site and removes nothing.
+  Three typed maps is the plainer design. **Trigger:** none named; a prefix word (`not x`,
+  `typeof x`) would add the third map, and the shape argument still holds at three.
+
+**Judged not a smell:** `Language.registerNud` and its siblings forwarding to the `register*`
+functions. That is the "one unified register API" Facade `CLAUDE.md` names, not a Middle Man,
+and a `Grammar` class would not remove the forwarding. Also `keyOf` staying a plain function:
+a grammar-owned keying policy has no second policy to serve.
+
+---
+
 ## Parser, lexer and types — what the parser review left
 
 The parser and lexer are done (`done.md`); these are the findings and deferrals the review

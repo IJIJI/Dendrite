@@ -2,7 +2,7 @@ import { type ASTNode, type LiteralNode } from "../infra/nodes";
 import { type Vocabulary } from "../infra/registry";
 import { type Type } from "../infra/types";
 import { type Token, type TokenKind } from "./lexer";
-import { type Grammar } from "./grammar";
+import { type Grammar, type Led } from "./grammar";
 import {
   type ParseError,
   type ParseErrorKind,
@@ -99,12 +99,19 @@ export class Parser {
     let left = nud(this, token);
     while (!this.atEnd()) {
       const next = this.peek();
-      const led = this.grammar.leds.get(keyOf(next));
+      const led = this.ledFor(next);
       if (!led || led.bp <= minBp) break;
       this.advance();
       left = led.parse(this, left, next);
     }
     return left;
+  }
+
+  // An identifier is looked up by its text first (a word-led such as `as`), then every token
+  // by its grammar key.
+  private ledFor(token: Token): Led | undefined {
+    const byWord = token.kind === "ident" ? this.grammar.wordLeds.get(token.value) : undefined;
+    return byWord ?? this.grammar.leds.get(keyOf(token));
   }
 
   // Comma-separated items up to a closing punct, trailing comma allowed. The kernel

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { tokenise } from "./lexer";
 import { parse as parseProgram, parseExpression } from "./parser";
 import { createStdlib } from "../stdlib";
-import { createLanguage, type Language } from "../language";
+import { createLanguage, extendLanguage, type Language } from "../language";
+import { BP } from "./precedence";
 import { Type } from "../infra/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -629,5 +630,50 @@ describe("binding annotations", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.program.annotations?.get("f")).toEqual(Type.fn([Type.number], Type.boolean));
+  });
+});
+
+// ─── Word-leds ────────────────────────────────────────────────────────────────
+
+describe("word-leds: a led keyed by an identifier's text", () => {
+  // `plus` as an infix word for Add, registered on a copy of the stdlib.
+  const lang = extendLanguage(createLanguage(), createStdlib());
+  lang.registerWordLed("plus", {
+    bp: BP.ADD,
+    parse: (p, left, token) => ({
+      kind: "operation",
+      op: "Add",
+      inputs: { nodes: [left, p.parseExpr(BP.ADD)] },
+      output: Type.any,
+      source: token.source,
+    }),
+  });
+
+  it("continues an expression, at its binding power", () => {
+    const r = parse("1 plus 2 * 3", lang);
+    expect(r.errors).toEqual([]);
+    expect(r.node).toMatchObject({
+      kind: "operation",
+      op: "Add",
+      inputs: {
+        nodes: [
+          { kind: "literal", value: 1 },
+          { kind: "operation", op: "Multiply" },
+        ],
+      },
+    });
+  });
+
+  it("is an ordinary name anywhere else, so no other identifier is affected", () => {
+    expect(parse("plus", lang).node).toMatchObject({ kind: "ref", name: "plus" });
+    const r = program("let plus = 1\noutput o = plus plus 2", lang);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.outputs.get("o")).toMatchObject({ kind: "operation", op: "Add" });
+  });
+
+  it("survives extendLanguage, like every other grammar entry", () => {
+    const extended = extendLanguage(createLanguage(), lang);
+    expect(extended.grammar.wordLeds.has("plus")).toBe(true);
   });
 });

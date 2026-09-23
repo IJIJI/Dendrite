@@ -11,6 +11,12 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **A led can be keyed by a word: `registerWordLed`.** The Pratt kernel looked every token up
+  by its kind, so each identifier shared the key `ident` and no word could continue an
+  expression without matching all of them. An identifier is now looked up by its text first,
+  the way a statement keyword is, so `as` can be an infix word (next) while it stays an
+  ordinary name everywhere else. `Grammar` gains a `wordLeds` map, which `extendLanguage`
+  carries over like the others.
 - **`valueFits`, a runtime check of a value against a type.** Internal for now: the dynamic half
   of the type system, beside `isCompatible`'s static half, and the first thing a safe cast
   (next) and validation at the host boundary (after that) both need. It follows the static
