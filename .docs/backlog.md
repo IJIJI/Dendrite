@@ -940,6 +940,23 @@ still touches `grammar.ts`, the `Language` interface and its factory, and the pa
   Three typed maps is the plainer design. **Trigger:** none named; a prefix word (`not x`,
   `typeof x`) would add the third map, and the shape argument still holds at three.
 
+- **Merge `wordLeds` into `leds`** (the user, 2026-09-23). Both hold a `Led`; only the KEY
+  differs: a token's kind or punct text for `leds`, an identifier's text for `wordLeds`. One map
+  needs keys that cannot collide, which is a keying rule: `"ident:as"` beside `"punct:+"` and
+  `"kind:number"`, or the identifier's text with the kinds reserved. Compare the refactorings
+  before choosing:
+  - **Namespaced keys.** `keyOf` gains a prefix, every `registerNud`/`registerLed` key changes
+    (`"("` becomes `"punct:("`, `"ident"` becomes `"kind:ident"`), and the editor's reads of
+    `operatorTokens` and `statements` are untouched. Mechanical, one file for the keys, but
+    `registerInfix`/`registerPrefix` and every stdlib symbol registration go through it.
+  - **Text keys, kinds reserved.** An identifier is keyed by its text, a kind by its name, and a
+    word that equals a kind name (`number`, `string`) is refused at registration. One map, no
+    prefix, one refusal. Cheapest, and it leaves a rule a host can trip on.
+  - **Keep two maps** (today). No keying rule, one extra lookup in `ledFor`.
+  **Trigger:** the same as the `words` map above, or a host that registers enough words for
+  the second lookup to read as duplication. Decide the three together: a `words` map and a
+  merged `leds` pull in opposite directions (one splits by position, the other unifies by role).
+
 **Judged not a smell:** `Language.registerNud` and its siblings forwarding to the `register*`
 functions. That is the "one unified register API" Facade `CLAUDE.md` names, not a Middle Man,
 and a `Grammar` class would not remove the forwarding. Also `keyOf` staying a plain function:

@@ -209,12 +209,39 @@ describe("deserialise guard", () => {
     expect(() => deserialise(ast({ a: node }))).toThrow(/inputs\.nodes\[0\]/);
   });
 
+  it("rejects a cast with a malformed child or target, with a path", () => {
+    const value = { kind: "literal", value: 1 };
+    expect(() => deserialise(ast({ a: { kind: "cast", value: 42, type: Type.number } }))).toThrow(
+      /a\.value is not a node/,
+    );
+    expect(() => deserialise(ast({ a: { kind: "cast", value, type: "number" } }))).toThrow(
+      /a\.type is not a type/,
+    );
+  });
+
   it("rejects an annotation that is not a type", () => {
     const saved = {
       ...ast({}),
       annotations: { a: { kind: "bogus" } },
     } as unknown as SavedAstProgram;
     expect(() => deserialise(saved)).toThrow(/annotations\.a is not a type/);
+  });
+});
+
+describe("a cast in the ast form", () => {
+  it("makes the round trip and still casts", () => {
+    const env = makeEnv();
+    const parsed = env.parse("output top = Max($xs as number[])");
+    if (!parsed.ok) throw new Error("parse failed");
+    const revived = deserialise(JSON.parse(JSON.stringify(serialiseAst(parsed.program))));
+    expect(revived.outputs.get("top")).toMatchObject({
+      kind: "operation",
+      inputs: { list: { kind: "cast", type: Type.array(Type.number) } },
+    });
+    const loaded = env.analyse(revived);
+    expect(loaded.ok).toBe(true);
+    expect(env.run(loaded.program, { xs: [10, 3] }).get("top")).toBe(10);
+    expect(env.run(loaded.program, { xs: "nope" }).get("top")).toBe(0);
   });
 });
 

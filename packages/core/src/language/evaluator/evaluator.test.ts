@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   type ASTNode,
   type AppNode,
@@ -531,5 +532,55 @@ describe("string ops", () => {
     expect(value('Contains("abc", "")')).toBe(true);
     expect(value('StartsWith("abc", "")')).toBe(true);
     expect(value('EndsWith("abc", "")')).toBe(true);
+  });
+});
+
+// ─── The safe cast ────────────────────────────────────────────────────────────
+
+describe("as: the value when it fits, null when it does not", () => {
+  const castOf = (source: string, rows: unknown) => {
+    const lang = createStdlib();
+    lang.registerType("Grade", { extends: "number", schema: z.number().int().min(0).max(10) });
+    const descriptor = withPorts(lang, {
+      types: [{ name: "Bus", fields: { id: Type.number, name: Type.string } }],
+      inputs: [{ name: "rows", type: Type.any }],
+      outputs: [],
+    });
+    const parsed = parseSource(source, lang);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    const analysed = analyse(parsed.program, descriptor);
+    expect(analysed.errors).toEqual([]);
+    const state = createEvalState();
+    updateInput("rows", rows, state);
+    return evaluate(
+      analysed.program.outputs.get("out")!,
+      analysed.program,
+      state,
+      undefined,
+      descriptor,
+    );
+  };
+
+  it("a list of numbers fits number[], and anything else gives null", () => {
+    expect(castOf("output out = $rows as number[]", [1, 2])).toEqual([1, 2]);
+    expect(castOf("output out = $rows as number[]", 5)).toBeNull();
+    expect(castOf("output out = $rows as number[]", [1, "a"])).toBeNull();
+    expect(castOf("output out = $rows as number[]", null)).toBeNull();
+  });
+
+  it("a subtype's rules apply: a Grade outside its range gives null", () => {
+    expect(castOf("output out = $rows as Grade", 7)).toBe(7);
+    expect(castOf("output out = $rows as Grade", 11)).toBeNull();
+  });
+
+  it("the null is what IsSet, Default and the list ops already handle", () => {
+    expect(castOf("output out = IsSet($rows as number[])", 5)).toBe(false);
+    expect(castOf("output out = Default($rows as number[], [0])", 5)).toEqual([0]);
+    expect(castOf("output out = Average($rows as number[])", 5)).toBe(0);
+  });
+
+  it("a struct that lacks a field gives null, and a field read on that null is null", () => {
+    expect(castOf("output out = ($rows as Bus).name", { id: 1, name: "one" })).toBe("one");
+    expect(castOf("output out = ($rows as Bus).name", {})).toBeNull();
   });
 });

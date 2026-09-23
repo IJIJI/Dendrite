@@ -16,6 +16,7 @@ import {
   type Grammar,
   type Nud,
   registerLed,
+  registerWordLed,
   registerNud,
   registerStatement,
   type Statement,
@@ -292,6 +293,20 @@ export function installCoreGrammar(g: Grammar): void {
   registerLed(g, "(", {
     bp: BP.CALL,
     parse: (p, left, token) => buildCall(p, left, parseCallArgs(p), token),
+  });
+
+  // The safe cast: value as TYPE. A word, so it is a word-led: `as` stays a plain name
+  // everywhere but after an expression. It binds tighter than any operator and looser than
+  // a call or a field, so `1 + $x as number` casts `$x` and `$row.value as number` casts the
+  // field (see BP.CAST).
+  registerWordLed(g, "as", {
+    bp: BP.CAST,
+    parse: (p, left, token) => ({
+      kind: "cast",
+      value: left,
+      type: parseType(p),
+      source: token.source,
+    }),
   });
 
   // Statements

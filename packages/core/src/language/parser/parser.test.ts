@@ -677,3 +677,59 @@ describe("word-leds: a led keyed by an identifier's text", () => {
     expect(extended.grammar.wordLeds.has("plus")).toBe(true);
   });
 });
+
+// ─── The safe cast ────────────────────────────────────────────────────────────
+
+describe("as: the safe cast", () => {
+  it("builds a cast node holding the value and the target type", () => {
+    expect(parse("$rows as number[]", withInput("rows")).node).toMatchObject({
+      kind: "cast",
+      value: { kind: "input", name: "rows" },
+      type: Type.array(Type.number),
+    });
+  });
+
+  it("binds tighter than any operator: the cast takes the operand next to it", () => {
+    // 1 + ($x as number), not (1 + $x) as number.
+    expect(parse("1 + $x as number").node).toMatchObject({
+      kind: "operation",
+      op: "Add",
+      inputs: { nodes: [{ value: 1 }, { kind: "cast", value: { kind: "input", name: "x" } }] },
+    });
+    // !($on as boolean).
+    expect(parse("!$on as boolean").node).toMatchObject({
+      op: "Not",
+      inputs: { a: { kind: "cast" } },
+    });
+    // ($price as number) * 2.
+    expect(parse("$price as number * 2").node).toMatchObject({
+      op: "Multiply",
+      inputs: { nodes: [{ kind: "cast" }, { value: 2 }] },
+    });
+  });
+
+  it("binds looser than a field access and a call", () => {
+    expect(parse("$row.value as number", withInput("row")).node).toMatchObject({
+      kind: "cast",
+      value: { kind: "field", field: "value" },
+    });
+    expect(parse("f(1) as number").node).toMatchObject({ kind: "cast", value: { kind: "app" } });
+  });
+
+  it("takes a function type too, and the analyser is what refuses it", () => {
+    expect(parse("f as (number) -> boolean").node).toMatchObject({
+      kind: "cast",
+      type: Type.fn([Type.number], Type.boolean),
+    });
+  });
+
+  it("is a plain name everywhere but after an expression", () => {
+    const r = program("let as = 1\noutput o = as as number");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.outputs.get("o")).toMatchObject({
+      kind: "cast",
+      value: { kind: "ref", name: "as" },
+    });
+  });
+});

@@ -1696,3 +1696,51 @@ describe("binding annotations: a stated type is checked, and then it is the type
     expect(result.warnings).toEqual([]);
   });
 });
+
+// ─── The safe cast ────────────────────────────────────────────────────────────
+
+describe("as: the cast has the target type, and its value's dependencies", () => {
+  const analyseSource = (source: string, ports: Ports) => {
+    const language = createStdlib();
+    const parsed = parseSource(source, language);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    return analyse(parsed.program, withPorts(language, ports));
+  };
+  const OUT = { name: "out", type: Type.any };
+
+  it("an any value cast to number[] is a number[] to everything downstream, with no warning", () => {
+    const result = analyseSource("output out = Average($rows as number[])", {
+      inputs: [{ name: "rows", type: Type.any }],
+      outputs: [OUT],
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    const out = result.program.outputs.get("out")!;
+    expect(out.kind).toBe("operation");
+    expect(out.dependsOn).toEqual(new Set(["rows"]));
+  });
+
+  it("a cast to a name nothing registered is unknown_type", () => {
+    const result = analyseSource("output out = $x as Nope", {
+      inputs: [{ name: "x", type: Type.any }],
+      outputs: [OUT],
+    });
+    expect(result.errors.map((e) => e.kind)).toEqual(["unknown_type"]);
+  });
+
+  it("collectRefs sees through a cast: the binding it reads is ordered first", () => {
+    // Built as an ast program (no code source), so the lexical-order check is off and only
+    // the reference graph decides the order: `a` reads `b`, and `b` is declared after it.
+    const language = createStdlib();
+    const program: RawProgram = {
+      bindings: new Map<string, ASTNode>([
+        ["a", { kind: "cast", value: { kind: "ref", name: "b" }, type: Type.number }],
+        ["b", { kind: "literal", value: 5 }],
+      ]),
+      outputs: new Map<string, ASTNode>([["out", { kind: "ref", name: "a" }]]),
+    };
+    const result = analyse(program, withPorts(language, { inputs: [], outputs: [OUT] }));
+    expect(result.errors).toEqual([]);
+    expect(getOutputType(result.program.outputs.get("out")!)).toEqual(Type.number);
+  });
+});

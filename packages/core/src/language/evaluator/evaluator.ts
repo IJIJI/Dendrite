@@ -1,3 +1,4 @@
+import { valueFits } from "../infra/fits";
 import { CNode } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
 import { type FnValue, Vocabulary } from "../infra/registry";
@@ -178,6 +179,14 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
       };
       return closure;
     }
+
+    case "cast":
+      // The value when it fits the target, else null: a safe cast never throws, and a null is
+      // what the language already gives for "no value", so Default and IsSet handle it.
+      return memoise(node, ctx, state, () => {
+        const value = evalNode(node.value, ctx, state);
+        return valueFits(value, node.type, ctx.descriptor) ? value : null;
+      });
 
     case "app":
       return memoise(node, ctx, state, () => {

@@ -11,6 +11,17 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **The safe cast: `$rows as number[]`.** The other answer to an `any`: where an annotation
+  states a type, a cast checks the value. It gives the value when it fits the type
+  (`valueFits`, above) and **`null`** when it does not, for every type, a list included, so a
+  cast never throws and `IsSet`, `Default` and the list ops handle the miss the way they
+  already handle a null. `Average($rows as number[])` over a host's garbage is `0`. To the
+  checker the result simply IS the target type, so nothing downstream warns. `as` is a new
+  kind of node, not an op call, because a type is not a value an op can receive; it binds
+  tighter than every operator and looser than a call or a field, so `1 + $x as number` casts
+  `$x`, and `$row.value as number` casts the field. A cast to a name nothing registered is an
+  `unknown_type`. `as` is a word, not a symbol, and it stays an ordinary name everywhere but
+  after an expression: `let as = 1` is still a program.
 - **A led can be keyed by a word: `registerWordLed`.** The Pratt kernel looked every token up
   by its kind, so each identifier shared the key `ident` and no word could continue an
   expression without matching all of them. An identifier is now looked up by its text first,

@@ -63,6 +63,15 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
         for (const arg of n.positional) walk(arg);
         for (const arg of Object.values(n.named)) walk(arg);
         break;
+      case "cast":
+        walk(n.value);
+        break;
+      default: {
+        // A node kind this walk does not know would silently drop its references, and the
+        // reference graph would order its binding wrong. Make that a compile error instead.
+        const unhandled: never = n;
+        throw new Error(`collectRefs: unhandled node kind ${String(unhandled)}`);
+      }
     }
   }
   walk(node);
@@ -93,6 +102,8 @@ export function getOutputType(node: CNode): Type {
     case "lambda":
       return node.type;
     case "app":
+      return node.type;
+    case "cast":
       return node.type;
     case "error":
       return node.type ?? Type.any;
@@ -599,6 +610,16 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         source: node.source,
         dependsOn: body.dependsOn,
       };
+    }
+
+    case "cast": {
+      // The target is the node's type whatever the value's static type is: that is what a
+      // cast is for. The value is analysed for its own errors and its dependencies only. The
+      // target's names must exist, as an annotation's must.
+      const value = analyseNode(node.value, ctx);
+      if (value.kind === "error") return errorNode(node.type, node.source);
+      if (reportUnknownTypes(node.type, ctx, node.source)) return errorNode(undefined, node.source);
+      return { ...node, value, dependsOn: value.dependsOn };
     }
 
     case "app": {

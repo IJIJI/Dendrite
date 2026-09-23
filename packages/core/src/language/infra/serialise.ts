@@ -168,6 +168,10 @@ function assertNode(value: unknown, path: string): void {
       }
       break;
     }
+    case "cast":
+      assertNode(value["value"], `${path}.value`);
+      assertType(value["type"], `${path}.type`);
+      break;
     // literal / input / ref carry no child nodes.
   }
 }
@@ -182,15 +186,18 @@ function assertNodeRecord(value: unknown, path: string): void {
   for (const [name, node] of Object.entries(value)) assertNode(node, `${path}.${name}`);
 }
 
-// An annotation is a structured Type; whether its names exist is the analyser's job on load.
+// A written type (an annotation, a cast target) is a structured Type; whether its names exist
+// is the analyser's job on load.
 const TYPE_KINDS = new Set(["name", "array", "function"]);
+function assertType(value: unknown, path: string): void {
+  if (!isRecord(value) || !TYPE_KINDS.has(String(value["kind"]))) {
+    throw new Error(`Malformed SavedProgram: ${path} is not a type`);
+  }
+}
+
 function assertTypeRecord(value: unknown, path: string): void {
   if (!isRecord(value)) throw new Error(`Malformed SavedProgram: ${path} is not a record`);
-  for (const [name, type] of Object.entries(value)) {
-    if (!isRecord(type) || !TYPE_KINDS.has(String(type["kind"]))) {
-      throw new Error(`Malformed SavedProgram: ${path}.${name} is not a type`);
-    }
-  }
+  for (const [name, type] of Object.entries(value)) assertType(type, `${path}.${name}`);
 }
 
 /**
