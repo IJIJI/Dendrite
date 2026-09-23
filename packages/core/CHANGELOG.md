@@ -11,6 +11,15 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **`valueFits`, a runtime check of a value against a type.** Internal for now: the dynamic half
+  of the type system, beside `isCompatible`'s static half, and the first thing a safe cast
+  (next) and validation at the host boundary (after that) both need. It follows the static
+  rules: `any` fits everything and a `null` value fits every type; a list fits when each item
+  fits; a named type is checked against every rule on its `extends` chain, the zod `schema` and
+  the struct `fields` alike, so a `Grade extends number` value has to satisfy `Grade`'s rule
+  AND be a number. A struct needs each declared field present, null allowed, missing not, and
+  extra fields are ignored. A function type never fits: a closure carries no signature. One
+  consequence of using the schemas as they are: `NaN` and `Infinity` are not numbers.
 - **A binding can state its type: `let rows: number[] = $rows`.** The annotation is a claim
   about the value, checked when the program is analysed: a value the type does not fit is a new
   `binding_type_mismatch`, and the binding fails like any other error, so nothing downstream
