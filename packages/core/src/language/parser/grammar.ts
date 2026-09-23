@@ -1,4 +1,5 @@
 import { type ASTNode, type SourceRef } from "../infra/nodes";
+import { type Type } from "../infra/types";
 import { type Token } from "./lexer";
 import { type Parser } from "./parser";
 
@@ -22,6 +23,8 @@ export interface Statement {
   name: string;
   node: ASTNode;
   source: SourceRef;
+  /** The annotation, when the statement states a type: `let rows: number[] = …`. */
+  type?: Type;
 }
 export type StatementFn = (p: Parser) => Statement;
 

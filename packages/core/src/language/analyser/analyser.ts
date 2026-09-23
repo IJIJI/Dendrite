@@ -457,8 +457,11 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           }
         }
 
+        // A stated type wins over the inferred one: `let none: number[] = []` is a number[]
+        // to everything that reads it, which is what the annotation is for.
         const binding = ctx.analysedBindings.get(node.name)!;
-        return { ...node, type: getOutputType(binding), dependsOn: binding.dependsOn };
+        const type = ctx.annotations.get(node.name) ?? getOutputType(binding);
+        return { ...node, type, dependsOn: binding.dependsOn };
       }
 
       ctx.errors.push({
@@ -547,6 +550,11 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     }
 
     case "lambda": {
+      // A name written in an annotation has to exist, or every check downstream compares
+      // against a type that is not there.
+      const written = [...node.params.map((p) => p.type), node.returnType];
+      const unknown = written.filter((t) => t && reportUnknownTypes(t, ctx, node.source));
+      if (unknown.length > 0) return errorNode(undefined, node.source);
       // Bind params into the local scope (untyped → any, gradual), then analyse the
       // body in that extended scope. Nested lambdas recurse naturally, layering more
       // params onto localBindings.
@@ -663,6 +671,28 @@ function collectTypeNames(t: Type, into: Set<string>): void {
   }
 }
 
+// A type WRITTEN in a program - an annotation, a lambda parameter - must name registered
+// types, the way a declaration must (validateDescriptor). The parser cannot check it: it has the
+// vocabulary alone, and a layer type such as `Bus` arrives with the composed descriptor. A Type
+// has no span of its own, so the error points at the statement or the lambda that wrote it.
+// Returns whether anything was reported.
+function reportUnknownTypes(t: Type, ctx: AnalysisContext, source: SourceRef | undefined): boolean {
+  const names = new Set<string>();
+  collectTypeNames(t, names);
+  let reported = false;
+  for (const name of names) {
+    if (ctx.descriptor.types.has(name)) continue;
+    ctx.errors.push({
+      kind: "unknown_type",
+      name,
+      message: `Type '${name}' is not registered`,
+      source,
+    });
+    reported = true;
+  }
+  return reported;
+}
+
 //? validateDescriptor: referential integrity of a language definition. Every named-type
 // reference (op inputs/outputs, input/output types, struct `fields`, `extends`) must
 // resolve to a registered type - a dangling reference (typo, forgotten registerType) is
@@ -777,6 +807,7 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     descriptor,
     analysedBindings: new Map(),
     failedBindings,
+    annotations: program.annotations ?? new Map(),
     localBindings: new Map(),
     declarationIndex: refGraph.declarationIndex,
     bindingSourceRefs: refGraph.bindingSourceRefs,
@@ -950,11 +981,29 @@ function analyseBindings(program: RawProgram, order: string[], ctx: AnalysisCont
   for (const name of order) {
     if (ctx.failedBindings.has(name)) continue;
     const errorsBefore = ctx.errors.length;
-    const cnode = analyseNode(program.bindings.get(name)!, {
+    const rawNode = program.bindings.get(name)!;
+    const cnode = analyseNode(rawNode, {
       ...ctx,
       currentDeclarationIndex: ctx.declarationIndex.get(name),
     });
     ctx.analysedBindings.set(name, cnode);
+    // A stated type is a claim about the value: check the value against it. The check sits
+    // inside the error window, so a mismatch fails the binding like any other error, and a
+    // value of the wrong type never flows on under a type it does not have.
+    const annotation = ctx.annotations.get(name);
+    if (
+      annotation &&
+      cnode.kind !== "error" &&
+      !reportUnknownTypes(annotation, ctx, rawNode.source)
+    ) {
+      checkCompat(
+        getOutputType(cnode),
+        annotation,
+        { name, label: `Binding '${name}'`, node: cnode, source: rawNode.source },
+        ctx,
+        "binding_type_mismatch",
+      );
+    }
     if (ctx.errors.length > errorsBefore) ctx.failedBindings.add(name);
   }
 }

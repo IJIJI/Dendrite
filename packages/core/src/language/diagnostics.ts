@@ -263,6 +263,17 @@ export const diagnostics = {
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
   },
+  unknown_type: {
+    stage: "analyse",
+    severity: "error",
+    message: "A type written in the program is one the language does not have.",
+    triggeredBy:
+      "A typo in an annotation - `let rows: nubmer[] = …`, `(n: nubmer) => …` - or a struct type the host never registered. Every name inside a list or a function type is checked.",
+    example: den`
+      let rows: nubmer[] = [1, 2]
+      output x = Average(rows)
+    `,
+  },
   binding_cycle: {
     stage: "analyse",
     severity: "error",
@@ -344,6 +355,17 @@ export const diagnostics = {
       `,
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
+  },
+  binding_type_mismatch: {
+    stage: "analyse",
+    severity: "error",
+    message: "A binding states a type its value does not have.",
+    triggeredBy:
+      '`let n: number = "a"`: the annotation is a claim about the value, and the value is checked against it. The binding fails, so nothing downstream runs on a type it does not have.',
+    example: den`
+      let n: number = "a"
+      output x = n
+    `,
   },
   lambda_return_type_mismatch: {
     stage: "analyse",

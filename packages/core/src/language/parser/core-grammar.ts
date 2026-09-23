@@ -180,14 +180,28 @@ function parseTypeAtom(p: Parser): Type {
   return Type.name(name.value);
 }
 
-// let NAME = EXPR  /  output NAME = EXPR. They differ only in which map they feed, so
-// one helper covers both. The leading keyword is already matched by the caller.
+// let NAME (: TYPE)? = EXPR  /  output NAME = EXPR. They differ only in which map they feed,
+// so one helper covers both. The leading keyword is already matched by the caller. The
+// annotation states the binding's type, and the analyser checks the value against it; an
+// output takes none, because the host declares what an output is.
 function parseBinding(p: Parser, target: "binding" | "output"): Statement {
   p.advance(); // 'let' / 'output'
   const name = p.expect("ident");
+  let type: Type | undefined;
+  if (p.check("punct", ":")) {
+    const colon = p.advance();
+    type = parseType(p);
+    if (target === "output") {
+      p.error(
+        "syntax_error",
+        "An output cannot be annotated: the host declares its type",
+        colon.source,
+      );
+    }
+  }
   p.expect("punct", "=");
   const node = p.parseExpr(0);
-  return { target, name: name.value, node, source: name.source };
+  return { target, name: name.value, node, source: name.source, ...(type ? { type } : {}) };
 }
 
 // ── Installation ─────────────────────────────────────────────────────────────

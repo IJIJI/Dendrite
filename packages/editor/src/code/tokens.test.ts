@@ -15,6 +15,10 @@ describe("the type colour", () => {
     expect(classOf("let double = (n: number) => n * 2", "number")).toBe("type");
   });
 
+  it("colours a binding's annotation, by the same rule", () => {
+    expect(classOf("let rows: number[] = []", "number")).toBe("type");
+  });
+
   it("colours a signature's return type, after ->", () => {
     expect(classes("Add(nodes...: number) -> number")).toEqual([
       "Add:op",

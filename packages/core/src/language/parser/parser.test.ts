@@ -599,3 +599,35 @@ describe("program diagnostics & recovery", () => {
     expect(() => program("@#^&")).not.toThrow();
   });
 });
+
+// ─── Binding annotations ──────────────────────────────────────────────────────
+
+describe("binding annotations", () => {
+  it("let NAME: TYPE = EXPR keeps the type beside the binding", () => {
+    const r = program("let rows: number[] = []\nlet n = 1\noutput o = n");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.annotations?.get("rows")).toEqual(Type.array(Type.number));
+    expect(r.program.annotations?.has("n")).toBe(false);
+  });
+
+  it("a program with no annotation has no annotations key at all", () => {
+    const r = program("let n = 1\noutput o = n");
+    expect(r.ok && "annotations" in r.program).toBe(false);
+  });
+
+  it("an output cannot be annotated: the host declares its type", () => {
+    const r = program("output o: number = 1");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.map((e) => e.kind)).toEqual(["syntax_error"]);
+    expect(r.errors[0].message).toMatch(/host declares its type/);
+  });
+
+  it("a function type annotates a binding too", () => {
+    const r = program("let f: (number) -> boolean = n => n > 1\noutput o = f");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.program.annotations?.get("f")).toEqual(Type.fn([Type.number], Type.boolean));
+  });
+});

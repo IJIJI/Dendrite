@@ -208,6 +208,32 @@ describe("deserialise guard", () => {
     const node = { kind: "operation", op: "Add", inputs: { nodes: [42] }, output: Type.number };
     expect(() => deserialise(ast({ a: node }))).toThrow(/inputs\.nodes\[0\]/);
   });
+
+  it("rejects an annotation that is not a type", () => {
+    const saved = {
+      ...ast({}),
+      annotations: { a: { kind: "bogus" } },
+    } as unknown as SavedAstProgram;
+    expect(() => deserialise(saved)).toThrow(/annotations\.a is not a type/);
+  });
+});
+
+describe("binding annotations in the ast form", () => {
+  it("make the round trip, and are absent when there are none", () => {
+    const env = makeEnv();
+    const parsed = env.parse("let none: number[] = []\noutput top = Max(none)");
+    if (!parsed.ok) throw new Error("parse failed");
+    const saved = JSON.parse(JSON.stringify(serialiseAst(parsed.program))) as SavedAstProgram;
+    expect(saved.annotations).toEqual({ none: Type.array(Type.number) });
+    const revived = deserialise(saved);
+    expect(revived.annotations?.get("none")).toEqual(Type.array(Type.number));
+    // The annotation does its job after the round trip: no any-cast warning on Max.
+    expect(env.analyse(revived).warnings.map((w) => w.kind)).not.toContain("implicit_any_cast");
+
+    const plain = env.parse("output top = 1");
+    if (!plain.ok) throw new Error("parse failed");
+    expect("annotations" in serialiseAst(plain.program)).toBe(false);
+  });
 });
 
 describe("den - a program as a template literal", () => {

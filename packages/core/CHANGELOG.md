@@ -11,6 +11,19 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **A binding can state its type: `let rows: number[] = $rows`.** The annotation is a claim
+  about the value, checked when the program is analysed: a value the type does not fit is a new
+  `binding_type_mismatch`, and the binding fails like any other error, so nothing downstream
+  runs on a type it does not have. Where it fits, the stated type is what every reader of the
+  binding sees, so `let none: number[] = []` is a `number[]` to `Average`, which closes the one
+  case the `implicit_any_cast` warning had no answer for. An `any` source still warns: the
+  annotation states a type, it does not check the value. `output` takes no annotation, because
+  the host declares what an output is. The `ast` saved form carries the annotations under an
+  `annotations` key, written only when there are any, so an existing document is unchanged.
+- **A type written in a program must exist.** `(n: nubmer) => n` compiled, and the first thing
+  to notice was a mismatch against a type called `nubmer`. A name in an annotation, on a lambda
+  parameter or a lambda's return type, that nothing registered is now `unknown_type`, the
+  program-side pair of `unknown_op`, and the lambda or the binding that wrote it fails.
 - **Breaking: `unknown_type` is `unknown_port_type`.** The port problem for a declaration that
   names a type nothing registered is renamed, so that `unknown_type` can mean what `unknown_op`
   does: a name in a program. The kind changes in `PortProblem["kind"]`, in `AnalysisErrorKind`

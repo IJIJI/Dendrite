@@ -7,6 +7,7 @@ import { type Type } from "../infra/types";
 export type AnalysisErrorKind =
   | "unknown_op" // Op not in descriptor
   | "unknown_program_input" // Context input not in descriptor
+  | "unknown_type" // A type name written in a program (an annotation, a lambda parameter) that nothing registered
   | "unknown_port_type" // Type string not in descriptor
   | "missing_evaluator" // Op registered without an evaluator (would throw evaluator_not_found at runtime)
   | "orphan_evaluator" // Evaluator registered for an op that doesn't exist (dead code / typo)
@@ -20,6 +21,7 @@ export type AnalysisErrorKind =
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
   | "lambda_return_type_mismatch" // Lambda body type incompatible with its return annotation
+  | "binding_type_mismatch" // A binding's value is incompatible with the type its annotation states
   | "app_callee_not_function" // Application callee is not function-typed
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
   | "app_argument_type_mismatch"; // A resolved application argument has an incompatible type
@@ -69,6 +71,7 @@ export interface AnalysisContext {
   descriptor: LanguageDescriptor;
   analysedBindings: Map<string, CNode>;
   failedBindings: Set<string>;
+  annotations: ReadonlyMap<string, Type>; // the type a binding states, when it does (RawProgram.annotations)
   localBindings: ReadonlyMap<string, Type>; // local scope: lambda params / scoped vars → type; empty at top level
   declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
   bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)

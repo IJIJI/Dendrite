@@ -1,6 +1,7 @@
 import { AST_NODE_KINDS, type ASTNode } from "./nodes";
 import { isPorts, type Ports } from "./ports";
 import { type RawProgram } from "./program";
+import { type Type } from "./types";
 
 //? SavedProgram: the durable JSON form of a program.
 //
@@ -48,6 +49,8 @@ export interface SavedAstProgram extends SavedProgramBase {
   form: "ast";
   bindings: Record<string, ASTNode>;
   outputs: Record<string, ASTNode>;
+  /** The bindings' annotations (`RawProgram.annotations`). Absent when there are none. */
+  annotations?: Record<string, Type>;
 }
 
 export type SavedProgram = SavedCodeProgram | SavedReteProgram | SavedAstProgram;
@@ -94,6 +97,9 @@ export function serialiseAst(program: RawProgram, ports?: Ports): SavedAstProgra
     form: "ast",
     bindings: clone(Object.fromEntries(program.bindings)),
     outputs: clone(Object.fromEntries(program.outputs)),
+    ...(program.annotations?.size
+      ? { annotations: clone(Object.fromEntries(program.annotations)) }
+      : {}),
     ...portsKey(ports && clone(ports)),
   };
 }
@@ -176,6 +182,17 @@ function assertNodeRecord(value: unknown, path: string): void {
   for (const [name, node] of Object.entries(value)) assertNode(node, `${path}.${name}`);
 }
 
+// An annotation is a structured Type; whether its names exist is the analyser's job on load.
+const TYPE_KINDS = new Set(["name", "array", "function"]);
+function assertTypeRecord(value: unknown, path: string): void {
+  if (!isRecord(value)) throw new Error(`Malformed SavedProgram: ${path} is not a record`);
+  for (const [name, type] of Object.entries(value)) {
+    if (!isRecord(type) || !TYPE_KINDS.has(String(type["kind"]))) {
+      throw new Error(`Malformed SavedProgram: ${path}.${name} is not a type`);
+    }
+  }
+}
+
 /**
  * Guard the optional `ports` of a saved program of any form (throws descriptively). Part of
  * deserialise for the ast form; loaders of the other forms call it before trusting `ports`.
@@ -195,8 +212,10 @@ export function deserialise(saved: SavedAstProgram): RawProgram {
   assertSavedPorts(saved);
   assertNodeRecord(saved.bindings, "bindings");
   assertNodeRecord(saved.outputs, "outputs");
+  if (saved.annotations !== undefined) assertTypeRecord(saved.annotations, "annotations");
   return {
     bindings: new Map(Object.entries(saved.bindings)),
     outputs: new Map(Object.entries(saved.outputs)),
+    ...(saved.annotations ? { annotations: new Map(Object.entries(saved.annotations)) } : {}),
   };
 }

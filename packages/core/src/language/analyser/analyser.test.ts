@@ -1615,14 +1615,84 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
     expect(castsIn("output out = Join([])")).toEqual([]);
   });
 
-  it("known ceiling: a NAME bound to an empty list does warn", () => {
-    // Only its type (`any[]`) reaches the check, and a binding cannot be annotated yet
-    // (`.docs/todo.md`: binding annotations, with the safe cast). Pinned so that fix shows up here.
+  it("a NAME bound to an empty list warns, and an annotation is the answer", () => {
+    // Only its type (`any[]`) reaches the check. Stating the type closes it: the empty literal
+    // is quiet against the annotation, and every reader sees a number[].
     const [warning] = castsIn("let none = []\noutput out = Average(none)");
     expect(warning?.message).toBe("'none' is 'any[]' typed - 'number[]' expected");
+    expect(castsIn("let none: number[] = []\noutput out = Average(none)")).toEqual([]);
   });
 
   it("leaves functions alone: an untyped lambda into Filter is gradual typing, not a cast", () => {
     expect(castsIn("output out = Filter([1, 2, 3], item => item > 1)")).toEqual([]);
+  });
+});
+
+// ─── Binding annotations ──────────────────────────────────────────────────────
+
+describe("binding annotations: a stated type is checked, and then it is the type", () => {
+  const OUT = { name: "out", type: Type.any };
+  const analyseSource = (source: string, ports: Ports = { inputs: [], outputs: [OUT] }) => {
+    const language = createStdlib();
+    const parsed = parseSource(source, language);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    return analyse(parsed.program, withPorts(language, ports));
+  };
+  const kinds = (result: { errors: { kind: string }[] }) => result.errors.map((e) => e.kind);
+
+  it("a value of the wrong type is binding_type_mismatch, and the binding fails", () => {
+    const result = analyseSource('let n: number = "a"\noutput out = n + 1');
+    expect(kinds(result)).toEqual(["binding_type_mismatch", "output_depends_on_failed_binding"]);
+    expect(result.errors[0].message).toBe(
+      "Binding 'n' has type 'string', which is not compatible with expected 'number'",
+    );
+  });
+
+  it("a ref reads the stated type, not the inferred one", () => {
+    // A list literal: `any[]` inferred, `number[]` stated, and Average sees the number[].
+    const literal = analyseSource("let none: number[] = []\noutput out = Average(none)");
+    expect(literal.errors).toEqual([]);
+    expect(literal.warnings.map((w) => w.kind)).toEqual([]);
+    // An op call: `number[]` inferred, `any[]` stated, and Average now warns about the any.
+    const call = analyseSource(
+      "let xs: any[] = Filter([1, 2], n => n > 1)\noutput out = Average(xs)",
+    );
+    expect(call.errors).toEqual([]);
+    expect(call.warnings.map((w) => w.kind)).toEqual(["implicit_any_cast"]);
+  });
+
+  it("an any source still warns: the annotation is a claim, not a check", () => {
+    const result = analyseSource("let rows: number[] = $rows\noutput out = Average(rows)", {
+      inputs: [{ name: "rows", type: Type.any }],
+      outputs: [OUT],
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.map((w) => w.message)).toEqual([
+      "'$rows' is 'any' typed - 'number[]' expected",
+    ]);
+  });
+
+  it("a type name that nothing registered is unknown_type: annotation and lambda alike", () => {
+    expect(kinds(analyseSource("let x: Nope = 1\noutput out = x"))).toEqual([
+      "unknown_type",
+      "output_depends_on_failed_binding",
+    ]);
+    expect(kinds(analyseSource("let x: Nope[] = []\noutput out = x"))).toContain("unknown_type");
+    const lambda = analyseSource("let f = (n: nubmer) => n\noutput out = f(1)");
+    expect(kinds(lambda)).toEqual(["unknown_type", "output_depends_on_failed_binding"]);
+    expect(lambda.errors[0]).toMatchObject({
+      name: "nubmer",
+      message: "Type 'nubmer' is not registered",
+    });
+  });
+
+  it("a layer's struct type is known, so `let b: Bus = $bus` is fine", () => {
+    const result = analyseSource("let b: Bus = $bus\noutput out = b.name", {
+      types: [{ name: "Bus", fields: { name: Type.string } }],
+      inputs: [{ name: "bus", type: Type.name("Bus") }],
+      outputs: [OUT],
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
   });
 });
