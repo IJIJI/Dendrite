@@ -349,6 +349,48 @@ describe("a list op reads what is not a list as []", () => {
   });
 });
 
+// A field of null is null, so a well-typed `Find(...).name` with no match does not throw. A
+// struct that is there but lacks the field is still an error: it came from a host and does not
+// match its declared type.
+describe("a field read on null gives null", () => {
+  const evalWith = (src: string, buses: unknown) => {
+    const lang = createStdlib();
+    const descriptor = withPorts(lang, {
+      types: [{ name: "Bus", fields: { id: Type.number, name: Type.string } }],
+      inputs: [{ name: "buses", type: Type.array(Type.name("Bus")) }],
+      outputs: [],
+    });
+    const parsed = parseSource(src, lang);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    const analysed = analyse(parsed.program, descriptor);
+    expect(analysed.errors).toEqual([]);
+    const state = createEvalState();
+    updateInput("buses", buses, state);
+    return evaluate(
+      analysed.program.outputs.get("out")!,
+      analysed.program,
+      state,
+      undefined,
+      descriptor,
+    );
+  };
+  const src = "output out = Find($buses, b => b.id == 9).name";
+
+  it("a match reads its field", () => {
+    expect(evalWith(src, [{ id: 9, name: "nine" }])).toBe("nine");
+  });
+
+  it("no match is null, not a throw, and so is a field of that", () => {
+    expect(evalWith(src, [{ id: 1, name: "one" }])).toBeNull();
+    expect(evalWith("output out = Find($buses, b => b.id == 9).name.length", [])).toBeNull();
+  });
+
+  it("a struct that lacks the field still throws invalid_field_access", () => {
+    expect(() => evalWith(src, [{ id: 9 }])).toThrow(/does not exist/);
+    expect(() => evalWith(src, [9])).toThrow(/does not exist/);
+  });
+});
+
 describe("conversion ops", () => {
   const value = (src: string) => {
     const { analysed, value } = runSource(`output out = ${src}`);

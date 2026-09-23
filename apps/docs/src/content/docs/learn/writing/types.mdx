@@ -86,7 +86,9 @@ refusing to start.
 
 It will not produce sensible numbers, which is what `Default{:den}` and `IsSet{:den}` are for -
 see [Inputs](../inputs/). A list op reads a `null{:den}` as an empty list, so `Length{:den}` of an
-unset list is 0 and `Find{:den}` over one is `null{:den}`; nothing throws.
+unset list is 0 and `Find{:den}` over one is `null{:den}`, and a field of `null{:den}` is `null{:den}`
+again, so `Find(buses, b => b.id == 9).name{:den}` is simply unset when no bus matches. Nothing
+throws.
 
 ## Converting on purpose
 

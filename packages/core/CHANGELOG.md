@@ -20,6 +20,13 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
   the same: `Length(5)` was `undefined` and is `0`, and `Length("abc")`, which was `3` only
   because a JavaScript string has a `length`, is `0` too. Whether a string should count as a
   list is a question in its own right, and is answered on purpose later, not by accident here.
+- **A field of `null` is `null`.** `Find($buses, b => b.id == 9).name` threw `invalid_field_access`
+  whenever no bus matched, in a program the checker had passed, and nothing in the language could
+  guard it: `If` is an op, so both of its branches are evaluated. The read now gives `null`, the
+  way a `null` reads as `""` in a string op and as `[]` in a list op. A struct that is there but
+  lacks the field still throws: that value came from a host and does not match its declared type,
+  and a value that is not an object at all now raises the same `invalid_field_access` instead of
+  a bare `TypeError`.
 
 ## 0.3.0
 

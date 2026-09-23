@@ -144,14 +144,13 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
     case "field":
       return memoise(node, ctx, state, () => {
         const src = evalNode(node.struct, ctx, state);
-        if (src === null || src === undefined) {
-          throw new EvalError(
-            "invalid_field_access",
-            `Cannot access field '${node.field}' on null/undefined`,
-          );
-        }
+        // A field of nothing is nothing: `Find(...).name` with no match is null, not a throw,
+        // the way a null reads as "" in a string op and as [] in a list op. A struct that IS
+        // there but lacks the field is still an error: that value came from a host and does
+        // not match its declared type.
+        if (src === null || src === undefined) return null;
         const record = src as Record<string, unknown>;
-        if (!(node.field in record)) {
+        if (typeof record !== "object" || !(node.field in record)) {
           throw new EvalError(
             "invalid_field_access",
             `Field '${node.field}' does not exist on value`,
