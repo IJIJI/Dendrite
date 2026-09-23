@@ -111,7 +111,7 @@ describe("composeLayers", () => {
         [layer("d", { inputs: [{ name: "a", type: Type.array(Type.name("Nope")) }] })],
       ),
     );
-    expect(problem).toMatchObject({ kind: "unknown_type", layerId: "d", where: "input a" });
+    expect(problem).toMatchObject({ kind: "unknown_port_type", layerId: "d", where: "input a" });
     expect(problem?.message).toContain("Nope");
   });
 
@@ -167,7 +167,7 @@ describe("composeLayers", () => {
         }),
       ],
     );
-    expect(problemsOf(result).map((p) => p.kind)).toEqual(["invalid_name", "unknown_type"]);
+    expect(problemsOf(result).map((p) => p.kind)).toEqual(["invalid_name", "unknown_port_type"]);
   });
 
   it("carries a layer type's default into the descriptor", () => {

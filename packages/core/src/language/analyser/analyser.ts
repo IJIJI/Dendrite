@@ -666,14 +666,14 @@ function collectTypeNames(t: Type, into: Set<string>): void {
 //? validateDescriptor: referential integrity of a language definition. Every named-type
 // reference (op inputs/outputs, input/output types, struct `fields`, `extends`) must
 // resolve to a registered type - a dangling reference (typo, forgotten registerType) is
-// an `unknown_type` error. A registered-but-fieldless type is fine (an opaque handle);
+// an `unknown_port_type` error. A registered-but-fieldless type is fine (an opaque handle);
 // only UNregistered names are flagged. Run once when the language is assembled.
 export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisError[] {
   const errors: AnalysisError[] = [];
   const report = (name: string, where: string, subject: ErrorSubject) => {
     if (!descriptor.types.has(name)) {
       errors.push({
-        kind: "unknown_type",
+        kind: "unknown_port_type",
         name,
         message: `Type '${name}' is referenced by ${where} but is not registered`,
         subject,

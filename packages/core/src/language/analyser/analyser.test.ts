@@ -484,7 +484,7 @@ describe("descriptor validation", () => {
     lang.registerType("Bus", { fields: { name: Type.name("Ghost") } });
     expect(
       validateDescriptor(lang.unchecked).some(
-        (e) => e.kind === "unknown_type" && e.name === "Ghost",
+        (e) => e.kind === "unknown_port_type" && e.name === "Ghost",
       ),
     ).toBe(true);
   });

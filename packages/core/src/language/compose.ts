@@ -27,7 +27,7 @@ export interface PortProblem {
     | "invalid_name"
     | "duplicate_name"
     | "shadowed_name"
-    | "unknown_type"
+    | "unknown_port_type"
     | "incompatible_field_override";
   layerId: string;
   /** "input score" | "output result" | "type Bus" */
@@ -147,7 +147,7 @@ function attribute(
   if (
     !subject ||
     !origin ||
-    (error.kind !== "unknown_type" && error.kind !== "incompatible_field_override")
+    (error.kind !== "unknown_port_type" && error.kind !== "incompatible_field_override")
   ) {
     throw new Error(`Language descriptor is invalid before any layer applies: ${error.message}`);
   }

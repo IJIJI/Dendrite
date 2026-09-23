@@ -7,7 +7,7 @@ import { type Type } from "../infra/types";
 export type AnalysisErrorKind =
   | "unknown_op" // Op not in descriptor
   | "unknown_program_input" // Context input not in descriptor
-  | "unknown_type" // Type string not in descriptor
+  | "unknown_port_type" // Type string not in descriptor
   | "missing_evaluator" // Op registered without an evaluator (would throw evaluator_not_found at runtime)
   | "orphan_evaluator" // Evaluator registered for an op that doesn't exist (dead code / typo)
   | "binding_cycle" // Cycle in binding DAG
@@ -37,7 +37,7 @@ export interface AnalysisError {
   source?: SourceRef;
   /**
    * Set by validateDescriptor: the declaration the error was found in. `name` stays the
-   * offending name (for unknown_type the missing type, for a field override the field).
+   * offending name (for unknown_port_type the missing type, for a field override the field).
    */
   subject?: ErrorSubject;
 }

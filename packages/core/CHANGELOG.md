@@ -11,6 +11,10 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Breaking: `unknown_type` is `unknown_port_type`.** The port problem for a declaration that
+  names a type nothing registered is renamed, so that `unknown_type` can mean what `unknown_op`
+  does: a name in a program. The kind changes in `PortProblem["kind"]`, in `AnalysisErrorKind`
+  and in the diagnostics registry; its stage, message and example are unchanged.
 - **A list op never throws.** `Length(null)`, `Average(null)`, `Includes(null, 1)` and
   `Filter(null, …)` threw a `TypeError` wrapped as `host_error`, while `Join(null)` was `""` and an
   unset list input already seeded to `[]`: an accident of `null.length`, not a rule. Every list op

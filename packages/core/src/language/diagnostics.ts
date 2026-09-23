@@ -22,7 +22,7 @@ import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
 // language no longer does, and the `satisfies` below fails to compile the moment a kind is
 // added without being documented here.
 //
-// One entry per kind, not per (stage, kind): `unknown_type` and `incompatible_field_override`
+// One entry per kind, not per (stage, kind): `unknown_port_type` and `incompatible_field_override`
 // are declared in the analyser's union AND in PortProblem's, and mean the same thing in both.
 // `stage` says where a host actually meets it, which is not always where it is declared - see
 // the four descriptor checks below.
@@ -199,7 +199,7 @@ export const diagnostics = {
       outputs: [],
     }),
   },
-  unknown_type: {
+  unknown_port_type: {
     stage: "ports",
     severity: "error",
     message: "A declaration names a type nothing registered.",
