@@ -11,6 +11,10 @@ of core needs a release here too, even if nothing in this package changed.
 
 ## Unreleased
 
+- **A template is coloured as one.** Its backticks and text take the string colour, as a
+  string's quotes do, its `{` `}` stay punctuation, and the code in a hole is coloured as code,
+  because the lexer hands it over as ordinary tokens. The backtick auto-closes like a quote, so
+  a half-typed template does not flash `unterminated_string`.
 - **`as` is coloured as a keyword, and its target as a type.** A word operator registered with
   core's new `registerWordLed` takes the `keyword` class beside `let` and `output`, and the
   type written after `as` is a type position for `tok-type`, as the one after `:` is.

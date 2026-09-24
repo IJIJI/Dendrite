@@ -1,6 +1,7 @@
 import { createStdlib } from "@dendrite-lang/core";
 import { describe, expect, it } from "vitest";
 
+import { sourceHtml } from "./source";
 import { styledRanges, type TokenClass } from "./tokens";
 
 // The highlighter's classes, read back as `text:class` pairs so a test says what a reader sees.
@@ -24,6 +25,23 @@ describe("the type colour", () => {
     // lexer skips them and they stay uncoloured, and the type after the colon is still a type.
     expect(classOf("Join(parts~: string[], separator?: string) -> string", "string")).toBe("type");
     expect(classes("Join(parts~: string[])")).not.toContainEqual(expect.stringContaining("~"));
+  });
+
+  it("colours a template: backticks and text as string, braces as punct, a hole as code", () => {
+    expect(classes("`n = {count + 1}`")).toEqual([
+      "`:string",
+      "n = :string",
+      "{:punct",
+      "count:ident",
+      "+:operator",
+      "1:number",
+      "}:punct",
+      "`:string",
+    ]);
+    // What the docs' remark plugin prints, through the same ranges.
+    expect(sourceHtml("`a{1}`", language)).toBe(
+      '<span class="tok-string">`</span><span class="tok-string">a</span><span class="tok-punct">{</span><span class="tok-number">1</span><span class="tok-punct">}</span><span class="tok-string">`</span>',
+    );
   });
 
   it("colours a cast: `as` as a keyword, its target as a type", () => {

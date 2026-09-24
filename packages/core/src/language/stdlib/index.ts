@@ -793,15 +793,18 @@ export function createStdlib(): Language {
   // hole, becomes an item of one list, and Join converts every item to text itself (its `parts`
   // declares `convert`), so a hole needs no ToString and the analyser inserts no node.
   lang.registerNud("`", (p, open) => {
+    // Between the backticks the lexer leaves only two things, a hole `{ … }` or a string token,
+    // so the second branch needs no check of its own. Every turn consumes at least one token
+    // (`expect` on a miss records an error and stays put), so the loop always reaches the
+    // closing backtick or the end.
     const items: ASTNode[] = [];
     while (!p.check("punct", "`") && !p.atEnd()) {
-      if (p.check("string")) {
-        const text = p.advance();
-        items.push({ kind: "literal", value: text.value, source: text.source });
-      } else {
-        p.expect("punct", "{");
+      if (p.match("punct", "{")) {
         items.push(p.parseExpr(0));
         p.expect("punct", "}");
+      } else {
+        const text = p.expect("string");
+        items.push({ kind: "literal", value: text.value, source: text.source });
       }
     }
     p.expect("punct", "`");

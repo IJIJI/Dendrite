@@ -124,14 +124,18 @@ export function styledRanges(source: string, language: Language): StyledRange[] 
                 : "ident";
         break;
       default: // punct
+        // A template's backtick is string-coloured, as a string's quotes are (they sit inside
+        // the string token); its `{` `}` stay punctuation, marking where the code in a hole is.
         cls =
           token.value === "$"
             ? "input"
-            : language.grammar.operatorTokens.has(token.value) ||
-                token.value === "=>" ||
-                token.value === "->"
-              ? "operator"
-              : "punct";
+            : token.value === "`"
+              ? "string"
+              : language.grammar.operatorTokens.has(token.value) ||
+                  token.value === "=>" ||
+                  token.value === "->"
+                ? "operator"
+                : "punct";
     }
 
     afterSigil = token.kind === "punct" && token.value === "$";
