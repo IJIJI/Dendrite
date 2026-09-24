@@ -74,8 +74,11 @@ files as rows, with what changed in each - plus the exact `git add` and a one-li
 stop until it is committed. Never run a git command that changes state - `add`, `commit`,
 `checkout`, `reset`, `stash`, `rebase`, tags - without explicit permission for that command;
 that includes staging a file just edited. Read-only git (`status`, `diff`, `log`) is fine.
-Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
-point is a good one to open a PR, but do not write its title or body, or open it, unless asked.
+Never stack new work on uncommitted changes: read `git status` before each milestone and before
+each commit's work, and if the tree is not clean, the previous handover is the first thing to ask
+about. Every handover gives the full `git add`, with every file of the table, and the `git commit`,
+as two blocks, whatever the index already holds. PRs are the maintainer's too: say when a point
+is a good one to open a PR, but do not write its title or body, or open it, unless asked.
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
 deploy runs from. `dev` has a GitHub ruleset forbidding merge commits, so never `git merge` into
