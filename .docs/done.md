@@ -5,6 +5,32 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.4.0 on npm — DONE 2026-09-25
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.4.0**, three days
+after 0.3.0. A minor because it breaks: two renames (`"ports"` to `"compose"`, `operatorTokens` to
+`symbols`), `unknown_type` with a new meaning, and three behaviours tightened on purpose. The
+runbook held from the tags on, and taught two things before them.
+
+- **Check the PR's commit count against `git log origin/main..dev` before merging.** PR #19 was
+  merged while `dev` still had five commits to push, so `main` got 16 of 21. The fix chosen was a
+  reset of `main` to the merge before it (`git reset --hard`, `--force-with-lease`), with the
+  ruleset's block on force pushes lifted for the push and restored after, then one PR (#21) with
+  all 21. Chosen over reverting the revert because nothing on npm or in a tag depended on `main`
+  yet, and it leaves one merge instead of three.
+- **A revert of a merge cannot be undone by merging the branch again.** Git counts the reverted
+  commits as already merged and brings only the new ones. PR #20 was GitHub's Revert button on
+  #19, merged by accident; had `main` not been reset, the way back was "revert the revert" and
+  only then a PR for the rest. Recorded in `release-plan.md`, step 2.
+
+Checked after approval: `latest` on each package, an attestation on all three, the peer ranges at
+`^0.4.0`, and a clean install outside the repo where a program with an annotation, a cast that
+misses, a template and a converting `Join` gives `"Ada has 2 rows: [3,4]"` for a list and the
+empty text, `0` and `false` for `"nope"`; `grammar.symbols` reads, and the editor from npm colours
+a template and a cast as the source does.
+
+---
+
 ## Types and text — the plan for 0.4.0 — DONE 2026-09-24
 
 Twenty-one commits in three days, the plan in `types-and-text-plan.md` (its status table, and what

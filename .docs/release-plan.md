@@ -174,7 +174,12 @@ The runbook. Only the packages whose version changed are part of a release.
 
 1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
    peer on core `^0.1.0`, so a **minor** bump of core means a release of all three.
-2. Merge `dev` into `main`.
+2. Merge `dev` into `main`, through a PR. Before merging, check that the PR's commit count equals
+   `git log --oneline origin/main..dev | wc -l`: a push to `dev` after the PR opened is not in it
+   (0.4.0 merged 16 of 21 that way). If a merge was reverted by mistake, do not merge `dev`
+   again: git treats the reverted commits as merged and brings only the new ones. Either revert
+   the revert first, or reset `main` to the merge before it and force-push with the ruleset's
+   block lifted for that one push, then one PR with everything (what 0.4.0 did).
 3. On `main`, one tag per changed package: `git tag -a "@dendrite-lang/<name>@<version>" -m "…"`,
    then push the tags. Tags trigger nothing by themselves.
 4. **One GitHub release per batch**, on core's tag if core is in it, otherwise on the tag of one
