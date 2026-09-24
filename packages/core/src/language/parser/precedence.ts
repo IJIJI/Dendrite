@@ -23,6 +23,7 @@ export const BP = {
   ADD: 50, // +  -
   MULTIPLY: 60, // *  /
   PREFIX: 70, // !  (unary)
+  CAST: 80, // as  (tight: `1 + $x as number` casts $x, `!$on as boolean` casts $on)
   MEMBER: 90, // .
   CALL: 100, // f(…)  (highest)
 } as const;

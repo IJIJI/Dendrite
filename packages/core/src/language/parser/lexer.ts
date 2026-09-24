@@ -18,7 +18,7 @@ export type TokenKind =
   | "number" // 3, 3.14
   | "boolean" // true, false
   | "null" // null
-  | "punct" // ( ) [ ] { } , . : = => == != > >= < <= + - * / % !
+  | "punct" // ( ) [ ] , . : = $ => -> and the operators; ` { } inside a template only
   | "comment" // // line and /* block */ - trivia, never in the main token stream
   | "eof";
 
@@ -72,6 +72,9 @@ const ESCAPES: Record<string, string> = {
   '"': '"',
   "'": "'",
 };
+
+// A template's text can also escape what would end it or open a hole.
+const TEMPLATE_ESCAPES: Record<string, string> = { ...ESCAPES, "`": "`", "{": "{" };
 
 //? Character utilities (pure, no state)
 const isDigit = (ch: string) => ch >= "0" && ch <= "9";
@@ -143,27 +146,7 @@ function scanString(s: Scanner, quote: string): Token {
   let value = "";
 
   while (!s.atEnd() && s.peek() !== quote) {
-    if (s.peek() === "\\") {
-      const escMark = s.mark();
-      const escPos = s.pos;
-      s.advance(); // backslash
-      if (s.atEnd()) break; // dangling backslash → unterminated, reported below
-      const esc = s.advance();
-      if (esc in ESCAPES) {
-        value += ESCAPES[esc];
-      } else {
-        // Unknown escape: keep both characters verbatim rather than silently
-        // dropping the backslash, and warn.
-        value += "\\" + esc;
-        s.warn(
-          "invalid_escape",
-          `Unknown escape sequence '\\${esc}'`,
-          s.ref(escMark, s.pos - escPos),
-        );
-      }
-    } else {
-      value += s.advance();
-    }
+    value += s.peek() === "\\" ? scanEscape(s, ESCAPES) : s.advance();
   }
 
   if (s.atEnd()) {
@@ -174,6 +157,69 @@ function scanString(s: Scanner, quote: string): Token {
 
   s.advance(); // closing quote
   return { kind: "string", value, source: s.ref(start, s.pos - startPos) };
+}
+
+// A backslash sequence, translated. An unknown one keeps both characters verbatim rather than
+// silently dropping the backslash, and warns. A dangling backslash at the end gives nothing,
+// and the caller then finds the end and reports its own unterminated literal.
+function scanEscape(s: Scanner, escapes: Record<string, string>): string {
+  const escMark = s.mark();
+  const escPos = s.pos;
+  s.advance(); // backslash
+  if (s.atEnd()) return "";
+  const esc = s.advance();
+  if (esc in escapes) return escapes[esc];
+  s.warn("invalid_escape", `Unknown escape sequence '\\${esc}'`, s.ref(escMark, s.pos - escPos));
+  return "\\" + esc;
+}
+
+// A template: `text {hole} text`. Structure, not a token kind: the backtick and the braces are
+// punct tokens, each text part is a string token, and a hole holds ordinary tokens, scanned by
+// scanToken, so a hole can hold a template. The parser's nud on the backtick builds the value.
+// A hole ends at the first `}` at its own level: `{` and `}` are no tokens outside a template,
+// so nothing inside a hole can open a brace except another template, which consumes its own.
+function scanTemplate(
+  s: Scanner,
+  ops: readonly string[],
+  tokens: Token[],
+  comments: Token[],
+): void {
+  const open = s.mark();
+  const openPos = s.pos;
+  const punct = (value: string): void => {
+    const at = s.mark();
+    s.advance();
+    tokens.push({ kind: "punct", value, source: s.ref(at, 1) });
+  };
+  punct("`");
+  for (;;) {
+    // A text part, up to a hole, the closing backtick, or the end of the source.
+    const start = s.mark();
+    const startPos = s.pos;
+    let value = "";
+    while (!s.atEnd() && s.peek() !== "`" && s.peek() !== "{") {
+      value += s.peek() === "\\" ? scanEscape(s, TEMPLATE_ESCAPES) : s.advance();
+    }
+    if (s.pos > startPos) {
+      tokens.push({ kind: "string", value, source: s.ref(start, s.pos - startPos) });
+    }
+    if (s.atEnd()) {
+      s.error("unterminated_string", "Unterminated template", s.ref(open, s.pos - openPos));
+      return;
+    }
+    if (s.peek() === "`") {
+      punct("`");
+      return;
+    }
+    // A hole. `$` is plain text here, so `${n}` is the text "$" and the hole `n`.
+    punct("{");
+    while (!s.atEnd() && s.peek() !== "}") scanToken(s, ops, tokens, comments);
+    if (s.atEnd()) {
+      s.error("unterminated_string", "Unterminated template", s.ref(open, s.pos - openPos));
+      return;
+    }
+    punct("}");
+  }
 }
 
 function scanNumber(s: Scanner): Token {
@@ -252,6 +298,27 @@ function scanComment(s: Scanner): Token {
   };
 }
 
+// One token (or one piece of trivia) from the cursor: the driver's step, and a template hole's.
+function scanToken(s: Scanner, ops: readonly string[], tokens: Token[], comments: Token[]): void {
+  const ch = s.peek();
+  if (isSpace(ch)) {
+    s.advance();
+  } else if (ch === "/" && (s.peek(1) === "/" || s.peek(1) === "*")) {
+    comments.push(scanComment(s));
+  } else if (ch === "`") {
+    scanTemplate(s, ops, tokens, comments);
+  } else if (ch === '"' || ch === "'") {
+    tokens.push(scanString(s, ch));
+  } else if (isDigit(ch)) {
+    tokens.push(scanNumber(s));
+  } else if (isIdentifierStart(ch)) {
+    tokens.push(scanIdent(s));
+  } else {
+    const token = scanPunct(s, ops);
+    if (token) tokens.push(token);
+  }
+}
+
 //? Driver
 export function tokenise(source: string, operators: readonly string[] = []): LexResult {
   const s = new Scanner(source);
@@ -261,31 +328,7 @@ export function tokenise(source: string, operators: readonly string[] = []): Lex
   const tokens: Token[] = [];
   const comments: Token[] = [];
 
-  while (!s.atEnd()) {
-    const ch = s.peek();
-    if (isSpace(ch)) {
-      s.advance();
-      continue;
-    }
-    if (ch === "/" && (s.peek(1) === "/" || s.peek(1) === "*")) {
-      comments.push(scanComment(s));
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      tokens.push(scanString(s, ch));
-      continue;
-    }
-    if (isDigit(ch)) {
-      tokens.push(scanNumber(s));
-      continue;
-    }
-    if (isIdentifierStart(ch)) {
-      tokens.push(scanIdent(s));
-      continue;
-    }
-    const token = scanPunct(s, ops);
-    if (token) tokens.push(token);
-  }
+  while (!s.atEnd()) scanToken(s, ops, tokens, comments);
 
   tokens.push({
     kind: "eof",

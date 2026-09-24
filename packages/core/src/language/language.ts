@@ -13,8 +13,10 @@ import {
   type Led,
   type Nud,
   registerInfix,
+  mergeGrammar,
   registerLed,
   registerNud,
+  registerWordLed,
   registerPrefix,
   registerStatement,
   type StatementFn,
@@ -41,6 +43,7 @@ export interface Language {
   // Syntax → grammar. Full handlers, with operator sugar on top.
   registerNud(key: string, nud: Nud): void;
   registerLed(key: string, led: Led): void;
+  registerWordLed(word: string, led: Led): void;
   registerStatement(key: string, fn: StatementFn): void;
   registerInfix(
     token: string,
@@ -75,6 +78,7 @@ export function createLanguage(): Language {
 
     registerNud: (key, nud) => registerNud(grammar, key, nud),
     registerLed: (key, led) => registerLed(grammar, key, led),
+    registerWordLed: (word, led) => registerWordLed(grammar, word, led),
     registerStatement: (key, fn) => registerStatement(grammar, key, fn),
     registerInfix: (token, bp, build, rightAssoc) =>
       registerInfix(grammar, token, bp, build, rightAssoc),
@@ -121,17 +125,8 @@ export function extendLanguage(extension: Language, base: Language): Language {
     if (!e.evaluators.has(v.op)) extension.registerEvaluator(v);
   });
 
-  // Grammar: nuds / leds / statements / operator tokens.
-  base.grammar.nuds.forEach((v, k) => {
-    if (!extension.grammar.nuds.has(k)) extension.registerNud(k, v);
-  });
-  base.grammar.leds.forEach((v, k) => {
-    if (!extension.grammar.leds.has(k)) extension.registerLed(k, v);
-  });
-  base.grammar.statements.forEach((v, k) => {
-    if (!extension.grammar.statements.has(k)) extension.registerStatement(k, v);
-  });
-  base.grammar.operatorTokens.forEach((tok) => extension.grammar.operatorTokens.add(tok));
+  // Grammar: the same rule, extension wins, applied by the grammar itself.
+  mergeGrammar(extension.grammar, base.grammar);
 
   return extension;
 }

@@ -5,6 +5,70 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.3.0 on npm — DONE 2026-09-22
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.3.0**, two days
+after 0.2.0. A minor because core gained API (ten ops, the first optional op input) and a
+warning widened (an `any` inside a list). Editor shipped a colour; link shipped nothing and moved
+its peer range. The runbook held again: the bump on `dev`, PR #18, three tags on the merge commit
+`7287918`, one release on core's tag, `Stage release` green, three approvals with 2FA, core first.
+
+Checked after approval: `latest` on each package, an attestation on all three, the peer ranges at
+`^0.3.0`, and a clean install outside the repo where `Join(["n =", ToString(ToNumber($raw)),
+Upper("abc")], " ")` gives `"n = 12 ABC"` and `ToNumber("0x10")` gives `null`.
+
+One thing worth keeping: **run the docs build in its own command.** All five gates in one shell,
+`yarn test` then `yarn workspace dendrite-docs build`, gave the build exit 1 once, and it passed
+twice alone. Not reproduced and not explained; the docs test run and the build share the `.astro`
+cache, which is the suspect. Judge the docs gate on a run of its own.
+
+---
+
+## Language — do we want implicit casting? — DECIDED 2026-09-21
+
+**No, not by type.** The analyser never inserts a node: every analysed node maps to one the
+author wrote, and that invariant was named during the discussion and is now the rule. What the
+language does instead, all in `types-and-text-plan.md`:
+
+- **An op input may declare that it converts**: `convert: true` on `OpInput`, shown as
+  `parts~: string[]` in the reference. The conversion is the OP's, declared and documented, not
+  the analyser's. `Join` is the only stdlib user; a converting lambda parameter is next.
+- **A template converts through `Join`**, because it desugars to one: the hole calling
+  `ToString` itself (the earlier decision, below) is superseded, and no node is inserted.
+- **`++` is the same**: sugar over `Join`, so it converts the way `Join` does.
+- **No cast to boolean**, ever. `If(0, …)` stays a type error and `ToBool` stays explicit: a
+  number read as a condition is the coercion the language rejected first.
+- **A value crossing an `any` is the author's to check**: `as` (a safe cast, `null` on a
+  misfit) or an annotation, both in the plan.
+
+**The entry as it stood when the question was open:**
+
+
+**What:** a question, not a decision. Today the answer is **no**: implicit coercion (a number
+read as a boolean, say) was rejected because it undermines the soundness model and would need
+conversion nodes inserted by a rewrite the language deliberately lacks. The sound alternative is
+built: `ToString`, `ToNumber` and `ToBool` (2026-09-20, `done.md`). Three things now lean on the
+question:
+
+- **A template literal's hole calls `ToString` itself** (decided 2026-09-20, entry below). Argued
+  not to be the rejected coercion: the reader wrote the template, the conversion is visible in
+  it, and it goes one way only, to a string. But it IS a conversion nobody typed.
+- **An operator for joining strings** (entry below). `"n = " ++ 1` either stringifies the number
+  or is refused, and whichever it does is this question answered for one operator.
+- **A number in a condition.** `If(0, …)` is a type error today, and `ToBool` makes the
+  conversion explicit. A program full of `ToBool(...)` is the cost of the current answer.
+
+**Why deferred:** raised 2026-09-20 while planning the string ops, where it kept coming up from
+different directions. It wants deciding once, as a rule, rather than three times by accident.
+
+**What it requires:** a decision on WHICH direction, if any, is allowed silently (to a string is
+the only one with a case so far); where it happens (a desugaring can do it visibly, the analyser
+cannot without the rewrite); and whether a silent conversion warns. Decided together with the
+string operator and with "strings and arrays, interchangeable" below, since all three are about
+how much the language does without being asked.
+
+---
+
 ## 0.2.0 on npm — DONE 2026-09-20
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.2.0**, five days

@@ -9,6 +9,16 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.3.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
+## Unreleased
+
+- **A template is coloured as one.** Its backticks and text take the string colour, as a
+  string's quotes do, its `{` `}` stay punctuation, and the code in a hole is coloured as code,
+  because the lexer hands it over as ordinary tokens. The backtick auto-closes like a quote, so
+  a half-typed template does not flash `unterminated_string`.
+- **`as` is coloured as a keyword, and its target as a type.** A word operator registered with
+  core's new `registerWordLed` takes the `keyword` class beside `let` and `output`, and the
+  type written after `as` is a type position for `tok-type`, as the one after `:` is.
+
 ## 0.3.0
 
 - **The type colour is a soft cyan**, not the plain ink 0.2.0 shipped. Plain ink was picked
