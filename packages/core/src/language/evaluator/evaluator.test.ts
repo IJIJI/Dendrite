@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
   type ASTNode,
   type AppNode,
@@ -312,86 +311,6 @@ describe("array ops", () => {
   });
 });
 
-// A list op never throws: a null, or anything that is not a list arriving through `any`, reads
-// as the empty list. `null` fits a list type directly; a `5` or an `"abc"` can only reach a list
-// input through an untyped lambda parameter, so that is how they are delivered here.
-describe("a list op reads what is not a list as []", () => {
-  const viaAny = (body: string, arg: string) =>
-    runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;
-  const ops: [string, unknown][] = [
-    ["Length(x)", 0],
-    ["Concat(x, [1])", [1]],
-    ["Flatten(x, 1)", []],
-    ["Average(x)", 0],
-    ["Max(x)", 0],
-    ["Min(x)", 0],
-    ['Includes(x, "a")', false],
-    ["Filter(x, n => true)", []],
-    ["Map(x, n => n)", []],
-    ["Find(x, n => true)", null],
-    ["Every(x, n => false)", true],
-    ["Some(x, n => true)", false],
-    ["Reduce(x, 0, (acc, n) => acc + 1)", 0],
-    ['Join(x, "-")', ""],
-  ];
-
-  for (const [body, empty] of ops) {
-    it(`${body}: null, 5 and "abc" all give the empty-list answer`, () => {
-      expect(viaAny(body, "[]")).toEqual(empty);
-      expect(viaAny(body, "null")).toEqual(empty);
-      expect(viaAny(body, "5")).toEqual(empty);
-      expect(viaAny(body, '"abc"')).toEqual(empty);
-    });
-  }
-
-  it("Concat guards each member, not only the whole", () => {
-    expect(runSource("output out = Concat(null, [1], null)").value).toEqual([1]);
-    expect(viaAny("Concat([0], x)", "5")).toEqual([0]);
-  });
-});
-
-// A field of null is null, so a well-typed `Find(...).name` with no match does not throw. A
-// struct that is there but lacks the field is still an error: it came from a host and does not
-// match its declared type.
-describe("a field read on null gives null", () => {
-  const evalWith = (src: string, buses: unknown) => {
-    const lang = createStdlib();
-    const descriptor = withPorts(lang, {
-      types: [{ name: "Bus", fields: { id: Type.number, name: Type.string } }],
-      inputs: [{ name: "buses", type: Type.array(Type.name("Bus")) }],
-      outputs: [],
-    });
-    const parsed = parseSource(src, lang);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    const analysed = analyse(parsed.program, descriptor);
-    expect(analysed.errors).toEqual([]);
-    const state = createEvalState();
-    updateInput("buses", buses, state);
-    return evaluate(
-      analysed.program.outputs.get("out")!,
-      analysed.program,
-      state,
-      undefined,
-      descriptor,
-    );
-  };
-  const src = "output out = Find($buses, b => b.id == 9).name";
-
-  it("a match reads its field", () => {
-    expect(evalWith(src, [{ id: 9, name: "nine" }])).toBe("nine");
-  });
-
-  it("no match is null, not a throw, and so is a field of that", () => {
-    expect(evalWith(src, [{ id: 1, name: "one" }])).toBeNull();
-    expect(evalWith("output out = Find($buses, b => b.id == 9).name.length", [])).toBeNull();
-  });
-
-  it("a struct that lacks the field still throws invalid_field_access", () => {
-    expect(() => evalWith(src, [{ id: 9 }])).toThrow(/does not exist/);
-    expect(() => evalWith(src, [9])).toThrow(/does not exist/);
-  });
-});
-
 describe("conversion ops", () => {
   const value = (src: string) => {
     const { analysed, value } = runSource(`output out = ${src}`);
@@ -486,10 +405,9 @@ describe("string ops", () => {
     expect(value('Join(parts: ["a", "b"], separator: ", ")')).toBe("a, b");
   });
 
-  it("Join: a list of numbers is converted, because Join declares that it converts", () => {
-    // Until the `convert` flag (2026-09-24) this was an op_input_type_mismatch, and ToString
-    // was the visible fix. Both forms give the same text now.
-    expect(value('Join([1, 2], "-")')).toBe("1-2");
+  it("Join: a list of numbers is a type error, and ToString is the visible fix", () => {
+    const { analysed } = runSource("output out = Join([1, 2])");
+    expect(analysed.errors.map((e) => e.kind)).toContain("op_input_type_mismatch");
     expect(value('Join([ToString(1), ToString(2)], "-")')).toBe("1-2");
   });
 
@@ -533,152 +451,5 @@ describe("string ops", () => {
     expect(value('Contains("abc", "")')).toBe(true);
     expect(value('StartsWith("abc", "")')).toBe(true);
     expect(value('EndsWith("abc", "")')).toBe(true);
-  });
-});
-
-// ─── The safe cast ────────────────────────────────────────────────────────────
-
-describe("as: the value when it fits, null when it does not", () => {
-  const castOf = (source: string, rows: unknown) => {
-    const lang = createStdlib();
-    lang.registerType("Grade", { extends: "number", schema: z.number().int().min(0).max(10) });
-    const descriptor = withPorts(lang, {
-      types: [{ name: "Bus", fields: { id: Type.number, name: Type.string } }],
-      inputs: [{ name: "rows", type: Type.any }],
-      outputs: [],
-    });
-    const parsed = parseSource(source, lang);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    const analysed = analyse(parsed.program, descriptor);
-    expect(analysed.errors).toEqual([]);
-    const state = createEvalState();
-    updateInput("rows", rows, state);
-    return evaluate(
-      analysed.program.outputs.get("out")!,
-      analysed.program,
-      state,
-      undefined,
-      descriptor,
-    );
-  };
-
-  it("a list of numbers fits number[], and anything else gives null", () => {
-    expect(castOf("output out = $rows as number[]", [1, 2])).toEqual([1, 2]);
-    expect(castOf("output out = $rows as number[]", 5)).toBeNull();
-    expect(castOf("output out = $rows as number[]", [1, "a"])).toBeNull();
-    expect(castOf("output out = $rows as number[]", null)).toBeNull();
-  });
-
-  it("a subtype's rules apply: a Grade outside its range gives null", () => {
-    expect(castOf("output out = $rows as Grade", 7)).toBe(7);
-    expect(castOf("output out = $rows as Grade", 11)).toBeNull();
-  });
-
-  it("the null is what IsSet, Default and the list ops already handle", () => {
-    expect(castOf("output out = IsSet($rows as number[])", 5)).toBe(false);
-    expect(castOf("output out = Default($rows as number[], [0])", 5)).toEqual([0]);
-    expect(castOf("output out = Average($rows as number[])", 5)).toBe(0);
-  });
-
-  it("a struct that lacks a field gives null, and a field read on that null is null", () => {
-    expect(castOf("output out = ($rows as Bus).name", { id: 1, name: "one" })).toBe("one");
-    expect(castOf("output out = ($rows as Bus).name", {})).toBeNull();
-  });
-});
-
-// ─── The convert flag ─────────────────────────────────────────────────────────
-
-describe("convert: the evaluator converts a flagged input before the op runs", () => {
-  const hostLang = () => {
-    const lang = createStdlib();
-    lang.registerOp({
-      name: "Twice",
-      inputs: [{ name: "n", type: Type.number, convert: true }],
-      output: Type.number,
-      description: "n, twice.",
-      examples: [],
-    });
-    lang.registerEvaluator({
-      op: "Twice",
-      // The op sees a number or a null: never the text it was given.
-      evaluate: ({ n }) => (n === null ? null : (n as number) * 2),
-    });
-    return lang;
-  };
-  const evalWith = (source: string, raw: unknown) => {
-    const lang = hostLang();
-    const descriptor = withPorts(lang, {
-      inputs: [{ name: "raw", type: Type.any }],
-      outputs: [],
-    });
-    const parsed = parseSource(source, lang);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    const analysed = analyse(parsed.program, descriptor);
-    expect(analysed.errors).toEqual([]);
-    const state = createEvalState();
-    updateInput("raw", raw, state);
-    const value = evaluate(
-      analysed.program.outputs.get("out")!,
-      analysed.program,
-      state,
-      undefined,
-      descriptor,
-    );
-    return { value, casts: analysed.warnings.filter((w) => w.kind === "implicit_any_cast") };
-  };
-
-  it("Join converts each leaf: a number, a boolean, a null, a nested list", () => {
-    expect(runSource('output out = Join([1, true, null, [2]], ", ")').value).toBe("1, true, , [2]");
-  });
-
-  it("a host op with convert on number gets the number, or null when there is no rule", () => {
-    // An `any` meeting a converting LEAF has nothing to warn about: every value has a rule.
-    expect(evalWith("output out = Twice($raw)", "12")).toEqual({ value: 24, casts: [] });
-    expect(evalWith("output out = Twice($raw)", true).value).toBe(2);
-    expect(evalWith("output out = Twice($raw)", "abc").value).toBeNull();
-  });
-
-  it("a wrong runtime shape passes through unchanged, and the op's own guard handles it", () => {
-    // `any` holding a number where a LIST was declared: not a list, so nothing to convert leaf
-    // by leaf; Join's toList then reads it as empty. The checker did warn about that: a bare
-    // any into a shape is still an implicit cast, because the shape is what it cannot see.
-    const five = evalWith("output out = Join($raw)", 5);
-    expect(five.value).toBe("");
-    expect(five.casts.map((w) => w.message)).toEqual(["'$raw' is 'any' typed - 'any[]' expected"]);
-    expect(evalWith("output out = Join($raw)", ["a", 1]).value).toBe("a1");
-  });
-});
-
-// ─── Templates ────────────────────────────────────────────────────────────────
-
-describe("templates: text with holes, through Join", () => {
-  const out = (program: string) => {
-    const { analysed, value } = runSource(program);
-    expect(analysed.errors).toEqual([]);
-    // No any-cast warning: Join converts, so a hole of any type is fine by declaration.
-    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
-    return value;
-  };
-
-  it("a hole is converted the way Join converts: number, null, list, boolean", () => {
-    expect(out("let count = 5\noutput out = `n = {count}`")).toBe("n = 5");
-    expect(out("output out = `a{null}b`")).toBe("ab");
-    expect(out("output out = `{[1, 2]}`")).toBe("[1,2]");
-    expect(out("output out = `{1 > 0}!`")).toBe("true!");
-  });
-
-  it("a template can hold a template, and can span lines", () => {
-    expect(out("output out = `x{`y{1}`}z`")).toBe("xy1z");
-    expect(out("output out = `one\ntwo {2}`")).toBe("one\ntwo 2");
-  });
-
-  it("the result is a string to the checker, so it flows into a string input", () => {
-    expect(out("output out = Upper(`a{1}`)")).toBe("A1");
-  });
-
-  it("ceiling: a lambda in a hole is a type error that names Join, which was not written", () => {
-    const { analysed } = runSource("output out = `{n => n}`");
-    expect(analysed.errors.map((e) => e.kind)).toEqual(["op_input_type_mismatch"]);
-    expect(analysed.errors[0].message).toContain("'Join'");
   });
 });

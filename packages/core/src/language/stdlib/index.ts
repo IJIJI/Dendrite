@@ -3,7 +3,6 @@ import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
-import { Convert } from "../infra/convert";
 
 // Operator desugar builders (pure - reference only ASTNodes, no `lang`). Module-level so
 // they're defined once rather than rebuilt per createStdlib() call. They stay in stdlib:
@@ -20,10 +19,20 @@ const variadic =
   (l: ASTNode, r: ASTNode): ASTNode =>
     operationNode(op, { nodes: [l, r] });
 
-// A value as a list: the one rule every list op shares, so a null (or anything that is not a
-// list, reaching the op through `any`) reads as the empty list and no op throws on it. It is
-// the list counterpart of Convert.toString, and Join uses both.
-const toList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+// What ToNumber accepts as text: a plain decimal, with an optional sign, fraction and exponent.
+// `Number()` alone would also take "", "0x10" and "Infinity". Anything else is null rather than
+// a throw or a 0: null is the language's "no value", and `Default(ToNumber(x), 0)` says the
+// fallback aloud.
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+// A value as text: the one rule ToString and every string op share, so a null or a number
+// reaching a string op reads the same as it would through ToString, and no op throws on one.
+const toText = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+};
 
 /**
  * Creates the standard-library language: logic / comparison / control / arithmetic /
@@ -415,10 +424,7 @@ export function createStdlib(): Language {
   lang.registerOp({
     name: "Join",
     inputs: [
-      // `convert`: a number or a boolean in the list becomes text before Join sees it, so
-      // `Join([1, 2], ", ")` is "1, 2" with no ToString and no warning (the evaluator converts;
-      // the reference shows it as `parts~`).
-      { name: "parts", type: Type.array(Type.string), convert: true },
+      { name: "parts", type: Type.array(Type.string) },
       { name: "separator", type: Type.string, required: false },
     ],
     output: Type.string,
@@ -556,12 +562,12 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Length",
-    evaluate: ({ list }) => toList(list).length,
+    evaluate: ({ list }) => (list as unknown[]).length,
   });
 
   lang.registerEvaluator({
     op: "Concat",
-    evaluate: ({ arrays }) => toList(arrays).map(toList).flat(),
+    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
     // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
     inferOutput: (inputTypes) => {
       const arrays = inputTypes["arrays"];
@@ -571,13 +577,13 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Flatten",
-    evaluate: ({ array, depth }) => toList(array).flat(depth as number),
+    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
   });
 
   lang.registerEvaluator({
     op: "Average",
     evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
+      const numbers = list as number[];
       return numbers.reduce((sum, n) => sum + n, 0) / numbers.length || 0;
     },
   });
@@ -587,7 +593,7 @@ export function createStdlib(): Language {
     // Empty → 0 (matches Average's convention; the natural "none" for non-negative
     // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
     evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
+      const numbers = list as number[];
       return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n > m ? n : m));
     },
   });
@@ -597,14 +603,14 @@ export function createStdlib(): Language {
     // Empty → 0 (matches Average's convention; the natural "none" for non-negative
     // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
     evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
+      const numbers = list as number[];
       return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n < m ? n : m));
     },
   });
 
   lang.registerEvaluator({
     op: "Includes",
-    evaluate: ({ list, value }) => toList(list).includes(value),
+    evaluate: ({ list, value }) => (list as unknown[]).includes(value),
   });
 
   // -------------------------------------------------------------------------
@@ -617,7 +623,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Filter",
     evaluate: ({ list, predicate }) =>
-      toList(list).filter((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -629,7 +635,8 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list, transform }) => toList(list).map((item) => (transform as FnValue)(item)),
+    evaluate: ({ list, transform }) =>
+      (list as unknown[]).map((item) => (transform as FnValue)(item)),
     inferInputTypes: (inputTypes) => ({
       transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
     }),
@@ -642,7 +649,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Find",
     evaluate: ({ list, predicate }) =>
-      toList(list).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
+      (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -652,7 +659,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Every",
     evaluate: ({ list, predicate }) =>
-      toList(list).every((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).every((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -661,7 +668,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Some",
     evaluate: ({ list, predicate }) =>
-      toList(list).some((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).some((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -670,7 +677,7 @@ export function createStdlib(): Language {
   lang.registerEvaluator({
     op: "Reduce",
     evaluate: ({ list, initial, reducer }) =>
-      toList(list).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
+      (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
     inferInputTypes: (inputTypes) => {
       const acc = inputTypes["initial"] ?? Type.any;
       return { reducer: Type.fn([acc, elementOf(inputTypes["list"])], acc) };
@@ -712,17 +719,31 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "ToString",
-    evaluate: ({ value }) => Convert.toString(value),
+    evaluate: ({ value }) => toText(value),
   });
 
   lang.registerEvaluator({
     op: "ToNumber",
-    evaluate: ({ value }) => Convert.toNumber(value),
+    evaluate: ({ value }) => {
+      if (typeof value === "number") return value;
+      if (typeof value === "boolean") return value ? 1 : 0;
+      if (typeof value !== "string") return null;
+      const text = value.trim();
+      return DECIMAL.test(text) ? Number(text) : null;
+    },
   });
 
   lang.registerEvaluator({
     op: "ToBool",
-    evaluate: ({ value }) => Convert.toBool(value),
+    evaluate: ({ value }) =>
+      !(
+        value === false ||
+        value === 0 ||
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        (Array.isArray(value) && value.length === 0)
+      ),
   });
 
   // -------------------------------------------------------------------------
@@ -733,32 +754,32 @@ export function createStdlib(): Language {
   // give the same text on every host.
   lang.registerEvaluator({
     op: "Join",
-    // `parts` arrives converted (the flag); a null separator still reads as "".
-    evaluate: ({ parts, separator }) => toList(parts).join(Convert.toString(separator)),
+    evaluate: ({ parts, separator }) =>
+      (Array.isArray(parts) ? parts : []).map(toText).join(toText(separator)),
   });
   lang.registerEvaluator({
     op: "Upper",
-    evaluate: ({ text }) => Convert.toString(text).toUpperCase(),
+    evaluate: ({ text }) => toText(text).toUpperCase(),
   });
   lang.registerEvaluator({
     op: "Lower",
-    evaluate: ({ text }) => Convert.toString(text).toLowerCase(),
+    evaluate: ({ text }) => toText(text).toLowerCase(),
   });
   lang.registerEvaluator({
     op: "Trim",
-    evaluate: ({ text }) => Convert.toString(text).trim(),
+    evaluate: ({ text }) => toText(text).trim(),
   });
   lang.registerEvaluator({
     op: "Contains",
-    evaluate: ({ text, part }) => Convert.toString(text).includes(Convert.toString(part)),
+    evaluate: ({ text, part }) => toText(text).includes(toText(part)),
   });
   lang.registerEvaluator({
     op: "StartsWith",
-    evaluate: ({ text, part }) => Convert.toString(text).startsWith(Convert.toString(part)),
+    evaluate: ({ text, part }) => toText(text).startsWith(toText(part)),
   });
   lang.registerEvaluator({
     op: "EndsWith",
-    evaluate: ({ text, part }) => Convert.toString(text).endsWith(Convert.toString(part)),
+    evaluate: ({ text, part }) => toText(text).endsWith(toText(part)),
   });
 
   // -------------------------------------------------------------------------
@@ -786,31 +807,6 @@ export function createStdlib(): Language {
   // `-` in front of a value, as `!` is: the parser tells it from the infix `-` by position, so
   // `1 - -14` is Subtract(1, Negate(14)). Without it the language had no negative numbers.
   lang.registerPrefix("-", BP.PREFIX, (operand) => operationNode("Negate", { a: operand }));
-
-  // A template, `text {hole} text`: sugar over Join, the way `>=` is sugar over LessThan, and
-  // registered here for the same reason - it names an op the core grammar does not have. The
-  // lexer has already cut it into string tokens and holes between `{` `}`; each part, text or
-  // hole, becomes an item of one list, and Join converts every item to text itself (its `parts`
-  // declares `convert`), so a hole needs no ToString and the analyser inserts no node.
-  lang.registerNud("`", (p, open) => {
-    // Between the backticks the lexer leaves only two things, a hole `{ … }` or a string token,
-    // so the second branch needs no check of its own. Every turn consumes at least one token
-    // (`expect` on a miss records an error and stays put), so the loop always reaches the
-    // closing backtick or the end.
-    const items: ASTNode[] = [];
-    while (!p.check("punct", "`") && !p.atEnd()) {
-      if (p.match("punct", "{")) {
-        items.push(p.parseExpr(0));
-        p.expect("punct", "}");
-      } else {
-        const text = p.expect("string");
-        items.push({ kind: "literal", value: text.value, source: text.source });
-      }
-    }
-    p.expect("punct", "`");
-    const parts: ASTNode = { kind: "array", items, type: Type.any, source: open.source };
-    return operationNode("Join", { parts }, { output: Type.string, source: open.source });
-  });
 
   return lang;
 }

@@ -56,8 +56,6 @@ function show(node: ASTNode): string {
       const head = node.params.length === 1 && !node.params[0].type ? params : `(${params})`;
       return `${head} => ${show(node.body)}`;
     }
-    case "cast":
-      return `${show(node.value)} as ${typeToString(node.type)}`;
     case "app": {
       const args = [
         ...node.positional.map(show),

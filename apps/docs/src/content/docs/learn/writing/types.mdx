@@ -65,10 +65,8 @@ which means:
 
 That compiles, with a warning where the `any{:den}` meets `Length{:den}`, and the warning names
 what you wrote: `'$whatever' is 'any' typed`. Here `$whatever{:den}` holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
-`length{:den}` shows 0, a plausible number that is simply wrong, because the one check that
-would have caught it is the one `any{:den}` gave up. (A list op reads anything that is not a list
-as an empty one, so the program keeps running; what it cannot do is tell you the value was never
-a list.)
+`length{:den}` shows `undefined`, which is not a number at all, because the one check that
+would have caught it is the one `any{:den}` gave up.
 
 So `any{:den}` is an escape hatch with a cost: you trade the check for the flexibility. When you see
 an `implicit_any_cast{:den}` warning, that is the checker telling you where the trade happened,
@@ -85,10 +83,7 @@ expected. A program over unset inputs therefore still compiles and still runs, r
 refusing to start.
 
 It will not produce sensible numbers, which is what `Default{:den}` and `IsSet{:den}` are for -
-see [Inputs](../inputs/). A list op reads a `null{:den}` as an empty list, so `Length{:den}` of an
-unset list is 0 and `Find{:den}` over one is `null{:den}`, and a field of `null{:den}` is `null{:den}`
-again, so `Find(buses, b => b.id == 9).name{:den}` is simply unset when no bus matches. Nothing
-throws.
+see [Inputs](../inputs/).
 
 ## Converting on purpose
 

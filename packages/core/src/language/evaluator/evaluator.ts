@@ -1,9 +1,6 @@
-import { Convert } from "../infra/convert";
-import { valueFits } from "../infra/fits";
-import { CNode, type COperationNode } from "../infra/nodes";
-import { type Type } from "../infra/types";
+import { CNode } from "../infra/nodes";
 import { CoreProgram } from "../infra/program";
-import { type FnValue, type OpInput, Vocabulary } from "../infra/registry";
+import { type FnValue, Vocabulary } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
 // Shared empty local scope for evaluating global bindings. Scope maps are never
@@ -147,13 +144,14 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
     case "field":
       return memoise(node, ctx, state, () => {
         const src = evalNode(node.struct, ctx, state);
-        // A field of nothing is nothing: `Find(...).name` with no match is null, not a throw,
-        // the way a null reads as "" in a string op and as [] in a list op. A struct that IS
-        // there but lacks the field is still an error: that value came from a host and does
-        // not match its declared type.
-        if (src === null || src === undefined) return null;
+        if (src === null || src === undefined) {
+          throw new EvalError(
+            "invalid_field_access",
+            `Cannot access field '${node.field}' on null/undefined`,
+          );
+        }
         const record = src as Record<string, unknown>;
-        if (typeof record !== "object" || !(node.field in record)) {
+        if (!(node.field in record)) {
           throw new EvalError(
             "invalid_field_access",
             `Field '${node.field}' does not exist on value`,
@@ -182,14 +180,6 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
       return closure;
     }
 
-    case "cast":
-      // The value when it fits the target, else null: a safe cast never throws, and a null is
-      // what the language already gives for "no value", so Default and IsSet handle it.
-      return memoise(node, ctx, state, () => {
-        const value = evalNode(node.value, ctx, state);
-        return valueFits(value, node.type, ctx.descriptor) ? value : null;
-      });
-
     case "app":
       return memoise(node, ctx, state, () => {
         const callee = evalNode(node.callee, ctx, state);
@@ -210,7 +200,12 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
         if (!evaluator) {
           throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
         }
-        const resolved = resolveInputs(node, ctx, state);
+        const resolved: Record<string, unknown> = {};
+        for (const [key, input] of Object.entries(node.inputs)) {
+          resolved[key] = Array.isArray(input)
+            ? input.map((n) => evalNode(n, ctx, state))
+            : evalNode(input, ctx, state);
+        }
         try {
           return evaluator.evaluate(resolved);
         } catch (e) {
@@ -218,44 +213,6 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
         }
       });
-  }
-}
-
-// Evaluate an op node's inputs into the record its evaluator receives. An input declared
-// `convert` is converted leaf by leaf first, so the op sees the type it declared; one whose
-// runtime shape is wrong (an `any` holding a number where a list was declared) passes through
-// unchanged, and the op's own guard handles it, as it did before the flag existed.
-function resolveInputs(
-  node: COperationNode,
-  ctx: EvalContext,
-  state: EvalState,
-): Record<string, unknown> {
-  const declared = new Map(ctx.descriptor.ops.get(node.op)?.inputs.map((i) => [i.name, i]));
-  const resolved: Record<string, unknown> = {};
-  for (const [key, input] of Object.entries(node.inputs)) {
-    const value = Array.isArray(input)
-      ? input.map((n) => evalNode(n, ctx, state))
-      : evalNode(input, ctx, state);
-    const def: OpInput | undefined = declared.get(key);
-    resolved[key] = def?.convert ? convertTo(value, def.type) : value;
-  }
-  return resolved;
-}
-
-function convertTo(value: unknown, type: Type): unknown {
-  if (type.kind === "array") {
-    return Array.isArray(value) ? value.map((item) => convertTo(item, type.element)) : value;
-  }
-  if (type.kind !== "name") return value;
-  switch (type.name) {
-    case "string":
-      return Convert.toString(value);
-    case "number":
-      return Convert.toNumber(value);
-    case "boolean":
-      return Convert.toBool(value);
-    default:
-      return value;
   }
 }
 

@@ -59,7 +59,7 @@ what the entry claims. The docs site prints the same registry.
 
 Three things it records that are not obvious from the unions in `analyser/types.ts`:
 
-- `unknown_port_type`, `incompatible_field_override`, `missing_evaluator` and `orphan_evaluator` are
+- `unknown_type`, `incompatible_field_override`, `missing_evaluator` and `orphan_evaluator` are
   declared as analysis errors but only ever come from `validateDescriptor`, which runs inside
   `composeLayers`. The first two reach a host as ports problems; the other two make `attribute`
   THROW, because a language whose ops have no evaluators is broken before any program exists.

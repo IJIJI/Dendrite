@@ -52,13 +52,12 @@ let sources = ["cam 1", "cam 2", "mic"]
 
 output label  = Join(Map(sources, name => Upper(name)), ", ")
 output packed = Join(sources)
-output status = Join(["Live: ", Length(sources)])
+output status = Join(["Live: ", ToString(Length(sources))])
 ```
 
 `label{:den}` is `"CAM 1, CAM 2, MIC"`, and `packed{:den}` runs the parts together because it has
-no separator. `status{:den}` is where a number goes into a sentence, and it works without a
-`ToString{:den}`: `Join{:den}` is the one op that converts its parts to text itself, which its
-signature shows as `parts~{:den}`. Nothing else converts on its own. The rest of the text ops
+no separator. `status{:den}` is where a number goes into a sentence: `Join{:den}` wants text, and
+nothing converts on its own, so `ToString{:den}` says it out loud. The rest of the text ops
 (`Trim{:den}`, `Contains{:den}` and their neighbours) are on the [string](../../../stdlib/string/)
 page.
 

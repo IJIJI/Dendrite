@@ -484,7 +484,7 @@ describe("descriptor validation", () => {
     lang.registerType("Bus", { fields: { name: Type.name("Ghost") } });
     expect(
       validateDescriptor(lang.unchecked).some(
-        (e) => e.kind === "unknown_port_type" && e.name === "Ghost",
+        (e) => e.kind === "unknown_type" && e.name === "Ghost",
       ),
     ).toBe(true);
   });
@@ -1599,13 +1599,10 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
     expect(warning?.message).toBe("'$cells' is 'any[][]' typed - 'number[][]' expected");
   });
 
-  it("a mixed list into Join does not warn: Join declares that it converts", () => {
-    // Until the `convert` flag (2026-09-24) this WARNED, and ToString was the clean form. Join's
-    // `parts` now accepts any leaf and converts it, so neither form has anything to warn about.
-    expect(castsIn('output out = Join(["n = ", 1])')).toEqual([]);
+  it("a mixed list into Join warns, and ToString is the clean form", () => {
+    // The pair to evaluator.test.ts's "MIXED list" test, which pins the VALUE ("n = 1").
+    expect(castsIn('output out = Join(["n = ", 1])')).toHaveLength(1);
     expect(castsIn('output out = Join(["n = ", ToString(1)])')).toEqual([]);
-    // An input WITHOUT the flag still warns about the same list.
-    expect(castsIn('output out = Average(["n = ", 1])')).toHaveLength(1);
   });
 
   it("stays quiet for a list that fits, and where any is what is wanted", () => {
@@ -1618,244 +1615,14 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
     expect(castsIn("output out = Join([])")).toEqual([]);
   });
 
-  it("a NAME bound to an empty list warns, and an annotation is the answer", () => {
-    // Only its type (`any[]`) reaches the check. Stating the type closes it: the empty literal
-    // is quiet against the annotation, and every reader sees a number[].
+  it("known ceiling: a NAME bound to an empty list does warn", () => {
+    // Only its type (`any[]`) reaches the check, and a binding cannot be annotated yet
+    // (`.docs/todo.md`: binding annotations, with the safe cast). Pinned so that fix shows up here.
     const [warning] = castsIn("let none = []\noutput out = Average(none)");
     expect(warning?.message).toBe("'none' is 'any[]' typed - 'number[]' expected");
-    expect(castsIn("let none: number[] = []\noutput out = Average(none)")).toEqual([]);
   });
 
   it("leaves functions alone: an untyped lambda into Filter is gradual typing, not a cast", () => {
     expect(castsIn("output out = Filter([1, 2, 3], item => item > 1)")).toEqual([]);
-  });
-});
-
-// ─── Binding annotations ──────────────────────────────────────────────────────
-
-describe("binding annotations: a stated type is checked, and then it is the type", () => {
-  const OUT = { name: "out", type: Type.any };
-  const analyseSource = (source: string, ports: Ports = { inputs: [], outputs: [OUT] }) => {
-    const language = createStdlib();
-    const parsed = parseSource(source, language);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    return analyse(parsed.program, withPorts(language, ports));
-  };
-  const kinds = (result: { errors: { kind: string }[] }) => result.errors.map((e) => e.kind);
-
-  it("a value of the wrong type is binding_type_mismatch, and the binding fails", () => {
-    const result = analyseSource('let n: number = "a"\noutput out = n + 1');
-    expect(kinds(result)).toEqual(["binding_type_mismatch", "output_depends_on_failed_binding"]);
-    expect(result.errors[0].message).toBe(
-      "Binding 'n' has type 'string', which is not compatible with expected 'number'",
-    );
-  });
-
-  it("a ref reads the stated type, not the inferred one", () => {
-    // A list literal: `any[]` inferred, `number[]` stated, and Average sees the number[].
-    const literal = analyseSource("let none: number[] = []\noutput out = Average(none)");
-    expect(literal.errors).toEqual([]);
-    expect(literal.warnings.map((w) => w.kind)).toEqual([]);
-    // An op call: `number[]` inferred, `any[]` stated, and Average now warns about the any.
-    const call = analyseSource(
-      "let xs: any[] = Filter([1, 2], n => n > 1)\noutput out = Average(xs)",
-    );
-    expect(call.errors).toEqual([]);
-    expect(call.warnings.map((w) => w.kind)).toEqual(["implicit_any_cast"]);
-  });
-
-  it("an any source still warns: the annotation is a claim, not a check", () => {
-    const result = analyseSource("let rows: number[] = $rows\noutput out = Average(rows)", {
-      inputs: [{ name: "rows", type: Type.any }],
-      outputs: [OUT],
-    });
-    expect(result.errors).toEqual([]);
-    // The annotation's warning names its own fix; the same warning on an op input does not.
-    expect(result.warnings.map((w) => w.message)).toEqual([
-      "'$rows' is 'any' typed - 'number[]' expected. Use 'as number[]' to check it",
-    ]);
-    const plain = analyseSource("output out = Average($rows)", {
-      inputs: [{ name: "rows", type: Type.any }],
-      outputs: [OUT],
-    });
-    expect(plain.warnings.map((w) => w.message)).toEqual([
-      "'$rows' is 'any' typed - 'number[]' expected",
-    ]);
-  });
-
-  it("a type name that nothing registered is unknown_type: annotation and lambda alike", () => {
-    expect(kinds(analyseSource("let x: Nope = 1\noutput out = x"))).toEqual([
-      "unknown_type",
-      "output_depends_on_failed_binding",
-    ]);
-    expect(kinds(analyseSource("let x: Nope[] = []\noutput out = x"))).toContain("unknown_type");
-    const lambda = analyseSource("let f = (n: nubmer) => n\noutput out = f(1)");
-    expect(kinds(lambda)).toEqual(["unknown_type", "output_depends_on_failed_binding"]);
-    expect(lambda.errors[0]).toMatchObject({
-      name: "nubmer",
-      message: "Type 'nubmer' is not registered",
-    });
-  });
-
-  it("a layer's struct type is known, so `let b: Bus = $bus` is fine", () => {
-    const result = analyseSource("let b: Bus = $bus\noutput out = b.name", {
-      types: [{ name: "Bus", fields: { name: Type.string } }],
-      inputs: [{ name: "bus", type: Type.name("Bus") }],
-      outputs: [OUT],
-    });
-    expect(result.errors).toEqual([]);
-    expect(result.warnings).toEqual([]);
-  });
-});
-
-// ─── The safe cast ────────────────────────────────────────────────────────────
-
-describe("as: the cast has the target type, and its value's dependencies", () => {
-  const analyseSource = (source: string, ports: Ports) => {
-    const language = createStdlib();
-    const parsed = parseSource(source, language);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    return analyse(parsed.program, withPorts(language, ports));
-  };
-  const OUT = { name: "out", type: Type.any };
-
-  it("an any value cast to number[] is a number[] to everything downstream, with no warning", () => {
-    const result = analyseSource("output out = Average($rows as number[])", {
-      inputs: [{ name: "rows", type: Type.any }],
-      outputs: [OUT],
-    });
-    expect(result.errors).toEqual([]);
-    expect(result.warnings).toEqual([]);
-    const out = result.program.outputs.get("out")!;
-    expect(out.kind).toBe("operation");
-    expect(out.dependsOn).toEqual(new Set(["rows"]));
-  });
-
-  it("a cast to a name nothing registered is unknown_type", () => {
-    const result = analyseSource("output out = $x as Nope", {
-      inputs: [{ name: "x", type: Type.any }],
-      outputs: [OUT],
-    });
-    expect(result.errors.map((e) => e.kind)).toEqual(["unknown_type"]);
-  });
-
-  it("a cast to a function type is an error: a closure cannot be checked", () => {
-    const result = analyseSource(
-      "let f = (n: number) => n\noutput out = f as (number) -> boolean",
-      {
-        inputs: [],
-        outputs: [OUT],
-      },
-    );
-    expect(result.errors.map((e) => e.kind)).toEqual(["cast_to_function"]);
-    expect(result.warnings.map((w) => w.kind)).toEqual([]);
-  });
-
-  it("a cast that can never fit warns, and one that might does not", () => {
-    const never = analyseSource('output out = "five" as number', { inputs: [], outputs: [OUT] });
-    expect(never.errors).toEqual([]);
-    expect(never.warnings.map((w) => w.message)).toEqual([
-      "The value is 'string' typed and can never fit 'number': this cast is always null",
-    ]);
-    // Named as the reader wrote it, when it has a name.
-    const named = analyseSource("output out = $text as number[]", {
-      inputs: [{ name: "text", type: Type.string }],
-      outputs: [OUT],
-    });
-    expect(named.warnings[0]?.message).toMatch(/^'\$text' is 'string' typed/);
-    // Downward (a supertype to its subtype), upward, from an any: each may fit at runtime.
-    const language = createStdlib();
-    language.registerType("Grade", { extends: "number" });
-    const may = (source: string, inputs: Ports["inputs"]) => {
-      const parsed = parseSource(source, language);
-      if (!parsed.ok) throw new Error("parse failed");
-      return analyse(parsed.program, withPorts(language, { inputs, outputs: [OUT] })).warnings;
-    };
-    expect(may("output out = $n as Grade", [{ name: "n", type: Type.number }])).toEqual([]);
-    expect(may("output out = $g as number", [{ name: "g", type: Type.name("Grade") }])).toEqual([]);
-    expect(may("output out = $x as number", [{ name: "x", type: Type.any }])).toEqual([]);
-  });
-
-  it("an unknown target name is reported alone: no cast_never_fits beside it", () => {
-    const result = analyseSource('output out = "a" as Nope', { inputs: [], outputs: [OUT] });
-    expect(result.errors.map((e) => e.kind)).toEqual(["unknown_type"]);
-    expect(result.warnings).toEqual([]);
-  });
-
-  it("collectRefs sees through a cast: the binding it reads is ordered first", () => {
-    // Built as an ast program (no code source), so the lexical-order check is off and only
-    // the reference graph decides the order: `a` reads `b`, and `b` is declared after it.
-    const language = createStdlib();
-    const program: RawProgram = {
-      bindings: new Map<string, ASTNode>([
-        ["a", { kind: "cast", value: { kind: "ref", name: "b" }, type: Type.number }],
-        ["b", { kind: "literal", value: 5 }],
-      ]),
-      outputs: new Map<string, ASTNode>([["out", { kind: "ref", name: "a" }]]),
-    };
-    const result = analyse(program, withPorts(language, { inputs: [], outputs: [OUT] }));
-    expect(result.errors).toEqual([]);
-    expect(getOutputType(result.program.outputs.get("out")!)).toEqual(Type.number);
-  });
-});
-
-// ─── The convert flag ─────────────────────────────────────────────────────────
-
-describe("convert: an op input that accepts any leaf and converts it", () => {
-  const OUT = { name: "out", type: Type.any };
-  const check = (source: string) => {
-    const language = createStdlib();
-    const parsed = parseSource(source, language);
-    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
-    return analyse(parsed.program, withPorts(language, { inputs: [], outputs: [OUT] }));
-  };
-
-  it("the shape must match; a leaf may be anything, a nested list included", () => {
-    expect(check('output out = Join([1, 2], ", ")').errors).toEqual([]);
-    expect(check("output out = Join([[1], [2]])").errors).toEqual([]);
-    const five = check("output out = Join(5)");
-    expect(five.errors.map((e) => e.kind)).toEqual(["op_input_type_mismatch"]);
-    // The message names the shape it checked against, not the declared leaf type.
-    expect(five.errors[0].message).toContain("expected 'any[]'");
-  });
-
-  it("a function at a leaf is still an error: a function never fits any", () => {
-    expect(check("output out = Join([n => n])").errors.map((e) => e.kind)).toEqual([
-      "op_input_type_mismatch",
-    ]);
-  });
-
-  it("is refused when the language composes, for each rule it can break", () => {
-    const cases: [string, Parameters<Language["registerOp"]>[0]["inputs"][0]][] = [
-      ["struct", { name: "a", type: Type.name("Bus"), convert: true }],
-      ["function", { name: "a", type: Type.fn([], Type.string), convert: true }],
-      ["any", { name: "a", type: Type.any, convert: true }],
-      ["variadic", { name: "a", type: Type.string, variadic: true, convert: true }],
-      ["optional", { name: "a", type: Type.string, required: false, convert: true }],
-    ];
-    for (const [label, input] of cases) {
-      const lang = testLang(createStdlib());
-      lang.registerType("Bus", { fields: { id: Type.number } });
-      lang.registerOp({ name: "Host", inputs: [input], output: Type.string });
-      lang.registerEvaluator({ op: "Host", evaluate: () => "" });
-      const errors = validateDescriptor(lang.unchecked).filter(
-        (e) => e.kind === "invalid_convert_input",
-      );
-      expect(errors, label).toHaveLength(1);
-      expect(errors[0].subject, label).toEqual({ kind: "op", name: "Host" });
-      expect(() => createEnvironment(lang.language), label).toThrow(/is declared convert/);
-    }
-    // And accepted where it is allowed: a leaf, or a list of leaves.
-    const ok = testLang(createStdlib());
-    ok.registerOp({
-      name: "Host",
-      inputs: [
-        { name: "a", type: Type.number, convert: true },
-        { name: "b", type: Type.array(Type.array(Type.boolean)), convert: true },
-      ],
-      output: Type.string,
-    });
-    ok.registerEvaluator({ op: "Host", evaluate: () => "" });
-    expect(validateDescriptor(ok.unchecked)).toEqual([]);
   });
 });

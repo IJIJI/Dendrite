@@ -22,7 +22,7 @@ import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
 // language no longer does, and the `satisfies` below fails to compile the moment a kind is
 // added without being documented here.
 //
-// One entry per kind, not per (stage, kind): `unknown_port_type` and `incompatible_field_override`
+// One entry per kind, not per (stage, kind): `unknown_type` and `incompatible_field_override`
 // are declared in the analyser's union AND in PortProblem's, and mean the same thing in both.
 // `stage` says where a host actually meets it, which is not always where it is declared - see
 // the four descriptor checks below.
@@ -129,8 +129,7 @@ export const diagnostics = {
   unterminated_string: {
     stage: "parse",
     severity: "error",
-    message:
-      "A string literal has no closing quote, or a template no closing backtick (a hole left open counts too).",
+    message: "A string literal has no closing quote.",
     example: den`
       output x = "abc
     `,
@@ -200,7 +199,7 @@ export const diagnostics = {
       outputs: [],
     }),
   },
-  unknown_port_type: {
+  unknown_type: {
     stage: "ports",
     severity: "error",
     message: "A declaration names a type nothing registered.",
@@ -236,13 +235,6 @@ export const diagnostics = {
     triggeredBy:
       "A `registerEvaluator` whose `op` name matches nothing. Like a missing evaluator, this throws when the language composes.",
   },
-  invalid_convert_input: {
-    stage: "ports",
-    severity: "error",
-    message: "An op input is declared `convert: true` but cannot carry it.",
-    triggeredBy:
-      "A `registerOp` input with `convert` on a struct, a function or `any` (no conversion rule exists), on a variadic input, or on an optional one (an absent value would arrive converted rather than absent). Like a missing evaluator, this throws when the language composes.",
-  },
 
   // ── analyse: the program against those declarations ──────────────────────────
   unknown_op: {
@@ -270,17 +262,6 @@ export const diagnostics = {
     `,
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
-  },
-  unknown_type: {
-    stage: "analyse",
-    severity: "error",
-    message: "A type written in the program is one the language does not have.",
-    triggeredBy:
-      "A typo in an annotation - `let rows: nubmer[] = …`, `(n: nubmer) => …` - or a struct type the host never registered. Every name inside a list or a function type is checked.",
-    example: den`
-      let rows: nubmer[] = [1, 2]
-      output x = Average(rows)
-    `,
   },
   binding_cycle: {
     stage: "analyse",
@@ -363,27 +344,6 @@ export const diagnostics = {
       `,
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
-  },
-  binding_type_mismatch: {
-    stage: "analyse",
-    severity: "error",
-    message: "A binding states a type its value does not have.",
-    triggeredBy:
-      '`let n: number = "a"`: the annotation is a claim about the value, and the value is checked against it. The binding fails, so nothing downstream runs on a type it does not have.',
-    example: den`
-      let n: number = "a"
-      output x = n
-    `,
-  },
-  cast_to_function: {
-    stage: "analyse",
-    severity: "error",
-    message:
-      "A cast to a function type. A function value cannot be checked at runtime, so the cast could never succeed.",
-    example: den`
-      let f = (n: number) => n
-      output x = f as (number) -> boolean
-    `,
   },
   lambda_return_type_mismatch: {
     stage: "analyse",
@@ -530,15 +490,6 @@ export const diagnostics = {
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
   },
-  cast_never_fits: {
-    stage: "analyse",
-    severity: "warning",
-    message:
-      "A cast between two types neither of which fits the other, so the result is always null. Allowed, because it is pointless rather than unsound.",
-    example: den`
-      output x = "five" as number
-    `,
-  },
   implicit_any_cast: {
     stage: "analyse",
     severity: "warning",
@@ -566,7 +517,7 @@ export const diagnostics = {
     severity: "error",
     message: "A field was read from a value that does not have it.",
     triggeredBy:
-      "A host pushing a value that does not match the struct type its input was declared with. Nothing validates a pushed value against its type yet. A field of `null` is not this: it reads as `null`.",
+      "A host pushing a value that does not match the struct type its input was declared with. Nothing validates a pushed value against its type yet.",
   },
   host_error: {
     stage: "evaluate",

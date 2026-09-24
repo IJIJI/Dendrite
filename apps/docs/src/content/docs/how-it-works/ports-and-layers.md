@@ -86,7 +86,7 @@ The same rule is why a persisted layer may not declare a type with a `schema{:ts
 
 `composeLayers{:ts}` either produces a descriptor or a list of problems. It also runs the descriptor's
 own integrity check, which is where a declaration naming an unregistered type
-(`unknown_port_type{:den}`) or a struct field clashing with the one it inherits
+(`unknown_type{:den}`) or a struct field clashing with the one it inherits
 (`incompatible_field_override{:den}`) is caught.
 
 That check also catches two things that are not a layer's fault at all: an op registered with no

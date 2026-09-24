@@ -63,15 +63,6 @@ function collectRefs(node: ASTNode, bindings: Set<string>): Set<string> {
         for (const arg of n.positional) walk(arg);
         for (const arg of Object.values(n.named)) walk(arg);
         break;
-      case "cast":
-        walk(n.value);
-        break;
-      default: {
-        // A node kind this walk does not know would silently drop its references, and the
-        // reference graph would order its binding wrong. Make that a compile error instead.
-        const unhandled: never = n;
-        throw new Error(`collectRefs: unhandled node kind ${String(unhandled)}`);
-      }
     }
   }
   walk(node);
@@ -103,8 +94,6 @@ export function getOutputType(node: CNode): Type {
       return node.type;
     case "app":
       return node.type;
-    case "cast":
-      return node.type;
     case "error":
       return node.type ?? Type.any;
   }
@@ -120,8 +109,6 @@ interface Slot {
   node: CNode;
   /** Where the squiggle goes. Not always `node.source`: a lambda's return points at the lambda. */
   source?: SourceRef;
-  /** What to do about an implicit cast here, when the slot has an answer of its own. */
-  hint?: string;
 }
 
 // What a reader would call this value: the name they wrote, when there is one. `height >= 10`
@@ -152,19 +139,6 @@ function castsAny(actual: Type, expected: Type): boolean {
   return isAnyOrNull(actual) && !isAny(expected);
 }
 
-// The type a converting input accepts: its shape, with `any` at every leaf. `string[]` becomes
-// `any[]`, so a list of numbers fits and a lambda still does not (a function never fits `any`),
-// with no second compatibility relation.
-function anyAtLeaves(t: Type): Type {
-  return t.kind === "array" ? Type.array(anyAtLeaves(t.element)) : Type.any;
-}
-
-// What `convert` can be declared on: a leaf `Convert` has a rule for, or a list of them.
-function isConvertible(t: Type): boolean {
-  if (t.kind === "array") return isConvertible(t.element);
-  return t.kind === "name" && (t.name === "string" || t.name === "number" || t.name === "boolean");
-}
-
 // An empty list literal has no items to take a type from, so its element is `any`; warning
 // about it would be crying wolf. Only the LITERAL is recognisable: a name bound to an empty
 // list reaches a check as its type alone, and does warn, until a binding can be annotated.
@@ -193,9 +167,7 @@ function checkCompat(
     ctx.warnings.push({
       kind: "implicit_any_cast",
       name,
-      message:
-        `${subject ? `'${subject}'` : slot.label} is '${typeToString(actual)}' typed - '${typeToString(expected)}' expected` +
-        (slot.hint ? `. ${slot.hint}` : ""),
+      message: `${subject ? `'${subject}'` : slot.label} is '${typeToString(actual)}' typed - '${typeToString(expected)}' expected`,
       source,
     });
   }
@@ -362,10 +334,7 @@ function validateInputs(
     } else if (name in rawInputs) {
       // Refine the expected type (generic function inputs) and contextually type an
       // inline lambda's untyped params from it before analysing the body.
-      // A converting input accepts its shape with any leaf; the evaluator converts the leaves.
-      const expectedType = opInput.convert
-        ? anyAtLeaves(opInput.type)
-        : (inferInputTypes?.(inputTypes)?.[name] ?? opInput.type);
+      const expectedType = inferInputTypes?.(inputTypes)?.[name] ?? opInput.type;
       const cnode = analyseNode(withExpectedParams(rawInputs[name] as ASTNode, expectedType), ctx);
       const actualType = getOutputType(cnode);
       if (cnode.kind !== "error")
@@ -488,11 +457,8 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
           }
         }
 
-        // A stated type wins over the inferred one: `let none: number[] = []` is a number[]
-        // to everything that reads it, which is what the annotation is for.
         const binding = ctx.analysedBindings.get(node.name)!;
-        const type = ctx.annotations.get(node.name) ?? getOutputType(binding);
-        return { ...node, type, dependsOn: binding.dependsOn };
+        return { ...node, type: getOutputType(binding), dependsOn: binding.dependsOn };
       }
 
       ctx.errors.push({
@@ -581,11 +547,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     }
 
     case "lambda": {
-      // A name written in an annotation has to exist, or every check downstream compares
-      // against a type that is not there.
-      const written = [...node.params.map((p) => p.type), node.returnType];
-      const unknown = written.filter((t) => t && reportUnknownTypes(t, ctx, node.source));
-      if (unknown.length > 0) return errorNode(undefined, node.source);
       // Bind params into the local scope (untyped → any, gradual), then analyse the
       // body in that extended scope. Nested lambdas recurse naturally, layering more
       // params onto localBindings.
@@ -630,42 +591,6 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         source: node.source,
         dependsOn: body.dependsOn,
       };
-    }
-
-    case "cast": {
-      // The target is the node's type whatever the value's static type is: that is what a
-      // cast is for. The value is analysed for its own errors and its dependencies only. The
-      // target's names must exist, as an annotation's must.
-      const value = analyseNode(node.value, ctx);
-      if (value.kind === "error") return errorNode(node.type, node.source);
-      if (reportUnknownTypes(node.type, ctx, node.source)) return errorNode(undefined, node.source);
-      if (node.type.kind === "function") {
-        // A closure carries no signature, so valueFits cannot check one: the cast would
-        // always give null. An error, because no value could ever pass.
-        ctx.errors.push({
-          kind: "cast_to_function",
-          name: typeToString(node.type),
-          message: `Cannot cast to '${typeToString(node.type)}': a function value cannot be checked at runtime`,
-          source: node.source,
-        });
-        return errorNode(node.type, node.source);
-      }
-      const actual = getOutputType(value);
-      if (
-        !isCompatible(actual, node.type, ctx.descriptor) &&
-        !isCompatible(node.type, actual, ctx.descriptor)
-      ) {
-        // Neither direction fits, so no runtime value can either: the cast is pointless,
-        // not broken. `"5" as number` is always null; an `any` or a supertype is not this.
-        const subject = writtenAs(value);
-        ctx.warnings.push({
-          kind: "cast_never_fits",
-          name: typeToString(node.type),
-          message: `${subject ? `'${subject}'` : "The value"} is '${typeToString(actual)}' typed and can never fit '${typeToString(node.type)}': this cast is always null`,
-          source: node.source,
-        });
-      }
-      return { ...node, value, dependsOn: value.dependsOn };
     }
 
     case "app": {
@@ -738,39 +663,17 @@ function collectTypeNames(t: Type, into: Set<string>): void {
   }
 }
 
-// A type WRITTEN in a program - an annotation, a lambda parameter - must name registered
-// types, the way a declaration must (validateDescriptor). The parser cannot check it: it has the
-// vocabulary alone, and a layer type such as `Bus` arrives with the composed descriptor. A Type
-// has no span of its own, so the error points at the statement or the lambda that wrote it.
-// Returns whether anything was reported.
-function reportUnknownTypes(t: Type, ctx: AnalysisContext, source: SourceRef | undefined): boolean {
-  const names = new Set<string>();
-  collectTypeNames(t, names);
-  let reported = false;
-  for (const name of names) {
-    if (ctx.descriptor.types.has(name)) continue;
-    ctx.errors.push({
-      kind: "unknown_type",
-      name,
-      message: `Type '${name}' is not registered`,
-      source,
-    });
-    reported = true;
-  }
-  return reported;
-}
-
 //? validateDescriptor: referential integrity of a language definition. Every named-type
 // reference (op inputs/outputs, input/output types, struct `fields`, `extends`) must
 // resolve to a registered type - a dangling reference (typo, forgotten registerType) is
-// an `unknown_port_type` error. A registered-but-fieldless type is fine (an opaque handle);
+// an `unknown_type` error. A registered-but-fieldless type is fine (an opaque handle);
 // only UNregistered names are flagged. Run once when the language is assembled.
 export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisError[] {
   const errors: AnalysisError[] = [];
   const report = (name: string, where: string, subject: ErrorSubject) => {
     if (!descriptor.types.has(name)) {
       errors.push({
-        kind: "unknown_port_type",
+        kind: "unknown_type",
         name,
         message: `Type '${name}' is referenced by ${where} but is not registered`,
         subject,
@@ -796,23 +699,6 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
     const subject: ErrorSubject = { kind: "op", name: op.name };
     for (const input of op.inputs) {
       checkType(input.type, `op '${op.name}' input '${input.name}'`, subject);
-      if (!input.convert) continue;
-      // The flag's whole contract is in OpInput; each refusal names the rule it breaks.
-      const why = !isConvertible(input.type)
-        ? `its type '${typeToString(input.type)}' has no conversion rule (only string, number, boolean or a list of them)`
-        : input.variadic
-          ? "a variadic input cannot convert"
-          : input.required === false
-            ? "an optional input cannot convert (an absent value would arrive converted, not absent)"
-            : undefined;
-      if (why) {
-        errors.push({
-          kind: "invalid_convert_input",
-          name: input.name,
-          message: `Input '${input.name}' of op '${op.name}' is declared convert, but ${why}`,
-          subject,
-        });
-      }
     }
     checkType(op.output, `op '${op.name}' output`, subject);
   }
@@ -891,7 +777,6 @@ export function analyse(program: RawProgram, descriptor: LanguageDescriptor): An
     descriptor,
     analysedBindings: new Map(),
     failedBindings,
-    annotations: program.annotations ?? new Map(),
     localBindings: new Map(),
     declarationIndex: refGraph.declarationIndex,
     bindingSourceRefs: refGraph.bindingSourceRefs,
@@ -1065,37 +950,11 @@ function analyseBindings(program: RawProgram, order: string[], ctx: AnalysisCont
   for (const name of order) {
     if (ctx.failedBindings.has(name)) continue;
     const errorsBefore = ctx.errors.length;
-    const rawNode = program.bindings.get(name)!;
-    const cnode = analyseNode(rawNode, {
+    const cnode = analyseNode(program.bindings.get(name)!, {
       ...ctx,
       currentDeclarationIndex: ctx.declarationIndex.get(name),
     });
     ctx.analysedBindings.set(name, cnode);
-    // A stated type is a claim about the value: check the value against it. The check sits
-    // inside the error window, so a mismatch fails the binding like any other error, and a
-    // value of the wrong type never flows on under a type it does not have.
-    const annotation = ctx.annotations.get(name);
-    if (
-      annotation &&
-      cnode.kind !== "error" &&
-      !reportUnknownTypes(annotation, ctx, rawNode.source)
-    ) {
-      checkCompat(
-        getOutputType(cnode),
-        annotation,
-        {
-          name,
-          label: `Binding '${name}'`,
-          node: cnode,
-          source: rawNode.source,
-          // An annotation states a type and checks nothing, so the warning stays; its fix is
-          // the cast, which does check.
-          hint: `Use 'as ${typeToString(annotation)}' to check it`,
-        },
-        ctx,
-        "binding_type_mismatch",
-      );
-    }
     if (ctx.errors.length > errorsBefore) ctx.failedBindings.add(name);
   }
 }

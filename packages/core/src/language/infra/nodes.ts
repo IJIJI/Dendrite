@@ -127,19 +127,6 @@ export interface AppNode {
   source?: SourceRef;
 }
 
-/**
- * A safe cast: `value as type`. Its own node kind, not an op call, because a type is not a
- * value an op can receive. The analyser gives the node the target type; the evaluator gives
- * the value when it fits (valueFits) and `null` when it does not, so a cast never throws and
- * `IsSet` / `Default` see the misfit.
- */
-export interface CastNode {
-  kind: "cast";
-  value: ASTNode;
-  type: Type;
-  source?: SourceRef;
-}
-
 export type ASTNode =
   | LiteralNode
   | ArrayNode
@@ -148,8 +135,7 @@ export type ASTNode =
   | OperationNode
   | FieldAccessNode
   | LambdaNode
-  | AppNode
-  | CastNode;
+  | AppNode;
 
 // Runtime value of the node kinds (types are erased, so runtime checks like the
 // serialise guard need a value). Compile-checked against the union in BOTH directions:
@@ -164,7 +150,6 @@ export const AST_NODE_KINDS = [
   "field",
   "lambda",
   "app",
-  "cast",
 ] as const satisfies readonly ASTNode["kind"][];
 // (Can't be derived FROM the type - types are erased at runtime; that's why this value
 // exists. The reverse direction - typing each node's `kind` off this list - would work
@@ -228,10 +213,6 @@ export interface CAppNode extends Analysed {
   readonly source?: SourceRef;
 }
 
-export interface CCastNode extends Omit<CastNode, "value">, Analysed {
-  readonly value: CNode;
-}
-
 export interface CErrorNode extends Analysed {
   kind: "error";
   readonly type?: Type; // known output type when available (e.g. wrong_node_kind_for_op);
@@ -248,5 +229,4 @@ export type CNode =
   | CFieldAccessNode
   | CLambdaNode
   | CAppNode
-  | CCastNode
   | CErrorNode;

@@ -16,7 +16,6 @@ import {
   type Grammar,
   type Nud,
   registerLed,
-  registerWordLed,
   registerNud,
   registerStatement,
   type Statement,
@@ -181,28 +180,14 @@ function parseTypeAtom(p: Parser): Type {
   return Type.name(name.value);
 }
 
-// let NAME (: TYPE)? = EXPR  /  output NAME = EXPR. They differ only in which map they feed,
-// so one helper covers both. The leading keyword is already matched by the caller. The
-// annotation states the binding's type, and the analyser checks the value against it; an
-// output takes none, because the host declares what an output is.
+// let NAME = EXPR  /  output NAME = EXPR. They differ only in which map they feed, so
+// one helper covers both. The leading keyword is already matched by the caller.
 function parseBinding(p: Parser, target: "binding" | "output"): Statement {
   p.advance(); // 'let' / 'output'
   const name = p.expect("ident");
-  let type: Type | undefined;
-  if (p.check("punct", ":")) {
-    const colon = p.advance();
-    type = parseType(p);
-    if (target === "output") {
-      p.error(
-        "syntax_error",
-        "An output cannot be annotated: the host declares its type",
-        colon.source,
-      );
-    }
-  }
   p.expect("punct", "=");
   const node = p.parseExpr(0);
-  return { target, name: name.value, node, source: name.source, ...(type ? { type } : {}) };
+  return { target, name: name.value, node, source: name.source };
 }
 
 // ── Installation ─────────────────────────────────────────────────────────────
@@ -293,20 +278,6 @@ export function installCoreGrammar(g: Grammar): void {
   registerLed(g, "(", {
     bp: BP.CALL,
     parse: (p, left, token) => buildCall(p, left, parseCallArgs(p), token),
-  });
-
-  // The safe cast: value as TYPE. A word, so it is a word-led: `as` stays a plain name
-  // everywhere but after an expression. It binds tighter than any operator and looser than
-  // a call or a field, so `1 + $x as number` casts `$x` and `$row.value as number` casts the
-  // field (see BP.CAST).
-  registerWordLed(g, "as", {
-    bp: BP.CAST,
-    parse: (p, left, token) => ({
-      kind: "cast",
-      value: left,
-      type: parseType(p),
-      source: token.source,
-    }),
   });
 
   // Statements

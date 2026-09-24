@@ -40,16 +40,6 @@ export interface OpInput {
   type: Type;
   required?: boolean;
   variadic?: boolean;
-  /**
-   * The op converts this input. The analyser accepts a value of the same SHAPE with any data
-   * at the leaves (`Join([1, 2])` fits `parts: string[]`, with no `any` warning), and the
-   * evaluator converts each leaf with `Convert` before the op runs, so the op sees the type
-   * it declared. Only `string`, `number`, `boolean` or a list of them can carry it - a
-   * struct, a function or `any` has no rule - and neither a variadic input (nothing needs it)
-   * nor an optional one (an absent input would arrive as "" instead of absent). A wrong
-   * combination is refused when the language composes. The reference shows it as `name~`.
-   */
-  convert?: true;
 }
 
 export interface OpDefinition {

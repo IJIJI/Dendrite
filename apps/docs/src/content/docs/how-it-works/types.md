@@ -94,7 +94,7 @@ You pay for it with no user-written recursion, and you get the list ops instead.
 
 ## A literal's type is read off it
 
-You never have to annotate a list:
+You never annotate a list:
 
 ```den
 let numbers = [4, 8, 15]
@@ -102,11 +102,7 @@ output total = Average(numbers)
 ```
 
 `numbers{:den}` is `number[]{:den}`, inferred from the elements. Mixed contents fall back to
-`any[]{:den}`. An empty list is `any[]{:den}` too, since there is nothing to read, which is the one
-place you may want to say more: `let none: number[] = []{:den}` states the type, the checker holds
-the value to it, and every reader of `none{:den}` sees a `number[]{:den}`. A stated type that the
-value does not fit is a `binding_type_mismatch{:den}`, and a name in it the language does not
-have is an `unknown_type{:den}`.
+`any[]{:den}`. An empty list is `any[]{:den}` too, since there is nothing to read.
 
 ## Ops can be more precise than their signature
 

@@ -38,33 +38,13 @@ if (ops.length === 0) throw new Error(`no stdlib ops in category '${category}'`)
 const signature = (op: OpDefinition): string => {
   const inputs = op.inputs
     .map((input) => {
-      // `nodes...` swallows every argument; `separator?` may be left out (`required: false`);
-      // `parts~` converts what it is given (`convert: true`). One mark at most: the language
-      // refuses the flag on a variadic or an optional input when it composes.
-      const mark = input.variadic
-        ? "..."
-        : input.required === false
-          ? "?"
-          : input.convert
-            ? "~"
-            : "";
+      // `nodes...` swallows every argument; `separator?` may be left out (`required: false`).
+      const mark = input.variadic ? "..." : input.required === false ? "?" : "";
       return `${input.name}${mark}: ${typeToString(input.type)}`;
     })
     .join(", ");
   return sourceHtml(`${op.name}(${inputs}) -> ${typeToString(op.output)}`, env.language);
 };
-
-// One sentence per converting input, generated so it cannot disagree with the flag: what the
-// leaf becomes, and that the op itself does it. The leaf is the innermost type of a list.
-const converts = (op: OpDefinition): string[] =>
-  op.inputs
-    .filter((input) => input.convert)
-    .map((input) => {
-      let leaf = input.type;
-      while (leaf.kind === "array") leaf = leaf.element;
-      const what = input.type.kind === "array" ? `each value in ${input.name}` : input.name;
-      return `${input.name}~ converts: ${what} becomes a ${typeToString(leaf)} before ${op.name} runs, so a number, a boolean or a null there needs no conversion op.`;
-    });
 
 // [name, value] per output. Examples are literal-only, so running needs no inputs.
 const produced = (example: SavedProgram): [string, string][] => {
@@ -104,9 +84,6 @@ const examples = await Promise.all(
         <code class="den" set:html={signature(op)} />
       </p>
       <p>{op.description}</p>
-      {converts(op).map((sentence) => (
-        <p>{sentence}</p>
-      ))}
       {examples.map(({ source, lines, href }) => (
         <DenCode code={source} inset="52px">
           {/* The corner cluster, static: one link. The glyph is icons.tsx' `external`. */}
