@@ -66,9 +66,12 @@ without a named consumer.
 Do not judge a gate by searching its output: `astro check` colours it, so a search for `error ts`
 matches nothing while the command exits 1.
 
-**Commits are the maintainer's.** Hand over one table per commit - the files as rows, with what
-changed in each - plus the exact `git add` and a one-line message, then stop until it is
-committed. Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
+**Commits are the maintainer's, and so is the index.** Hand over one table per commit - the
+files as rows, with what changed in each - plus the exact `git add` and a one-line message, then
+stop until it is committed. Never run a git command that changes state - `add`, `commit`,
+`checkout`, `reset`, `stash`, `rebase`, tags - without explicit permission for that command;
+that includes staging a file just edited. Read-only git (`status`, `diff`, `log`) is fine.
+Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
 point is a good one to open a PR, but do not write its title or body, or open it, unless asked.
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
