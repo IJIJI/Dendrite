@@ -3,6 +3,7 @@ import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
+import { Convert } from "./convert";
 
 // Operator desugar builders (pure - reference only ASTNodes, no `lang`). Module-level so
 // they're defined once rather than rebuilt per createStdlib() call. They stay in stdlib:
@@ -19,24 +20,9 @@ const variadic =
   (l: ASTNode, r: ASTNode): ASTNode =>
     operationNode(op, { nodes: [l, r] });
 
-// What ToNumber accepts as text: a plain decimal, with an optional sign, fraction and exponent.
-// `Number()` alone would also take "", "0x10" and "Infinity". Anything else is null rather than
-// a throw or a 0: null is the language's "no value", and `Default(ToNumber(x), 0)` says the
-// fallback aloud.
-const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
-
-// A value as text: the one rule ToString and every string op share, so a null or a number
-// reaching a string op reads the same as it would through ToString, and no op throws on one.
-const toText = (value: unknown): string => {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value);
-};
-
 // A value as a list: the one rule every list op shares, so a null (or anything that is not a
 // list, reaching the op through `any`) reads as the empty list and no op throws on it. It is
-// the list counterpart of toText, and Join uses both.
+// the list counterpart of Convert.toString, and Join uses both.
 const toList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 
 /**
@@ -723,31 +709,17 @@ export function createStdlib(): Language {
 
   lang.registerEvaluator({
     op: "ToString",
-    evaluate: ({ value }) => toText(value),
+    evaluate: ({ value }) => Convert.toString(value),
   });
 
   lang.registerEvaluator({
     op: "ToNumber",
-    evaluate: ({ value }) => {
-      if (typeof value === "number") return value;
-      if (typeof value === "boolean") return value ? 1 : 0;
-      if (typeof value !== "string") return null;
-      const text = value.trim();
-      return DECIMAL.test(text) ? Number(text) : null;
-    },
+    evaluate: ({ value }) => Convert.toNumber(value),
   });
 
   lang.registerEvaluator({
     op: "ToBool",
-    evaluate: ({ value }) =>
-      !(
-        value === false ||
-        value === 0 ||
-        value === "" ||
-        value === null ||
-        value === undefined ||
-        (Array.isArray(value) && value.length === 0)
-      ),
+    evaluate: ({ value }) => Convert.toBool(value),
   });
 
   // -------------------------------------------------------------------------
@@ -758,31 +730,32 @@ export function createStdlib(): Language {
   // give the same text on every host.
   lang.registerEvaluator({
     op: "Join",
-    evaluate: ({ parts, separator }) => toList(parts).map(toText).join(toText(separator)),
+    evaluate: ({ parts, separator }) =>
+      toList(parts).map(Convert.toString).join(Convert.toString(separator)),
   });
   lang.registerEvaluator({
     op: "Upper",
-    evaluate: ({ text }) => toText(text).toUpperCase(),
+    evaluate: ({ text }) => Convert.toString(text).toUpperCase(),
   });
   lang.registerEvaluator({
     op: "Lower",
-    evaluate: ({ text }) => toText(text).toLowerCase(),
+    evaluate: ({ text }) => Convert.toString(text).toLowerCase(),
   });
   lang.registerEvaluator({
     op: "Trim",
-    evaluate: ({ text }) => toText(text).trim(),
+    evaluate: ({ text }) => Convert.toString(text).trim(),
   });
   lang.registerEvaluator({
     op: "Contains",
-    evaluate: ({ text, part }) => toText(text).includes(toText(part)),
+    evaluate: ({ text, part }) => Convert.toString(text).includes(Convert.toString(part)),
   });
   lang.registerEvaluator({
     op: "StartsWith",
-    evaluate: ({ text, part }) => toText(text).startsWith(toText(part)),
+    evaluate: ({ text, part }) => Convert.toString(text).startsWith(Convert.toString(part)),
   });
   lang.registerEvaluator({
     op: "EndsWith",
-    evaluate: ({ text, part }) => toText(text).endsWith(toText(part)),
+    evaluate: ({ text, part }) => Convert.toString(text).endsWith(Convert.toString(part)),
   });
 
   // -------------------------------------------------------------------------

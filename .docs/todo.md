@@ -28,9 +28,11 @@ six edits in five files: an op block in `createStdlib`, an evaluator block a scr
 row is the avoidable one: that table could be generated from the descriptor the way the pages
 are, and then a category is complete the moment its ops are registered. Do that here.
 
-Two helpers now sit at module level in `stdlib/index.ts` and belong to their categories when the
-file splits: `DECIMAL` (what `ToNumber` accepts as text) and `toText` (a value as text, shared by
-`ToString` and every string op, so they stay together or share a module).
+Two helpers sat at module level in `stdlib/index.ts`; on 2026-09-23 they became `Convert` in
+`stdlib/convert.ts`, the first module beside the one file, and `toList` (a value as a list, the
+list ops' guard) still sits at module level and belongs with the list category. Four EMPTY files
+already sit in `stdlib/` (`collections.ts`, `logic.ts`, `math.ts`, `types.ts`), scaffolding from
+before the split was deferred: fill them or delete them here, not before.
 
 **The original entry:**
 

@@ -11,6 +11,11 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **`Convert`, the three conversion rules, exported.** `Convert.toString`, `Convert.toNumber` and
+  `Convert.toBool` are what `ToString`, `ToNumber` and `ToBool` do, and what every string op reads
+  its text through, so a host op can convert the way the language does instead of the way
+  JavaScript does. The rules are unchanged; they moved out of the stdlib's one file into
+  `stdlib/convert.ts`.
 - **The safe cast: `$rows as number[]`.** The other answer to an `any`: where an annotation
   states a type, a cast checks the value. It gives the value when it fits the type
   (`valueFits`, above) and **`null`** when it does not, for every type, a list included, so a

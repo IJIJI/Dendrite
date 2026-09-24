@@ -820,6 +820,11 @@ Both are shared with the web editor, so neither is duplicated cost.
 - Incremental reuse: the analyser already runs per keystroke in the playground; the service should
   cache the last good `CoreProgram` so a broken edit still answers from the previous tree.
 - **No `vscode-languageserver` dependency in this module** — the LSP adapter lives in the extension.
+- **A diagnostic's fix as a field, not text in its message.** The `implicit_any_cast` warning on an
+  annotated binding ends with `Use 'as number[]' to check it` (2026-09-23, `Slot.hint` in the
+  analyser): one producer, and a host that prints diagnostics shows it as is. When the editor can
+  render a code action, that hint becomes `AnalysisWarning.fix`, structured, and the annotation is
+  its first producer. Not before: a public field with no consumer is Speculative Generality.
 
 **Driving need:** developer-grade editing in `@dendrite-lang/editor`; a VS Code extension for `.den`
 files (including this repo's own `examples/*.den`).

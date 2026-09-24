@@ -38,6 +38,7 @@ export {
 
 // ── standard library ─────────────────────────────────────────────────────────
 export { createStdlib, extendStdlib } from "./language/stdlib";
+export { Convert } from "./language/stdlib/convert"; // the three conversion rules, for a host op
 
 // ── analysis ─────────────────────────────────────────────────────────────────
 export { analyse, getOutputType, validateDescriptor } from "./language/analyser/analyser";
