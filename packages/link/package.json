@@ -1,6 +1,6 @@
 {
   "name": "@dendrite-lang/link",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Drive a Dendrite ProgramInstance across a channel: a host serves one, an editor connects a replica. The message shapes are Dendrite's; the pipe is the host's.",
   "keywords": [
     "dendrite",
@@ -45,7 +45,7 @@
     "example": "tsx --tsconfig tsconfig.examples.json examples/serve-ws.ts"
   },
   "peerDependencies": {
-    "@dendrite-lang/core": "^0.3.0"
+    "@dendrite-lang/core": "^0.4.0"
   },
   "devDependencies": {
     "@dendrite-lang/core": "workspace:^",

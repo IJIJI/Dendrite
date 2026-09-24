@@ -318,7 +318,7 @@ describe("ProgramInstance - layers", () => {
     });
     expect(instance.diagnostics.get()).toEqual([
       expect.objectContaining({
-        stage: "ports",
+        stage: "compose",
         kind: "shadowed_name",
         layerId: "document",
         where: "input g",
@@ -366,7 +366,7 @@ describe("ProgramInstance - layers", () => {
     });
     expect(instance.diagnostics.get()).toEqual([
       expect.objectContaining({
-        stage: "ports",
+        stage: "compose",
         kind: "shadowed_name",
         layerId: "document",
         where: "input p",

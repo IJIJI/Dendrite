@@ -38,9 +38,15 @@ export interface CodeOptions {
   gutters?: "full" | "compact" | "none";
 }
 
-// What the default keymap needs to know about Dendrite to toggle comments (Mod-/).
+// What the default keymap needs to know about Dendrite: the comment tokens (Mod-/), and the
+// backtick as a bracket to auto-close, so a template does not show unterminated_string as it
+// is typed. The first five are CodeMirror's own defaults, listed because the option replaces
+// them rather than adding to them.
 const languageData = EditorState.languageData.of(() => [
-  { commentTokens: { line: "//", block: { open: "/*", close: "*/" } } },
+  {
+    commentTokens: { line: "//", block: { open: "/*", close: "*/" } },
+    closeBrackets: { brackets: ["(", "[", "{", "'", '"', "`"] },
+  },
 ]);
 
 // What basicSetup adds over minimalSetup, minus the gutters (a separate choice below) and

@@ -288,6 +288,83 @@ describe("diagnostics", () => {
   });
 });
 
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+describe("templates", () => {
+  it("the backtick and the braces are punct, a text part is a string, a hole is tokens", () => {
+    expect(kinds("`n = {count}`")).toEqual(["punct", "string", "punct", "ident", "punct", "punct"]);
+    expect(values("`n = {count}`")).toEqual(["`", "n = ", "{", "count", "}", "`"]);
+  });
+
+  it("a hole holds any expression, operators included", () => {
+    expect(values("`{a + 1} left`", OPS)).toEqual(["`", "{", "a", "+", "1", "}", " left", "`"]);
+  });
+
+  it("a hole can hold a template, which consumes its own braces", () => {
+    expect(values("`a{`b{c}`}d`")).toEqual([
+      "`",
+      "a",
+      "{",
+      "`",
+      "b",
+      "{",
+      "c",
+      "}",
+      "`",
+      "}",
+      "d",
+      "`",
+    ]);
+  });
+
+  it("an empty text part is no token", () => {
+    expect(kinds("`{a}{b}`")).toEqual([
+      "punct",
+      "punct",
+      "ident",
+      "punct",
+      "punct",
+      "ident",
+      "punct",
+      "punct",
+    ]);
+    expect(kinds("``")).toEqual(["punct", "punct"]);
+  });
+
+  it("escapes: the backtick and the brace, plus the usual ones; a dollar is plain text", () => {
+    const { tokens, warnings } = tokenise("`\\`x\\{y$z\\n`");
+    expect(tokens[1]).toMatchObject({ kind: "string", value: "`x{y$z\n" });
+    expect(warnings).toEqual([]);
+    // `${n}` is what a TypeScript hand writes: here it is the text "$" and the hole `n`.
+    expect(values("`total: ${n}`")).toEqual(["`", "total: $", "{", "n", "}", "`"]);
+  });
+
+  it("spans: a text part covers its source, and a token in a hole keeps its own line", () => {
+    const { tokens } = tokenise("`ab\ncd {x}`");
+    expect(tokens[1].source).toEqual({ kind: "code", line: 1, column: 2, length: 6 });
+    expect(tokens[3]).toMatchObject({ value: "x", source: { line: 2, column: 5 } });
+  });
+
+  it("an unterminated template is a recoverable error, in the text or in a hole", () => {
+    for (const src of ["`abc", "`a {b"]) {
+      const { tokens, errors } = tokenise(src);
+      expect(
+        errors.map((e) => e.kind),
+        src,
+      ).toEqual(["unterminated_string"]);
+      expect(errors[0].source, src).toMatchObject({ column: 1, length: src.length });
+      expect(tokens.length, src).toBeGreaterThan(1); // what was read so far is kept
+    }
+  });
+
+  it("a brace outside a template is still an unknown character", () => {
+    expect(tokenise("{a}").errors.map((e) => e.kind)).toEqual([
+      "unknown_character",
+      "unknown_character",
+    ]);
+  });
+});
+
 // ─── Integration sanity ───────────────────────────────────────────────────────
 
 describe("integration", () => {

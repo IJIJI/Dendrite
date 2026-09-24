@@ -250,7 +250,7 @@ describe("setLayer and setProgram", () => {
     replica.setLayer("document", { inputs: [{ name: "g", type: Type.number }], outputs: [] });
     flush();
     expect(replica.diagnostics.get()).toEqual([
-      expect.objectContaining({ stage: "ports", kind: "shadowed_name", refused: true }),
+      expect.objectContaining({ stage: "compose", kind: "shadowed_name", refused: true }),
     ]);
     expect(replica.ports.get()).toBe(before);
   });

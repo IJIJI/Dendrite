@@ -7,9 +7,11 @@ import { type Type } from "../infra/types";
 export type AnalysisErrorKind =
   | "unknown_op" // Op not in descriptor
   | "unknown_program_input" // Context input not in descriptor
-  | "unknown_type" // Type string not in descriptor
+  | "unknown_type" // A type name written in a program (an annotation, a lambda parameter) that nothing registered
+  | "unknown_port_type" // Type string not in descriptor
   | "missing_evaluator" // Op registered without an evaluator (would throw evaluator_not_found at runtime)
   | "orphan_evaluator" // Evaluator registered for an op that doesn't exist (dead code / typo)
+  | "invalid_convert_input" // `convert: true` on an op input that cannot carry it (see OpInput)
   | "binding_cycle" // Cycle in binding DAG
   | "missing_required_program_output" // Required program output not declared
   | "undeclared_binding_reference" // Ref to a binding that was never declared
@@ -20,6 +22,8 @@ export type AnalysisErrorKind =
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
   | "lambda_return_type_mismatch" // Lambda body type incompatible with its return annotation
+  | "binding_type_mismatch" // A binding's value is incompatible with the type its annotation states
+  | "cast_to_function" // `as (…) -> T`: a closure carries no signature, so it cannot be checked at runtime
   | "app_callee_not_function" // Application callee is not function-typed
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
   | "app_argument_type_mismatch"; // A resolved application argument has an incompatible type
@@ -37,7 +41,7 @@ export interface AnalysisError {
   source?: SourceRef;
   /**
    * Set by validateDescriptor: the declaration the error was found in. `name` stays the
-   * offending name (for unknown_type the missing type, for a field override the field).
+   * offending name (for unknown_port_type the missing type, for a field override the field).
    */
   subject?: ErrorSubject;
 }
@@ -49,7 +53,8 @@ export type AnalysisWarningKind =
   | "field_access_on_primitive" // Field access on string/number/boolean typed node
   | "unknown_op_input_key" // Op node passes a key not declared by the op
   | "missing_op_input" // Required OpInput absent — type-default placeholder injected
-  | "implicit_any_cast"; // Any-typed value flows into a narrow expected type
+  | "implicit_any_cast" // Any-typed value flows into a narrow expected type
+  | "cast_never_fits"; // `x as T` where neither type is compatible with the other: always null
 
 export interface AnalysisWarning {
   kind: AnalysisWarningKind;
@@ -69,6 +74,7 @@ export interface AnalysisContext {
   descriptor: LanguageDescriptor;
   analysedBindings: Map<string, CNode>;
   failedBindings: Set<string>;
+  annotations: ReadonlyMap<string, Type>; // the type a binding states, when it does (RawProgram.annotations)
   localBindings: ReadonlyMap<string, Type>; // local scope: lambda params / scoped vars → type; empty at top level
   declarationIndex: ReadonlyMap<string, number>; // insertion order → ordering source of truth for lexical check
   bindingSourceRefs: ReadonlyMap<string, SourceRef>; // for error-message detail only (not ordering)

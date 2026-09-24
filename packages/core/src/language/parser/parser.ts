@@ -1,7 +1,8 @@
 import { type ASTNode, type LiteralNode } from "../infra/nodes";
 import { type Vocabulary } from "../infra/registry";
+import { type Type } from "../infra/types";
 import { type Token, type TokenKind } from "./lexer";
-import { type Grammar } from "./grammar";
+import { type Grammar, type Led } from "./grammar";
 import {
   type ParseError,
   type ParseErrorKind,
@@ -98,12 +99,19 @@ export class Parser {
     let left = nud(this, token);
     while (!this.atEnd()) {
       const next = this.peek();
-      const led = this.grammar.leds.get(keyOf(next));
+      const led = this.ledFor(next);
       if (!led || led.bp <= minBp) break;
       this.advance();
       left = led.parse(this, left, next);
     }
     return left;
+  }
+
+  // An identifier is looked up by its text first (a word-led such as `as`), then every token
+  // by its grammar key.
+  private ledFor(token: Token): Led | undefined {
+    const byWord = token.kind === "ident" ? this.grammar.wordLeds.get(token.value) : undefined;
+    return byWord ?? this.grammar.leds.get(keyOf(token));
   }
 
   // Comma-separated items up to a closing punct, trailing comma allowed. The kernel
@@ -162,6 +170,7 @@ export function parse(tokens: Token[], descriptor: Vocabulary, grammar: Grammar)
   const p = new Parser(tokens, descriptor, grammar);
   const bindings = new Map<string, ASTNode>();
   const outputs = new Map<string, ASTNode>();
+  const annotations = new Map<string, Type>();
 
   // A statement begins with a registered keyword — the recovery anchor skipUntil resyncs to.
   const isStatementStart = (t: Token): boolean =>
@@ -193,9 +202,13 @@ export function parse(tokens: Token[], descriptor: Vocabulary, grammar: Grammar)
       p.error("duplicate_binding", `Duplicate ${stmt.target} '${stmt.name}'`, stmt.source);
     } else {
       map.set(stmt.name, stmt.node);
+      if (stmt.type) annotations.set(stmt.name, stmt.type);
     }
   }
 
   if (p.errors.length > 0) return { ok: false, errors: p.errors, warnings: p.warnings };
-  return { ok: true, program: { bindings, outputs }, warnings: p.warnings };
+  // The key is written only when there is an annotation, so a program without one is the
+  // same object it always was.
+  const program = { bindings, outputs, ...(annotations.size > 0 ? { annotations } : {}) };
+  return { ok: true, program, warnings: p.warnings };
 }

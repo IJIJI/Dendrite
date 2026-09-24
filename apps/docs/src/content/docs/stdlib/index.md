@@ -45,9 +45,16 @@ ops work this way: `And{:den}`, `Or{:den}`, `Xor{:den}`, `Add{:den}`, `Multiply{
 The symbol form of a variadic op takes two at a time, so `1 + 2 + 3{:den}` nests where
 `Add(1, 2, 3){:den}` does not. Same answer; the op form says "sum these" more directly.
 
-An input marked `?` may be left out: `Join(parts: string[], separator?: string){:den}` joins with
+An input marked `?` may be left out: `Join(parts~: string[], separator?: string){:den}` joins with
 nothing between the parts when it gets no separator. One op has one so far. Leaving out any
 *other* input is a `missing_op_input{:den}` warning, with the type's default standing in.
+
+An input marked `~` converts what it is given. `parts~: string[]{:den}` accepts a list of
+anything, and each value in it becomes text before `Join{:den}` runs, so `Join([1, 2], ", "){:den}`
+is `"1, 2"` with no `ToString{:den}` and no warning. The conversion is the op's, declared on that
+one input and written under its signature; nothing else in the language converts on its own,
+and `Join{:den}` is the only op in the library that does. A host can declare the mark on an op of
+its own with `convert: true{:ts}`. The shape still has to match: `Join(5){:den}` is a type error.
 
 ## `any{:den}` in a signature
 

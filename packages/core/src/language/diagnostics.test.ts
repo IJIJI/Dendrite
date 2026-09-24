@@ -71,7 +71,7 @@ describe("the diagnostics registry", () => {
     if (example.form === "rete") throw new Error(`${kind}: a rete sample cannot be loaded`);
     const composed = compose(example.ports);
 
-    if (entry.stage === "ports") {
+    if (entry.stage === "compose") {
       expect(composed.ok, `${kind}: its ports composed cleanly, so it provokes nothing`).toBe(
         false,
       );

@@ -93,6 +93,12 @@ during parsing, because that is what the standard library registered `>={:den}` 
 symbol node kind, and nothing after this point can tell that a symbol was written. It also
 explains why one symbol can expand into two op calls.
 
+A template desugars the same way. `` `n = {count}`{:den} `` becomes `Join(["n = ", count]){:den}`, one
+`operation` node whose `parts` is a list of the text and the holes, and nothing downstream can
+tell that backticks were written. The safe cast is the exception that shows the rule: a type is
+not a value an op can take, so `$x as number{:den}` cannot become an op call, and the parser
+keeps it as a node kind of its own, `cast`, holding the value and the target type.
+
 Desugaring reports nothing of its own. A symbol used on the wrong values is reported later,
 by the analyser, as a mistake in a call to the op it became.
 
@@ -110,9 +116,9 @@ For our program that is one layer declaring `$score{:den}` as a `number{:den}` a
 as an output. The scripts do not print it: it is a map of the whole vocabulary, not something
 this program made.
 
-What it reports: the seven kinds under [Ports](../diagnostics/#ports), from `invalid_name{:den}`
-to `orphan_evaluator{:den}`. *Every diagnostic* calls this stage **ports**; it is the same step
-under another name. [Ports and layers](../ports-and-layers/) has the rules it enforces.
+What it reports: the eight kinds under [Compose](../diagnostics/#compose), from
+`invalid_name{:den}` to `invalid_convert_input{:den}`. [Ports and layers](../ports-and-layers/) has
+the rules it enforces.
 
 ## Analyse: the raw program becomes a core program
 

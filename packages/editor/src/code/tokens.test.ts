@@ -1,6 +1,7 @@
 import { createStdlib } from "@dendrite-lang/core";
 import { describe, expect, it } from "vitest";
 
+import { sourceHtml } from "./source";
 import { styledRanges, type TokenClass } from "./tokens";
 
 // The highlighter's classes, read back as `text:class` pairs so a test says what a reader sees.
@@ -15,6 +16,51 @@ describe("the type colour", () => {
     expect(classOf("let double = (n: number) => n * 2", "number")).toBe("type");
   });
 
+  it("colours a binding's annotation, by the same rule", () => {
+    expect(classOf("let rows: number[] = []", "number")).toBe("type");
+  });
+
+  it("reads a signature's marks (`...`, `?`, `~`) as plain text, and the type after them", () => {
+    // The reference prints `parts~: string[]`; `~` and `?` are no token of the language, so the
+    // lexer skips them and they stay uncoloured, and the type after the colon is still a type.
+    expect(classOf("Join(parts~: string[], separator?: string) -> string", "string")).toBe("type");
+    expect(classes("Join(parts~: string[])")).not.toContainEqual(expect.stringContaining("~"));
+  });
+
+  it("colours a template: backticks and text as string, braces as punct, a hole as code", () => {
+    expect(classes("`n = {count + 1}`")).toEqual([
+      "`:string",
+      "n = :string",
+      "{:punct",
+      "count:ident",
+      "+:symbol",
+      "1:number",
+      "}:punct",
+      "`:string",
+    ]);
+    // What the docs' remark plugin prints, through the same ranges.
+    expect(sourceHtml("`a{1}`", language)).toBe(
+      '<span class="tok-string">`</span><span class="tok-string">a</span><span class="tok-punct">{</span><span class="tok-number">1</span><span class="tok-punct">}</span><span class="tok-string">`</span>',
+    );
+  });
+
+  it("colours a cast: `as` as a keyword, its target as a type", () => {
+    expect(classes("output x = $rows as number[]")).toEqual([
+      "output:keyword",
+      "x:ident",
+      "=:punct",
+      "$:input",
+      "rows:input",
+      "as:keyword",
+      "number:type",
+      "[:punct",
+      "]:punct",
+    ]);
+    // `as` is a keyword only by its text, so a binding of that name reads the same way: the
+    // highlighter has no parser, and this is the same ceiling as a binding named `number`.
+    expect(classOf("let as = 1", "as")).toBe("keyword");
+  });
+
   it("colours a signature's return type, after ->", () => {
     expect(classes("Add(nodes...: number) -> number")).toEqual([
       "Add:op",
@@ -26,7 +72,7 @@ describe("the type colour", () => {
       "::punct",
       "number:type",
       "):punct",
-      "->:operator",
+      "->:symbol",
       "number:type",
     ]);
   });
@@ -50,7 +96,7 @@ describe("the type colour", () => {
       "(:punct",
       "number:type",
       "):punct",
-      "->:operator",
+      "->:symbol",
       "boolean:type",
     ]);
   });

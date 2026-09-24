@@ -24,9 +24,9 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.2.0** (2026-09-20). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.2.0** (2026-09-20). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
-| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.2.0** (2026-09-20). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.4.0** (2026-09-24). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.4.0** (2026-09-24). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.4.0** (2026-09-24). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `ijiji.github.io/Dendrite/playground/` |
 | `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `ijiji.github.io/Dendrite/` |
@@ -64,11 +64,17 @@ without a named consumer.
 **Gates**, all at the root, each judged by its **exit code**: `yarn typecheck`, `yarn lint`,
 `yarn format:check`, `yarn test`, and `yarn workspace dendrite-docs build` when the docs changed.
 Do not judge a gate by searching its output: `astro check` colours it, so a search for `error ts`
-matches nothing while the command exits 1.
+matches nothing while the command exits 1. The docs build reads core and the editor from their
+`dist`, and Astro caches rendered `.md` pages in `apps/docs/.astro`: after a change to either
+package, rebuild both and delete that cache before the docs build, or the site shows the old
+highlighter while every test passes (the tests alias package source).
 
-**Commits are the maintainer's.** Hand over one table per commit - the files as rows, with what
-changed in each - plus the exact `git add` and a one-line message, then stop until it is
-committed. Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
+**Commits are the maintainer's, and so is the index.** Hand over one table per commit - the
+files as rows, with what changed in each - plus the exact `git add` and a one-line message, then
+stop until it is committed. Never run a git command that changes state - `add`, `commit`,
+`checkout`, `reset`, `stash`, `rebase`, tags - without explicit permission for that command;
+that includes staging a file just edited. Read-only git (`status`, `diff`, `log`) is fine.
+Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
 point is a good one to open a PR, but do not write its title or body, or open it, unless asked.
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
@@ -120,7 +126,8 @@ substep of parse and **prune** as a substep of analyse (`apps/docs/src/component
 - **Desugar happens inside parsing, not as a pass:** a symbol (`>=`) becomes its op call(s) as
   the parser reads. There is no separate desugar phase over the tree.
 - **Compose** (`composeLayers`) builds the descriptor from the vocabulary and the port layers; it
-  never reads the program. *Every diagnostic* and `DiagnosticDoc.stage` call it `"ports"`.
+  never reads the program. *Every diagnostic* and `DiagnosticDoc.stage` call it `"compose"` too
+  (it was `"ports"` until 0.4.0).
 - **`analyse`** is always explicit — not hidden inside runner/runtime. **Prune** is its last
   passes (`pruneBindings`, `warnUnusedBindings`), so a CoreProgram is already pruned.
 - **Store RawProgram**, not CoreProgram — re-analyse on load so descriptor changes surface errors.
@@ -181,8 +188,8 @@ See `architecture.md` for the layering DAG and full design.
   `LanguageDescriptor` a program is checked against (`language/compose.ts`).
 - `createLanguage()` = empty base (core grammar only); `createStdlib()` = batteries (types + ops +
   operators); `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
-  `registerPrefix`), desugaring to op nodes; the lexer's operator vocab is single-sourced from
-  `grammar.operatorTokens`.
+  `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
+  `grammar.symbols`.
 
 ### Analyser
 - `analyse` is a **pass pipeline**: `buildReferenceGraph` → `topoSort` (cycle detection) →

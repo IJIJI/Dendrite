@@ -1,12 +1,13 @@
 import { type Language, type Token, tokenise } from "@dendrite-lang/core";
 
 //? Token classification for highlighting - driven by the language's OWN lexer, so the
-// operator vocabulary (grammar.operatorTokens), statement keywords (grammar.statements)
+// symbol vocabulary (grammar.symbols), statement keywords (grammar.statements) and
+// word operators (grammar.wordLeds)
 // and op names (descriptor.ops) can never drift from what actually parses.
 // Framework-free: returns plain styled ranges; cm.ts maps them onto CodeMirror.
 
 export type TokenClass =
-  | "keyword" // let / output (registered statement keywords)
+  | "keyword" // let / output / as (registered statement keywords and word operators)
   | "op" // registered op names (And, Filter, ...)
   | "ident" // plain identifiers (bindings, lambda params)
   | "type" // a registered type's name where a type is written: `(n: number)`, `-> boolean`
@@ -14,7 +15,7 @@ export type TokenClass =
   | "number"
   | "string"
   | "literal" // true / false / null
-  | "operator" // registered operators + the core arrows => ->
+  | "symbol" // registered symbols (+, >=) and the core arrows => ->
   | "punct" // structural punctuation ( ) [ ] , . : =
   | "comment"; // // line and /* block */ trivia (from LexResult.comments)
 
@@ -40,14 +41,18 @@ export const toOffset = (starts: number[], line: number, column: number): number
 const isPunct = (token: Token | undefined, value: string): boolean =>
   token?.kind === "punct" && token.value === value;
 
+const isWord = (token: Token | undefined, value: string): boolean =>
+  token?.kind === "ident" && token.value === value;
+
 // The punctuation a type expression is written with: `number[]`, `(any, string) -> boolean`.
 const TYPE_PUNCT = new Set(["[", "]", "(", ")", ",", "->"]);
 
 /**
  * Which tokens stand where a TYPE is written rather than a value. A name there that is a
  * registered type is coloured as one; the same name anywhere else is a binding that happens to
- * share it, and stays an identifier. Three places:
+ * share it, and stays an identifier. Four places:
  *   - right after `:` or `->`: a parameter's annotation, a signature's return;
+ *   - right after `as`: a cast's target;
  *   - inside a parenthesised group followed by `->`: the parameters of a function type;
  *   - everywhere, when the whole source is nothing but type names and type punctuation - a
  *     type written on its own, as the docs do in prose (`number[]`). No program is only that.
@@ -63,7 +68,8 @@ function typePositions(tokens: readonly Token[], isType: (name: string) => boole
       token.kind === "ident" ? isType(token.value) : TYPE_PUNCT.has(token.value),
     );
   tokens.forEach((token, index) => {
-    if (onlyTypes || isPunct(tokens[index - 1], ":") || isPunct(tokens[index - 1], "->")) {
+    const before = tokens[index - 1];
+    if (onlyTypes || isPunct(before, ":") || isPunct(before, "->") || isWord(before, "as")) {
       positions.add(index);
     }
     // Walk back from `) ->` to the matching `(`: every name in between is a parameter type.
@@ -79,7 +85,7 @@ function typePositions(tokens: readonly Token[], isType: (name: string) => boole
 
 export function styledRanges(source: string, language: Language): StyledRange[] {
   const starts = lineStartOffsets(source);
-  const lexed = tokenise(source, [...language.grammar.operatorTokens]);
+  const lexed = tokenise(source, [...language.grammar.symbols]);
   const tokens = lexed.tokens.filter(
     (token) => token.kind !== "eof" && token.source.kind === "code",
   );
@@ -108,7 +114,8 @@ export function styledRanges(source: string, language: Language): StyledRange[] 
       case "ident":
         cls = afterSigil
           ? "input"
-          : language.grammar.statements.has(token.value)
+          : language.grammar.statements.has(token.value) ||
+              language.grammar.wordLeds.has(token.value)
             ? "keyword"
             : language.descriptor.ops.has(token.value)
               ? "op"
@@ -117,14 +124,18 @@ export function styledRanges(source: string, language: Language): StyledRange[] 
                 : "ident";
         break;
       default: // punct
+        // A template's backtick is string-coloured, as a string's quotes are (they sit inside
+        // the string token); its `{` `}` stay punctuation, marking where the code in a hole is.
         cls =
           token.value === "$"
             ? "input"
-            : language.grammar.operatorTokens.has(token.value) ||
-                token.value === "=>" ||
-                token.value === "->"
-              ? "operator"
-              : "punct";
+            : token.value === "`"
+              ? "string"
+              : language.grammar.symbols.has(token.value) ||
+                  token.value === "=>" ||
+                  token.value === "->"
+                ? "symbol"
+                : "punct";
     }
 
     afterSigil = token.kind === "punct" && token.value === "$";

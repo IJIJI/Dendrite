@@ -7,7 +7,12 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.3.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.4.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+
+## 0.4.0
+
+- **Breaking with core 0.4.0:** a `ProgramDiagnostic` on the wire carries the stage `"compose"`
+  where it carried `"ports"`. A replica and its host move to 0.4.0 together.
 
 ## 0.3.0
 

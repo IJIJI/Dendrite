@@ -6,8 +6,24 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.3.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.4.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## 0.4.0
+
+- **Breaking: the token class `operator` is `symbol`.** `tok-symbol` replaces `tok-operator` in
+  the highlighter's output, and `--dendrite-syntax-symbol` replaces `--dendrite-syntax-operator`
+  in the theme, to match the docs' vocabulary (an _operator_ is `Add`, a _symbol_ is `+`). A
+  theme that sets the old variable sets the new one instead; nothing falls back.
+- **Breaking with core 0.4.0:** the port panes filter diagnostics by the stage `"compose"`, which
+  core renamed from `"ports"`.
+- **A template is coloured as one.** Its backticks and text take the string colour, as a
+  string's quotes do, its `{` `}` stay punctuation, and the code in a hole is coloured as code,
+  because the lexer hands it over as ordinary tokens. The backtick auto-closes like a quote, so
+  a half-typed template does not flash `unterminated_string`.
+- **`as` is coloured as a keyword, and its target as a type.** A word operator registered with
+  core's new `registerWordLed` takes the `keyword` class beside `let` and `output`, and the
+  type written after `as` is a type position for `tok-type`, as the one after `:` is.
 
 ## 0.3.0
 

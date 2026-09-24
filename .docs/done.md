@@ -5,6 +5,275 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Types and text — the plan for 0.4.0 — DONE 2026-09-24
+
+Twenty-one commits in three days, the plan in `types-and-text-plan.md` (its status table, and what
+was cut on review). Six features: a list op never throws and a field of null is null; a binding
+states its type and every written type name must exist; `valueFits`; the safe cast `as`, with a
+word-led in the Pratt kernel to carry it; `Convert` and the `convert` flag, with `Join` as its one
+stdlib user; and templates with `{…}` holes as sugar over that `Join`. Two renames rode along,
+because the release was breaking anyway.
+
+What is worth keeping beyond the changelogs and the plan:
+
+- **The analyser never inserts a node.** Named during the design discussion and held through
+  every milestone: a template is sugar the parser writes, a cast is a node the author wrote, and
+  the `convert` flag is a declaration the op owns. Implicit casting by type was rejected on it.
+- **A diagnostic reports a provable fault, never a guessed habit.** The one guessed one,
+  `dollar_before_hole`, was cut on review; `cast_never_fits` stayed because it is provable.
+- **Two reviews from other chats caught what one pair of eyes did not:** `getOutputType`
+  reading a list's element type (B.1), a field read on null in a well-typed program (N.2), the
+  missing `unknown_type` for a written name (B.1 step 7), and the stale-`dist` docs gate.
+- **Three process slips, each now a rule:** a milestone stacked on an uncommitted one, a file
+  staged without permission, and a leftover check that searched `src` and not `examples`.
+
+**The two todo entries as they stood** (the second is the design record the plan was built on):
+
+## Language — types and text: the plan for 0.4.0
+
+**The plan is `types-and-text-plan.md`**, approved 2026-09-22 after four review passes and two
+independent reviews. Six features in ten milestones, about 21 commits: `null` that does not throw,
+a binding annotation with a check of every type name, `valueFits`, the safe cast `as`, the
+`convert` flag with a `Convert` namespace, and templates. Then two renames and the 0.4.0 release.
+The reasoning behind the cast decisions is the entry below, kept as it was written; what the plan
+decided AFTER it was written:
+
+- **A list op reads every value that is not a list as `[]`**, not only `null`
+  (`Array.isArray`). The entry below says "`null`"; the user widened it (2026-09-22) so no list op
+  throws, and `Join` already had that guard. The cost: `Length("abc")` through `any` was 3 by
+  accident and becomes 0, which is why "strings as lists" is a todo below.
+- **A field read on `null` gives `null`** (N.2). `Find(...).name` with no match threw in a
+  well-typed program, and `If` cannot guard it (backlog).
+- **A type name in a program must exist.** `(n: nubmer) => n` compiled. `unknown_type` becomes
+  the program error, as the pair of `unknown_op`; the port problem is renamed `unknown_port_type`.
+- **The `convert` flag stays**, on `Join` only, as the foundation for a converting lambda
+  parameter. `Join` alone would be served by `any[]`; the user chose the foundation on purpose.
+- **A template is `` `n = {count}` ``**: backticks, holes in `{…}` (`${…}` reads as an input),
+  and it desugars to a plain `Join([...])`, which converts, so a hole needs no `ToString` and
+  the analyser inserts no node. The template entry from the backlog is folded in here.
+- **Cut:** a return type on a lambda (backlog), and `[]` as the failed cast of a list (never).
+
+---
+
+## Language — binding annotations and a safe cast (`as`), together
+
+**Decided 2026-09-21**, from the discussion the `implicit_any_cast` change set up: that change
+made the language louder about `any` and left the author no way to answer back. Needs its own
+plan before any code (two pieces of syntax, a node kind, a runtime validator).
+
+**Two features, one piece of work, and they mean different things:**
+
+| You write | It means | Runtime check | Warns when the source is `any`? |
+| --- | --- | --- | --- |
+| `let rows: number[] = $rows` | "I expect this to BE a `number[]`" | none | **yes**: the checker cannot verify the expectation |
+| `let rows = $rows as number[]` | "MAKE it a `number[]`, or `null`" | yes | no: it is checked, so nothing is left to warn about |
+
+- **`as` is a SAFE cast: it gives `null` when the value does not fit** (the user's choice). C#'s
+  `as`, Kotlin's `as?`. `Default($rows as number[], [])` is the fallback. It is the answer already
+  given for `ToNumber("abc")`, for the same reasons: never throw, `null` means "no value", and
+  `Default` is the remedy the docs teach. Rejected: unchecked, as in TypeScript (the evaluator
+  acts on a lie: `Length` of a number is `undefined`, which *Types in practice* admits), and
+  checked-and-failing (one bad host value takes an output down, and it needs a new failure
+  channel).
+- **A failed cast is `null` for EVERY type, a list included**, not `[]` (the user asked,
+  2026-09-21). `[]` would make "the host sent garbage" identical to "the host sent an empty
+  list", with nothing downstream able to tell, which is the argument that made `ToNumber("abc")`
+  `null` rather than `0`; and it would have to be per type (`as number` failing to `0`), the rule
+  already turned down. Scala agrees read closely: `Nil` is a VALUE, the empty list, and absence
+  is `None`; a failed match gives `None`.
+- **But the list ops must stop throwing on `null`, in this same plan.** Measured 2026-09-21:
+  `Length(null)`, `Average(null)`, `Includes(null, 1)` and `Filter(null, …)` all THROW a
+  TypeError (wrapped as `host_error`), while `Join(null)` is `""` and an unset `number[]` input
+  already seeds to `[]` (`runtime/seed.ts`). The throwing is an accident (`null.length`), not a
+  decision: the house rule is "never throw, return a neutral value". So **a list op reads `null`
+  as an empty list**, as a string op reads it as `""`. Then `Average($rows as number[])` over
+  garbage is `0` rather than a crash, and `IsSet($rows as number[])` is still `false` for whoever
+  wants to know. `Nil`'s ergonomics without the information loss. One shared guard, not six
+  copies (the string ops' `toText` is the precedent).
+- **The warning STAYS on an annotation.** The user asked whether it should, once a cast exists.
+  An annotation is a static claim with no runtime check, so one that silenced the warning would
+  be the unchecked cast arriving through the back door. Instead the annotation's warning points at
+  its own fix (*use `as number[]` to check it*), so the author always has an answer. "Set a
+  stricter type without a warning" is `let rows = $rows as number[]`, and it is sound.
+- **Done together** (the user's call): they share the type parser (`parseType` in
+  `core-grammar.ts`, which lambda parameters already use), the highlighter (`let x: number` is
+  coloured today by the "after `:`" rule; only "after `as`" is new in `typePositions`), one Learn
+  section, and the warning's wording.
+- **The empty list needs neither**: `let none: number[] = []` is quiet, since an empty literal is
+  recognised. That closes the ceiling the `implicit_any_cast` change named.
+
+**What it requires:**
+- **`valueFits(value, type, descriptor)`**, the runtime validator, and the real cost. Primitives
+  by `typeof` (or the zod `schema` every registered type already carries and nothing calls),
+  lists recursively, named struct types through their fields and their `extends` chain, `any`
+  always. A FUNCTION type cannot be checked at runtime, so `as` to one is an analyser error.
+  "Value validation at the boundary" (backlog) reuses it.
+- **A new node kind**, not a desugaring: a type is not a value an op can receive, so `as` cannot
+  become an op call. That touches `infra/nodes.ts`, the analyser, the evaluator, the `ast` saved
+  form, and `AST_NODE_KINDS`.
+- **`as` in the grammar.** It is an identifier token, like `let`; check how the Pratt kernel keys
+  a led before assuming it can be one. It binds tighter than comparison, looser than a call.
+- **`binding_type_mismatch`**, a new diagnostic, documented in the registry with an example.
+- **Also in scope: a lambda's RETURN cannot be annotated in source.** Its parameters can
+  (`(n: number) => …`), and the AST has `returnType`, but the parser has no syntax for it. Found
+  2026-09-21 while reading the grammar.
+- The editor's `typePositions`, docs (*Types in practice*, *The type system*), and the changelog.
+
+**Then, in this order** (backlog): boundary validation on `valueFits`; and "do we want implicit
+casting?" with "strings and arrays, interchangeable", which are easier to answer once a program
+can state and check a type.
+
+**The original annotation entry, moved here from the backlog:**
+
+
+**What:** `let total: number = $price * $quantity`. A lambda parameter can carry a type today
+(`(n: number) => n * 2`), a binding cannot: its type is always inferred. The docs met the gap
+twice on 2026-09-18 - a lambda bound on its own has nothing to infer its parameter from, and
+the only fix was to annotate the lambda, not the binding.
+
+**Why deferred:** the analyser infers every binding's type already, so an annotation is a check
+rather than a necessity. It earns its place as documentation a reader can trust, and as the
+thing that stops an `any` spreading.
+
+**What it requires:** the `let` statement in core-grammar.ts takes an optional `: Type` after
+the name (the same type parser lambda parameters use); `RawProgram` keeps it beside the node;
+the analyser checks the inferred type against it with `isCompatible` and reports a new
+`binding_type_mismatch`, which the diagnostics registry then documents. A rete program would
+carry it as node metadata.
+
+**Driving need:** any program that reads an `any` input and wants to stop the `any` there. Since
+2026-09-21 there is a concrete case with no other remedy: `let none = []` types as `any[]`, and
+`Average(none)` now warns (the `implicit_any_cast` check sees inside a list). An empty LITERAL is
+recognised and stays quiet, but a name bound to one reaches the check as its type alone.
+`let none: number[] = []` is the fix. Weighed together with the casting discussion in `todo.md`.
+
+---
+
+## Naming — the API still says "operator" where the docs say "symbol" — DONE 2026-09-24
+
+Renamed outright, with no deprecated aliases: `grammar.operatorTokens` is `symbols`, the
+editor's token class `operator` is `symbol` (`tok-symbol`), and the theme variable
+`--dendrite-syntax-operator` is `--dendrite-syntax-symbol`. `registerInfix` and `registerPrefix`
+keep their names, as the entry said: they name a position. The entry asked for aliases "for a
+version" when it expected an ordinary minor; 0.4.0 is breaking already and nothing on npm
+consumes the packages, so an alias would have been dead flexibility kept for nobody. Two
+changelog lines (core and the editor) say what changed. The four example scripts in
+`packages/core/examples/3-(code)` read the set too, and a leftover check that searched only
+`src` missed them: `yarn typecheck` did not.
+
+**The entry as it stood:**
+
+
+**What:** on 2026-09-18 the docs' vocabulary settled on **operator** (an **op**, for short) for a
+named function like `Add`, and **symbol** for the `+` that spells it. The public API predates
+that: `registerInfix` / `registerPrefix` are fine (they name a position, not a concept), but
+`grammar.operatorTokens`, the editor's `tok-operator` class and the `--dendrite-syntax-operator`
+theming variable all mean *symbol*.
+
+**Why deferred:** each is public - a host reads `operatorTokens`, a theme sets the variable -
+so renaming them is a breaking change, best done once, at a minor release, with the old names
+kept as aliases for a version.
+
+**What it requires:** `symbolTokens` beside `operatorTokens` (deprecated); `tok-symbol` beside
+`tok-operator`; `--dendrite-syntax-symbol` falling back to the old variable. Then drop the old
+names at the release after.
+
+---
+
+## Naming — the compose stage has two names — DONE 2026-09-24
+
+**`"compose"` won.** It is what `composeLayers` is called and what the chain draws; "ports" named
+what the stage checks, not the stage. Renamed in `DiagnosticDoc.stage`, `ProgramDiagnostic.stage`,
+the diagnostics table's section and anchor, the editor's port-pane filter, and the wire (link's
+`ProgramDiagnostic`), so all three packages carry a breaking line for 0.4.0. Done in the release
+that was breaking anyway, and while nothing on npm consumes the packages, which is the cheapest
+a rename ever gets. *The chain* no longer has to say "the same step under another name". Found
+on the way: that section listed seven compose kinds, and there are eight since
+`invalid_convert_input`.
+
+**The entry as it stood:**
+
+
+**What:** the docs' chain calls the step that builds the descriptor **compose** (after
+`composeLayers`), while *Every diagnostic* and core's `DiagnosticDoc.stage` call it `"ports"`.
+*The chain* says outright that they are the same step, which papers over it.
+
+**Why deferred:** found while drawing the chain (2026-09-19). Renaming the stage is a change to a
+public type (`DiagnosticDoc["stage"]`), so it waits for a release that can carry one.
+
+**What it requires:** pick one name (compose matches the function and the chain; ports matches
+what the stage checks), rename `"ports"` in `diagnostics.ts` and its `DiagnosticDoc` type, the
+stage list in `DiagnosticsTable.astro` and its `#ports` anchor, and the links to it on *The
+chain* and *Ports and layers*. A changelog line, since a host switching on the stage breaks.
+
+---
+
+## 0.3.0 on npm — DONE 2026-09-22
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.3.0**, two days
+after 0.2.0. A minor because core gained API (ten ops, the first optional op input) and a
+warning widened (an `any` inside a list). Editor shipped a colour; link shipped nothing and moved
+its peer range. The runbook held again: the bump on `dev`, PR #18, three tags on the merge commit
+`7287918`, one release on core's tag, `Stage release` green, three approvals with 2FA, core first.
+
+Checked after approval: `latest` on each package, an attestation on all three, the peer ranges at
+`^0.3.0`, and a clean install outside the repo where `Join(["n =", ToString(ToNumber($raw)),
+Upper("abc")], " ")` gives `"n = 12 ABC"` and `ToNumber("0x10")` gives `null`.
+
+One thing worth keeping: **run the docs build in its own command, on a fresh cache.** All five
+gates in one shell, `yarn test` then `yarn workspace dendrite-docs build`, gave the build exit 1
+once, and it passed twice alone. Explained on 2026-09-24, while checking templates on the site:
+Astro caches rendered `.md` pages in `apps/docs/.astro`, and the docs build reads core and the
+editor from their `dist`, so after a package change the site can show the old highlighter while
+every test passes. Rebuild both packages and delete the cache first (`CLAUDE.md`, Gates).
+
+---
+
+## Language — do we want implicit casting? — DECIDED 2026-09-21
+
+**No, not by type.** The analyser never inserts a node: every analysed node maps to one the
+author wrote, and that invariant was named during the discussion and is now the rule. What the
+language does instead, all in `types-and-text-plan.md`:
+
+- **An op input may declare that it converts**: `convert: true` on `OpInput`, shown as
+  `parts~: string[]` in the reference. The conversion is the OP's, declared and documented, not
+  the analyser's. `Join` is the only stdlib user; a converting lambda parameter is next.
+- **A template converts through `Join`**, because it desugars to one: the hole calling
+  `ToString` itself (the earlier decision, below) is superseded, and no node is inserted.
+- **`++` is the same**: sugar over `Join`, so it converts the way `Join` does.
+- **No cast to boolean**, ever. `If(0, …)` stays a type error and `ToBool` stays explicit: a
+  number read as a condition is the coercion the language rejected first.
+- **A value crossing an `any` is the author's to check**: `as` (a safe cast, `null` on a
+  misfit) or an annotation, both in the plan.
+
+**The entry as it stood when the question was open:**
+
+
+**What:** a question, not a decision. Today the answer is **no**: implicit coercion (a number
+read as a boolean, say) was rejected because it undermines the soundness model and would need
+conversion nodes inserted by a rewrite the language deliberately lacks. The sound alternative is
+built: `ToString`, `ToNumber` and `ToBool` (2026-09-20, `done.md`). Three things now lean on the
+question:
+
+- **A template literal's hole calls `ToString` itself** (decided 2026-09-20, entry below). Argued
+  not to be the rejected coercion: the reader wrote the template, the conversion is visible in
+  it, and it goes one way only, to a string. But it IS a conversion nobody typed.
+- **An operator for joining strings** (entry below). `"n = " ++ 1` either stringifies the number
+  or is refused, and whichever it does is this question answered for one operator.
+- **A number in a condition.** `If(0, …)` is a type error today, and `ToBool` makes the
+  conversion explicit. A program full of `ToBool(...)` is the cost of the current answer.
+
+**Why deferred:** raised 2026-09-20 while planning the string ops, where it kept coming up from
+different directions. It wants deciding once, as a rule, rather than three times by accident.
+
+**What it requires:** a decision on WHICH direction, if any, is allowed silently (to a string is
+the only one with a case so far); where it happens (a desugaring can do it visibly, the analyser
+cannot without the rewrite); and whether a silent conversion warns. Decided together with the
+string operator and with "strings and arrays, interchangeable" below, since all three are about
+how much the language does without being asked.
+
+---
+
 ## 0.2.0 on npm — DONE 2026-09-20
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.2.0**, five days

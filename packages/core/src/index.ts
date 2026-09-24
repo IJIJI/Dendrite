@@ -15,6 +15,7 @@ export * from "./language/infra/registry"; // LanguageDescriptor, Op/Input/Outpu
 export * from "./language/infra/program"; // RawProgram, CoreProgram
 export * from "./language/infra/serialise"; // SavedProgram forms, serialise/deserialise/migrate
 export * from "./language/infra/identifier"; // isIdentifier - the one identifier rule (lexer + port names)
+export { Convert } from "./language/infra/convert"; // the three conversion rules, for a host op
 export * from "./language/infra/ports"; // Ports, PortType, PortLayer, Policy, EMPTY_PORTS, flattenPorts, isPorts
 export * from "./language/infra/observable"; // Observable, Subject, createSubject
 

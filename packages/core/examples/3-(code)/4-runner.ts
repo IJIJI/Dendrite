@@ -40,7 +40,7 @@ const env = composed.environment;
 
 // --- source → CoreProgram ---------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
-const { tokens } = tokenise(source, [...lang.grammar.operatorTokens]);
+const { tokens } = tokenise(source, [...lang.grammar.symbols]);
 
 const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";
