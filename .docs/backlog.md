@@ -577,24 +577,6 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
-## Naming — the API still says "operator" where the docs say "symbol"
-
-**What:** on 2026-09-18 the docs' vocabulary settled on **operator** (an **op**, for short) for a
-named function like `Add`, and **symbol** for the `+` that spells it. The public API predates
-that: `registerInfix` / `registerPrefix` are fine (they name a position, not a concept), but
-`grammar.operatorTokens`, the editor's `tok-operator` class and the `--dendrite-syntax-operator`
-theming variable all mean *symbol*.
-
-**Why deferred:** each is public - a host reads `operatorTokens`, a theme sets the variable -
-so renaming them is a breaking change, best done once, at a minor release, with the old names
-kept as aliases for a version.
-
-**What it requires:** `symbolTokens` beside `operatorTokens` (deprecated); `tok-symbol` beside
-`tok-operator`; `--dendrite-syntax-symbol` falling back to the old variable. Then drop the old
-names at the release after.
-
----
-
 ## Core — `AnalysisContext` is public, and should not be
 
 **What:** `packages/core/src/index.ts` re-exports everything in `analyser/types.ts`, which

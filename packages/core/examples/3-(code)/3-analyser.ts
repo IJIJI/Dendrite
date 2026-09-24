@@ -46,7 +46,7 @@ const env = composed.environment;
 
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
-const { tokens } = tokenise(source, [...lang.grammar.operatorTokens]);
+const { tokens } = tokenise(source, [...lang.grammar.symbols]);
 const parsed = parse(tokens, env.descriptor, lang.grammar);
 
 if (!parsed.ok) {

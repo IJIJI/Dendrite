@@ -11,6 +11,10 @@ of core needs a release here too, even if nothing in this package changed.
 
 ## Unreleased
 
+- **Breaking: the token class `operator` is `symbol`.** `tok-symbol` replaces `tok-operator` in
+  the highlighter's output, and `--dendrite-syntax-symbol` replaces `--dendrite-syntax-operator`
+  in the theme, to match the docs' vocabulary (an _operator_ is `Add`, a _symbol_ is `+`). A
+  theme that sets the old variable sets the new one instead; nothing falls back.
 - **Breaking with core 0.4.0:** the port panes filter diagnostics by the stage `"compose"`, which
   core renamed from `"ports"`.
 - **A template is coloured as one.** Its backticks and text take the string colour, as a

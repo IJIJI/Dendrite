@@ -33,7 +33,7 @@ describe("the type colour", () => {
       "n = :string",
       "{:punct",
       "count:ident",
-      "+:operator",
+      "+:symbol",
       "1:number",
       "}:punct",
       "`:string",
@@ -72,7 +72,7 @@ describe("the type colour", () => {
       "::punct",
       "number:type",
       "):punct",
-      "->:operator",
+      "->:symbol",
       "number:type",
     ]);
   });
@@ -96,7 +96,7 @@ describe("the type colour", () => {
       "(:punct",
       "number:type",
       "):punct",
-      "->:operator",
+      "->:symbol",
       "boolean:type",
     ]);
   });

@@ -37,7 +37,7 @@ function typeParts(type: Type): Part[] {
           index === 0 ? typeParts(param) : [t(", ", "punct"), ...typeParts(param)],
         ),
         t(") ", "punct"),
-        t("->", "operator"),
+        t("->", "symbol"),
         t(" "),
         ...typeParts(type.returns),
       ];

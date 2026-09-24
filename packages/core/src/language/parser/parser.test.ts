@@ -21,12 +21,12 @@ function withInput(_name: string, type = "number"): Language {
 }
 
 function parse(src: string, lang: Language = CORE) {
-  const { tokens } = tokenise(src, [...lang.grammar.operatorTokens]);
+  const { tokens } = tokenise(src, [...lang.grammar.symbols]);
   return parseExpression(tokens, lang.descriptor, lang.grammar);
 }
 
 function program(src: string, lang: Language = CORE) {
-  const { tokens } = tokenise(src, [...lang.grammar.operatorTokens]);
+  const { tokens } = tokenise(src, [...lang.grammar.symbols]);
   return parseProgram(tokens, lang.descriptor, lang.grammar);
 }
 
@@ -799,7 +799,7 @@ describe("a template is a Join over its parts", () => {
 
   it("an empty hole is a syntax error, and an unterminated template is the lexer's", () => {
     expect(parse("`{}`").errors[0]).toMatchObject({ kind: "unexpected_token" });
-    const { tokens, errors } = tokenise("`abc", [...CORE.grammar.operatorTokens]);
+    const { tokens, errors } = tokenise("`abc", [...CORE.grammar.symbols]);
     expect(errors.map((e) => e.kind)).toEqual(["unterminated_string"]);
     // What the parser then sees still parses to the end without throwing.
     expect(() => parseExpression(tokens, CORE.descriptor, CORE.grammar)).not.toThrow();

@@ -28,7 +28,7 @@ const {
   tokens,
   errors: lexErrors,
   warnings: lexWarnings,
-} = tokenise(source, [...lang.grammar.operatorTokens]);
+} = tokenise(source, [...lang.grammar.symbols]);
 const result = parse(tokens, lang.descriptor, lang.grammar);
 
 // --- Render an ASTNode back to readable, source-like text -------------------

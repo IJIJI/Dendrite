@@ -5,6 +5,37 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Naming — the API still says "operator" where the docs say "symbol" — DONE 2026-09-24
+
+Renamed outright, with no deprecated aliases: `grammar.operatorTokens` is `symbols`, the
+editor's token class `operator` is `symbol` (`tok-symbol`), and the theme variable
+`--dendrite-syntax-operator` is `--dendrite-syntax-symbol`. `registerInfix` and `registerPrefix`
+keep their names, as the entry said: they name a position. The entry asked for aliases "for a
+version" when it expected an ordinary minor; 0.4.0 is breaking already and nothing on npm
+consumes the packages, so an alias would have been dead flexibility kept for nobody. Two
+changelog lines (core and the editor) say what changed. The four example scripts in
+`packages/core/examples/3-(code)` read the set too, and a leftover check that searched only
+`src` missed them: `yarn typecheck` did not.
+
+**The entry as it stood:**
+
+
+**What:** on 2026-09-18 the docs' vocabulary settled on **operator** (an **op**, for short) for a
+named function like `Add`, and **symbol** for the `+` that spells it. The public API predates
+that: `registerInfix` / `registerPrefix` are fine (they name a position, not a concept), but
+`grammar.operatorTokens`, the editor's `tok-operator` class and the `--dendrite-syntax-operator`
+theming variable all mean *symbol*.
+
+**Why deferred:** each is public - a host reads `operatorTokens`, a theme sets the variable -
+so renaming them is a breaking change, best done once, at a minor release, with the old names
+kept as aliases for a version.
+
+**What it requires:** `symbolTokens` beside `operatorTokens` (deprecated); `tok-symbol` beside
+`tok-operator`; `--dendrite-syntax-symbol` falling back to the old variable. Then drop the old
+names at the release after.
+
+---
+
 ## Naming — the compose stage has two names — DONE 2026-09-24
 
 **`"compose"` won.** It is what `composeLayers` is called and what the chain draws; "ports" named

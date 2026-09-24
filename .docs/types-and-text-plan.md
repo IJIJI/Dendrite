@@ -6,6 +6,18 @@ decisions came from the discussion of 2026-09-21 and 22; the reasoning behind ea
 Milestone 0, the 0.3.0 release, is done (`done.md`). The rest is worked in order, one commit at a
 time, and each finished milestone is recorded in `done.md`.
 
+## Status (2026-09-24)
+
+| Milestone | State |
+|---|---|
+| 0, R, N, B, V, C, K, T, D | **Done.** Eighteen commits on `dev`, each with its gates green. |
+| X.1 | **Done.** The stage is `"compose"`. |
+| X.2 | Next. |
+| X.3 | Then the release, and the **handoff**: this chat ends after 0.4.0 is verified on npm. |
+
+Two rows of the diagnostics table were cut on review (T.1), and one line in T.3 was kept on
+review (the backtick is string-coloured, as a string's quotes are). Nothing else deviated.
+
 ## Context
 
 The `any` warning is now louder, and a program author has no answer to it. This plan gives the
@@ -239,8 +251,8 @@ Each earlier milestone also updates the page that its change makes wrong.
 | # | Commit | Content |
 |---|---|---|
 | X.1 | The `"ports"` stage gets one name | Backlog entry "the compose stage has two names". A public type changes. |
-| X.2 | The API says "symbol" where the docs do | Backlog entry "the API still says operator". |
-| X.3 | Records, then versions to 0.4.0 | As milestone 0. |
+| X.2 | The API says "symbol" where the docs do | Backlog entry "the API still says operator". `Grammar.operatorTokens` becomes `symbols` (core, 11 sites), the token class `"operator"` becomes `"symbol"` with `.tok-symbol` (editor, docs component), and `--dendrite-syntax-operator` becomes `--dendrite-syntax-symbol` (the editor's stylesheet). `registerInfix` and `registerPrefix` keep their names: they name a position. **Stated default, against the backlog's text: a straight rename, no deprecated aliases.** The entry asked for aliases when it expected an ordinary minor. 0.4.0 is breaking already, and nothing on npm consumes the packages, so an alias would be dead flexibility kept for nobody. Three changelog lines say what changed. |
+| X.3 | Records, then versions to 0.4.0 | As milestone 0: versions, peer ranges to `^0.4.0`, `Unreleased` to `0.4.0` in three changelogs, the installation note, `yarn.lock`. Then the maintainer's PR, three tags, one release, three approvals, and the check on npm as for 0.3.0. **Handoff:** after that check, this chat ends. The next chat starts from `todo.md` ("Release after 0.4.0", boundary validation first), `done.md` for the reasoning behind everything here, and this file for what was cut and why. |
 
 **Stated default:** both renames go in 0.4.0, because it is a breaking release already. Remove this milestone for a smaller release.
 

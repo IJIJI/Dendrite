@@ -139,7 +139,7 @@ export function parseSource(source: string, language: Language): ParseResult {
     tokens,
     errors: lexErrors,
     warnings: lexWarnings,
-  } = tokenise(source, [...language.grammar.operatorTokens]);
+  } = tokenise(source, [...language.grammar.symbols]);
   const result = parse(tokens, language.descriptor, language.grammar);
   const warnings = [...lexWarnings, ...result.warnings];
   if (lexErrors.length > 0 || !result.ok) {

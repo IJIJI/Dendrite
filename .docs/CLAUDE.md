@@ -188,8 +188,8 @@ See `architecture.md` for the layering DAG and full design.
   `LanguageDescriptor` a program is checked against (`language/compose.ts`).
 - `createLanguage()` = empty base (core grammar only); `createStdlib()` = batteries (types + ops +
   operators); `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
-  `registerPrefix`), desugaring to op nodes; the lexer's operator vocab is single-sourced from
-  `grammar.operatorTokens`.
+  `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
+  `grammar.symbols`.
 
 ### Analyser
 - `analyse` is a **pass pipeline**: `buildReferenceGraph` → `topoSort` (cycle detection) →

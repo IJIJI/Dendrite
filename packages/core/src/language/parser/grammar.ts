@@ -38,7 +38,7 @@ export interface Grammar {
   // fine, because a led is only consulted after an expression.
   wordLeds: Map<string, Led>;
   statements: Map<string, StatementFn>; // leading keyword → statement handler
-  operatorTokens: Set<string>; // operator token strings the lexer must recognise (F1b)
+  symbols: Set<string>; // the symbol strings (`+`, `>=`) the lexer must recognise as tokens
 }
 
 export const createGrammar = (): Grammar => ({
@@ -46,7 +46,7 @@ export const createGrammar = (): Grammar => ({
   leds: new Map(),
   wordLeds: new Map(),
   statements: new Map(),
-  operatorTokens: new Set(),
+  symbols: new Set(),
 });
 
 export const registerNud = (g: Grammar, key: string, nud: Nud): void => void g.nuds.set(key, nud);
@@ -84,14 +84,14 @@ export function mergeGrammar(into: Grammar, from: Grammar): void {
   keep(into.leds, from.leds);
   keep(into.wordLeds, from.wordLeds);
   keep(into.statements, from.statements);
-  from.operatorTokens.forEach((tok) => into.operatorTokens.add(tok));
+  from.symbols.forEach((tok) => into.symbols.add(tok));
 }
 export const registerStatement = (g: Grammar, key: string, fn: StatementFn): void =>
   void g.statements.set(key, fn);
 
 //? Operator sugar over registerLed / registerNud. An operator is pure surface: it
 // builds an AST node from its operands (`build` references only ASTNodes - no Parser -
-// so it stays infra-friendly). The token is added to operatorTokens for the lexer.
+// so it stays infra-friendly). The token is added to symbols for the lexer.
 //
 // The operator token's `source` is attached to the built node (unless `build` already
 // set one) so desugared operator nodes are not source-less. This is a single
@@ -108,7 +108,7 @@ export const registerInfix = (
   rightAssoc = false,
 ): void => {
   assertSymbol("registerInfix", token);
-  g.operatorTokens.add(token);
+  g.symbols.add(token);
   registerLed(g, token, {
     bp,
     parse: (p, left, tok) => {
@@ -126,7 +126,7 @@ export const registerPrefix = (
   build: (operand: ASTNode) => ASTNode,
 ): void => {
   assertSymbol("registerPrefix", token);
-  g.operatorTokens.add(token);
+  g.symbols.add(token);
   registerNud(g, token, (p, tok) => {
     const node = build(p.parseExpr(bp));
     return node.source ? node : { ...node, source: tok.source };

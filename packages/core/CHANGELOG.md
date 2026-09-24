@@ -11,6 +11,10 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Breaking: `grammar.operatorTokens` is `grammar.symbols`.** The docs settled on
+  _operator_ (an _op_) for a named function like `Add` and _symbol_ for the `+` that spells it;
+  the set of symbol strings the lexer recognises now says so. A host that reads the set renames
+  one property. `registerInfix` and `registerPrefix` keep their names: they name a position.
 - **Breaking: the stage `"ports"` is `"compose"`.** The step that builds the descriptor was
   called compose in the docs' chain and by `composeLayers`, and ports by `DiagnosticDoc.stage`
   and `ProgramDiagnostic.stage`, which _Every diagnostic_ had to explain away. One name now. A
