@@ -11,6 +11,10 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Breaking: the stage `"ports"` is `"compose"`.** The step that builds the descriptor was
+  called compose in the docs' chain and by `composeLayers`, and ports by `DiagnosticDoc.stage`
+  and `ProgramDiagnostic.stage`, which _Every diagnostic_ had to explain away. One name now. A
+  host that switches on the stage changes one string; the kinds are unchanged.
 - **Templates: `` `n = {count}` ``.** Text with holes, the way TypeScript writes it, except that a
   hole is `{…}`, because `$` already means an input in this language (`` `${count}` `` is the text
   `$` followed by the hole). A template is sugar over `Join`, the way `>=` is sugar over

@@ -195,7 +195,7 @@ export function usePortEdits(
       // Applied problems name a row that exists; refused ones name what was attempted, and
       // edits are sequential, so those belong to the row edited last.
       return diagnostics
-        .filter((d) => d.stage === "ports" && d.layerId === row.layerId)
+        .filter((d) => d.stage === "compose" && d.layerId === row.layerId)
         .filter((d) => (d.refused ? isLast(row) : d.where === own))
         .map((d) => d.message);
     },

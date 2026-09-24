@@ -29,7 +29,7 @@ import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
 
 export interface DiagnosticDoc {
   /** Where a host meets it. */
-  stage: "load" | "parse" | "ports" | "analyse" | "evaluate";
+  stage: "load" | "parse" | "compose" | "analyse" | "evaluate";
   severity: "error" | "warning";
   /** What it means, in the terms of whoever has to fix it. One sentence. */
   message: string;
@@ -167,9 +167,9 @@ export const diagnostics = {
     `,
   },
 
-  // ── ports: composing the declarations a program is checked against ───────────
+  // ── compose: composing the declarations a program is checked against ─────────
   invalid_name: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "A declared name is not a legal identifier.",
     example: withPorts(den`output x = 1`, {
@@ -178,7 +178,7 @@ export const diagnostics = {
     }),
   },
   duplicate_name: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "One layer declares the same name twice.",
     example: withPorts(den`output x = 1`, {
@@ -190,7 +190,7 @@ export const diagnostics = {
     }),
   },
   shadowed_name: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message:
       "A layer claims a name an earlier layer, or the language, already has. Order is authority: the later one is the problem.",
@@ -201,7 +201,7 @@ export const diagnostics = {
     }),
   },
   unknown_port_type: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "A declaration names a type nothing registered.",
     example: withPorts(den`output x = 1`, {
@@ -210,7 +210,7 @@ export const diagnostics = {
     }),
   },
   incompatible_field_override: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "A struct field's type clashes with the one it inherits from the type it extends.",
     example: withPorts(den`output x = 1`, {
@@ -223,21 +223,21 @@ export const diagnostics = {
     }),
   },
   missing_evaluator: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "An op was registered with no evaluator, so nothing could ever run it.",
     triggeredBy:
       "A language that calls `registerOp` without a matching `registerEvaluator`. It is a mistake in the language, not in a program, so composing THROWS rather than reporting: the editor shows it as a failed mount.",
   },
   orphan_evaluator: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "An evaluator was registered for an op that does not exist, usually a typo.",
     triggeredBy:
       "A `registerEvaluator` whose `op` name matches nothing. Like a missing evaluator, this throws when the language composes.",
   },
   invalid_convert_input: {
-    stage: "ports",
+    stage: "compose",
     severity: "error",
     message: "An op input is declared `convert: true` but cannot carry it.",
     triggeredBy:

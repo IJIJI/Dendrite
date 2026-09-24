@@ -71,7 +71,7 @@ describe("carryValue, over a wire", () => {
     const fake = { snapshot, diagnostics, setInput } as unknown as ProgramInstance;
     const refused: ProgramDiagnostic = {
       severity: "error",
-      stage: "ports",
+      stage: "compose",
       kind: "duplicate_name",
       message: "",
       refused: true,

@@ -28,8 +28,8 @@ const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] 
   },
   { stage: "parse", title: "Parse", blurb: "The text: what the lexer and the parser make of it." },
   {
-    stage: "ports",
-    title: "Ports",
+    stage: "compose",
+    title: "Compose",
     blurb:
       "Composing the declarations a program is checked against. These name a layer and a declaration rather than a line.",
   },
@@ -188,7 +188,7 @@ const source = (entry: Entry): string | null =>
 // A `ports` kind is raised while the declarations compose, before a program is read, so its
 // sample's program is beside the point: those entries show the declarations as text, with no
 // code and no panes to wrap around it.
-const programMatters = (entry: Entry): boolean => entry.stage !== "ports";
+const programMatters = (entry: Entry): boolean => entry.stage !== "compose";
 ---
 
 {

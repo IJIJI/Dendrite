@@ -577,22 +577,6 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
-## Naming — the compose stage has two names
-
-**What:** the docs' chain calls the step that builds the descriptor **compose** (after
-`composeLayers`), while *Every diagnostic* and core's `DiagnosticDoc.stage` call it `"ports"`.
-*The chain* says outright that they are the same step, which papers over it.
-
-**Why deferred:** found while drawing the chain (2026-09-19). Renaming the stage is a change to a
-public type (`DiagnosticDoc["stage"]`), so it waits for a release that can carry one.
-
-**What it requires:** pick one name (compose matches the function and the chain; ports matches
-what the stage checks), rename `"ports"` in `diagnostics.ts` and its `DiagnosticDoc` type, the
-stage list in `DiagnosticsTable.astro` and its `#ports` anchor, and the links to it on *The
-chain* and *Ports and layers*. A changelog line, since a host switching on the stage breaks.
-
----
-
 ## Naming — the API still says "operator" where the docs say "symbol"
 
 **What:** on 2026-09-18 the docs' vocabulary settled on **operator** (an **op**, for short) for a

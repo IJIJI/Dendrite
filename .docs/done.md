@@ -5,6 +5,34 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Naming — the compose stage has two names — DONE 2026-09-24
+
+**`"compose"` won.** It is what `composeLayers` is called and what the chain draws; "ports" named
+what the stage checks, not the stage. Renamed in `DiagnosticDoc.stage`, `ProgramDiagnostic.stage`,
+the diagnostics table's section and anchor, the editor's port-pane filter, and the wire (link's
+`ProgramDiagnostic`), so all three packages carry a breaking line for 0.4.0. Done in the release
+that was breaking anyway, and while nothing on npm consumes the packages, which is the cheapest
+a rename ever gets. *The chain* no longer has to say "the same step under another name". Found
+on the way: that section listed seven compose kinds, and there are eight since
+`invalid_convert_input`.
+
+**The entry as it stood:**
+
+
+**What:** the docs' chain calls the step that builds the descriptor **compose** (after
+`composeLayers`), while *Every diagnostic* and core's `DiagnosticDoc.stage` call it `"ports"`.
+*The chain* says outright that they are the same step, which papers over it.
+
+**Why deferred:** found while drawing the chain (2026-09-19). Renaming the stage is a change to a
+public type (`DiagnosticDoc["stage"]`), so it waits for a release that can carry one.
+
+**What it requires:** pick one name (compose matches the function and the chain; ports matches
+what the stage checks), rename `"ports"` in `diagnostics.ts` and its `DiagnosticDoc` type, the
+stage list in `DiagnosticsTable.astro` and its `#ports` anchor, and the links to it on *The
+chain* and *Ports and layers*. A changelog line, since a host switching on the stage breaks.
+
+---
+
 ## 0.3.0 on npm — DONE 2026-09-22
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.3.0**, two days

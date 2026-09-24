@@ -25,8 +25,8 @@ import { defaultValueFor } from "./seed";
 /** A problem from any stage of getting a program running, on one shape. */
 export interface ProgramDiagnostic {
   severity: "error" | "warning";
-  /** Which stage produced it. `ports` problems carry `layerId` / `where` instead of a source. */
-  stage: "ports" | "load" | "parse" | "analyse";
+  /** Which stage produced it. A `compose` problem carries `layerId` / `where` instead of a source. */
+  stage: "compose" | "load" | "parse" | "analyse";
   kind: string;
   message: string;
   source?: SourceRef;
@@ -440,7 +440,7 @@ class Instance implements ProgramInstance {
 
 const portDiagnostic = (problem: PortProblem): ProgramDiagnostic => ({
   severity: "error",
-  stage: "ports",
+  stage: "compose",
   kind: problem.kind,
   message: problem.message,
   layerId: problem.layerId,

@@ -126,7 +126,8 @@ substep of parse and **prune** as a substep of analyse (`apps/docs/src/component
 - **Desugar happens inside parsing, not as a pass:** a symbol (`>=`) becomes its op call(s) as
   the parser reads. There is no separate desugar phase over the tree.
 - **Compose** (`composeLayers`) builds the descriptor from the vocabulary and the port layers; it
-  never reads the program. *Every diagnostic* and `DiagnosticDoc.stage` call it `"ports"`.
+  never reads the program. *Every diagnostic* and `DiagnosticDoc.stage` call it `"compose"` too
+  (it was `"ports"` until 0.4.0).
 - **`analyse`** is always explicit — not hidden inside runner/runtime. **Prune** is its last
   passes (`pruneBindings`, `warnUnusedBindings`), so a CoreProgram is already pruned.
 - **Store RawProgram**, not CoreProgram — re-analyse on load so descriptor changes surface errors.
