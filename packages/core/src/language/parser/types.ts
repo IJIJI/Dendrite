@@ -8,7 +8,7 @@ export type ParseErrorKind =
   | "unexpected_end"
   | "duplicate_binding"
   // Lexer-originated errors (recoverable: the lexer never throws).
-  | "unterminated_string"
+  | "unterminated_string" // a string or a template literal ran off the end
   | "unknown_character";
 
 export interface ParseError {

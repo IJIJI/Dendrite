@@ -48,8 +48,8 @@ Each open detail appears as a **stated default**. Correct it in this file.
 | `cast_to_function` | error | C.3 | `den` |
 | `cast_never_fits` | warning | C.3 | `den` |
 | `invalid_convert_input` | thrown when the language composes | K.2 | none. It is an `AnalysisErrorKind`, so the registry entry is mandatory (`diagnostics.ts:555`). It follows `orphan_evaluator`: stage `"ports"`, a `triggeredBy` note, no example. |
-| `unterminated_template` | error | T.1 | `serialiseSource("…")` |
-| `dollar_before_hole` | warning | T.1 | `serialiseSource("…")` |
+| ~~`unterminated_template`~~ | error | T.1 | **Cut on review (2026-09-24):** the same fault as `unterminated_string`, which now names a template too. |
+| ~~`dollar_before_hole`~~ | warning | T.1 | **Cut on review (2026-09-24):** `$` is plain text in a template, and `${n}` gives `$` and the hole. A rule and an escape for a guessed habit was not worth its cost; add it back if the habit proves real. |
 
 B.0 renames the old `unknown_type` to `unknown_port_type`. It keeps its stage, its message and
 its example. The name `unknown_type` then goes to the program error, as the pair of `unknown_op`.
@@ -210,16 +210,16 @@ first). I check the result as for 0.2.0. **A good PR point.**
 |---|---|---|
 | T.1 | The lexer | See the list. |
 | T.2 | The nud | The **stdlib** registers it, because it names `Join`. It reads `string` tokens and holes until the closing backtick, and builds `Join([…parts])`. It does not wrap a hole: `Join` converts its parts. |
-| T.3 | Editor and docs plugin | Small. The text parts are `string` tokens, so they get the `string` class today. One line gives the backtick the `string` class. Tests for the editor and for `remark-den`. The language data in `cm.ts:42` gets `closeBrackets: { brackets: ["(", "[", "{", "'", '"', "`"] }`. CodeMirror closes the first five by default (measured by the second review), so a `{` hole closes already. Without the backtick, each new template shows `unterminated_template` while the author types. |
+| T.3 | Editor and docs plugin | Small. The text parts are `string` tokens, so they get the `string` class today. One line gives the backtick the `string` class. Tests for the editor and for `remark-den`. The language data in `cm.ts:42` gets `closeBrackets: { brackets: ["(", "[", "{", "'", '"', "`"] }`. CodeMirror closes the first five by default (measured by the second review), so a `{` hole closes already. Without the backtick, each new template shows `unterminated_string` while the author types. |
 
 **T.1 in detail:**
 
 1. **No new token kind.** A backtick and the hole braces are `punct` tokens. A text part is a `string` token. The tokens of a hole are ordinary tokens.
 2. `scanTemplate` calls the ordinary token scan for a hole, until `}`. The driver loop body becomes `scanToken` (Extract Method). Recursion handles a template in a hole. No mode stack.
 3. **No brace depth.** `{` and `}` are not tokens of the language today. Struct literals will change that (recorded in R.1).
-4. Escapes: `` \` ``, `\{`, `\$`, and the usual ones.
-5. Error `unterminated_template`. The lexer recovers to the end of the source, as for a string.
-6. Warning `dollar_before_hole` when `$` comes directly before `{`. `\$` stops the warning, for a text such as a price.
+4. Escapes: `` \` ``, `\{`, and the usual ones. A `$` is plain text, so it needs none.
+5. An unterminated template is `unterminated_string`, the same fault, and the lexer recovers to the end of the source as for a string.
+6. ~~Warning `dollar_before_hole`~~ Cut on review, see the diagnostics table.
 
 **Stated defaults:** a template can span lines. A hole can contain a template.
 
@@ -270,7 +270,7 @@ Each earlier milestone also updates the page that its change makes wrong.
 | A host does not understand the `convert` flag | Milestone D.1. The reference shows each input that converts. |
 | The word-led change breaks the parser | The parser tests are the check. C.1 is its own commit, so it is easy to revert. |
 | `valueFits` on a long list costs time | It runs only in a cast. The pull-based cache runs the cast again only when its inputs change. |
-| A Dendrite template cannot go in the `den` tag | The tests and the two registry entries use plain strings. `den` does not change. D.1 says so. |
+| A Dendrite template cannot go in the `den` tag | The tests use plain strings, and no registry entry needs a template now that the two template kinds are cut. `den` does not change. D.1 says so. |
 | A backtick in inline code on an MDX page | A fence has no problem. An inline sample needs a double-backtick span. If `{:den}` cannot read it, the page uses a fence. |
 | The name check finds a name in a test or a sample that exists | The check on a lambda parameter is new for programs that exist. The second review found no such sample on the site or in the registry. The suite is the check, and I report each case before I change it. |
 | `as` is a word, not a reserved word | `let as = 1` stays valid. `as` is special only after an expression. The editor colours each `as` as a keyword. Accepted. |

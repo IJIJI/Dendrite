@@ -129,7 +129,8 @@ export const diagnostics = {
   unterminated_string: {
     stage: "parse",
     severity: "error",
-    message: "A string literal has no closing quote.",
+    message:
+      "A string literal has no closing quote, or a template no closing backtick (a hole left open counts too).",
     example: den`
       output x = "abc
     `,
