@@ -1,7 +1,9 @@
+import { Convert } from "../infra/convert";
 import { valueFits } from "../infra/fits";
-import { CNode } from "../infra/nodes";
+import { CNode, type COperationNode } from "../infra/nodes";
+import { type Type } from "../infra/types";
 import { CoreProgram } from "../infra/program";
-import { type FnValue, Vocabulary } from "../infra/registry";
+import { type FnValue, type OpInput, Vocabulary } from "../infra/registry";
 import { EvalState, EvalError } from "./types";
 
 // Shared empty local scope for evaluating global bindings. Scope maps are never
@@ -208,12 +210,7 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
         if (!evaluator) {
           throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
         }
-        const resolved: Record<string, unknown> = {};
-        for (const [key, input] of Object.entries(node.inputs)) {
-          resolved[key] = Array.isArray(input)
-            ? input.map((n) => evalNode(n, ctx, state))
-            : evalNode(input, ctx, state);
-        }
+        const resolved = resolveInputs(node, ctx, state);
         try {
           return evaluator.evaluate(resolved);
         } catch (e) {
@@ -221,6 +218,44 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
         }
       });
+  }
+}
+
+// Evaluate an op node's inputs into the record its evaluator receives. An input declared
+// `convert` is converted leaf by leaf first, so the op sees the type it declared; one whose
+// runtime shape is wrong (an `any` holding a number where a list was declared) passes through
+// unchanged, and the op's own guard handles it, as it did before the flag existed.
+function resolveInputs(
+  node: COperationNode,
+  ctx: EvalContext,
+  state: EvalState,
+): Record<string, unknown> {
+  const declared = new Map(ctx.descriptor.ops.get(node.op)?.inputs.map((i) => [i.name, i]));
+  const resolved: Record<string, unknown> = {};
+  for (const [key, input] of Object.entries(node.inputs)) {
+    const value = Array.isArray(input)
+      ? input.map((n) => evalNode(n, ctx, state))
+      : evalNode(input, ctx, state);
+    const def: OpInput | undefined = declared.get(key);
+    resolved[key] = def?.convert ? convertTo(value, def.type) : value;
+  }
+  return resolved;
+}
+
+function convertTo(value: unknown, type: Type): unknown {
+  if (type.kind === "array") {
+    return Array.isArray(value) ? value.map((item) => convertTo(item, type.element)) : value;
+  }
+  if (type.kind !== "name") return value;
+  switch (type.name) {
+    case "string":
+      return Convert.toString(value);
+    case "number":
+      return Convert.toNumber(value);
+    case "boolean":
+      return Convert.toBool(value);
+    default:
+      return value;
   }
 }
 

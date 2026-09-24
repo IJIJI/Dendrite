@@ -29,7 +29,7 @@ row is the avoidable one: that table could be generated from the descriptor the 
 are, and then a category is complete the moment its ops are registered. Do that here.
 
 Two helpers sat at module level in `stdlib/index.ts`; on 2026-09-23 they became `Convert` in
-`stdlib/convert.ts`, the first module beside the one file, and `toList` (a value as a list, the
+`infra/convert.ts` (it started in `stdlib/`, and moved when the evaluator needed it), and `toList` (a value as a list, the
 list ops' guard) still sits at module level and belongs with the list category. Four EMPTY files
 already sit in `stdlib/` (`collections.ts`, `logic.ts`, `math.ts`, `types.ts`), scaffolding from
 before the split was deferred: fill them or delete them here, not before.

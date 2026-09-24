@@ -3,7 +3,7 @@ import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { BP, createLanguage, extendLanguage, type Language } from "../language";
 import { Type, elementOf, isAny, typesEqual } from "../infra/types";
-import { Convert } from "./convert";
+import { Convert } from "../infra/convert";
 
 // Operator desugar builders (pure - reference only ASTNodes, no `lang`). Module-level so
 // they're defined once rather than rebuilt per createStdlib() call. They stay in stdlib:
@@ -415,7 +415,10 @@ export function createStdlib(): Language {
   lang.registerOp({
     name: "Join",
     inputs: [
-      { name: "parts", type: Type.array(Type.string) },
+      // `convert`: a number or a boolean in the list becomes text before Join sees it, so
+      // `Join([1, 2], ", ")` is "1, 2" with no ToString and no warning (the evaluator converts;
+      // the reference shows it as `parts~`).
+      { name: "parts", type: Type.array(Type.string), convert: true },
       { name: "separator", type: Type.string, required: false },
     ],
     output: Type.string,
@@ -730,8 +733,8 @@ export function createStdlib(): Language {
   // give the same text on every host.
   lang.registerEvaluator({
     op: "Join",
-    evaluate: ({ parts, separator }) =>
-      toList(parts).map(Convert.toString).join(Convert.toString(separator)),
+    // `parts` arrives converted (the flag); a null separator still reads as "".
+    evaluate: ({ parts, separator }) => toList(parts).join(Convert.toString(separator)),
   });
   lang.registerEvaluator({
     op: "Upper",

@@ -1,6 +1,7 @@
 //? Convert: the three conversion rules, decided here rather than inherited from JavaScript, and
 // exported so a host op converts the way the language does. `ToString`, `ToNumber` and `ToBool`
-// call these, and every string op reads its text through `toString`.
+// call these, every string op reads its text through `toString`, and the evaluator converts an
+// op input declared `convert: true` with them before the op runs (see OpInput).
 
 // What toNumber accepts as text: a plain decimal, with an optional sign, fraction and exponent.
 // `Number()` alone would also take "", "0x10" and "Infinity". Anything else is null rather than

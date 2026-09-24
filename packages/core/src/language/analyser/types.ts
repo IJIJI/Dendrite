@@ -11,6 +11,7 @@ export type AnalysisErrorKind =
   | "unknown_port_type" // Type string not in descriptor
   | "missing_evaluator" // Op registered without an evaluator (would throw evaluator_not_found at runtime)
   | "orphan_evaluator" // Evaluator registered for an op that doesn't exist (dead code / typo)
+  | "invalid_convert_input" // `convert: true` on an op input that cannot carry it (see OpInput)
   | "binding_cycle" // Cycle in binding DAG
   | "missing_required_program_output" // Required program output not declared
   | "undeclared_binding_reference" // Ref to a binding that was never declared

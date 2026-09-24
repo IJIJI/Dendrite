@@ -11,6 +11,21 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **An op input can declare that it converts: `convert: true`.** `Join([1, 2], ", ")` is
+  `"1, 2"`, with no `ToString` and no `implicit_any_cast`: the analyser accepts a value of the
+  declared SHAPE with any data at the leaves, and the evaluator converts each leaf with
+  `Convert` before the op runs, so the op sees the type it declared. Only `string`, `number`,
+  `boolean` or a list of them can carry the flag, and neither a variadic nor an optional input
+  can; a wrong declaration is `invalid_convert_input` and throws when the language composes.
+  In the stdlib only `Join` uses it, on `parts`. The rule stays the language's, not a type's:
+  the analyser inserts nothing, and a caller's mistake on a converting input is converted
+  rather than reported, which is what the flag means and why it is opt-in per input. One
+  consequence of `Join` converting: `Join([1, 2])` was an `op_input_type_mismatch` and compiles.
+  A bare `any` into a list-shaped converting input still warns (`'$x' is 'any' typed - 'any[]'
+expected`): the flag vouches for the leaves, and the shape is what the checker cannot see.
+  The reference marks a converting input `name~`.
+- **`Convert` moved to `infra/`** (from `stdlib/`, where it was added a commit ago): the
+  evaluator converts with it, and core does not import from the stdlib.
 - **`Convert`, the three conversion rules, exported.** `Convert.toString`, `Convert.toNumber` and
   `Convert.toBool` are what `ToString`, `ToNumber` and `ToBool` do, and what every string op reads
   its text through, so a host op can convert the way the language does instead of the way

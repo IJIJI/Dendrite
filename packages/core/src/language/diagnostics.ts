@@ -235,6 +235,13 @@ export const diagnostics = {
     triggeredBy:
       "A `registerEvaluator` whose `op` name matches nothing. Like a missing evaluator, this throws when the language composes.",
   },
+  invalid_convert_input: {
+    stage: "ports",
+    severity: "error",
+    message: "An op input is declared `convert: true` but cannot carry it.",
+    triggeredBy:
+      "A `registerOp` input with `convert` on a struct, a function or `any` (no conversion rule exists), on a variadic input, or on an optional one (an absent value would arrive converted rather than absent). Like a missing evaluator, this throws when the language composes.",
+  },
 
   // ── analyse: the program against those declarations ──────────────────────────
   unknown_op: {

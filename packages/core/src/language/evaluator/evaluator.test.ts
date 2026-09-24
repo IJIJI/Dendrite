@@ -486,9 +486,10 @@ describe("string ops", () => {
     expect(value('Join(parts: ["a", "b"], separator: ", ")')).toBe("a, b");
   });
 
-  it("Join: a list of numbers is a type error, and ToString is the visible fix", () => {
-    const { analysed } = runSource("output out = Join([1, 2])");
-    expect(analysed.errors.map((e) => e.kind)).toContain("op_input_type_mismatch");
+  it("Join: a list of numbers is converted, because Join declares that it converts", () => {
+    // Until the `convert` flag (2026-09-24) this was an op_input_type_mismatch, and ToString
+    // was the visible fix. Both forms give the same text now.
+    expect(value('Join([1, 2], "-")')).toBe("1-2");
     expect(value('Join([ToString(1), ToString(2)], "-")')).toBe("1-2");
   });
 
@@ -582,5 +583,68 @@ describe("as: the value when it fits, null when it does not", () => {
   it("a struct that lacks a field gives null, and a field read on that null is null", () => {
     expect(castOf("output out = ($rows as Bus).name", { id: 1, name: "one" })).toBe("one");
     expect(castOf("output out = ($rows as Bus).name", {})).toBeNull();
+  });
+});
+
+// ─── The convert flag ─────────────────────────────────────────────────────────
+
+describe("convert: the evaluator converts a flagged input before the op runs", () => {
+  const hostLang = () => {
+    const lang = createStdlib();
+    lang.registerOp({
+      name: "Twice",
+      inputs: [{ name: "n", type: Type.number, convert: true }],
+      output: Type.number,
+      description: "n, twice.",
+      examples: [],
+    });
+    lang.registerEvaluator({
+      op: "Twice",
+      // The op sees a number or a null: never the text it was given.
+      evaluate: ({ n }) => (n === null ? null : (n as number) * 2),
+    });
+    return lang;
+  };
+  const evalWith = (source: string, raw: unknown) => {
+    const lang = hostLang();
+    const descriptor = withPorts(lang, {
+      inputs: [{ name: "raw", type: Type.any }],
+      outputs: [],
+    });
+    const parsed = parseSource(source, lang);
+    if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+    const analysed = analyse(parsed.program, descriptor);
+    expect(analysed.errors).toEqual([]);
+    const state = createEvalState();
+    updateInput("raw", raw, state);
+    const value = evaluate(
+      analysed.program.outputs.get("out")!,
+      analysed.program,
+      state,
+      undefined,
+      descriptor,
+    );
+    return { value, casts: analysed.warnings.filter((w) => w.kind === "implicit_any_cast") };
+  };
+
+  it("Join converts each leaf: a number, a boolean, a null, a nested list", () => {
+    expect(runSource('output out = Join([1, true, null, [2]], ", ")').value).toBe("1, true, , [2]");
+  });
+
+  it("a host op with convert on number gets the number, or null when there is no rule", () => {
+    // An `any` meeting a converting LEAF has nothing to warn about: every value has a rule.
+    expect(evalWith("output out = Twice($raw)", "12")).toEqual({ value: 24, casts: [] });
+    expect(evalWith("output out = Twice($raw)", true).value).toBe(2);
+    expect(evalWith("output out = Twice($raw)", "abc").value).toBeNull();
+  });
+
+  it("a wrong runtime shape passes through unchanged, and the op's own guard handles it", () => {
+    // `any` holding a number where a LIST was declared: not a list, so nothing to convert leaf
+    // by leaf; Join's toList then reads it as empty. The checker did warn about that: a bare
+    // any into a shape is still an implicit cast, because the shape is what it cannot see.
+    const five = evalWith("output out = Join($raw)", 5);
+    expect(five.value).toBe("");
+    expect(five.casts.map((w) => w.message)).toEqual(["'$raw' is 'any' typed - 'any[]' expected"]);
+    expect(evalWith("output out = Join($raw)", ["a", 1]).value).toBe("a1");
   });
 });

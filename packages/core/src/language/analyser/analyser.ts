@@ -152,6 +152,19 @@ function castsAny(actual: Type, expected: Type): boolean {
   return isAnyOrNull(actual) && !isAny(expected);
 }
 
+// The type a converting input accepts: its shape, with `any` at every leaf. `string[]` becomes
+// `any[]`, so a list of numbers fits and a lambda still does not (a function never fits `any`),
+// with no second compatibility relation.
+function anyAtLeaves(t: Type): Type {
+  return t.kind === "array" ? Type.array(anyAtLeaves(t.element)) : Type.any;
+}
+
+// What `convert` can be declared on: a leaf `Convert` has a rule for, or a list of them.
+function isConvertible(t: Type): boolean {
+  if (t.kind === "array") return isConvertible(t.element);
+  return t.kind === "name" && (t.name === "string" || t.name === "number" || t.name === "boolean");
+}
+
 // An empty list literal has no items to take a type from, so its element is `any`; warning
 // about it would be crying wolf. Only the LITERAL is recognisable: a name bound to an empty
 // list reaches a check as its type alone, and does warn, until a binding can be annotated.
@@ -349,7 +362,10 @@ function validateInputs(
     } else if (name in rawInputs) {
       // Refine the expected type (generic function inputs) and contextually type an
       // inline lambda's untyped params from it before analysing the body.
-      const expectedType = inferInputTypes?.(inputTypes)?.[name] ?? opInput.type;
+      // A converting input accepts its shape with any leaf; the evaluator converts the leaves.
+      const expectedType = opInput.convert
+        ? anyAtLeaves(opInput.type)
+        : (inferInputTypes?.(inputTypes)?.[name] ?? opInput.type);
       const cnode = analyseNode(withExpectedParams(rawInputs[name] as ASTNode, expectedType), ctx);
       const actualType = getOutputType(cnode);
       if (cnode.kind !== "error")
@@ -780,6 +796,23 @@ export function validateDescriptor(descriptor: LanguageDescriptor): AnalysisErro
     const subject: ErrorSubject = { kind: "op", name: op.name };
     for (const input of op.inputs) {
       checkType(input.type, `op '${op.name}' input '${input.name}'`, subject);
+      if (!input.convert) continue;
+      // The flag's whole contract is in OpInput; each refusal names the rule it breaks.
+      const why = !isConvertible(input.type)
+        ? `its type '${typeToString(input.type)}' has no conversion rule (only string, number, boolean or a list of them)`
+        : input.variadic
+          ? "a variadic input cannot convert"
+          : input.required === false
+            ? "an optional input cannot convert (an absent value would arrive converted, not absent)"
+            : undefined;
+      if (why) {
+        errors.push({
+          kind: "invalid_convert_input",
+          name: input.name,
+          message: `Input '${input.name}' of op '${op.name}' is declared convert, but ${why}`,
+          subject,
+        });
+      }
     }
     checkType(op.output, `op '${op.name}' output`, subject);
   }
