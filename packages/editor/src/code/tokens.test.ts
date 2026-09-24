@@ -19,6 +19,13 @@ describe("the type colour", () => {
     expect(classOf("let rows: number[] = []", "number")).toBe("type");
   });
 
+  it("reads a signature's marks (`...`, `?`, `~`) as plain text, and the type after them", () => {
+    // The reference prints `parts~: string[]`; `~` and `?` are no token of the language, so the
+    // lexer skips them and they stay uncoloured, and the type after the colon is still a type.
+    expect(classOf("Join(parts~: string[], separator?: string) -> string", "string")).toBe("type");
+    expect(classes("Join(parts~: string[])")).not.toContainEqual(expect.stringContaining("~"));
+  });
+
   it("colours a cast: `as` as a keyword, its target as a type", () => {
     expect(classes("output x = $rows as number[]")).toEqual([
       "output:keyword",
