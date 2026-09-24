@@ -109,6 +109,56 @@ real zero, so the fallback is yours to write, with the `Default{:den}` you alrea
 list, and true for everything else. The three are on the
 [conversion](../../../stdlib/conversion/) page.
 
+One op converts for you. `Join{:den}` turns each of its parts into text itself, which its
+signature marks as `parts~{:den}`, and that is why a template (`` `n = {count}`{:den} ``, on the
+[operators page](../operators-and-symbols/#text-with-holes)) needs no `ToString{:den}` in its holes.
+
+## Stating a type
+
+A binding can say what type it holds:
+
+```den warns inputs="rows:any"
+let rows: number[] = $rows
+output mean = Average(rows)
+```
+
+`rows{:den}` is a `number[]{:den}` to everything that reads it, so `Average{:den}` sees the list it
+wants. The annotation is a claim, not a check: `$rows{:den}` is `any{:den}`, so the checker still
+warns where the claim is made, and the message says what would turn the claim into a check:
+`Use 'as number[]' to check it`. A value the claim cannot hold at all is an error,
+`binding_type_mismatch{:den}`, and a type name the language does not have is `unknown_type{:den}`.
+
+Where an annotation earns its keep is the empty list. `[]{:den}` is a list of nothing in
+particular, `any[]{:den}`, and a name bound to it warns the moment it reaches a typed input.
+Stated, it is quiet and precise:
+
+```den
+let none: number[] = []
+output mean = Average(none)
+```
+
+## Checking a type
+
+`as{:den}` checks a value against a type while the program runs:
+
+```den inputs="rows:any"
+let rows = $rows as number[]
+output mean  = Average(rows)
+output known = IsSet(rows)
+```
+
+`rows{:den}` is the list when `$rows{:den}` holds a list of numbers, and `null{:den}` when it holds
+anything else: a number, a list with text in it, nothing at all. That is the answer `ToNumber{:den}`
+gives for text that is not a number, for the same reason. `null{:den}` means "no value", the list
+ops read it as an empty list, `IsSet{:den}` sees it, and `Default(rows, []){:den}` is the fallback you
+write yourself. There is no warning, because nothing is left to warn about: the value was checked.
+
+A cast never throws and never changes a value. `"5" as number{:den}` is `null{:den}`, not `5`. When
+the checker can already see that no value could fit, as there, it says so with
+`cast_never_fits{:den}`, a warning, since the cast is pointless rather than wrong. A cast to a
+function type is an error: a function cannot be checked. `as{:den}` binds tighter than any symbol,
+so `1 + $x as number{:den}` casts `$x{:den}` alone, and `$row.value as number{:den}` casts the field.
+
 ## Reading a message
 
 Diagnostics come in two severities and they mean different things.

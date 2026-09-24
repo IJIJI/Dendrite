@@ -26,6 +26,9 @@ Supplied by the standard library or by the host.
 `Add{:den}`. Symbols are rewritten during parsing and leave no trace afterwards, and one
 symbol may expand into more than one op call.
 
+**Template**: text with holes, `` `n = {count}`{:den} ``. Sugar over `Join{:den}`, which converts
+each hole to text; a hole is `{…}`, since `$` means an input.
+
 **Lambda**: a function written inline, `item => item > 10{:den}`. A value like any other, with
 real lexical closure over what surrounded it.
 
@@ -51,6 +54,12 @@ a host uses when it does not know a value's type. Each crossing warns.
 program over unset inputs still runs.
 
 **`extends{:ts}`**: a named type declaring a parent. Compatibility walks the chain.
+
+**Annotation**: a type stated on a binding, `let rows: number[] = …{:den}`. A claim the checker
+holds the value to, with no check at runtime, so an `any{:den}` source still warns there.
+
+**Cast**: `value as type{:den}`, a check at runtime. The value when it fits the type, `null{:den}` when
+it does not; never a throw, never a changed value.
 
 **Covariant, contravariant**: which way a type may vary and stay compatible. Arrays are
 covariant in their element; functions are contravariant in their parameters and covariant in

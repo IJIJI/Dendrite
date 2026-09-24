@@ -64,7 +64,10 @@ without a named consumer.
 **Gates**, all at the root, each judged by its **exit code**: `yarn typecheck`, `yarn lint`,
 `yarn format:check`, `yarn test`, and `yarn workspace dendrite-docs build` when the docs changed.
 Do not judge a gate by searching its output: `astro check` colours it, so a search for `error ts`
-matches nothing while the command exits 1.
+matches nothing while the command exits 1. The docs build reads core and the editor from their
+`dist`, and Astro caches rendered `.md` pages in `apps/docs/.astro`: after a change to either
+package, rebuild both and delete that cache before the docs build, or the site shows the old
+highlighter while every test passes (the tests alias package source).
 
 **Commits are the maintainer's, and so is the index.** Hand over one table per commit - the
 files as rows, with what changed in each - plus the exact `git add` and a one-line message, then

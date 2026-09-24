@@ -17,10 +17,12 @@ Checked after approval: `latest` on each package, an attestation on all three, t
 `^0.3.0`, and a clean install outside the repo where `Join(["n =", ToString(ToNumber($raw)),
 Upper("abc")], " ")` gives `"n = 12 ABC"` and `ToNumber("0x10")` gives `null`.
 
-One thing worth keeping: **run the docs build in its own command.** All five gates in one shell,
-`yarn test` then `yarn workspace dendrite-docs build`, gave the build exit 1 once, and it passed
-twice alone. Not reproduced and not explained; the docs test run and the build share the `.astro`
-cache, which is the suspect. Judge the docs gate on a run of its own.
+One thing worth keeping: **run the docs build in its own command, on a fresh cache.** All five
+gates in one shell, `yarn test` then `yarn workspace dendrite-docs build`, gave the build exit 1
+once, and it passed twice alone. Explained on 2026-09-24, while checking templates on the site:
+Astro caches rendered `.md` pages in `apps/docs/.astro`, and the docs build reads core and the
+editor from their `dist`, so after a package change the site can show the old highlighter while
+every test passes. Rebuild both packages and delete the cache first (`CLAUDE.md`, Gates).
 
 ---
 

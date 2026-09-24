@@ -92,3 +92,19 @@ Two mistakes worth knowing by name. Pass an input an op does not have and you ge
 `unknown_op_input_key{:den}`, a warning: the value is ignored. Leave out one it needs and you
 get `missing_op_input{:den}`, also a warning, with a default filled in for you, which is why a
 half-written program keeps running while you write the rest of it.
+
+## Text with holes
+
+A template is text with expressions in it:
+
+```den inputs="count:number, name:string"
+output label  = `{$name} has {$count} left`
+output nested = `outer {`inner {$count > 3}`}`
+```
+
+The backticks hold the text, and each `{…}` holds any expression, a template included. A hole is
+`{…}` and not `${…}`, because `$` already means an input in this language: `${count}` is the text
+`$` followed by the hole. Underneath, a template is a `Join{:den}` over its parts,
+`Join([$name, " has ", $count, " left"]){:den}`, and `Join{:den}` converts each part to text itself,
+so a number, a boolean, a null or a list in a hole needs no `ToString{:den}`. A template can span
+lines, and `` \` `` and `\{` write a backtick or a brace as text.
