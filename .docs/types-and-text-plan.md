@@ -11,9 +11,8 @@ time, and each finished milestone is recorded in `done.md`.
 | Milestone | State |
 |---|---|
 | 0, R, N, B, V, C, K, T, D | **Done.** Eighteen commits on `dev`, each with its gates green. |
-| X.1 | **Done.** The stage is `"compose"`. |
-| X.2 | Next. |
-| X.3 | Then the release, and the **handoff**: this chat ends after 0.4.0 is verified on npm. |
+| X.1, X.2 | **Done.** The stage is `"compose"`, and the API says symbol. |
+| X.3 | **Done.** Versions at 0.4.0; the release itself is the maintainer's, then the check on npm, then the **handoff**. |
 
 Two rows of the diagnostics table were cut on review (T.1), and one line in T.3 was kept on
 review (the backtick is string-coloured, as a string's quotes are). Nothing else deviated.

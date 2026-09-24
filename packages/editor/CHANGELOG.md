@@ -6,10 +6,10 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.3.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.4.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
-## Unreleased
+## 0.4.0
 
 - **Breaking: the token class `operator` is `symbol`.** `tok-symbol` replaces `tok-operator` in
   the highlighter's output, and `--dendrite-syntax-symbol` replaces `--dendrite-syntax-operator`

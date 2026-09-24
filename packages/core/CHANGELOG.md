@@ -7,9 +7,9 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.3.0`, so a minor release here is always accompanied by a release of both.
+at `^0.4.0`, so a minor release here is always accompanied by a release of both.
 
-## Unreleased
+## 0.4.0
 
 - **Breaking: `grammar.operatorTokens` is `grammar.symbols`.** The docs settled on
   _operator_ (an _op_) for a named function like `Add` and _symbol_ for the `+` that spells it;
