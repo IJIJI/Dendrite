@@ -752,3 +752,56 @@ describe("a handler in the wrong map is refused at registration, not ignored", (
     expect(() => lang.registerInfix("++", BP.ADD, (l) => l)).not.toThrow();
   });
 });
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+describe("a template is a Join over its parts", () => {
+  it("text parts are string literals, holes are expressions, in order", () => {
+    expect(parse("`n = {count}, done`").node).toMatchObject({
+      kind: "operation",
+      op: "Join",
+      output: Type.string,
+      inputs: {
+        parts: {
+          kind: "array",
+          items: [
+            { kind: "literal", value: "n = " },
+            { kind: "ref", name: "count" },
+            { kind: "literal", value: ", done" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("a hole holds any expression, and a template", () => {
+    expect(parse("`{1 + 2}`").node).toMatchObject({
+      inputs: { parts: { items: [{ kind: "operation", op: "Add" }] } },
+    });
+    expect(parse("`a{`b{c}`}`").node).toMatchObject({
+      inputs: {
+        parts: {
+          items: [
+            { value: "a" },
+            {
+              op: "Join",
+              inputs: { parts: { items: [{ value: "b" }, { kind: "ref", name: "c" }] } },
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("an empty template is Join over nothing", () => {
+    expect(parse("``").node).toMatchObject({ op: "Join", inputs: { parts: { items: [] } } });
+  });
+
+  it("an empty hole is a syntax error, and an unterminated template is the lexer's", () => {
+    expect(parse("`{}`").errors[0]).toMatchObject({ kind: "unexpected_token" });
+    const { tokens, errors } = tokenise("`abc", [...CORE.grammar.operatorTokens]);
+    expect(errors.map((e) => e.kind)).toEqual(["unterminated_string"]);
+    // What the parser then sees still parses to the end without throwing.
+    expect(() => parseExpression(tokens, CORE.descriptor, CORE.grammar)).not.toThrow();
+  });
+});

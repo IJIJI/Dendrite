@@ -11,6 +11,16 @@ at `^0.3.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Templates: `` `n = {count}` ``.** Text with holes, the way TypeScript writes it, except that a
+  hole is `{…}`, because `$` already means an input in this language (`` `${count}` `` is the text
+  `$` followed by the hole). A template is sugar over `Join`, the way `>=` is sugar over
+  `LessThan`: the text parts and the holes become one list, and `Join` converts each part to text
+  itself, so a number, a boolean, a null or a list in a hole needs no `ToString`, and nothing is
+  inserted that the author did not write. A template can span lines and can hold a template.
+  Escapes: `` \` `` and `\{`, plus the usual ones. An unterminated template, or a hole left open,
+  is `unterminated_string`, the same fault as a string without its closing quote. The lexer cuts
+  a template into a backtick, string tokens and `{` `}` punctuation around ordinary tokens, so
+  the editor colours the code in a hole as code.
 - **An op input can declare that it converts: `convert: true`.** `Join([1, 2], ", ")` is
   `"1, 2"`, with no `ToString` and no `implicit_any_cast`: the analyser accepts a value of the
   declared SHAPE with any data at the leaves, and the evaluator converts each leaf with

@@ -787,6 +787,28 @@ export function createStdlib(): Language {
   // `1 - -14` is Subtract(1, Negate(14)). Without it the language had no negative numbers.
   lang.registerPrefix("-", BP.PREFIX, (operand) => operationNode("Negate", { a: operand }));
 
+  // A template, `text {hole} text`: sugar over Join, the way `>=` is sugar over LessThan, and
+  // registered here for the same reason - it names an op the core grammar does not have. The
+  // lexer has already cut it into string tokens and holes between `{` `}`; each part, text or
+  // hole, becomes an item of one list, and Join converts every item to text itself (its `parts`
+  // declares `convert`), so a hole needs no ToString and the analyser inserts no node.
+  lang.registerNud("`", (p, open) => {
+    const items: ASTNode[] = [];
+    while (!p.check("punct", "`") && !p.atEnd()) {
+      if (p.check("string")) {
+        const text = p.advance();
+        items.push({ kind: "literal", value: text.value, source: text.source });
+      } else {
+        p.expect("punct", "{");
+        items.push(p.parseExpr(0));
+        p.expect("punct", "}");
+      }
+    }
+    p.expect("punct", "`");
+    const parts: ASTNode = { kind: "array", items, type: Type.any, source: open.source };
+    return operationNode("Join", { parts }, { output: Type.string, source: open.source });
+  });
+
   return lang;
 }
 

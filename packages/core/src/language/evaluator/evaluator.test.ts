@@ -648,3 +648,37 @@ describe("convert: the evaluator converts a flagged input before the op runs", (
     expect(evalWith("output out = Join($raw)", ["a", 1]).value).toBe("a1");
   });
 });
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+describe("templates: text with holes, through Join", () => {
+  const out = (program: string) => {
+    const { analysed, value } = runSource(program);
+    expect(analysed.errors).toEqual([]);
+    // No any-cast warning: Join converts, so a hole of any type is fine by declaration.
+    expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+    return value;
+  };
+
+  it("a hole is converted the way Join converts: number, null, list, boolean", () => {
+    expect(out("let count = 5\noutput out = `n = {count}`")).toBe("n = 5");
+    expect(out("output out = `a{null}b`")).toBe("ab");
+    expect(out("output out = `{[1, 2]}`")).toBe("[1,2]");
+    expect(out("output out = `{1 > 0}!`")).toBe("true!");
+  });
+
+  it("a template can hold a template, and can span lines", () => {
+    expect(out("output out = `x{`y{1}`}z`")).toBe("xy1z");
+    expect(out("output out = `one\ntwo {2}`")).toBe("one\ntwo 2");
+  });
+
+  it("the result is a string to the checker, so it flows into a string input", () => {
+    expect(out("output out = Upper(`a{1}`)")).toBe("A1");
+  });
+
+  it("ceiling: a lambda in a hole is a type error that names Join, which was not written", () => {
+    const { analysed } = runSource("output out = `{n => n}`");
+    expect(analysed.errors.map((e) => e.kind)).toEqual(["op_input_type_mismatch"]);
+    expect(analysed.errors[0].message).toContain("'Join'");
+  });
+});
