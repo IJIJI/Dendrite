@@ -1,5 +1,6 @@
 import { createEvalState, evaluateProgram, updateInput } from "../evaluator/evaluator";
 import { EvalError, type EvalState } from "../evaluator/types";
+import { assertFits, valueFits } from "../infra/fits";
 import { type Ports } from "../infra/ports";
 import { type CoreProgram } from "../infra/program";
 import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
@@ -64,7 +65,7 @@ export class ProgramEntry {
   }
 
   setInput(name: string, value: unknown): void {
-    this.programInput(name);
+    assertFits(this.programInput(name), value, this.live.bound.composed);
     this.values.set(name, value);
     updateInput(name, value, this.live.state);
   }
@@ -107,7 +108,8 @@ export class ProgramEntry {
   }
 
   // Fresh state seeded with defaults for every input, then the runtime's global values, then
-  // this entry's own program-level values (dropping any whose input is no longer declared).
+  // this entry's own program-level values (dropping any whose input is no longer declared, or
+  // whose value no longer fits the input's type after the declaration changed).
   private activate(bound: BoundProgram, globalValues: ReadonlyMap<string, unknown>): Live {
     const inputs = new Map(bound.ports.inputs.map((input) => [input.name, input]));
     const state = createEvalState();
@@ -116,7 +118,8 @@ export class ProgramEntry {
     }
     for (const [name, value] of globalValues) updateInput(name, value, state);
     for (const [name, value] of [...this.values]) {
-      if (inputs.has(name)) updateInput(name, value, state);
+      const def = inputs.get(name);
+      if (def && valueFits(value, def.type, bound.composed)) updateInput(name, value, state);
       else this.values.delete(name);
     }
     return { bound, inputs, state };

@@ -308,6 +308,15 @@ describe("ProgramInstance - layers", () => {
     });
   });
 
+  it("seeds an input whose kept value no longer fits its new type", () => {
+    const { instance } = setup();
+    instance.setInput("p", 5);
+    const asText: Ports = { inputs: [{ name: "p", type: Type.string }], outputs: [] };
+    instance.setProgram(serialiseSource('output out = If($p == "", 0, 1)', asText));
+    expect(instance.values.get()).toEqual({ p: "" });
+    expect(outputsOf(instance)).toBe(0);
+  });
+
   it("refuses a layer change that takes a name an earlier layer owns, through diagnostics", () => {
     const { instance } = setup();
     const before = instance.ports.get();

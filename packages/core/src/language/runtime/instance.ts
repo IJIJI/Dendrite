@@ -5,6 +5,7 @@ import { type SourceRef } from "../infra/nodes";
 import { type Observable, createSubject } from "../infra/observable";
 import { EMPTY_PORTS, flattenPorts, type PortLayer, type Ports, Policy } from "../infra/ports";
 import { type LanguageDescriptor } from "../infra/registry";
+import { valueFits } from "../infra/fits";
 import { type SavedProgram } from "../infra/serialise";
 import { type ProgramHandle, type Runtime } from "./runtime";
 import { defaultValueFor } from "./seed";
@@ -361,14 +362,16 @@ class Instance implements ProgramInstance {
     }
   }
 
-  // Keep a value whose input survived, seed the rest. This map is the truth: it is handed
-  // to the runtime on every register and replace, so the entry follows rather than guesses.
+  // Keep a value whose input survived and whose new type it still fits, seed the rest. This
+  // map is the truth: it is handed to the runtime on every register and replace, so the entry
+  // follows rather than guesses.
   private seedValues(descriptor: LanguageDescriptor): void {
     const next: Record<string, unknown> = {};
     for (const def of flattenPorts(this.layers).inputs) {
+      const kept = def.name in this.programValues ? this.programValues[def.name] : undefined;
       next[def.name] =
-        def.name in this.programValues
-          ? this.programValues[def.name]
+        def.name in this.programValues && valueFits(kept, def.type, descriptor)
+          ? kept
           : defaultValueFor(def, descriptor);
     }
     // Compared against what subscribers have SEEN, not against the internal map: at boot

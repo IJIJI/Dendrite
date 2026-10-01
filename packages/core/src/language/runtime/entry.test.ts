@@ -154,6 +154,44 @@ describe("ProgramEntry", () => {
     expect(entry.outputHandlers.has(handler)).toBe(true); // subscribers survive a replace
   });
 
+  it("setInput refuses a value that does not fit the input's type, and keeps the old one", () => {
+    const entry = new ProgramEntry(
+      "e",
+      bind(makeLang(), "output out = Add($g, $p)", P),
+      NO_GLOBALS,
+    );
+    entry.setInput("p", 3);
+    expect(() => entry.setInput("p", "oops")).toThrow(/'p' does not fit its type number/);
+    expect(entry.programValues.get("p")).toBe(3);
+    expect(outOf(entry)).toBe(3);
+    entry.setInput("p", null); // null fits every type, as it does statically
+  });
+
+  it("setInput checks a struct against its declared fields", () => {
+    const entry = new ProgramEntry(
+      "e",
+      bind(makeLang(), "output out = $b.n", {
+        types: [{ name: "Bus", fields: { n: Type.number } }],
+        inputs: [{ name: "b", type: Type.name("Bus") }],
+        outputs: [],
+      }),
+      NO_GLOBALS,
+    );
+    expect(() => entry.setInput("b", {})).toThrow(/does not fit/); // a missing field
+    entry.setInput("b", { n: 4, extra: true }); // an extra field is ignored
+    expect(outOf(entry)).toBe(4);
+  });
+
+  it("replace drops a kept value its input's new type no longer fits", () => {
+    const lang = makeLang();
+    const entry = new ProgramEntry("e", bind(lang, "output out = Add($g, $p)", P), NO_GLOBALS);
+    entry.setInput("p", 3);
+    const asText: Ports = { inputs: [{ name: "p", type: Type.string }], outputs: [] };
+    entry.replace(bind(lang, 'output out = If($p == "", 0, 1)', asText), NO_GLOBALS);
+    expect(entry.programValues.has("p")).toBe(false);
+    expect(outOf(entry)).toBe(0); // seeded "", not the stale 3
+  });
+
   it("returns an EvalError as an outcome and lets anything else propagate", () => {
     const entry = new ProgramEntry("e", bind(makeLang(), "output out = Boom($p)", P), NO_GLOBALS);
     expect(entry.evaluate(undefined).ok).toBe(true);
