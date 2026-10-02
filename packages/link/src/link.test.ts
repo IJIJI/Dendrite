@@ -213,6 +213,22 @@ describe("setInput", () => {
     );
   });
 
+  it("takes back the echo of a value the server refuses, and shows why", async () => {
+    const { instance, replica, flush, onError } = await linked();
+    replica.setInput("p", 4);
+    flush();
+
+    replica.setInput("p", "oops");
+    expect(replica.values.get()).toEqual({ p: "oops" }); // echoed before any push
+    flush();
+    expect(instance.values.get()).toEqual({ p: 4 });
+    expect(replica.values.get()).toEqual({ p: 4 });
+    expect(replica.snapshot.get().inputValues).toEqual({ p: 4 });
+    expect(replica.diagnostics.get().map((d) => d.kind)).toEqual(["value_does_not_fit"]);
+    expect(outputOf(replica)).toBe(4);
+    expect(onError).not.toHaveBeenCalled(); // refused by core's own channel, not thrown
+  });
+
   it("drops a values push older than the latest command, and adopts a state push's clock", async () => {
     const { replica, instance, flush, sent } = await linked();
     replica.setInput("p", 1);

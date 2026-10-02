@@ -12,6 +12,7 @@ import {
 import { operationNode } from "./infra/nodes";
 import { Type } from "./infra/types";
 import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
+import { type InputProblemKind } from "./runtime/instance";
 
 //? Every diagnostic the language can produce, in one place, with a program that triggers it.
 //
@@ -29,7 +30,7 @@ import { type ParseErrorKind, type ParseWarningKind } from "./parser/types";
 
 export interface DiagnosticDoc {
   /** Where a host meets it. */
-  stage: "load" | "parse" | "compose" | "analyse" | "evaluate";
+  stage: "load" | "parse" | "compose" | "analyse" | "evaluate" | "input";
   severity: "error" | "warning";
   /** What it means, in the terms of whoever has to fix it. One sentence. */
   message: string;
@@ -601,6 +602,14 @@ export const diagnostics = {
     triggeredBy:
       "An analyser bug: the checker rejects a call on anything that is not function-typed, so reaching this means a program ran unchecked.",
   },
+  value_does_not_fit: {
+    stage: "input",
+    severity: "error",
+    message:
+      "A value pushed into an input does not fit the type the input declares. The push is refused and the input keeps its value.",
+    triggeredBy:
+      "A host, a pane or a replica calling `setInput` or `fireTrigger` on an instance with a value of another type: a string for a `number`, or a struct with a declared field missing. A runtime used directly throws instead.",
+  },
 } satisfies Record<
   | LoadError["kind"]
   | ParseErrorKind
@@ -608,11 +617,12 @@ export const diagnostics = {
   | PortProblem["kind"]
   | AnalysisErrorKind
   | AnalysisWarningKind
-  | EvalErrorKind,
+  | EvalErrorKind
+  | InputProblemKind,
   DiagnosticDoc
 >;
 
-/** Every kind, as a list, in reading order: load, parse, ports, analyse, evaluate. */
+/** Every kind, as a list, in reading order: load, parse, compose, analyse, evaluate, input. */
 export const diagnosticList: readonly (DiagnosticDoc & { kind: string })[] = Object.entries(
   diagnostics,
 ).map(([kind, doc]) => ({ kind, ...doc }));

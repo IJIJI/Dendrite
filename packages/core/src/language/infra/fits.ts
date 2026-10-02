@@ -55,11 +55,21 @@ function structFits(value: unknown, fields: Record<string, Type>, descriptor: Vo
   );
 }
 
-/** The host boundary: a value pushed into an input must fit the type the input declares. */
+/**
+ * The host boundary: a value pushed into an input must fit the type the input declares.
+ * Says why it does not, or null when it does.
+ */
+export function misfit(
+  def: InputDefinition,
+  value: unknown,
+  descriptor: Vocabulary,
+): string | null {
+  if (valueFits(value, def.type, descriptor)) return null;
+  return `Value for input '${def.name}' does not fit its type ${typeToString(def.type)}`;
+}
+
+/** The same check for an API whose caller is code: a value that does not fit is a host bug. */
 export function assertFits(def: InputDefinition, value: unknown, descriptor: Vocabulary): void {
-  if (!valueFits(value, def.type, descriptor)) {
-    throw new Error(
-      `Value for input '${def.name}' does not fit its type ${typeToString(def.type)}`,
-    );
-  }
+  const problem = misfit(def, value, descriptor);
+  if (problem) throw new Error(problem);
 }

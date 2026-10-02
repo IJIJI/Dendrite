@@ -210,6 +210,64 @@ describe("ProgramInstance - values", () => {
     expect(() => instance.setInput("g", 1)).toThrow(/not a program-level input/);
   });
 
+  it("refuses a value that does not fit, through diagnostics, and moves nothing", () => {
+    const { instance } = setup();
+    instance.setInput("p", 3);
+    const snapshots = record(instance);
+    const published = vi.fn();
+    instance.diagnostics.subscribe(published);
+
+    instance.setInput("p", "oops");
+    expect(instance.values.get()).toEqual({ p: 3 });
+    expect(outputsOf(instance)).toBe(3);
+    expect(snapshots).toEqual([]);
+    expect(instance.diagnostics.get()).toEqual([
+      {
+        severity: "error",
+        stage: "input",
+        kind: "value_does_not_fit",
+        message: "Value for input 'p' does not fit its type number",
+        where: "input p",
+        refused: true,
+      },
+    ]);
+
+    // Said once, however often the bad value arrives.
+    instance.setInput("p", "oops again");
+    expect(published).toHaveBeenCalledTimes(1);
+
+    // The next value that fits clears it, even one that changes nothing.
+    instance.setInput("p", 3);
+    expect(kinds(instance)).toEqual([]);
+  });
+
+  it("clears a refused value on the next compile, and keeps a refused layer through it", () => {
+    const { instance } = setup();
+    instance.setInput("p", "oops");
+    instance.setLayer("document", { inputs: [{ name: "g", type: Type.number }], outputs: [] });
+    expect(kinds(instance)).toEqual(["shadowed_name", "value_does_not_fit"]);
+
+    instance.setInput("p", 1);
+    expect(kinds(instance)).toEqual(["shadowed_name"]);
+
+    instance.setInput("p", "oops");
+    instance.setProgram(serialiseSource(SOURCE));
+    expect(kinds(instance)).toEqual([]);
+  });
+
+  it("refuses a trigger fired with a value that does not fit", () => {
+    const ports: Ports = {
+      inputs: [{ name: "t", type: Type.number, trigger: true }],
+      outputs: [],
+    };
+    const { instance } = setup({ program: serialiseSource("output out = Add($t, 0)", ports) });
+    const seen = vi.fn();
+    instance.outputs.subscribe(seen);
+    instance.fireTrigger("t", "oops");
+    expect(seen).not.toHaveBeenCalled();
+    expect(kinds(instance)).toEqual(["value_does_not_fit"]);
+  });
+
   it("fires a program-level trigger and returns it to its default", () => {
     const ports: Ports = {
       inputs: [{ name: "t", type: Type.number, trigger: true }],

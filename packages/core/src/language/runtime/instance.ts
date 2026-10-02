@@ -4,8 +4,8 @@ import { type EvalError } from "../evaluator/types";
 import { type SourceRef } from "../infra/nodes";
 import { type Observable, createSubject } from "../infra/observable";
 import { EMPTY_PORTS, flattenPorts, type PortLayer, type Ports, Policy } from "../infra/ports";
-import { type LanguageDescriptor } from "../infra/registry";
-import { valueFits } from "../infra/fits";
+import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
+import { misfit, valueFits } from "../infra/fits";
 import { type SavedProgram } from "../infra/serialise";
 import { type ProgramHandle, type Runtime } from "./runtime";
 import { defaultValueFor } from "./seed";
@@ -26,8 +26,11 @@ import { defaultValueFor } from "./seed";
 /** A problem from any stage of getting a program running, on one shape. */
 export interface ProgramDiagnostic {
   severity: "error" | "warning";
-  /** Which stage produced it. A `compose` problem carries `layerId` / `where` instead of a source. */
-  stage: "compose" | "load" | "parse" | "analyse";
+  /**
+   * Which stage produced it. A `compose` problem carries `layerId` / `where` instead of a
+   * source, and an `input` problem (a pushed value that was refused) carries `where`.
+   */
+  stage: "compose" | "load" | "parse" | "analyse" | "input";
   kind: string;
   message: string;
   source?: SourceRef;
@@ -40,6 +43,9 @@ export interface ProgramDiagnostic {
    */
   refused?: true;
 }
+
+/** What an instance says about a value pushed into one of its inputs. */
+export type InputProblemKind = "value_does_not_fit";
 
 /**
  * The last evaluation. `outputs` is null only while nothing has ever compiled. `stale` means
@@ -161,6 +167,9 @@ class Instance implements ProgramInstance {
   // stays visible - through setInput and fireTrigger - until a change that compiles.
   private compiled: ProgramDiagnostic[] = [];
   private refusal: ProgramDiagnostic[] = [];
+  // Why the last value pushed into an input was refused, per input. It moves nothing either,
+  // and it goes with the next value that fits, or with the next compile.
+  private readonly rejected = new Map<string, ProgramDiagnostic>();
   private readonly unsubscribes: (() => void)[] = [];
 
   constructor(
@@ -236,7 +245,7 @@ class Instance implements ProgramInstance {
   }
 
   setInput(name: string, value: unknown): void {
-    this.assertProgramInput(name);
+    if (!this.admit(this.programInput(name), value)) return;
     if (Object.is(this.programValues[name], value) && name in this.programValues) return;
     this.storeValue(name, value);
     // While the registered program is behind the source, the value is kept for the compile
@@ -245,14 +254,14 @@ class Instance implements ProgramInstance {
   }
 
   fireTrigger(name: string, value: unknown): void {
-    this.assertProgramInput(name);
+    const def = this.programInput(name);
+    if (!this.admit(def, value)) return;
     if (!this.live) return;
     this.handle?.fireTrigger(name, value);
     // The runtime has already reset it; mirror where the value landed, quietly when it did
     // not move (a trigger that starts and ends at its default must not dirty the document).
-    const def = this.declaredInputs().get(name);
     const descriptor = this.descriptor();
-    if (def && descriptor) this.storeValue(name, defaultValueFor(def, descriptor));
+    if (descriptor) this.storeValue(name, defaultValueFor(def, descriptor));
   }
 
   setProgram(saved: SavedProgram): void {
@@ -313,6 +322,7 @@ class Instance implements ProgramInstance {
 
     this.compiled = diagnostics;
     this.refusal = [];
+    this.rejected.clear();
     this.publishDiagnostics();
     const ports = flattenPorts(this.layers);
     const values = this.programValues;
@@ -353,6 +363,7 @@ class Instance implements ProgramInstance {
   private fail(diagnostics: ProgramDiagnostic[]): void {
     this.compiled = diagnostics;
     this.refusal = [];
+    this.rejected.clear();
     this.publishDiagnostics();
     this.live = false;
     this.stale = true;
@@ -412,10 +423,38 @@ class Instance implements ProgramInstance {
     ];
   }
 
-  private assertProgramInput(name: string): void {
-    if (!this.declaredInputs().has(name)) {
+  private programInput(name: string): InputDefinition {
+    const def = this.declaredInputs().get(name);
+    if (!def) {
       throw new Error(`'${name}' is not a program-level input of instance '${this.id}'`);
     }
+    return def;
+  }
+
+  // Does the value fit the type its input declares? The runtime throws on one that does not
+  // (a host bug); here the caller may be a pane or a replica, so it is refused through the
+  // diagnostics instead, and nothing moves. Published once per input, not once per push: a
+  // sensor feeding a bad value every frame says so once. While the layers do not compose
+  // there is nothing to check against, and the compile that recovers re-seeds what misfits.
+  private admit(def: InputDefinition, value: unknown): boolean {
+    const descriptor = this.descriptor();
+    const problem = descriptor ? misfit(def, value, descriptor) : null;
+    if (problem === null) {
+      if (this.rejected.delete(def.name)) this.publishDiagnostics();
+      return true;
+    }
+    if (!this.rejected.has(def.name)) {
+      this.rejected.set(def.name, {
+        severity: "error",
+        stage: "input",
+        kind: "value_does_not_fit" satisfies InputProblemKind,
+        message: problem,
+        where: `input ${def.name}`,
+        refused: true,
+      });
+      this.publishDiagnostics();
+    }
+    return false;
   }
 
   private buildSnapshot(): Snapshot {
@@ -437,7 +476,7 @@ class Instance implements ProgramInstance {
   }
 
   private publishDiagnostics(): void {
-    this.diagnostics$.set([...this.compiled, ...this.refusal]);
+    this.diagnostics$.set([...this.compiled, ...this.refusal, ...this.rejected.values()]);
   }
 }
 
