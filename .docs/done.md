@@ -5,6 +5,30 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## `++`, sugar over `Join` — DONE 2026-10-02
+
+`"Hello, " ++ name`. One `registerInfix` in the stdlib, beside `+`: the two sides become a
+two-item list and the node is a `Join`, which converts its parts (the `convert` flag,
+`types-and-text-plan.md`, milestone K), so `"n = " ++ 1` needed no decision and the analyser
+inserts nothing. The lexer sorts symbols longest first, so `++` beats `+` as `>=` beats `>`, and
+the editor colours it from `grammar.symbols` with no change. Three choices, each the small one:
+
+- **`BP.ADD`, as decided 2026-09-21.** The cost is known and loud: `"total: " ++ 1 + 2` reads
+  left to right as `("total: " ++ 1) + 2` and is `op_input_type_mismatch` on `Add`, never a
+  silent wrong answer. A tier of its own below `+` (Haskell's choice) would make that line
+  `"total: 3"`, and would be a new rung on the ladder for one operator. The operators page says
+  to bracket the sum or write a template.
+- **A chain nests, `Join([Join([a, b]), c])`, as `+` nests `Add`.** Folding it into one list
+  would need the parser to tell a `Join` it built from one the author wrote, and that one may
+  carry a separator.
+- **The list node takes the left operand's source.** It has no token of its own, and a
+  diagnostic about the list should point at the expression.
+
+`1++2` was a syntax error and is now `"12"`. The `+` half of the old backlog entry stays there
+("`+` on text").
+
+---
+
 ## Value validation at the boundary — DONE 2026-10-02
 
 Three commits. Before them nothing in core checked that a value a host pushes matches the type

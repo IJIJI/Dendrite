@@ -57,34 +57,12 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 Kept here, not in the backlog, because each has a timeframe: the release after the types plan.
 
-1. **`++`**, plain sugar over `Join` (the entry below, moved from the backlog). Deferred out of
-   the plan 2026-09-21: once `Join` converts its parts, `"n = " ++ 1` needs no decision, so the
-   operator is a few lines with nothing left to discuss.
-2. **A converting lambda parameter, `(t~: string) => …`**: the `convert` flag's second consumer,
+1. **A converting lambda parameter, `(t~: string) => …`**: the `convert` flag's second consumer,
    and the reason it was kept. The mark `~` on a parameter means what it means on an op input.
    Needs the flag on `LambdaParam` and the same evaluator step at application.
-3. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
+2. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
    0.4.0 whether it stays here or moves to the backlog: it has no consumer yet, only symmetry
    with `required: false` on an op input.
-
----
-
-## Language — `++`, sugar over `Join`
-
-**What:** `"Hello, " ++ name`. Text is built with `Join` today, and
-`Join(["Bus ", ToString(n), " is live"])` is correct and clumsy.
-
-**When:** the release after 0.4.0 (the list above). Moved from the backlog 2026-09-22, where it
-was "an operator for joining strings (`+` or `++`)"; the `+` half stays there.
-
-**Decided 2026-09-21:** `++`, and it waits for one thing only. The entry used to wait on the
-implicit-casting question, because `"n = " ++ 1` either stringifies the number or is refused.
-That question is closed (`done.md`): `Join` converts its parts through the `convert` flag
-(`types-and-text-plan.md`, milestone K), so a `Join` built from `++` converts the same way, with
-nothing wrapped and no node inserted. What is left is a few lines: `registerInfix("++", BP.ADD, …)`
-building `Join` over a two-item list. The lexer already sorts operators longest-first, so `++`
-beats `+` the way `>=` beats `>`. It is not in the plan because the plan is large enough, and the
-operator adds nothing a template does not already say.
 
 ---
 

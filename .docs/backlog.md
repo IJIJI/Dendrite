@@ -89,14 +89,30 @@ brings the brace depth with it: a hole then ends at the `}` that matches, not th
 
 **What:** `"Hello, " + name`, by teaching `Add` strings, as most languages overload `+`.
 
-**Why deferred:** `++` is the operator being built (`todo.md`), because it is plain sugar over
-`Join`, and `Join` converts its parts, so `"n = " ++ 1` needs no decision. `+` waits on the same
+**Why deferred:** `++` is the operator that was built (`done.md`, 2026-10-02), because it is plain
+sugar over `Join`, and `Join` converts its parts, so `"n = " ++ 1` needs no decision. `+` waits on the same
 thing it always did: its signature cannot be honest. With no union types the reference would print
 `Add(nodes...: number) -> number` for an op that also joins text.
 
 **What it requires:** about one commit, recorded when the entry was written (2026-09-20): the
 variadic branch of `validateInputs` analyses all items before it checks them, then `Add` gets
 `inferInputTypes`, `inferOutput` and an evaluator that sums or joins.
+
+---
+
+## Core — a function in a converting input becomes empty text, silently
+
+**What:** `Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"` with no
+error and no warning, while `ToString(x => x)` is `op_input_type_mismatch`. Found 2026-10-02
+while probing `++`; it has been so since the `convert` flag shipped in 0.4.0, and `++` only adds
+a third spelling. Everywhere else the rule is that a function is never `any`, and a function
+has no text form.
+
+**Why deferred:** it is the flag's check, not the operator's, and it is not a regression.
+
+**What it requires:** where the analyser lets a `convert` input accept every type, refuse a
+function, for the argument and for an item of a list argument, with the mismatch error it
+already has. One test per spelling. It tightens a behaviour, so it wants a changelog line.
 
 ---
 

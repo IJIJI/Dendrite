@@ -11,6 +11,13 @@ at `^0.4.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **`++` joins two values as text: `"Bus " ++ $n ++ " is live"`.** Sugar over `Join`, as a
+  template is: the two sides become a two-item list, and `Join` converts each to text itself, so
+  a number, a boolean, a null or a list needs no `ToString`, and nothing is inserted that the
+  author did not write. It binds as `+` does and chains to the left, one `Join` inside the next.
+  With `+` in the same expression that rule reads `"total: " ++ 1 + 2` as
+  `("total: " ++ 1) + 2`, text handed to `Add`, which is `op_input_type_mismatch`: bracket the
+  sum, or write a template. `1++2` was a syntax error and is now `"12"`.
 - **Breaking: a value pushed into an input must fit the type the input declares.** Nothing
   checked it before: `updateInputs({ score: "oops" })` succeeded, and the program failed later
   at a field read or computed nonsense. The check is `valueFits`, the one a cast (`as`) runs: a

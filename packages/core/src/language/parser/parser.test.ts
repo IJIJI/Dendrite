@@ -441,6 +441,30 @@ describe("operators", () => {
     });
   });
 
+  it("++ desugars to Join over its two sides, and is one token, not two pluses", () => {
+    expect(parse('"n = " ++ count').node).toMatchObject({
+      kind: "operation",
+      op: "Join",
+      inputs: {
+        parts: {
+          kind: "array",
+          items: [
+            { kind: "literal", value: "n = " },
+            { kind: "ref", name: "count" },
+          ],
+        },
+      },
+    });
+    expect(parse('"n = " ++ count').errors).toEqual([]);
+  });
+
+  it("++ binds as + does and chains to the left: a + 1 ++ b ++ c", () => {
+    const join = (items: unknown[]) => ({ op: "Join", inputs: { parts: { items } } });
+    expect(parse("a + 1 ++ b ++ c").node).toMatchObject(
+      join([join([{ op: "Add" }, { kind: "ref", name: "b" }]), { kind: "ref", name: "c" }]),
+    );
+  });
+
   it(">= desugars to Not(LessThan(...)) — no dedicated op", () => {
     expect(parse("a >= b").node).toMatchObject({
       kind: "operation",

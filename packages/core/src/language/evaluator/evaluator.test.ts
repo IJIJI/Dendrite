@@ -667,6 +667,13 @@ describe("templates: text with holes, through Join", () => {
     expect(out("output out = `{1 > 0}!`")).toBe("true!");
   });
 
+  it("++ joins two values through the same Join, converting each side", () => {
+    expect(out('let count = 5\noutput out = "n = " ++ count')).toBe("n = 5");
+    expect(out('output out = 1 + 2 ++ " items" ++ null ++ "!"')).toBe("3 items!");
+    expect(out('output out = "on: " ++ (1 > 0)')).toBe("on: true");
+    expect(out("output out = `{1}` ++ [2, 3]")).toBe("1[2,3]");
+  });
+
   it("a template can hold a template, and can span lines", () => {
     expect(out("output out = `x{`y{1}`}z`")).toBe("xy1z");
     expect(out("output out = `one\ntwo {2}`")).toBe("one\ntwo 2");

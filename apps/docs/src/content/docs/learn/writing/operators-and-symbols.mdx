@@ -51,6 +51,7 @@ pluses, because `Add{:den}` is variadic and takes as many as you give it.
 | `<{:den}` `>{:den}` | comparison | `LessThan{:den}`, `GreaterThan{:den}` |
 | `<={:den}` `>={:den}` | comparison | `Not(GreaterThan(…)){:den}`, `Not(LessThan(…)){:den}` |
 | `+{:den}` `-{:den}` | addition | `Add{:den}` (variadic), `Subtract{:den}` |
+| `++{:den}` | join as text | `Join{:den}` over the two sides |
 | `*{:den}` `/{:den}` | multiplication | `Multiply{:den}` (variadic), `Divide{:den}` |
 | `!{:den}` | not, prefix | `Not{:den}` |
 | `-{:den}` | negate, prefix | `Negate{:den}` |
@@ -108,3 +109,14 @@ The backticks hold the text, and each `{…}` holds any expression, a template i
 `Join([$name, " has ", $count, " left"]){:den}`, and `Join{:den}` converts each part to text itself,
 so a number, a boolean, a null or a list in a hole needs no `ToString{:den}`. A template can span
 lines, and `` \` `` and `\{` write a backtick or a brace as text.
+
+For two values, `++{:den}` says the same thing shorter:
+
+```den inputs="count:number, name:string"
+output label = $name ++ " has " ++ $count
+```
+
+It is the same `Join{:den}` underneath, so each side becomes text the way a hole does. It binds
+exactly as `+{:den}` does, which matters when both appear: `"total: " ++ $a + $b{:den}` reads as
+`("total: " ++ $a) + $b{:den}`, text handed to `Add{:den}`, and is reported as a type error.
+Bracket the sum, or write a template.
