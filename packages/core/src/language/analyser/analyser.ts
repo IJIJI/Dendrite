@@ -208,13 +208,17 @@ function errorNode(type?: Type, source?: SourceRef): CErrorNode {
 // Contextual typing: when an inline lambda flows into a function-typed slot, fill its
 // untyped params from the expected param types so the body sees precise types
 // (e.g. `item` is `number` inside `Filter(numbers, item => …)`). Annotated params and
-// non-lambda args are left untouched; an arity mismatch is left for checkCompat to flag.
+// non-lambda args are left untouched; an arity mismatch is left for checkCompat to flag. A
+// converting param is left untouched too: its type is what it converts TO, which only its
+// author can say, so `(n~) => …` stays untyped and is reported (invalid_convert_param).
 function withExpectedParams(node: ASTNode, expected: Type): ASTNode {
   if (node.kind !== "lambda" || expected.kind !== "function") return node;
   if (node.params.length !== expected.params.length) return node;
   return {
     ...node,
-    params: node.params.map((p, i) => (p.type ? p : { ...p, type: expected.params[i] })),
+    params: node.params.map((p, i) =>
+      p.type || p.convert ? p : { ...p, type: expected.params[i] },
+    ),
   };
 }
 
@@ -586,6 +590,21 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       const written = [...node.params.map((p) => p.type), node.returnType];
       const unknown = written.filter((t) => t && reportUnknownTypes(t, ctx, node.source));
       if (unknown.length > 0) return errorNode(undefined, node.source);
+      // A converting param needs something to convert to: a written type with a Convert rule.
+      const unconvertible = node.params.filter(
+        (p) => p.convert && !(p.type && isConvertible(p.type)),
+      );
+      for (const p of unconvertible) {
+        ctx.errors.push({
+          kind: "invalid_convert_param",
+          name: p.name,
+          message: p.type
+            ? `Parameter '${p.name}' is marked '~' but '${typeToString(p.type)}' has no conversion: only string, number, boolean or a list of them does`
+            : `Parameter '${p.name}' is marked '~' but states no type to convert to: write (${p.name}~: string)`,
+          source: node.source,
+        });
+      }
+      if (unconvertible.length > 0) return errorNode(undefined, node.source);
       // Bind params into the local scope (untyped → any, gradual), then analyse the
       // body in that extended scope. Nested lambdas recurse naturally, layering more
       // params onto localBindings.
@@ -616,8 +635,11 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // Param refs contribute ∅ dependsOn, so body.dependsOn is exactly the lambda's
       // free global/input deps the function's dependsOn. paramNames ride along on the
       // type so application sites can resolve named arguments.
+      // A converting param is its written type inside the body and that shape with `any`
+      // leaves to a caller, exactly as a converting op input is (anyAtLeaves): the caller
+      // often knows the function only by its type, so the type is what has to say "anything".
       const type = Type.fn(
-        paramTypes,
+        node.params.map((p, i) => (p.convert ? anyAtLeaves(paramTypes[i]!) : paramTypes[i]!)),
         node.returnType ?? bodyReturn,
         node.params.map((p) => p.name),
       );

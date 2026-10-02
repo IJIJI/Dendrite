@@ -11,6 +11,18 @@ at `^0.4.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **A lambda parameter can convert: `(t~: string) => Upper(t)`.** The mark `~` means what it
+  means on an op input (`parts~` in the reference): an argument of any type is accepted, and it
+  arrives in the body converted to the written type by `Convert`'s rules, leaf by leaf for a
+  list. To a caller the parameter is `any`, so the function's type is `(any) -> string` and the
+  lambda fits wherever an op hands it another type: `Map([1, 2], (n~: string) => Upper(n))`.
+  The conversion runs where the closure binds its arguments, so a call an op makes converts as
+  a call written in the program does. A function is still refused, as it is everywhere. The
+  type must be written, and must be `string`, `number`, `boolean` or a list of them; any other
+  type, or none, is the new error `invalid_convert_param`. That includes the short form
+  `t~ => …`, which has no place for a type. `LambdaParam` gains `convert?: true`.
+- **`~` is punctuation.** A stray one was the lexer's `unknown_character`; it is now a
+  `syntax_error` from the parser that says what the mark is for.
 - **`++` joins two values as text: `"Bus " ++ $n ++ " is live"`.** Sugar over `Join`, as a
   template is: the two sides become a two-item list, and `Join` converts each to text itself, so
   a number, a boolean, a null or a list needs no `ToString`, and nothing is inserted that the

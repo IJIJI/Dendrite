@@ -22,6 +22,7 @@ export type AnalysisErrorKind =
   | "program_output_type_mismatch" // Program output mapped to an incompatible type
   | "output_depends_on_failed_binding" // Known output dropped: depends on a poisoned binding
   | "lambda_return_type_mismatch" // Lambda body type incompatible with its return annotation
+  | "invalid_convert_param" // `(t~) => …` or `(t~: Bus) => …`: the mark needs a written type Convert has a rule for
   | "binding_type_mismatch" // A binding's value is incompatible with the type its annotation states
   | "cast_to_function" // `as (…) -> T`: a closure carries no signature, so it cannot be checked at runtime
   | "app_callee_not_function" // Application callee is not function-typed

@@ -20,11 +20,16 @@ describe("the type colour", () => {
     expect(classOf("let rows: number[] = []", "number")).toBe("type");
   });
 
-  it("reads a signature's marks (`...`, `?`, `~`) as plain text, and the type after them", () => {
-    // The reference prints `parts~: string[]`; `~` and `?` are no token of the language, so the
-    // lexer skips them and they stay uncoloured, and the type after the colon is still a type.
-    expect(classOf("Join(parts~: string[], separator?: string) -> string", "string")).toBe("type");
-    expect(classes("Join(parts~: string[])")).not.toContainEqual(expect.stringContaining("~"));
+  it("reads a signature's marks (`...`, `?`, `~`), and the type after them", () => {
+    // The reference prints `parts~: string[], separator?: string`. `~` is the converting mark,
+    // a token of the language since a lambda parameter can carry it, so it is punctuation as
+    // `:` is. `?` is no token, so the lexer skips it and it stays uncoloured. Either way the
+    // type after the colon is still a type, in a signature and in a lambda.
+    const signature = "Join(parts~: string[], separator?: string) -> string";
+    expect(classOf(signature, "string")).toBe("type");
+    expect(classes(signature)).toContain("~:punct");
+    expect(classes(signature)).not.toContainEqual(expect.stringContaining("?"));
+    expect(classOf("(t~: string) => t", "string")).toBe("type");
   });
 
   it("colours a template: backticks and text as string, braces as punct, a hole as code", () => {

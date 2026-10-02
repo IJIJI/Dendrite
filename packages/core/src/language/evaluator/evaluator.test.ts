@@ -651,6 +651,35 @@ describe("convert: the evaluator converts a flagged input before the op runs", (
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
+describe("a converting lambda parameter converts its argument where the closure binds it", () => {
+  const out = (program: string) => {
+    const { analysed, value } = runSource(program);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+  const SHOUT = "let shout = (t~: string) => Upper(t)\n";
+
+  it("on a call written in the program, positional or named", () => {
+    expect(out(SHOUT + "output out = shout(5)")).toBe("5");
+    expect(out(SHOUT + "output out = shout(t: true)")).toBe("TRUE");
+  });
+
+  it("on a call an op makes, for a lambda given inline or by name", () => {
+    expect(out("output out = Map([1, 2], (n~: string) => Upper(n))")).toEqual(["1", "2"]);
+    expect(out(SHOUT + "output out = Map([1, true], shout)")).toEqual(["1", "TRUE"]);
+  });
+
+  it("leaf by leaf for a list, by Convert's rules for a number, and only where marked", () => {
+    expect(out('let dash = (xs~: string[]) => Join(xs, "-")\noutput out = dash([1, 2])')).toBe(
+      "1-2",
+    );
+    expect(out('let inc = (n~: number) => n + 1\noutput out = [inc("4"), inc(true)]')).toEqual([
+      5, 2,
+    ]);
+    expect(out("let pair = (a~: string, b) => [a, b]\noutput out = pair(1, 2)")).toEqual(["1", 2]);
+  });
+});
+
 describe("templates: text with holes, through Join", () => {
   const out = (program: string) => {
     const { analysed, value } = runSource(program);

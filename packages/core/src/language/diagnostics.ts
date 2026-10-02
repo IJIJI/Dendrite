@@ -415,6 +415,19 @@ export const diagnostics = {
       { inputs: [], outputs: [{ name: "x", type: Type.any }] },
     ),
   },
+  invalid_convert_param: {
+    stage: "analyse",
+    severity: "error",
+    message:
+      "A lambda parameter is marked `~` but has nothing to convert to: it states no type, or a type with no conversion (only string, number, boolean or a list of them has one).",
+    example: withPorts(
+      den`
+      let label = (n~) => n
+      output x = label(1)
+    `,
+      { inputs: [], outputs: [{ name: "x", type: Type.any }] },
+    ),
+  },
   app_callee_not_function: {
     stage: "analyse",
     severity: "error",

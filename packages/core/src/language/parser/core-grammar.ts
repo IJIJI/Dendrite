@@ -142,12 +142,15 @@ function arrowParamsAhead(p: Parser): boolean {
   }
 }
 
-// Param list of a parenthesised lambda: NAME (':' TYPE)? , … . The opening '(' is
-// already consumed; this consumes through the closing ')'.
+// Param list of a parenthesised lambda: NAME '~'? (':' TYPE)? , … . The opening '(' is
+// already consumed; this consumes through the closing ')'. The `~` is read whether or not a
+// type follows: a mark with nothing to convert to is the analyser's to report, so the text
+// form and a stored `ast` program are refused by one check.
 function parseLambdaParams(p: Parser): LambdaParam[] {
   return p.parseSeparated(")", () => {
     const name = p.expect("ident");
     const param: LambdaParam = { name: name.value };
+    if (p.match("punct", "~")) param.convert = true;
     if (p.match("punct", ":")) param.type = parseType(p);
     return param;
   });
@@ -270,6 +273,27 @@ export function installCoreGrammar(g: Grammar): void {
       if (left.kind === "ref") params.push({ name: left.name });
       else p.error("syntax_error", "A lambda parameter must be a name", token.source);
       const body = p.parseExpr(0);
+      return { kind: "lambda", params, body, source: left.source ?? token.source };
+    },
+  });
+
+  // The converting mark outside parentheses: `t~ => body`. The short form has no place for
+  // the type the mark needs, so this lambda is always refused - but by the analyser
+  // (invalid_convert_param), whose message says what to write, rather than as a stray `~`.
+  // Anywhere else a `~` is a syntax error.
+  registerLed(g, "~", {
+    bp: BP.ARROW,
+    parse: (p, left, token) => {
+      if (left.kind !== "ref" || !p.match("punct", "=>")) {
+        p.error(
+          "syntax_error",
+          "'~' marks a lambda parameter that converts: (t~: string) => …",
+          token.source,
+        );
+        return left;
+      }
+      const body = p.parseExpr(0);
+      const params: LambdaParam[] = [{ name: left.name, convert: true }];
       return { kind: "lambda", params, body, source: left.source ?? token.source };
     },
   });

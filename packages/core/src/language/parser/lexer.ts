@@ -50,8 +50,9 @@ export interface LexResult {
 //   ( ) grouping & calls   [ ] array literals   , separators
 //   .   field access        =   binding (let x = …)   :   named arg / param type
 //   $   input sigil ($name → InputNode, resolved by the parser)
+//   ~   the converting mark on a lambda parameter: (t~: string) => …
 // Other operators (+ - < > ! == …) are deliberately absent: they arrive via operators.
-const STRUCTURAL_PUNCT = new Set("()[],.=:$");
+const STRUCTURAL_PUNCT = new Set("()[],.=:$~");
 
 // Core operators: always recognised, ahead of any language-supplied operators.
 // `=>` is the lambda arrow; `->` is the function-type arrow (type annotations).

@@ -94,6 +94,12 @@ export interface FieldAccessNode {
 export interface LambdaParam {
   name: string;
   type?: Type;
+  /**
+   * `(t~: string) => …`: the parameter converts, as an op input declared `convert` does
+   * (OpInput). An argument of any type is accepted and arrives in the body converted to
+   * `type`, which must be written and must be `string`, `number`, `boolean` or a list of them.
+   */
+  convert?: true;
 }
 
 /**
