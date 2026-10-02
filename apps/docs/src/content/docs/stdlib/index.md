@@ -54,7 +54,9 @@ anything, and each value in it becomes text before `Join{:den}` runs, so `Join([
 is `"1, 2"` with no `ToString{:den}` and no warning. The conversion is the op's, declared on that
 one input and written under its signature; nothing else in the language converts on its own,
 and `Join{:den}` is the only op in the library that does. A host can declare the mark on an op of
-its own with `convert: true{:ts}`. The shape still has to match: `Join(5){:den}` is a type error.
+its own with `convert: true{:ts}`, and a lambda can carry it on a parameter,
+`(t~: string) => Upper(t){:den}` ([Naming a function](../learn/writing/lambdas-and-lists/#naming-a-function)).
+The shape still has to match: `Join(5){:den}` is a type error.
 
 ## `any{:den}` in a signature
 

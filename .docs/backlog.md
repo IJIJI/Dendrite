@@ -100,19 +100,48 @@ variadic branch of `validateInputs` analyses all items before it checks them, th
 
 ---
 
-## Core — a function in a converting input becomes empty text, silently
+## Core — a list literal with mixed items hides a function behind `any`
 
-**What:** `Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"` with no
-error and no warning, while `ToString(x => x)` is `op_input_type_mismatch`. Found 2026-10-02
-while probing `++`; it has been so since the `convert` flag shipped in 0.4.0, and `++` only adds
-a third spelling. Everywhere else the rule is that a function is never `any`, and a function
-has no text form.
+**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
+`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
+`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
+and the function goes in with the rest, although a function is never `any` everywhere else.
+A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
+`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
+fault of the `convert` flag, which it is not: no converting input is needed to see it.
 
-**Why deferred:** it is the flag's check, not the operator's, and it is not a regression.
+**Why deferred:** not a regression, and not the operator's or the flag's. It has been so since
+list literals took their element type from their items.
 
-**What it requires:** where the analyser lets a `convert` input accept every type, refuse a
-function, for the argument and for an item of a list argument, with the mismatch error it
-already has. One test per spelling. It tightens a behaviour, so it wants a changelog line.
+**What it requires:** where the analyser derives a list literal's element type, a function
+item among items of another type is an error rather than a reason to say `any`. Decide the
+kind (a new one, or the mismatch the op would have raised) and whether two functions of
+different signatures count. A test per spelling above. It tightens a behaviour, so it wants a
+changelog line.
+
+---
+
+## Core — a host type with a conversion, and `~` on a type that extends a primitive
+
+**What:** two steps, asked by the maintainer 2026-10-02 once a lambda parameter could convert.
+(1) `(s~: Score)` with `Score extends number` is `invalid_convert_param`, and so is
+`convert: true` on an op input of that type: `isConvertible` compares the type's name with the
+three primitives. It could follow the `extends` chain and use the root's rule. (2) A conversion
+the type owns, `registerType("Score", { extends: "number", convert: (value) => … })`, so the
+mark converts INTO a host type.
+
+**Why deferred:** no host asks for either (Speculative Generality). A host has three things
+today: `as` checks a value against its type (schema, fields, the whole chain); `Convert` is
+exported, so a host op converts the way the language does; and a conversion can always be an
+ordinary op, `ToScore(value)`.
+
+**What it requires:** (1) `isConvertible` and the evaluator's `convertTo` resolve a named type
+to its primitive root through the descriptor. **Open question:** must the converted value then
+pass the type's `schema` (a `Grade` of 11), and what is it when it does not; `null`, as
+`ToNumber` gives for text that is no number, is the consistent answer. (2) a `convert?`
+function on `TypeDefinition` and one more case in each of those two functions. Like `schema`
+it is a function, so it cannot travel in the layer an instance persists. "A type defines its
+own text form" below is the other direction (`toText`); design the two together.
 
 ---
 

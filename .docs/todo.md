@@ -57,10 +57,7 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 Kept here, not in the backlog, because each has a timeframe: the release after the types plan.
 
-1. **A converting lambda parameter, `(t~: string) => …`**: the `convert` flag's second consumer,
-   and the reason it was kept. The mark `~` on a parameter means what it means on an op input.
-   Needs the flag on `LambdaParam` and the same evaluator step at application.
-2. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
+1. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
    0.4.0 whether it stays here or moves to the backlog: it has no consumer yet, only symmetry
    with `required: false` on an op input.
 

@@ -103,6 +103,22 @@ let adjust = (x: number) => x + 10
 output named = adjust(x: 5)
 ```
 
+A parameter can also convert what it is given. Mark it `~{:den}`, the mark `Join{:den}` carries on
+its `parts~{:den}`, and write the type to convert to:
+
+```den
+let shout = (t~: string) => Upper(t)
+output one  = shout(5)
+output many = Map([1, true], shout)
+```
+
+`shout{:den}` accepts anything, and `t{:den}` is text by the time the body reads it: `one{:den}` is
+`"5"` and `many{:den}` is `["1", "TRUE"]`. Without the mark `Upper{:den}` would refuse a number,
+and every call would need its own `ToString{:den}`. The type has to be written, and it has to be
+`string{:den}`, `number{:den}`, `boolean{:den}` or a list of one of them, the types the
+[conversion](../../../stdlib/conversion/) ops cover. Anything else, or the mark with no type, is
+`invalid_convert_param{:den}`.
+
 ## Why recursion is impossible
 
 A function cannot call itself, and the language has no way to express it. A name referring to

@@ -5,6 +5,42 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## A converting lambda parameter, `(t~: string) => …` — DONE 2026-10-02
+
+The `convert` flag's second consumer, and the reason the flag was kept (`types-and-text-plan.md`).
+The mark on a parameter means what it means on an op input: any argument is accepted, and it
+arrives in the body converted to the written type. `LambdaParam` gained `convert?: true`, and
+everything else is the op-input machinery called a second time (`anyAtLeaves`, `isConvertible`,
+`convertTo`); nothing was abstracted over the two declarations, because both already call the
+same three functions. Three decisions:
+
+- **To a caller the parameter is `any`; in the body it is its written type.** A caller often
+  knows a function only by its type (a name bound to a lambda, a function handed to `Map`), so
+  the type has to say "anything", and `any` at the leaves says it with no change to `Type` or
+  to `isCompatible`. The cost: the function prints as `(any) -> string`, and the mark is not
+  in the message. A second notation for types was not worth one character.
+- **The conversion runs where the closure binds its arguments**, not at the call site. A call
+  written in a program and a call an op makes (`Map`, `Filter`) then convert alike; a step at
+  the application node would have missed every higher-order op.
+- **A mark with nothing to convert to is the analyser's error, `invalid_convert_param`**: no
+  type, or a type with no rule (a struct, a function, `any`, a host type). One check covers
+  text and a stored `ast` program. Contextual typing leaves a marked parameter alone, or
+  `Map([1, 2], (n~) => n)` would be handed `number` and convert a number to a number in silence.
+
+Two things the plan did not foresee. The short form `t~ => …` cannot state a type, and with no
+rule of its own it was a bare "unexpected `~`"; it got a rule in the core grammar so that the
+analyser's message, which says to write `(t~: string)`, is the one a user reads, and a `~`
+anywhere else is a syntax error that says what the mark is for. And `~` became structural
+punctuation, so the editor colours it as it colours `:`, in a program and in the reference's
+`parts~: string[]`; an editor test that asserted "`~` is no token of the language" was updated
+to the new fact.
+
+A function argument is still refused (`app_argument_type_mismatch`): a function never fits
+`any`. A host type cannot carry the mark, not even one that extends a primitive; that is in
+the backlog with the conversion a host type could own.
+
+---
+
 ## `++`, sugar over `Join` — DONE 2026-10-02
 
 `"Hello, " ++ name`. One `registerInfix` in the stdlib, beside `+`: the two sides become a
