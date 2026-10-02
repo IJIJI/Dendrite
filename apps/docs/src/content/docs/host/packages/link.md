@@ -56,7 +56,9 @@ exactly the shape a network wants. So the protocol is two directions of JSON:
 All of it lives in the replica, so a host does nothing to get it.
 
 - **An input change echoes at once.** `setInput{:ts}` updates the replica's own `values{:ts}` immediately,
-  rather than waiting for the round trip, or a dragged slider would fight the network.
+  rather than waiting for the round trip, or a dragged slider would fight the network. If the
+  server refuses the value because it does not fit the input's type, it sends back what the input
+  really holds, and the replica drops its echo and shows the diagnostic.
 - **Late news is dropped.** A `values{:ts}` push stamped before your latest command is ignored, so the
   slider does not snap back to where it was a moment ago.
 - **A dropped connection goes stale.** Outputs flip to `stale: true{:ts}` the moment the channel closes,

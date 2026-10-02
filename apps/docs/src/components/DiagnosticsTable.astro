@@ -44,6 +44,12 @@ const stages: { stage: DiagnosticDoc["stage"]; title: string; blurb: string }[] 
     blurb:
       "While the program runs. These do not arrive as diagnostics: an evaluation failure reaches a host on the outputs instead.",
   },
+  {
+    stage: "input",
+    title: "Input",
+    blurb:
+      "A value pushed into an input of a running program. An instance refuses one that does not fit the input's type and reports it here, marked refused. A runtime used on its own throws instead.",
+  },
 ];
 
 type Entry = (typeof diagnosticList)[number];

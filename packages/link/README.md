@@ -55,7 +55,11 @@ rather than being silently wrong.
 **What makes remote feel local**, all in the replica:
 
 - `setInput` echoes into `values` at once (and into `snapshot` for the persisted layer's inputs,
-  so a debounced save cannot beat the round trip), or a dragged slider fights the wire.
+  so a debounced save cannot beat the round trip), or a dragged slider fights the wire. A value
+  the server's instance refuses (it does not fit the input's type) is answered with the real
+  `values` and `snapshot`, so the echo is taken back and the `value_does_not_fit` diagnostic
+  says why. The replica does not run that check itself: schemas do not cross the wire, so its
+  answer could differ from the server's.
 - A `values` push stamped before the client's latest command is dropped, or the slider snaps
   back. A `state` push is authoritative and resets that clock, which is what makes a reconnect
   work when the server's per-connection counter restarts.

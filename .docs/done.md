@@ -5,6 +5,52 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Value validation at the boundary — DONE 2026-10-02
+
+Three commits. Before them nothing in core checked that a value a host pushes matches the type
+it was declared with: `updateInput("user", "oops")` succeeded, and the program failed later at a
+field read or quietly computed nonsense. Now every pushed value goes through `valueFits`
+(`infra/fits.ts`), the check the cast was built on, with nothing added to it.
+
+- **One check, at the place every caller routes through.** `entry.setInput` for a program-level
+  input, the runtime's `applyChanges` for a global one. Seeds are not checked: core makes them.
+- **Two channels, each the one its level already had.** The runtime throws, as it does for a
+  wrong name: its caller is host code. An instance refuses through `diagnostics` (kind
+  `value_does_not_fit`, a new stage `input`, `refused: true`, `where` naming the input), because
+  its caller may be a pane or a replica's user, and a throw on the server reaches only the
+  host's `onError`. The plan first justified this with "the link server cannot catch a throw";
+  it can, and the reason that holds is who gets to see the answer.
+- **The refusal is kept per input, apart from a refused layer change.** They end differently: a
+  refused value goes with the next value that fits (a refused layer stays through value
+  changes, and a test holds it to that), and both go with the next compile. Per input also
+  means a sensor pushing a bad value every frame publishes once.
+- **`refused` now has two meanings a consumer can tell apart.** The ports pane matches a refused
+  diagnostic by `layerId` and by stage `compose`; a refused value carries neither, on purpose.
+  `carryValue` gives up on any `refused`, which is safe only because a compile clears a refused
+  value before the snapshot it waits for.
+- **A kept value is checked again when its declaration changes.** A retype from `number` to
+  `string` with 5 stored used to hand 5 to a program expecting text. Three places now re-seed
+  instead: `instance.seedValues`, `entry.activate`, and the runtime's `setLayer` for global
+  values. The same rule drops a saved document's value that no longer fits its input, silently,
+  as it drops one whose input is gone.
+- **`register` and `replace` check their starting values before they touch anything.** Found on
+  review: the throw came after the entry was stored, which left the id taken.
+- **The link server answers a refused value with the real `values` and `snapshot`.** A replica
+  echoes before the server answers, and a refusal publishes no values, so the echo would have
+  stayed on screen and in the replica's snapshot. The replica does not run the check itself:
+  schemas are stripped on the wire, so it would answer differently from the server for any type
+  that has one.
+- **Always on, no flag.** A number costs one schema call per push; a list or struct one pass,
+  the order of the evaluation that follows. A development-only switch had no consumer
+  (Speculative Generality). The backlog holds it for the day a host measures a cost.
+- **A missing struct field does not fit**, as the cast says and as a read of one throws. To
+  relax that later breaks nothing; to tighten it would.
+
+What the entry also held and this did not do is in the backlog: enums as a serialisable list,
+and the check where an `any` meets a concrete op input.
+
+---
+
 ## 0.4.0 on npm — DONE 2026-09-25
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.4.0**, three days

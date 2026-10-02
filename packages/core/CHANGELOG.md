@@ -9,6 +9,27 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.4.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **Breaking: a value pushed into an input must fit the type the input declares.** Nothing
+  checked it before: `updateInputs({ score: "oops" })` succeeded, and the program failed later
+  at a field read or computed nonsense. The check is `valueFits`, the one a cast (`as`) runs: a
+  list item by item, a struct field by field (a missing field does not fit, an extra one is
+  ignored), a named type along its whole `extends` chain with every `schema` on it, and `null`
+  fits every type. It is always on. Each level answers in the channel it already has:
+  - **A runtime throws.** `runtime.updateInput` / `updateInputs`, a handle's `setInput` and
+    `fireTrigger`, and the starting `values` of `register` and `replace`. The caller is host
+    code, so a wrong value is a bug in it, the way a wrong name is. A batch with one bad value
+    changes nothing, and neither does a refused `register`.
+  - **An instance refuses.** `instance.setInput` and `fireTrigger` keep the input's value and
+    publish a `value_does_not_fit` diagnostic: stage `"input"` (new on `ProgramDiagnostic.stage`
+    and `DiagnosticDoc.stage`), `where` naming the input, `refused: true`. It is published once
+    per input however often the bad value arrives, and it goes with the next value that fits or
+    with the next compile. A host that switches on the stage gains one case.
+  - **A value that outlives a change of declaration is checked again.** When an input's type
+    changes and the value it held no longer fits, the input is seeded from its new type, where
+    the stale value used to be handed to a program that expected something else.
+
 ## 0.4.0
 
 - **Breaking: `grammar.operatorTokens` is `grammar.symbols`.** The docs settled on

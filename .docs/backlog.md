@@ -6,6 +6,39 @@ What is being done next is in `todo.md`.
 
 ---
 
+## What boundary validation left: enums, the `any` crossing, a switch, the input row
+
+Split from "Value validation at the boundary" when it was built (2026-10-02, `done.md`). Four
+separate things, none needed by the check that shipped.
+
+- **Enums want a serialisable form, not a schema.** A list of allowed values on the type
+  travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
+  That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
+  drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
+  and reloaded would accept odd ones. Hence the split settled 2026-09-07 (`decisions.md`): a
+  schema where the declaration is code, shape only on the layer an instance persists.
+  **Requires:** an `enum` (or `values`) field on `TypeDefinition`, read by `valueFits` beside
+  `schema` and `fields`, by `isPorts`, and by the editor's `controlFor`. **Driving need:** a
+  user-declared input that is one of a few names.
+- **A value that crosses an `any`.** An `implicit_any_cast` is a warning, and nothing checks the
+  value at runtime: with `$whatever: any` holding 5, `Length($whatever)` is `5.length`, so an
+  output declared `number` holds `undefined` and no error is raised (found 2026-09-19; *Types
+  in practice* says so). **Requires:** a `valueFits` call where an `any`-typed argument meets a
+  concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
+  call, not per pushed value, and the cast (`as`) is the explicit way to check today.
+- **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
+  and a flag without a consumer is Speculative Generality. **Requires:** a host with a frame
+  rate push of a large list or struct and a number; then a policy on the layer, not a global.
+- **Editor: a refused value shows on its input row.** Typing `["a"]` into the JSON box of a
+  `number[]` input is refused, and the reason appears only in the Diagnostics pane; the box
+  keeps the text with no mark (checked in the playground, 2026-10-02). The box already marks a
+  JSON parse error, so the two faults look different for no reason. **Requires:** `Inputs.tsx`
+  reading the `input`-stage diagnostics by `where`, the way `usePortEdits.problems` reads the
+  `compose` ones. **Why deferred:** only the JSON box can reach it (the other controls produce
+  values of their own type), and "a field-wise widget for struct inputs" below replaces that box.
+
+---
+
 ## Stdlib — a friendlier text form for a list or a struct
 
 **What:** `ToString([1, 2])` is `"[1,2]"` and a struct is its JSON. That was chosen on

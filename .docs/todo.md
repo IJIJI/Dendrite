@@ -57,64 +57,15 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 Kept here, not in the backlog, because each has a timeframe: the release after the types plan.
 
-1. **Boundary validation** (the entry below, moved from the backlog 2026-09-22): it reuses
-   `valueFits` from the plan. **Open question for it:** does a missing struct field fit? The cast
-   says no (V.1), and a read of a missing field throws (N.2). To relax both later is not a
-   breaking change; to tighten them would be.
-2. **`++`**, plain sugar over `Join` (the entry below, moved from the backlog). Deferred out of
+1. **`++`**, plain sugar over `Join` (the entry below, moved from the backlog). Deferred out of
    the plan 2026-09-21: once `Join` converts its parts, `"n = " ++ 1` needs no decision, so the
    operator is a few lines with nothing left to discuss.
-3. **A converting lambda parameter, `(t~: string) => …`**: the `convert` flag's second consumer,
+2. **A converting lambda parameter, `(t~: string) => …`**: the `convert` flag's second consumer,
    and the reason it was kept. The mark `~` on a parameter means what it means on an op input.
    Needs the flag on `LambdaParam` and the same evaluator step at application.
-4. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
+3. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
    0.4.0 whether it stays here or moves to the backlog: it has no consumer yet, only symmetry
    with `required: false` on an op input.
-
----
-
-## Value validation at the boundary (and enums)
-
-**What:** Nothing in core ever checks that a value a host pushes matches the type it was
-declared with. `updateInput("user", "oops")` succeeds, and the program fails later at a field
-access, or quietly computes nonsense. `TypeDefinition.schema` is the slot for the check and
-nothing calls it.
-
-**Why deferred:** it needs a decision about enums first (below), and the ports work had to settle
-what a type even is before the check could be designed once for both levels.
-
-**What it requires:**
-- One place that validates when a value arrives — `instance.setInput`, `runtime.updateInputs`,
-  and the entry's seeding. Cost matters: a live show pushes values at frame rate, so decide
-  whether validation is always on, opt-in per layer, or development-only.
-- **Walk the `extends` chain and apply every ancestor's schema, not just the most derived one.**
-  Static compatibility already walks that chain to let a `Derived` flow where a `Base` is
-  expected; validation has to honour the same claim. It also means a host writing
-  `Grade extends Score extends number` never repeats the parent's rules.
-- A failure needs a channel. A new `ProgramDiagnostic` stage is the natural home, since the
-  panes already render those and a bad value is not an `EvalError`.
-- **Enums want a serialisable form, not a schema.** A list of allowed values on the type
-  travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
-  That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
-  drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
-  and reloaded would accept odd ones. Hence the split settled 2026-09-07: a type may
-  carry a zod schema wherever its declaration is CODE (the language, or a capability layer the
-  host rebuilds each boot). The exception is the layer an instance persists, which is saved as
-  JSON; a type there carries shape only and inherits validation through `extends`.
-
-- **The other boundary: a value that crosses an `any`.** An `implicit_any_cast` is a warning,
-  and nothing checks the value at runtime either: with `$whatever: any` holding 5,
-  `Length($whatever)` is `5.length`, so an output declared `number` holds `undefined` and no
-  error is raised (found 2026-09-19; *Types in practice* now says so). A check where an `any`
-  meets a concrete input, with a runtime error as the channel, would close it; it is the same
-  cost question as above, per op call rather than per pushed value.
-
-**Shared machinery (2026-09-21):** the safe cast in `todo.md` (`$rows as number[]`) needs the same
-thing this does, a runtime test of a value against a `Type`. It is built there first, as one
-`valueFits(value, type, descriptor)`, and this entry REUSES it rather than writing a second.
-
-**Driving need:** a host pushing a struct that does not match its declaration is currently
-invisible until something downstream misbehaves.
 
 ---
 
