@@ -173,6 +173,10 @@ token today, so it also needs the lexer, the parameter list and the type annotat
    `(x: number = 0)`, which must evaluate the default expression.
 4. Is `(t~?: string)` refused, as an op input refuses `convert` with optional?
 
+**`?` has two more claimants** (2026-10-05): `??` for `Default` and `c ? a : b` for `If`, in
+`todo.md` for after 0.6.0. Their plan settles what the lexer does with `?`, `??` and `?:`, this
+spelling included, so read it before planning this entry.
+
 ---
 
 ## Language — a return type on a lambda, `(n: number): string => …`
@@ -233,6 +237,9 @@ is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no
 plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
 remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
 propagation does not cover (an expensive branch, or a read that must throw).
+
+**A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
+(`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
 
 ---
 
@@ -328,11 +335,8 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   `LiteralValue`): there is no `undefined`. An unset input is `null`, and `null` flows anywhere a
   value is expected. Decide whether "not set" should be its own thing, or whether every input
   should always have a default - the Learn page on inputs currently teaches the `null` answer.
-- **More math ops** ([stdlib/index.ts](../packages/core/src/language/stdlib/index.ts)): the
-  arithmetic segment has `Add`, `Subtract`, `Multiply`, `Divide`, `Negate`. Candidates:
-  `Mod` (the Host docs build one as their extension example - if it moves into the stdlib, that
-  page needs a new example), `Min`, `Max`, `Abs`, `Round`, `Floor`, `Ceil`, `Pow`. Add when a
-  program wants one; each is a registration, an evaluator and a documented example.
+- ~~**More math ops**~~ — MOVED 2026-10-05 to `todo.md`, "a math batch", for 0.6.0. `Min` and
+  `Max` were listed here as candidates; both exist, over a list.
 - **`PortOrigin.level` as an enum** ([compose.ts](../packages/core/src/language/compose.ts)): a
   string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
   exported constant would read better at call sites. Low value - close it unless a third level

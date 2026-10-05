@@ -6,6 +6,23 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
+## The 0.6.0 group
+
+The stdlib release, grouped on 2026-10-05. The rows are in the order of the work. "Decided" is
+the maintainer's word; "proposed" is still a suggestion.
+
+| # | Item | Entry | Status |
+| --- | --- | --- | --- |
+| 1 | The stdlib per category | below | decided |
+| 2 | A math batch, seven ops | below | decided |
+| 3 | A mixed list literal refuses a function | `backlog.md` | proposed |
+| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | proposed |
+| 5 | Strings as lists, with its own plan | below | decided |
+
+After the release: the two symbols that want `?`, below.
+
+---
+
 ## Core — the stdlib, configurable per category, maybe per op
 
 **When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from
@@ -50,6 +67,37 @@ the segment that owns their op; a test that the composition equals today's stdli
 per-segment pages (already one per `category`) gain "how to include only this".
 
 **Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
+
+---
+
+## Stdlib — a math batch: `Round`, `Floor`, `Ceil`, `Clamp`, `Mod`, `Abs`, `Pow`
+
+**When:** in 0.6.0, straight after the restructure above (the maintainer, 2026-10-05, who asked
+for `Clamp` and then chose the full list). Moved from the backlog's code-TODO roundup, where it
+was "more math ops". Its `TODO` is in the arithmetic band of `stdlib/index.ts` and goes when the
+ops land.
+
+**Why after the restructure:** it is the restructure's test. Seven ops in the `arithmetic`
+category should be seven registrations in one file, their tests and a changelog line, and nothing
+else by hand: the reference page and the index row are generated.
+
+**Not in the batch:** `Min` and `Max`. Both exist, over a list: `Max([a, b])`. `Clamp` can be
+written today as `Min([Max([value, low]), high])` (probed 2026-10-05: 15 into 0..10 gives 10).
+
+**To decide in the plan,** one rule each:
+
+- `Round(value, digits?)`: whether it takes `digits`, and the half rule. JS `Math.round` sends
+  `-2.5` to `-2`.
+- `Clamp(value, low, high)`: what `low > high` gives. The form above lets `high` win.
+- `Mod(a, b)`: the sign for a negative `a` (JS `%` keeps the sign of `a`; a floored result is what
+  cycling through a list wants), and `b = 0`, where `Divide` gives zero.
+- `Pow(base, exponent)`: a result that is no number (a negative base with a fractional exponent).
+- `null` in any input, by the rule the arithmetic ops have today.
+- Symbols: none is asked for. `%` is the one to settle, because of the cost below.
+
+**One cost:** the Host docs build `Mod`, and then `%` as its symbol, as their example of extending
+the language (`host/extending-the-language.md`). With `Mod` in the stdlib that page needs another
+op and another symbol.
 
 ---
 
@@ -121,6 +169,46 @@ above.
 | Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
 
 **Driving need:** Beacon: a tally label is text built from values.
+
+---
+
+## After the 0.6.0 release — two symbols that want `?`: `??` and `c ? a : b`
+
+**When:** the first item after 0.6.0 (the maintainer, 2026-10-05), as ONE plan for both. Asked
+the same day, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
+
+**Why one plan:** three ideas want `?`: these two, and the optional lambda parameter
+(`backlog.md`). The first one built fixes what the lexer does with `?`, `??` and `?:`, so the plan
+settles all three spellings, even if it builds two.
+
+**`??` for `Default`, not `||`** (probed 2026-10-05). `||` is taken: it is sugar over `Or`, `Or`
+takes booleans, and `null || 5` is `op_input_type_mismatch` today. A symbol becomes its op while
+the parser reads, before any type is known, so `||` cannot choose between `Or` and `Default` by
+type. The other way is an `Or` that accepts `any` and decides at runtime, and then the reference
+prints a signature that is not honest, which is what keeps `+` from text (`backlog.md`). `Default`
+tests for `null`, not for false, and that is what other languages spell `??`.
+`registerInfix("??", …)` is plain sugar, as `++` is over `Join`, and a registered symbol reaches
+the lexer through `grammar.symbols`. **To decide:** its tier in the ladder (`precedence.ts` has
+room below `OR`).
+
+**`condition ? a : b` for `If`.** Sugar over `If(condition, a, b)`, so it inherits what `If` does:
+
+- **Both branches are evaluated** ("`If` evaluates both branches", `backlog.md`). A reader of `?:`
+  expects the opposite more than a reader of `If(…)` does. Decide whether the symbol waits for a
+  lazy `If`, or ships with the fact said in the docs.
+- **Its type** is the branches' type when they agree, and `any` when they differ (`If`'s
+  `inferOutput`).
+- **The registration has no route today.** `registerInfix` builds a symbol with two operands. A
+  conditional needs a led that reads two more, and `registerLed` does not add its key to
+  `grammar.symbols`, so the lexer still answers `unknown_character` for `?` (probed). It should
+  not go in the core grammar either, which names no stdlib op. The smallest fix is a way to
+  register a symbol with a hand-written led.
+- **To decide:** its tier (between `ARROW` and `OR`), whether `a ? b : c ? d : e` chains, and
+  that a `:` inside the first branch still reads (a lambda's annotation,
+  `c ? (x: number) => x : y`).
+
+**No consumer but the wish:** `If` and `Default` work. Estimate: a plan, then about three commits
+(one per symbol, one for the docs).
 
 ---
 
