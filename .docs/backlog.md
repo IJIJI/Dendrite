@@ -382,6 +382,36 @@ export against the patched sheet before replacing it.
 
 ---
 
+## Brand — a web app manifest, and its two icons
+
+**What:** `manifest.webmanifest` and a `<link rel="manifest">` on the docs and the playground,
+so a phone or Chrome can install the site as an app: a home-screen icon, a splash screen and a
+name. Brand round 2 (`brand/CHANGES.md`, "Icons wiring") names the icons for it:
+`dendrite-icon-a-square-512.svg` at 512 and as the maskable one (the D sits in the central 56 %,
+inside the 80 % safe circle).
+
+**Why deferred (2026-10-05):** nothing reads a manifest today, and the two PNGs have no reader
+without one. Speculative Generality until somebody wants the site on a home screen.
+
+**What it requires:** two rows in `brand/render.ts` (512, and the same file as the maskable
+icon), the manifest in each app's `public/`, and the link tag in `apps/docs/astro.config.ts` and
+`apps/playground/index.html`. The playground is the likelier consumer: it is the app.
+
+---
+
+## Brand — the VS Code extension icon
+
+**What:** `brand/assets/icons/dendrite-icon-a-512.svg` at 128 px is the marketplace tile of a
+VS Code extension (round 2, "Icons wiring").
+
+**Why deferred (2026-10-05):** the repo has no extension. The icon is wired when one exists
+(`.den` highlighting and diagnostics are what it would carry).
+
+**What it requires:** one row in `brand/render.ts`, and the `icon` field of the extension's
+`package.json`.
+
+---
+
 ## Brand — try cooler background colours
 
 **What:** The surfaces are warm greys from the brand ramp (ground `#f3f2f2` … dark-0 `#141312`,

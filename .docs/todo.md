@@ -23,6 +23,21 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
+## Docs — brand round 2 on the site
+
+**What:** the handoff of 2026-10-05 (`brand/CHANGES.md`, sheet §22 to §25), in two commits.
+
+| # | Part | Status |
+| --- | --- | --- |
+| 1 | Icons (favicon, touch icon, avatar PNG) and the OG card, baked by `brand/render.ts` | handed over 2026-10-05 |
+| 2 | The landing hero "5z": the aurora band, `mountAurora()`, the live block as the code well | next |
+
+**Decided:** the hero's right column stays the live block, not the static `beacon.den` sample;
+the headline and lede are `hero.html`'s; the three pillars §24 draws are not built, because
+everything below the hero stays. The manifest and the VS Code icon are in `backlog.md`.
+
+---
+
 ## Core — the stdlib, configurable per category, maybe per op
 
 **When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from

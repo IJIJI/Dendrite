@@ -127,5 +127,7 @@ dendrite-brand/
   assets/                    16 SVGs (mark ×6, wordmark ×2, stacked ×2, avatar ×2, sticker, banner, og ×2)
                              + 18 aurora SVGs (3 fields × 6 sizes)
   assets/icons/              A and D3 icons (rounded + square, 512), avatars, Iris mark
+  render.ts                  node brand/render.ts → the PNGs the site and the avatars use (touch
+                             icon, avatar, OG card from assets/dendrite-og-aurora.svg), via Chrome
 ```
 Tokens 1.2 · October 2026 (aurora; editor sync from 1.1 retained, see the changelog in `dendrite-tokens.css`). Sheet 1.2 adds §22 Aurora, §23 Icons, §24 Docs landing and §25 Editor surfaces and carries the synced syntax cards, code samples and editor-surface note in its source, so future exports no longer need the script patch.

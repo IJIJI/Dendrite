@@ -14,10 +14,13 @@ import { remarkTs } from "./src/plugins/remark-ts";
 
 const source = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
+// GitHub Pages serves project sites under /<repo>/ - CI sets DOCS_BASE. Dev stays at /.
+const site = "https://ijiji.github.io";
+const base = process.env.DOCS_BASE ?? "/";
+
 export default defineConfig({
-  site: "https://ijiji.github.io",
-  // GitHub Pages serves project sites under /<repo>/ - CI sets DOCS_BASE. Dev stays at /.
-  base: process.env.DOCS_BASE ?? "/",
+  site,
+  base,
   // Only SVGs so far; the default service wants sharp for nothing.
   image: { service: passthroughImageService() },
   // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer, and
@@ -54,6 +57,11 @@ export default defineConfig({
       // Sidebar labels are plain text, so a label that is CODE - `stdlib` - is marked from a
       // script rather than markup; dendrite.css sets it in Kode Mono. Runs before first paint.
       head: [
+        // The brand's icon A (brand/CHANGES.md, "Icons wiring"); the PNGs are baked by
+        // brand/render.ts. A crawler wants the card's image as an absolute URL.
+        { tag: "link", attrs: { rel: "apple-touch-icon", href: `${base}apple-touch-icon.png` } },
+        { tag: "meta", attrs: { property: "og:image", content: `${site}${base}og.png` } },
+        { tag: "meta", attrs: { name: "twitter:image", content: `${site}${base}og.png` } },
         {
           tag: "script",
           content:
