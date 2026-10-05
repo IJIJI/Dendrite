@@ -53,36 +53,12 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 ---
 
-## After the 0.5.0 release
-
-0.5.0 took the first three of the four items listed here after 0.4.0: boundary validation,
-`++`, and a converting lambda parameter (`done.md`). One is left, and it has a timeframe, which
-is why it is here and not in the backlog.
-
-**An optional lambda parameter, `(sep?: string) => …`.** Raised beside the converting one
-(2026-09-21). The maintainer's decision 2026-10-02: after the 0.5.0 release, with its
-decisions deferred until then. It has no consumer yet, only symmetry with `required: false` on
-an op input, so "move it to the backlog" is still an answer when it comes up.
-
-- **Why it is bigger than the converting parameter (measured 2026-10-02):** that one needed
-  no change to `Type`. This one does: a caller often knows a function only by its type, and
-  the call check counts the parameters in that type, so "may be left out" has to live in the
-  function type. About eight places read a function type's parameter list (`isCompatible`,
-  `typesEqual`, `typeToString`, the call check, contextual typing, the docs' printer). `?` is
-  no token today, so it also needs the lexer, the parameter list and the type annotation
-  `(string, number?) -> string`. Estimate: a plan, then three commits.
-- **Four decisions, not taken:** (1) does `(a, b?) -> r` fit where `(a) -> r` is expected,
-  which changes function subtyping; (2) must an optional parameter come last; (3) what the
-  body reads for an absent argument, `null` or a written default; (4) whether `(t~?: string)`
-  is refused, as an op input refuses `convert` with optional.
-
----
-
 ## Language — strings as lists, in some places
 
-**When:** after the types plan (`types-and-text-plan.md`), the user's instruction 2026-09-22.
-Moved from the backlog, where it was "strings and arrays, interchangeable"; the wanted direction
-and the four open edges below are unchanged.
+**When:** in the release after 0.5.0, after the stdlib restructure above, with its own plan (the
+maintainer, 2026-10-05). Before that: after the types plan (`types-and-text-plan.md`), the
+user's instruction 2026-09-22. Moved from the backlog, where it was "strings and arrays,
+interchangeable"; the wanted direction and the four open edges below are unchanged.
 
 **What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
 through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a

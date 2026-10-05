@@ -145,6 +145,36 @@ own text form" below is the other direction (`toText`); design the two together.
 
 ---
 
+## Language — an optional lambda parameter, `(sep?: string) => …`
+
+**What:** a parameter a caller may leave out. Raised beside the converting parameter
+(2026-09-21) and held in `todo.md` for after the 0.5.0 release; moved here on 2026-10-05, the
+maintainer's decision.
+
+**Why deferred:** no consumer, only symmetry with `required: false` on an op input, and the
+higher-order ops are fixed-arity. It is not small either (measured 2026-10-02): the converting
+parameter needed no change to `Type`, and this one does. A caller often knows a function only
+by its type, and the call check counts the parameters in that type, so "may be left out" has to
+live in the function type.
+
+**What it requires:** about eight places read a function type's parameter list (`isCompatible`,
+`typesEqual`, `typeToString`, the call check, contextual typing, the docs' printer). `?` is no
+token today, so it also needs the lexer, the parameter list and the type annotation
+`(string, number?) -> string`. Estimate: a plan, then three commits.
+
+**Four decisions, not taken:**
+
+1. Does `(a, b?) -> r` fit where `(a) -> r` is expected? That changes function subtyping.
+2. Must an optional parameter come last? Trailing only keeps the arity rule small.
+3. What the body reads for an absent argument. Three options, in escalating cost: an
+   `unset`/`null` sentinel, queried with the existing `IsSet` and handled with `Default(x, …)`
+   (preferred when this was first weighed: no nullability unions, only ops that exist); plain
+   `null`, compatible with every type through `isCompatible`; or a written default,
+   `(x: number = 0)`, which must evaluate the default expression.
+4. Is `(t~?: string)` refused, as an op input refuses `convert` with optional?
+
+---
+
 ## Language — a return type on a lambda, `(n: number): string => …`
 
 **What:** the AST has `LambdaNode.returnType` and the analyser checks it (`analyser.ts`, the
@@ -1072,14 +1102,8 @@ left open.
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
   higher-order ops already supply param types (`inferInputTypes` + contextual typing) and explicit
   annotations cover standalone lambdas; this only closes the standalone-unannotated gap.
-- **Optional / default params.** `(x?: number)` declined for now (no use case yet — higher-order
-  ops are fixed-arity). Deferred for lack of need, *not* difficulty. Three escalating options:
-  1. **Unset default (preferred).** Trailing-only optional params; an absent arg binds to an
-     `unset`/`null` sentinel, queried with the existing `IsSet` and handled with `Default(x, …)`.
-     Cleanest — no nullability unions, leans entirely on stdlib ops you already have.
-  2. **Null default.** Same idea, absent → `null` (compatible with every type via `isCompatible`).
-  3. **Default values** `(x: number = 0)` — richer but must evaluate the default expression.
-  In all cases the only real cost is the arity-rule surface (trailing-only enforcement).
+- **Optional / default params.** Its own entry now: "Language — an optional lambda parameter"
+  above, which holds the three options for an absent argument that stood here.
 - **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
   (`return { a: …, b: … }`). Needs struct literals + struct types (see *Static field typing for
   FieldAccessNode*). Until then, a lambda returns one value. Keep `return` (lambda, single value)
