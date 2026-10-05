@@ -5,7 +5,7 @@ Apply to the `brand/` folder (same layout as this package). Files are based on y
 ## Decisions
 - **Aurora**: `warp` field is **primary** (contour rings warped by noise). `dune` and `marble` are approved alternatives for future use; do not mix fields on one page.
 - **Docs landing**: implement hero option **5z** (aurora behind the hero band, fading to dark-0; headline left, code well right). Pillar treatments with live examples are future expansions, not in this round.
-- **Icons**: add **D3** (dark-0 rounded square, dim aurora glow, ground D, Periwinkle fork) alongside the existing A (plain dark-0) and the reversed-on-Iris avatar. Use D3 for social avatars; keep A for the browser favicon and the reversed avatar for 16 px.
+- **Icons**: add **D3** (dark-0 rounded square, dim aurora glow, ground D, Periwinkle fork) as an option. Default use stays with the three plain fields: **A** (plain dark-0) for favicon, touch icon, PWA and VS Code; **reversed on Iris** for GitHub and npm avatars and anything under 24 px; the **Iris mark on transparent** inline in docs and READMEs. D3 is reserved for social cards, launch posts and places where the aurora is already present.
 - **Swag** and **MinimalLayout** editor: still TBD, nothing to implement.
 
 ## Updated files
@@ -46,11 +46,13 @@ assets/icons/
 
 ## Icons wiring
 - `favicon.svg`: `dendrite-icon-a-square-512.svg` (platform rounds it).
-- `apple-touch-icon` 180: `dendrite-icon-d3-square-512.svg` rendered to PNG.
-- PWA manifest 512 + maskable: `dendrite-icon-d3-square-512.svg` (safe zone: the D occupies the central 56 %, inside the 80 % maskable circle).
-- VS Code extension 128: `dendrite-icon-d3-512.svg`.
-- npm / GitHub org avatar: `dendrite-icon-d3-512.svg` rendered to PNG.
-- Below 24 px keep the reversed avatar (`dendrite-avatar-square.svg`).
+- `apple-touch-icon` 180: `dendrite-icon-a-square-512.svg` rendered to PNG.
+- PWA manifest 512 + maskable: `dendrite-icon-a-square-512.svg` (safe zone: the D occupies the central 56 %, inside the 80 % maskable circle).
+- VS Code extension 128: `dendrite-icon-a-512.svg`.
+- GitHub org / npm avatar: `dendrite-avatar-square.svg` (reversed on Iris) rendered to PNG.
+- Inline in docs, README, badges: `dendrite-mark-iris.svg`.
+- Below 24 px always the reversed avatar.
+- D3 (`dendrite-icon-d3-512.svg`): social cards and launch posts only.
 
 ## Tokens
 Added to `dendrite-tokens.css` (1.2; the 1.1 editor surfaces and shipped syntax colours are untouched): `--dn-aurora-0..3` (aliases of iris-700, iris-500, periwinkle, iris-300), `--dn-aurora-seam` (magenta, marble only), `--dn-aurora-fade-from: 40%`, `--dn-aurora-interval: 4000ms`. Changelog entry added at the bottom of the file.
