@@ -2,6 +2,7 @@
    these map them onto the brand tokens (brand/dendrite-tokens.css; the dark derivations are
    the editor's, packages/editor/style.css). Fonts are self-hosted, as in the playground. */
 
+@import "@fontsource/chakra-petch/600.css"; /* display: the landing headline, nothing else */
 @import "@fontsource/archivo/400.css";
 @import "@fontsource/archivo/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
@@ -45,6 +46,72 @@
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
   --sl-color-accent-low: oklch(0.29 0.1 277);
+}
+
+/* The landing page (and the 404, the other page with a hero). Its hero is a band in the
+   brand's dark-0 across the whole window, in both themes (Hero.astro; sheet §24), and two
+   things of Starlight's own follow from that.
+
+   One: the nav sits on the band, so on this page it wears the dark palette whatever the theme,
+   on dark-0 with the band's rule beneath it. A custom property is computed where it is
+   declared, so the roles Starlight derives from the ramp on :root are derived again here.
+   Screen only: print forces the light palette, and the nav goes with it. */
+@media screen {
+  :root[data-has-hero] .page > .header {
+    color-scheme: dark;
+
+    --sl-color-white: var(--dn-dark-ink);
+    --sl-color-gray-1: var(--dn-dark-ink);
+    --sl-color-gray-2: var(--dn-dark-ink-2);
+    --sl-color-gray-3: var(--dn-dark-ink-3);
+    --sl-color-gray-4: var(--dn-dark-4);
+    --sl-color-gray-5: var(--dn-dark-3);
+    --sl-color-gray-6: var(--dn-dark-2);
+    --sl-color-gray-7: var(--dn-dark-0);
+    --sl-color-black: var(--dn-dark-1);
+    --sl-color-accent: var(--dn-periwinkle);
+    --sl-color-accent-high: var(--dn-iris-300);
+    --sl-color-accent-low: var(--dn-iris-900);
+
+    --sl-color-text: var(--sl-color-gray-2);
+    --sl-color-text-accent: var(--sl-color-accent-high);
+    --sl-color-text-invert: var(--sl-color-accent-low);
+    --sl-color-bg-nav: var(--dn-dark-0);
+    --sl-color-hairline-shade: var(--dn-dark-border);
+  }
+
+  /* The wordmark for a dark ground, though the theme may be the light one. */
+  :root[data-has-hero] .site-title img.light\:sl-hidden {
+    display: block;
+  }
+
+  :root[data-has-hero] .site-title img.dark\:sl-hidden {
+    display: none;
+  }
+}
+
+/* Two: the hero sits inside Starlight's content panel, which pads it and holds it to the
+   reading width. The band wants neither, so on this page the padding and the width move from
+   the hero's ancestors to its siblings: the page below the band keeps the measure it had,
+   left-aligned below 72rem and centred above it, as the container was. */
+:root[data-has-hero] main > .content-panel {
+  padding: 0 0 1.5rem;
+}
+
+:root[data-has-hero] main > .content-panel > .sl-container {
+  max-width: none;
+  margin-inline: 0;
+}
+
+:root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
+  max-width: calc(var(--sl-content-width) + 2 * var(--sl-content-pad-x));
+  padding-inline: var(--sl-content-pad-x);
+}
+
+@media (min-width: 72rem) {
+  :root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
+    margin-inline: auto;
+  }
 }
 
 /* The brand's corners: square containers, 2px controls. */

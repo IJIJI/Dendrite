@@ -5,6 +5,47 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — brand round 2 on the site — DONE 2026-10-06
+
+The handoff of 2026-10-05 from Claude Design (`brand/CHANGES.md`, sheet §22 to §25), in two
+commits: the icons and the OG card, then the landing hero "5z" (the aurora band, the drift from
+`mountAurora()`, a live block where the design draws a code well). What was decided, and why:
+
+- **The hero's right column is the live block, not the static `beacon.den` well.** §24 itself
+  says "a live code well", and the sample reads struct fields the language may not parse.
+  Nothing of the editor is overridden: `color-scheme: dark` on the band is all its
+  `light-dark()` colours need, and its own dark panel is already dark-1 with a dark-border
+  edge, which is what §24 asks of the well.
+- **The PNGs are baked through headless Chrome** (`brand/render.ts`), not through an SVG
+  library. The aurora strokes are `oklch()` and the OG card sets live text in two fonts; a
+  browser is the one renderer certain to agree with the site. The PNGs are committed, so CI
+  never renders.
+- **The nav is dark on the landing page in both themes**, because §24 puts it on the band. A
+  custom property is computed where it is declared, so the roles Starlight derives from its
+  ramp on `:root` are declared again on the header (`dendrite.css`). The search dialog lives
+  in the header, so on this page it is dark too.
+- **The band leaves the content panel by moving the panel's padding and width to the hero's
+  siblings**, not by viewport arithmetic. `100vw` counts the scrollbar, and Starlight's
+  container is left-aligned, not centred, below 72rem; both put a strip beside the band. The
+  page below keeps its measure: at eight widths from 375 to 1920 its content box is the one
+  Starlight's own rules give, to the tenth of a pixel.
+- **The headline is the design's 56px where the column has room, and a tenth of the column
+  (`10cqi`) where it has not.** Its first line is 9.8em wide, so that line always fits, and
+  no word is cut off on a phone. It is three lines beside the live block: the rule "two lines
+  max" cannot hold with this copy (the entry in `backlog.md`).
+- **`hero.html` was not taken verbatim.** Four of its rules failed when they ran; they are
+  listed in `backlog.md` for the design source.
+
+Not built, on purpose: the three pillars §24 draws (everything below the hero stays), the web
+app manifest and the VS Code icon (no consumer; both in `backlog.md`).
+
+Checked in a browser: both themes, no sideways scroll from 375 to 1920, the live block
+recomputing on the band, the 404 page (the other page with a hero), a doc page untouched, and
+`prefers-reduced-motion` through Chrome's DevTools protocol (the field hidden, one frame, the
+baked image shown).
+
+---
+
 ## 0.5.0 on npm — DONE 2026-10-05
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.5.0**, eleven

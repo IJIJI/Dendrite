@@ -45,13 +45,16 @@ export default defineConfig({
         // First, and it matters: it names the cascade layers in order (see the file).
         "./src/styles/layers.css",
         "@dendrite-lang/editor/style.css",
+        // The brand's own tokens (--dn-*), which the landing hero is written in. Custom
+        // properties only, so loading them for every page costs nothing a page can see.
+        "../../brand/dendrite-tokens.css",
         "./src/styles/dendrite.css",
       ],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/IJIJI/Dendrite" }],
       // The social links open in a new tab (Starlight's own component, one attribute added).
       components: {
         SocialIcons: "./src/components/SocialIcons.astro",
-        // The splash hero: the wordmark as the title, a live Minimal block as the image.
+        // The splash hero: the aurora band, a live Minimal block where the design's code well is.
         Hero: "./src/components/Hero.astro",
       },
       // Sidebar labels are plain text, so a label that is CODE - `stdlib` - is marked from a

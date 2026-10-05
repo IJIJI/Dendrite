@@ -382,6 +382,40 @@ export against the patched sheet before replacing it.
 
 ---
 
+## Brand — take the hero's corrections back to the Claude Design source
+
+**What:** `brand/aurora/hero.html` is the design's markup and CSS for the landing hero. The
+site's `apps/docs/src/components/Hero.astro` departs from it in five places, each found when the
+page ran (2026-10-06). The next export from the canvas brings the originals back.
+
+1. **The fallback never hides.** `.dn-hero__bg svg + .dn-hero__fallback` wants the svg before
+   the image, and `mountAurora` appends it after. Both fields then show at once, and the baked
+   one stays still under the drifting one. The site marks the host from the script and fades
+   the image out while the first frame fades in.
+2. **The reduced-motion rule loses.** `.dn-hero__bg svg { display: none }` is beaten by the
+   inline `display: block` that `hero.ts` sets on its svg. The site adds `!important`.
+3. **One column is wider than a phone.** Under 960 the grid is `1fr`, whose minimum is the
+   widest child. With the live block that is its longest code line. The site uses
+   `minmax(0, 1fr)`.
+4. **The band has no height.** It is as tall as the copy, so the copy starts 20% down the band,
+   above the fade, where §24 wants it in the lower 55%. The site gives the grid the design
+   frame's 600px above 960.
+5. **"Two lines max" cannot hold.** At 56px "recomputed incrementally." is 705px wide, and the
+   copy column is 568px at the 1280 frame. The site sets three lines. The design decides: a
+   shorter second line, a 44px headline, or a wider copy column.
+
+Two more, seen and left alone: at 1440 the hero's copy starts 52px left of the page content
+below it (the hero's 1280 frame against Starlight's 67.5rem measure), and §24's three pillars
+are not built, because everything below the hero stayed.
+
+**Why deferred:** the source is edited in Claude Design, not in this repo.
+
+**What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert
+its svg first and to leave `display` to the stylesheet), decide 5, re-export, and diff the
+export against `Hero.astro`.
+
+---
+
 ## Brand — a web app manifest, and its two icons
 
 **What:** `manifest.webmanifest` and a `<link rel="manifest">` on the docs and the playground,
