@@ -1,6 +1,7 @@
 import { composeLayers, type PortProblem } from "../compose";
 import { outputDependencies } from "../evaluator/evaluator";
 import { EvalError } from "../evaluator/types";
+import { assertFits, valueFits } from "../infra/fits";
 import { EMPTY_PORTS, type PortLayer, type Ports, Policy } from "../infra/ports";
 import { type CoreProgram } from "../infra/program";
 import { type InputDefinition, type LanguageDescriptor, type Vocabulary } from "../infra/registry";
@@ -226,7 +227,11 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
   function applyChanges(changes: Map<string, unknown>): Map<string, Map<string, unknown>> {
     const accepted = new Map<string, unknown>();
     for (const [name, value] of changes) {
-      if (globalInputs().has(name)) accepted.set(name, value);
+      const def = globalInputs().get(name);
+      if (!def) continue;
+      // Checked before anything is stored, so a batch with one bad value moves nothing.
+      assertFits(def, value, globalDescriptor);
+      accepted.set(name, value);
     }
     const results = new Map<string, Map<string, unknown>>();
     if (accepted.size === 0) return results;
@@ -262,17 +267,16 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
   }
 
   // Starting values for a program's own inputs; every other name is ignored, so a caller
-  // may hand over a whole map without filtering it first.
-  function applyValues(
-    entry: ProgramEntry,
-    ports: Ports,
+  // may hand over a whole map without filtering it first. Checked here, before register or
+  // replace touches anything, so a value that does not fit leaves the runtime as it was.
+  function startingValues(
+    bound: BoundProgram,
     values: Readonly<Record<string, unknown>> | undefined,
-  ): void {
-    if (!values) return;
-    const declared = new Set(ports.inputs.map((input) => input.name));
-    for (const [name, value] of Object.entries(values)) {
-      if (declared.has(name)) entry.setInput(name, value);
-    }
+  ): [string, unknown][] {
+    const declared = new Map(bound.ports.inputs.map((input) => [input.name, input]));
+    const kept = Object.entries(values ?? {}).filter(([name]) => declared.has(name));
+    for (const [name, value] of kept) assertFits(declared.get(name)!, value, bound.composed);
+    return kept;
   }
 
   function handleFor(
@@ -321,8 +325,10 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
 
       layers = next;
       globalDescriptor = composed.descriptor;
-      for (const name of [...globalValues.keys()]) {
-        if (!globalInputs().has(name)) globalValues.delete(name);
+      // A value goes with its input, and with a type change it no longer fits.
+      for (const [name, value] of [...globalValues]) {
+        const def = globalInputs().get(name);
+        if (!def || !valueFits(value, def.type, globalDescriptor)) globalValues.delete(name);
       }
       // Notified last: a listener recompiles against the state this call just settled.
       for (const listener of layerListeners) listener(layers);
@@ -337,11 +343,12 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
     register(id, program, options = {}) {
       if (entries.has(id)) throw new Error(`Program '${id}' is already registered - use replace`);
       const ports = options.ports ?? EMPTY_PORTS;
-      const entry = new ProgramEntry(id, bind(id, program, ports), globalValues);
+      const bound = bind(id, program, ports);
+      const values = startingValues(bound, options.values);
+      const entry = new ProgramEntry(id, bound, globalValues);
       entries.set(id, entry);
       addToIndex(entry);
-
-      applyValues(entry, ports, options.values);
+      for (const [name, value] of values) entry.setInput(name, value);
       return handleFor(entry, evaluateAndRoute(entry));
     },
 
@@ -349,10 +356,11 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
       const entry = entries.get(id);
       if (!entry) throw new Error(`Program '${id}' is not registered`);
       const bound = bind(id, program, options.ports ?? entry.ports);
+      const values = startingValues(bound, options.values);
       removeFromIndex(entry);
       entry.replace(bound, globalValues);
       addToIndex(entry);
-      applyValues(entry, bound.ports, options.values);
+      for (const [name, value] of values) entry.setInput(name, value);
       return handleFor(entry, evaluateAndRoute(entry));
     },
 

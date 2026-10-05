@@ -5,6 +5,138 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## A converting lambda parameter, `(t~: string) => …` — DONE 2026-10-02
+
+The `convert` flag's second consumer, and the reason the flag was kept (`types-and-text-plan.md`).
+The mark on a parameter means what it means on an op input: any argument is accepted, and it
+arrives in the body converted to the written type. `LambdaParam` gained `convert?: true`, and
+everything else is the op-input machinery called a second time (`anyAtLeaves`, `isConvertible`,
+`convertTo`); nothing was abstracted over the two declarations, because both already call the
+same three functions. Three decisions:
+
+- **To a caller the parameter is `any`; in the body it is its written type.** A caller often
+  knows a function only by its type (a name bound to a lambda, a function handed to `Map`), so
+  the type has to say "anything", and `any` at the leaves says it with no change to `Type` or
+  to `isCompatible`. The cost: the function prints as `(any) -> string`, and the mark is not
+  in the message. A second notation for types was not worth one character.
+- **The conversion runs where the closure binds its arguments**, not at the call site. A call
+  written in a program and a call an op makes (`Map`, `Filter`) then convert alike; a step at
+  the application node would have missed every higher-order op.
+- **A mark with nothing to convert to is the analyser's error, `invalid_convert_param`**: no
+  type, or a type with no rule (a struct, a function, `any`, a host type). One check covers
+  text and a stored `ast` program. Contextual typing leaves a marked parameter alone, or
+  `Map([1, 2], (n~) => n)` would be handed `number` and convert a number to a number in silence.
+
+Two things the plan did not foresee. The short form `t~ => …` cannot state a type, and with no
+rule of its own it was a bare "unexpected `~`"; it got a rule in the core grammar so that the
+analyser's message, which says to write `(t~: string)`, is the one a user reads, and a `~`
+anywhere else is a syntax error that says what the mark is for. And `~` became structural
+punctuation, so the editor colours it as it colours `:`, in a program and in the reference's
+`parts~: string[]`; an editor test that asserted "`~` is no token of the language" was updated
+to the new fact.
+
+A function argument is still refused (`app_argument_type_mismatch`): a function never fits
+`any`. A host type cannot carry the mark, not even one that extends a primitive; that is in
+the backlog with the conversion a host type could own.
+
+---
+
+## `++`, sugar over `Join` — DONE 2026-10-02
+
+`"Hello, " ++ name`. One `registerInfix` in the stdlib, beside `+`: the two sides become a
+two-item list and the node is a `Join`, which converts its parts (the `convert` flag,
+`types-and-text-plan.md`, milestone K), so `"n = " ++ 1` needed no decision and the analyser
+inserts nothing. The lexer sorts symbols longest first, so `++` beats `+` as `>=` beats `>`, and
+the editor colours it from `grammar.symbols` with no change. Three choices, each the small one:
+
+- **`BP.ADD`, as decided 2026-09-21.** The cost is known and loud: `"total: " ++ 1 + 2` reads
+  left to right as `("total: " ++ 1) + 2` and is `op_input_type_mismatch` on `Add`, never a
+  silent wrong answer. A tier of its own below `+` (Haskell's choice) would make that line
+  `"total: 3"`, and would be a new rung on the ladder for one operator. The operators page says
+  to bracket the sum or write a template.
+- **A chain nests, `Join([Join([a, b]), c])`, as `+` nests `Add`.** Folding it into one list
+  would need the parser to tell a `Join` it built from one the author wrote, and that one may
+  carry a separator.
+- **The list node takes the left operand's source.** It has no token of its own, and a
+  diagnostic about the list should point at the expression.
+
+`1++2` was a syntax error and is now `"12"`. The `+` half of the old backlog entry stays there
+("`+` on text").
+
+---
+
+## Value validation at the boundary — DONE 2026-10-02
+
+Three commits. Before them nothing in core checked that a value a host pushes matches the type
+it was declared with: `updateInput("user", "oops")` succeeded, and the program failed later at a
+field read or quietly computed nonsense. Now every pushed value goes through `valueFits`
+(`infra/fits.ts`), the check the cast was built on, with nothing added to it.
+
+- **One check, at the place every caller routes through.** `entry.setInput` for a program-level
+  input, the runtime's `applyChanges` for a global one. Seeds are not checked: core makes them.
+- **Two channels, each the one its level already had.** The runtime throws, as it does for a
+  wrong name: its caller is host code. An instance refuses through `diagnostics` (kind
+  `value_does_not_fit`, a new stage `input`, `refused: true`, `where` naming the input), because
+  its caller may be a pane or a replica's user, and a throw on the server reaches only the
+  host's `onError`. The plan first justified this with "the link server cannot catch a throw";
+  it can, and the reason that holds is who gets to see the answer.
+- **The refusal is kept per input, apart from a refused layer change.** They end differently: a
+  refused value goes with the next value that fits (a refused layer stays through value
+  changes, and a test holds it to that), and both go with the next compile. Per input also
+  means a sensor pushing a bad value every frame publishes once.
+- **`refused` now has two meanings a consumer can tell apart.** The ports pane matches a refused
+  diagnostic by `layerId` and by stage `compose`; a refused value carries neither, on purpose.
+  `carryValue` gives up on any `refused`, which is safe only because a compile clears a refused
+  value before the snapshot it waits for.
+- **A kept value is checked again when its declaration changes.** A retype from `number` to
+  `string` with 5 stored used to hand 5 to a program expecting text. Three places now re-seed
+  instead: `instance.seedValues`, `entry.activate`, and the runtime's `setLayer` for global
+  values. The same rule drops a saved document's value that no longer fits its input, silently,
+  as it drops one whose input is gone.
+- **`register` and `replace` check their starting values before they touch anything.** Found on
+  review: the throw came after the entry was stored, which left the id taken.
+- **The link server answers a refused value with the real `values` and `snapshot`.** A replica
+  echoes before the server answers, and a refusal publishes no values, so the echo would have
+  stayed on screen and in the replica's snapshot. The replica does not run the check itself:
+  schemas are stripped on the wire, so it would answer differently from the server for any type
+  that has one.
+- **Always on, no flag.** A number costs one schema call per push; a list or struct one pass,
+  the order of the evaluation that follows. A development-only switch had no consumer
+  (Speculative Generality). The backlog holds it for the day a host measures a cost.
+- **A missing struct field does not fit**, as the cast says and as a read of one throws. To
+  relax that later breaks nothing; to tighten it would.
+
+What the entry also held and this did not do is in the backlog: enums as a serialisable list,
+and the check where an `any` meets a concrete op input.
+
+---
+
+## 0.4.0 on npm — DONE 2026-09-25
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.4.0**, three days
+after 0.3.0. A minor because it breaks: two renames (`"ports"` to `"compose"`, `operatorTokens` to
+`symbols`), `unknown_type` with a new meaning, and three behaviours tightened on purpose. The
+runbook held from the tags on, and taught two things before them.
+
+- **Check the PR's commit count against `git log origin/main..dev` before merging.** PR #19 was
+  merged while `dev` still had five commits to push, so `main` got 16 of 21. The fix chosen was a
+  reset of `main` to the merge before it (`git reset --hard`, `--force-with-lease`), with the
+  ruleset's block on force pushes lifted for the push and restored after, then one PR (#21) with
+  all 21. Chosen over reverting the revert because nothing on npm or in a tag depended on `main`
+  yet, and it leaves one merge instead of three.
+- **A revert of a merge cannot be undone by merging the branch again.** Git counts the reverted
+  commits as already merged and brings only the new ones. PR #20 was GitHub's Revert button on
+  #19, merged by accident; had `main` not been reset, the way back was "revert the revert" and
+  only then a PR for the rest. Recorded in `release-plan.md`, step 2.
+
+Checked after approval: `latest` on each package, an attestation on all three, the peer ranges at
+`^0.4.0`, and a clean install outside the repo where a program with an annotation, a cast that
+misses, a template and a converting `Join` gives `"Ada has 2 rows: [3,4]"` for a list and the
+empty text, `0` and `false` for `"nope"`; `grammar.symbols` reads, and the editor from npm colours
+a template and a cast as the source does.
+
+---
+
 ## Types and text — the plan for 0.4.0 — DONE 2026-09-24
 
 Twenty-one commits in three days, the plan in `types-and-text-plan.md` (its status table, and what

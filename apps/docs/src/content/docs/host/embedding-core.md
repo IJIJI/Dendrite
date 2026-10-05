@@ -43,8 +43,8 @@ identically.
 
 | Command | Does |
 | --- | --- |
-| `setInput(name, value){:ts}` | set a program-level input. Throws on a global name - those are the runtime's |
-| `fireTrigger(name, value){:ts}` | set, evaluate, reset to the default, evaluate again |
+| `setInput(name, value){:ts}` | set a program-level input. Throws on a global name - those are the runtime's. Refuses a value that does not fit the input's type |
+| `fireTrigger(name, value){:ts}` | set, evaluate, reset to the default, evaluate again. Refuses a value the same way |
 | `setProgram(saved){:ts}` | swap the program |
 | `setLayer(id, ports){:ts}` | replace one program-level layer's declarations |
 
@@ -66,6 +66,26 @@ instance.setInput("limit", 35);            // this program's own input
 Calling `instance.setInput{:ts}` with a global name throws, because a value with two owners would have
 no right answer. `updateInputs{:ts}` takes several at once and evaluates each program a single time, so
 prefer it for anything that arrives together.
+
+## A value has to fit its type
+
+Both places check a value against the type its input declares, with the check a cast (`as{:den}`)
+runs: a list item by item, a struct field by field, a named type along its whole `extends{:ts}` chain
+with every `schema{:ts}` on it. `null{:den}` fits every type. A struct with a declared field missing
+does not fit, and an extra field is ignored.
+
+What differs is how each one says no.
+
+- **The runtime throws.** `runtime.updateInputs{:ts}` and a handle's `setInput{:ts}` are called by your
+  code, so a value of the wrong type is a bug in it. A batch with one bad value changes nothing.
+- **An instance refuses.** `instance.setInput{:ts}` and `fireTrigger{:ts}` may be called by a pane, or by
+  a client across a network, and neither can catch an exception. The input keeps its value, and
+  `diagnostics{:ts}` gains a [`value_does_not_fit{:den}`](../../how-it-works/diagnostics/#value_does_not_fit)
+  error marked `refused{:ts}` that names the input. It goes with the next value that fits, or with
+  the next compile.
+
+A value that outlives a change of declaration is checked again. When an input's type changes and
+what it held no longer fits, the input starts over from the default of its new type.
 
 ## When the program breaks
 

@@ -1,10 +1,10 @@
-import { type Vocabulary } from "./registry";
-import { type Type } from "./types";
+import { type InputDefinition, type Vocabulary } from "./registry";
+import { type Type, typeToString } from "./types";
 
 //? valueFits: does a runtime VALUE fit a Type? The dynamic half of the type system, where
 // isCompatible is the static half: the checker compares types it inferred, this compares a
-// value that arrived. A cast (`$rows as number[]`) is its first caller; validation at the host
-// boundary is the next.
+// value that arrived. Two callers: a cast (`$rows as number[]`), and the host boundary, where
+// every value pushed into an input is checked (`assertFits` below).
 //
 // The rules mirror the static ones. `any` fits everything, a `null` value fits every type (null
 // goes anywhere), a list fits when each item fits its element type, and a named type is checked
@@ -53,4 +53,23 @@ function structFits(value: unknown, fields: Record<string, Type>, descriptor: Vo
   return Object.entries(fields).every(
     ([field, type]) => field in record && valueFits(record[field], type, descriptor),
   );
+}
+
+/**
+ * The host boundary: a value pushed into an input must fit the type the input declares.
+ * Says why it does not, or null when it does.
+ */
+export function misfit(
+  def: InputDefinition,
+  value: unknown,
+  descriptor: Vocabulary,
+): string | null {
+  if (valueFits(value, def.type, descriptor)) return null;
+  return `Value for input '${def.name}' does not fit its type ${typeToString(def.type)}`;
+}
+
+/** The same check for an API whose caller is code: a value that does not fit is a host bug. */
+export function assertFits(def: InputDefinition, value: unknown, descriptor: Vocabulary): void {
+  const problem = misfit(def, value, descriptor);
+  if (problem) throw new Error(problem);
 }

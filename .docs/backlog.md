@@ -6,6 +6,39 @@ What is being done next is in `todo.md`.
 
 ---
 
+## What boundary validation left: enums, the `any` crossing, a switch, the input row
+
+Split from "Value validation at the boundary" when it was built (2026-10-02, `done.md`). Four
+separate things, none needed by the check that shipped.
+
+- **Enums want a serialisable form, not a schema.** A list of allowed values on the type
+  travels inside a document, drives a dropdown in the Inputs pane, and generates its own check.
+  That is the one thing zod cannot do: converting a schema to JSON keeps enums and bounds but
+  drops a `.refine` predicate *silently* (verified against zod 4.4.3), so an "even number" saved
+  and reloaded would accept odd ones. Hence the split settled 2026-09-07 (`decisions.md`): a
+  schema where the declaration is code, shape only on the layer an instance persists.
+  **Requires:** an `enum` (or `values`) field on `TypeDefinition`, read by `valueFits` beside
+  `schema` and `fields`, by `isPorts`, and by the editor's `controlFor`. **Driving need:** a
+  user-declared input that is one of a few names.
+- **A value that crosses an `any`.** An `implicit_any_cast` is a warning, and nothing checks the
+  value at runtime: with `$whatever: any` holding 5, `Length($whatever)` is `5.length`, so an
+  output declared `number` holds `undefined` and no error is raised (found 2026-09-19; *Types
+  in practice* says so). **Requires:** a `valueFits` call where an `any`-typed argument meets a
+  concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
+  call, not per pushed value, and the cast (`as`) is the explicit way to check today.
+- **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
+  and a flag without a consumer is Speculative Generality. **Requires:** a host with a frame
+  rate push of a large list or struct and a number; then a policy on the layer, not a global.
+- **Editor: a refused value shows on its input row.** Typing `["a"]` into the JSON box of a
+  `number[]` input is refused, and the reason appears only in the Diagnostics pane; the box
+  keeps the text with no mark (checked in the playground, 2026-10-02). The box already marks a
+  JSON parse error, so the two faults look different for no reason. **Requires:** `Inputs.tsx`
+  reading the `input`-stage diagnostics by `where`, the way `usePortEdits.problems` reads the
+  `compose` ones. **Why deferred:** only the JSON box can reach it (the other controls produce
+  values of their own type), and "a field-wise widget for struct inputs" below replaces that box.
+
+---
+
 ## Stdlib — a friendlier text form for a list or a struct
 
 **What:** `ToString([1, 2])` is `"[1,2]"` and a struct is its JSON. That was chosen on
@@ -56,14 +89,59 @@ brings the brace depth with it: a hole then ends at the `}` that matches, not th
 
 **What:** `"Hello, " + name`, by teaching `Add` strings, as most languages overload `+`.
 
-**Why deferred:** `++` is the operator being built (`todo.md`), because it is plain sugar over
-`Join`, and `Join` converts its parts, so `"n = " ++ 1` needs no decision. `+` waits on the same
+**Why deferred:** `++` is the operator that was built (`done.md`, 2026-10-02), because it is plain
+sugar over `Join`, and `Join` converts its parts, so `"n = " ++ 1` needs no decision. `+` waits on the same
 thing it always did: its signature cannot be honest. With no union types the reference would print
 `Add(nodes...: number) -> number` for an op that also joins text.
 
 **What it requires:** about one commit, recorded when the entry was written (2026-09-20): the
 variadic branch of `validateInputs` analyses all items before it checks them, then `Add` gets
 `inferInputTypes`, `inferOutput` and an evaluator that sums or joins.
+
+---
+
+## Core — a list literal with mixed items hides a function behind `any`
+
+**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
+`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
+`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
+and the function goes in with the rest, although a function is never `any` everywhere else.
+A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
+`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
+fault of the `convert` flag, which it is not: no converting input is needed to see it.
+
+**Why deferred:** not a regression, and not the operator's or the flag's. It has been so since
+list literals took their element type from their items.
+
+**What it requires:** where the analyser derives a list literal's element type, a function
+item among items of another type is an error rather than a reason to say `any`. Decide the
+kind (a new one, or the mismatch the op would have raised) and whether two functions of
+different signatures count. A test per spelling above. It tightens a behaviour, so it wants a
+changelog line.
+
+---
+
+## Core — a host type with a conversion, and `~` on a type that extends a primitive
+
+**What:** two steps, asked by the maintainer 2026-10-02 once a lambda parameter could convert.
+(1) `(s~: Score)` with `Score extends number` is `invalid_convert_param`, and so is
+`convert: true` on an op input of that type: `isConvertible` compares the type's name with the
+three primitives. It could follow the `extends` chain and use the root's rule. (2) A conversion
+the type owns, `registerType("Score", { extends: "number", convert: (value) => … })`, so the
+mark converts INTO a host type.
+
+**Why deferred:** no host asks for either (Speculative Generality). A host has three things
+today: `as` checks a value against its type (schema, fields, the whole chain); `Convert` is
+exported, so a host op converts the way the language does; and a conversion can always be an
+ordinary op, `ToScore(value)`.
+
+**What it requires:** (1) `isConvertible` and the evaluator's `convertTo` resolve a named type
+to its primitive root through the descriptor. **Open question:** must the converted value then
+pass the type's `schema` (a `Grade` of 11), and what is it when it does not; `null`, as
+`ToNumber` gives for text that is no number, is the consistent answer. (2) a `convert?`
+function on `TypeDefinition` and one more case in each of those two functions. Like `schema`
+it is a function, so it cannot travel in the layer an instance persists. "A type defines its
+own text form" below is the other direction (`toText`); design the two together.
 
 ---
 

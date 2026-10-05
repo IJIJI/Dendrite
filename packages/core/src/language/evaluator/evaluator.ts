@@ -167,10 +167,14 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
       // Applying it extends that scope with the args (lexical capture). The captured
       // scope map is never mutated, so the closure sees exactly what was in scope when
       // it was defined, including enclosing lambda params (nesting/currying).
+      // A converting param (`t~: string`) converts its argument here, where the closure binds
+      // it, so a call from an op (Map, Filter) converts the same as a call written in a program.
       const captured = state;
       const closure: FnValue = (...args) => {
         const innerLocal = new Map(captured.localBindings);
-        node.params.forEach((p, i) => innerLocal.set(p.name, args[i]));
+        node.params.forEach((p, i) =>
+          innerLocal.set(p.name, p.convert && p.type ? convertTo(args[i], p.type) : args[i]),
+        );
         const innerState: EvalState = {
           inputs: captured.inputs,
           nodeCache: captured.nodeCache,

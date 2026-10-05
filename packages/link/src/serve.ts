@@ -122,6 +122,12 @@ export function serveInstance(
       }
       case "setInput":
         instance.setInput(command.name, command.value);
+        // Core refused it (the diagnostics say why) and so published no values. The client
+        // echoed the write before sending it, so hand back what the input really holds.
+        if (!Object.is(instance.values.get()[command.name], command.value)) {
+          push({ kind: "values", values: instance.values.get() });
+          push({ kind: "snapshot", snapshot: instance.snapshot.get() });
+        }
         return;
       case "fireTrigger":
         instance.fireTrigger(command.name, command.value);

@@ -213,9 +213,14 @@ produces is published `stale: true` rather than hidden — what the lights follo
 shows, marked.
 
 Every instance command returns nothing and reports through the observables. A refused layer
-change is published as `ports` diagnostics marked `refused` — nothing moved — rather than
+change is published as `compose` diagnostics marked `refused` — nothing moved — rather than
 returned, because a synchronous answer cannot cross a wire, and the editor drives instances
-across one (below).
+across one (below). A refused VALUE goes the same way: every value pushed into an input is
+checked against the input's type with `valueFits` (`infra/fits.ts`), and an instance answers
+one that does not fit with a `value_does_not_fit` diagnostic (stage `input`, `refused`), kept
+per input until a value fits or a compile runs. The runtime and its entries throw on the same
+check — their caller is host code — and both levels re-seed a kept value that a change of
+declaration left not fitting.
 
 ---
 
@@ -239,7 +244,8 @@ has, or takes an adapter.
 language (a composed descriptor holds functions and cannot cross — hence `hello` carries a
 protocol version and a vocabulary fingerprint, and a mismatch is refused with the difference
 named); it echoes `setInput` into `values` at once, and into `snapshot` for the persisted
-layer's inputs; it drops a `values` push stamped before its latest command and adopts the clock
+layer's inputs (the server answers a value core refused with the real `values` and `snapshot`,
+which takes the echo back); it drops a `values` push stamped before its latest command and adopts the clock
 of a `state` push; it marks outputs `stale` when the channel drops and re-handshakes when it
 returns; it refuses locally what a local instance refuses.
 

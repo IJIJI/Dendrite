@@ -71,6 +71,30 @@ describe("runtime", () => {
     expect(handle.initialOutputs.get("out")).toBe(1); // x seeds 0 → 0 + 1
   });
 
+  it("updateInputs refuses a batch with a value that does not fit, and moves nothing", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    const handle = rt.register("a", build(lang, "output out = Add($x, $y)"), {});
+    const seen = vi.fn();
+    handle.onOutput(seen);
+    expect(() => rt.updateInputs({ x: 1, y: "oops" })).toThrow(/'y' does not fit its type number/);
+    expect(seen).not.toHaveBeenCalled();
+    expect(rt.updateInputs({ y: 2 }).get("a")?.get("out")).toBe(2); // x never landed
+  });
+
+  it("register and replace refuse a starting value that does not fit, and change nothing", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    const ports: Ports = { inputs: [{ name: "p", type: Type.number }], outputs: [] };
+    const program = build(lang, "output out = Add($x, $p)", { ports });
+    expect(() => rt.register("a", program, { ports, values: { p: "oops" } })).toThrow(
+      /does not fit/,
+    );
+    const handle = rt.register("a", program, { ports, values: { p: 1 } }); // the id is still free
+    expect(() => rt.replace("a", program, { values: { p: "oops" } })).toThrow(/does not fit/);
+    expect(handle.setInput("p", 2).get("out")).toBe(2);
+  });
+
   it("updateInputs re-evaluates and notifies onOutput", () => {
     const lang = makeLang();
     const rt = runtimeFor(lang);
@@ -385,6 +409,23 @@ describe("runtime - global layers", () => {
     // x survived with its value, y's value went with the input, z seeds its own default.
     const handle = rt.register("a", build(lang, "output out = Add($x, $z)", { global: next }), {});
     expect(handle.initialOutputs.get("out")).toBe(13);
+  });
+
+  it("setLayer drops a global value the input's new type no longer fits", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    rt.updateInputs({ x: 5 });
+    const asText: Ports = {
+      inputs: [{ name: "x", type: Type.string }],
+      outputs: [{ name: "out", type: Type.number }],
+    };
+    expect(rt.setLayer("host", asText)).toEqual([]);
+    const handle = rt.register(
+      "a",
+      build(lang, 'output out = If($x == "", 0, 1)', { global: asText }),
+      {},
+    );
+    expect(handle.initialOutputs.get("out")).toBe(0); // seeded, not the stale 5
   });
 
   it("unsubscribes a layer listener", () => {

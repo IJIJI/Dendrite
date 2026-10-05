@@ -104,7 +104,8 @@ declare that it does, one input at a time. The analyser then accepts a value of 
 **shape** with any data at the leaves (a list of anything for `string[]{:ts}`), and before the op
 runs, the evaluator converts each leaf with the same rules `ToString{:den}`, `ToNumber{:den}` and
 `ToBool{:den}` use, so your evaluator sees the type it declared. The reference marks such an input
-`parts~{:den}` and writes a sentence under the signature, generated from the flag.
+`parts~{:den}` and writes a sentence under the signature, generated from the flag. A program's
+own lambda can carry the same mark on a parameter, `(t~: string) => …{:den}`, with the same rules.
 
 ```ts
 language.registerOp({

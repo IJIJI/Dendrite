@@ -1825,6 +1825,50 @@ describe("convert: an op input that accepts any leaf and converts it", () => {
     ]);
   });
 
+  describe("on a lambda parameter, (t~: string) => …", () => {
+    const kindsOf = (source: string) => check(source).errors.map((e) => e.kind);
+
+    it("is its written type in the body, and any to a caller", () => {
+      const analysed = check("let shout = (t~: string) => Upper(t)\noutput out = shout(5)");
+      expect(analysed.errors).toEqual([]);
+      expect(analysed.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
+      expect(analysed.program.bindings.get("shout")).toMatchObject({
+        type: Type.fn([Type.any], Type.string, ["t"]),
+      });
+    });
+
+    it("fits where an op hands it another type, inline or by name", () => {
+      expect(kindsOf("output out = Map([1, 2], (n~: string) => Upper(n))")).toEqual([]);
+      expect(
+        kindsOf("let shout = (t~: string) => Upper(t)\noutput out = Map([1, 2], shout)"),
+      ).toEqual([]);
+    });
+
+    it("keeps the shape of a list, and still refuses a function", () => {
+      const dash = 'let dash = (xs~: string[]) => Join(xs, "-")\n';
+      expect(kindsOf(dash + "output out = dash([1, 2])")).toEqual([]);
+      expect(kindsOf(dash + "output out = dash(5)")).toEqual(["app_argument_type_mismatch"]);
+      expect(kindsOf("let shout = (t~: string) => t\noutput out = shout(x => x)")).toEqual([
+        "app_argument_type_mismatch",
+      ]);
+    });
+
+    it("needs a written type: contextual typing does not supply one", () => {
+      expect(kindsOf("output out = Map([1, 2], (n~) => n)")).toEqual(["invalid_convert_param"]);
+      const short = check("output out = Map([1, 2], n~ => n)");
+      expect(short.errors.map((e) => e.kind)).toEqual(["invalid_convert_param"]);
+      expect(short.errors[0]!.message).toContain("write (n~: string)");
+    });
+
+    it("needs a type with a conversion: not a function, a struct or any", () => {
+      for (const type of ["(number) -> number", "any", "any[]"]) {
+        const analysed = check(`let f = (v~: ${type}) => v\noutput out = f(1)`);
+        expect(analysed.errors[0]).toMatchObject({ kind: "invalid_convert_param", name: "v" });
+        expect(analysed.errors[0]!.message).toContain("has no conversion");
+      }
+    });
+  });
+
   it("is refused when the language composes, for each rule it can break", () => {
     const cases: [string, Parameters<Language["registerOp"]>[0]["inputs"][0]][] = [
       ["struct", { name: "a", type: Type.name("Bus"), convert: true }],

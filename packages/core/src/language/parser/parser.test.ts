@@ -352,6 +352,30 @@ describe("lambdas", () => {
     });
   });
 
+  it("a parameter marked ~ converts: (t~: string, n) => …", () => {
+    expect(parse("(t~: string, n) => t").node).toMatchObject({
+      kind: "lambda",
+      params: [{ name: "t", type: Type.string, convert: true }, { name: "n" }],
+    });
+    expect(parse("(t~: string, n) => t").node).not.toHaveProperty("params.1.convert");
+  });
+
+  it("the mark with no type still parses, short form included: the analyser refuses it", () => {
+    for (const source of ["(t~) => t", "t~ => t"]) {
+      const { node, errors } = parse(source);
+      expect(errors).toEqual([]);
+      expect(node).toMatchObject({ kind: "lambda", params: [{ name: "t", convert: true }] });
+    }
+  });
+
+  it("a ~ anywhere else is a syntax error that says what the mark is for", () => {
+    for (const source of ["1 ~ 2", "(1)~ => 2"]) {
+      const { errors } = parse(source);
+      expect(errors[0]).toMatchObject({ kind: "syntax_error" });
+      expect(errors[0]!.message).toContain("(t~: string)");
+    }
+  });
+
   it("(x) is a grouping, (x) => … is a lambda", () => {
     expect(parse("(x)").node).toMatchObject({ kind: "ref", name: "x" });
     expect(parse("(x) => x").node).toMatchObject({ kind: "lambda", params: [{ name: "x" }] });
@@ -439,6 +463,30 @@ describe("operators", () => {
         b: { value: 3 },
       },
     });
+  });
+
+  it("++ desugars to Join over its two sides, and is one token, not two pluses", () => {
+    expect(parse('"n = " ++ count').node).toMatchObject({
+      kind: "operation",
+      op: "Join",
+      inputs: {
+        parts: {
+          kind: "array",
+          items: [
+            { kind: "literal", value: "n = " },
+            { kind: "ref", name: "count" },
+          ],
+        },
+      },
+    });
+    expect(parse('"n = " ++ count').errors).toEqual([]);
+  });
+
+  it("++ binds as + does and chains to the left: a + 1 ++ b ++ c", () => {
+    const join = (items: unknown[]) => ({ op: "Join", inputs: { parts: { items } } });
+    expect(parse("a + 1 ++ b ++ c").node).toMatchObject(
+      join([join([{ op: "Add" }, { kind: "ref", name: "b" }]), { kind: "ref", name: "c" }]),
+    );
   });
 
   it(">= desugars to Not(LessThan(...)) — no dedicated op", () => {

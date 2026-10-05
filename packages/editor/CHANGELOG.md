@@ -6,8 +6,16 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.4.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.5.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## 0.5.0
+
+- **No change in the package.** The peer range moves to core `^0.5.0`, and two things core
+  changed show through it. The Diagnostics pane lists core's new `value_does_not_fit` when a
+  value typed into an input does not fit its type (the JSON box of a list or struct input can
+  send one); the input keeps its value. And `~` is coloured as punctuation, in a program's
+  `(t~: string) => …` and in the reference's `parts~: string[]`, because core now lexes it.
 
 ## 0.4.0
 

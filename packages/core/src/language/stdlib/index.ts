@@ -780,6 +780,16 @@ export function createStdlib(): Language {
   );
   lang.registerInfix("+", BP.ADD, variadic("Add"));
   lang.registerInfix("-", BP.ADD, bin("Subtract"));
+  // `++` joins two values as text: sugar over Join, as a template is. Join converts its parts
+  // (`convert`), so `"n = " ++ 1` needs no ToString and the analyser inserts nothing. A chain
+  // nests, the way `+` does: a Join the author wrote may carry a separator, so the parser
+  // cannot fold one into another. The list takes the left operand's position, so a problem
+  // with the list itself points at the expression rather than nowhere.
+  lang.registerInfix("++", BP.ADD, (l, r) =>
+    operationNode("Join", {
+      parts: { kind: "array", items: [l, r], type: Type.any, source: l.source },
+    }),
+  );
   lang.registerInfix("*", BP.MULTIPLY, variadic("Multiply"));
   lang.registerInfix("/", BP.MULTIPLY, bin("Divide"));
   lang.registerPrefix("!", BP.PREFIX, (operand) => operationNode("Not", { a: operand }));

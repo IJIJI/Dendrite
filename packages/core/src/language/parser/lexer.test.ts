@@ -156,6 +156,12 @@ describe("operators", () => {
     expect(values("=-3", OPS)).toEqual(["=", "-", "3"]);
   });
 
+  it("~ is structural: the converting mark on a lambda parameter needs no vocabulary", () => {
+    const { tokens, errors } = tokenise("(t~: string)");
+    expect(errors).toEqual([]);
+    expect(tokens.map((t) => t.value).slice(0, 4)).toEqual(["(", "t", "~", ":"]);
+  });
+
   it("core has no operators: an operator char is unknown without a vocabulary", () => {
     const { errors } = tokenise("1+2");
     expect(errors).toHaveLength(1);

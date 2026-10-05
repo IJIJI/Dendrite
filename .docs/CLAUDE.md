@@ -24,9 +24,9 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.4.0** (2026-09-24). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.4.0** (2026-09-24). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
-| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.4.0** (2026-09-24). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.5.0** (2026-10-02). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.5.0** (2026-10-02). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.5.0** (2026-10-02). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `ijiji.github.io/Dendrite/playground/` |
 | `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `ijiji.github.io/Dendrite/` |
@@ -74,8 +74,11 @@ files as rows, with what changed in each - plus the exact `git add` and a one-li
 stop until it is committed. Never run a git command that changes state - `add`, `commit`,
 `checkout`, `reset`, `stash`, `rebase`, tags - without explicit permission for that command;
 that includes staging a file just edited. Read-only git (`status`, `diff`, `log`) is fine.
-Never stack new work on uncommitted changes. PRs are the maintainer's too: say when a
-point is a good one to open a PR, but do not write its title or body, or open it, unless asked.
+Never stack new work on uncommitted changes: read `git status` before each milestone and before
+each commit's work, and if the tree is not clean, the previous handover is the first thing to ask
+about. Every handover gives the full `git add`, with every file of the table, and the `git commit`,
+as two blocks, whatever the index already holds. PRs are the maintainer's too: say when a point
+is a good one to open a PR, but do not write its title or body, or open it, unless asked.
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
 deploy runs from. `dev` has a GitHub ruleset forbidding merge commits, so never `git merge` into
