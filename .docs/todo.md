@@ -53,13 +53,28 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 ---
 
-## Release after 0.4.0 — in this order
+## After the 0.5.0 release
 
-Kept here, not in the backlog, because each has a timeframe: the release after the types plan.
+0.5.0 took the first three of the four items listed here after 0.4.0: boundary validation,
+`++`, and a converting lambda parameter (`done.md`). One is left, and it has a timeframe, which
+is why it is here and not in the backlog.
 
-1. **An optional lambda parameter.** Raised beside the converting one (2026-09-21). Decide after
-   0.4.0 whether it stays here or moves to the backlog: it has no consumer yet, only symmetry
-   with `required: false` on an op input.
+**An optional lambda parameter, `(sep?: string) => …`.** Raised beside the converting one
+(2026-09-21). The maintainer's decision 2026-10-02: after the 0.5.0 release, with its
+decisions deferred until then. It has no consumer yet, only symmetry with `required: false` on
+an op input, so "move it to the backlog" is still an answer when it comes up.
+
+- **Why it is bigger than the converting parameter (measured 2026-10-02):** that one needed
+  no change to `Type`. This one does: a caller often knows a function only by its type, and
+  the call check counts the parameters in that type, so "may be left out" has to live in the
+  function type. About eight places read a function type's parameter list (`isCompatible`,
+  `typesEqual`, `typeToString`, the call check, contextual typing, the docs' printer). `?` is
+  no token today, so it also needs the lexer, the parameter list and the type annotation
+  `(string, number?) -> string`. Estimate: a plan, then three commits.
+- **Four decisions, not taken:** (1) does `(a, b?) -> r` fit where `(a) -> r` is expected,
+  which changes function subtyping; (2) must an optional parameter come last; (3) what the
+  body reads for an absent argument, `null` or a written default; (4) whether `(t~?: string)`
+  is refused, as an op input refuses `convert` with optional.
 
 ---
 

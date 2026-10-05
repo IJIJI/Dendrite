@@ -7,15 +7,15 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.4.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.5.0`: a minor release of core needs a release here too, even if nothing in this package changed.
 
-## Unreleased
+## 0.5.0
 
 - **A refused value is taken back.** Core now refuses a value that does not fit its input's
   type. A replica echoes `setInput` before the server answers, so the server follows a refused
   one with the real `values` and `snapshot`, and the `value_does_not_fit` diagnostic arrives
   beside them. Before core checked, the server stored whatever came.
-- **With core's next release:** a `ProgramDiagnostic` on the wire can carry the stage `"input"`.
+- **With core 0.5.0:** a `ProgramDiagnostic` on the wire can carry the stage `"input"`.
 
 ## 0.4.0
 
