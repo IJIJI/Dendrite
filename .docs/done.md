@@ -5,6 +5,29 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.5.0 on npm — DONE 2026-10-05
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.5.0**, eleven
+days after 0.4.0. A minor because it breaks: a value pushed into an input must fit the input's
+type. Three features in nine commits, each with its reasoning above: boundary validation, `++`,
+and a converting lambda parameter. The editor changed nothing of its own and released as the
+peer range demands.
+
+The runbook (`release-plan.md`, "Every later release") held with nothing added. PR #22 showed
+9 of 9 commits, because every commit was pushed before it opened and nothing was pushed after.
+One GitHub release on core's tag started one `Stage release` run (1m09s, green), and the three
+versions were approved core first.
+
+Checked after approval, from outside the repo: `latest` is 0.5.0 on each package, an
+attestation is on all three, the peer ranges are `^0.5.0`, and a clean `npm install` of the
+three runs a program that uses everything new. `"n = " ++ $n ++ ", " ++ shout(true)` with
+`shout = (t~: string) => Upper(t)` and `n` at 4 gives `"n = 4, TRUE"`; pushing `"oops"` into `n`
+leaves the value at 4 and publishes `input/value_does_not_fit/input n`; the same push through a
+runtime's `register` throws "Value for input 'n' does not fit its type number"; and
+`grammar.symbols` has `++`.
+
+---
+
 ## A converting lambda parameter, `(t~: string) => …` — DONE 2026-10-02
 
 The `convert` flag's second consumer, and the reason the flag was kept (`types-and-text-plan.md`).

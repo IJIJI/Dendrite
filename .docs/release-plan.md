@@ -230,6 +230,16 @@ versions were staged with provenance, and approving them core first published cl
 - **Tag names start with `@`, so PowerShell needs them quoted** (`git tag -a "@dendrite-lang/core@0.2.0"`),
   or a bare `@` is read as splatting.
 
+## What the third and fourth releases taught
+
+**0.3.0 and 0.4.0** are above (0.4.0's lesson is step 2 of the runbook). **0.5.0, 2026-10-05:
+the runbook held with nothing added.** The PR's commit count matched `origin/main..dev` (9 of 9)
+because every commit was pushed before the PR opened and none after; one release, one run, three
+approvals core first. The after-approval check was run from a clean directory outside the repo,
+with a program that exercises each feature of the release, which is a better check than an
+import alone: it is what caught nothing this time and would catch a build that packs the wrong
+`dist`.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the
