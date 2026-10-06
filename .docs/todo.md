@@ -47,7 +47,7 @@ is one commit. Row b follows the brand README, and it is what makes a doc page a
 read as one site.
 
 **Also seen, on the landing:** on a phone the headline sits on the field's strongest lines,
-because one column makes the band tall and the fade starts 30% down it. The field is a tenth
+because one column makes the band tall and the fade starts 30% down it. The field is a fifth
 darker since 2026-10-06 (`done.md`), which helps a little. An earlier fade under 960 would do
 more. Not decided.
 
