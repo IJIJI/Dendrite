@@ -23,30 +23,12 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
-## Docs — the rest of the sheet's docs page (§20)
+## Docs — the landing in a narrow window
 
-**What:** after the top bar and the pillars (2026-10-06, `done.md`), what a doc page still shows
-differently from sheet §20. Proposed, none decided.
+Two things seen while the landing was built (2026-10-06), neither decided. The doc pages took
+the sheet's type and controls the same day (`done.md`); what is left of that is in `backlog.md`.
 
-| # | Part | Sheet and brand README | Site, measured 2026-10-06 | Work | Proposal |
-| --- | --- | --- | --- | --- | --- |
-| a | The rule under the bar | 2px, ink | 1px hairline | CSS | pick |
-| b | H1 and H2, the face | Chakra Petch 600 ("Display stops at H2") | Archivo 600 | CSS | pick |
-| c | The heading sizes | H1 40/1.1, H2 28/1.15, H3 20/1.3, H4 16/1.4 | 42, 35, 29 and Starlight's H4 | CSS | pick apart from b: it changes the density of every page |
-| d | The sidebar's active item | an Iris bar on its left, ground-2 fill, ink text, square | solid Iris fill, white text, 4px corners | CSS | pick |
-| e | "On this page", the title | an overline: 11px, capitals, .08em, ink-2 | 18px, sentence case, ink | CSS | pick |
-| f | "On this page", the current item | ink | Iris | CSS | pick with e |
-| g | Previous and next | plain text with arrows, a 1px rule above | boxed links, 8px corners, a shadow | CSS | maybe: the corners break the brand's radius rule |
-| h | A note | info-soft fill, a 2px bar in the info colour, ink text | Starlight's own blue, a 4px bar, a blue title | CSS | maybe: these colours are not the brand's |
-| i | The section name above H1 | an Iris overline | none | a `PageTitle` override | later |
-| j | The page's ground | ground, and dark-0 in dark | white, and dark-1 in dark | palette | leave: decided earlier |
-| k | The sidebar's shape | one flat list | groups that fold | structure | leave |
-
-Each of a to h is one small change in `apps/docs/src/styles/dendrite.css`, and any set of them
-is one commit. Row b follows the brand README, and it is what makes a doc page and the landing
-read as one site.
-
-**Also seen, on the landing:** on a phone the headline sits on the field's strongest lines,
+**The headline on the field.** On a phone the headline sits on the field's strongest lines,
 because one column makes the band tall and the fade starts 30% down it. The field is a fifth
 darker since 2026-10-06 (`done.md`), which helps a little. An earlier fade under 960 would do
 more. Not decided.

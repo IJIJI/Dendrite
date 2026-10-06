@@ -428,6 +428,36 @@ re-export, and diff the export against `Hero.astro` and `brand/aurora/hero.ts`.
 
 ---
 
+## Docs — the section name above a page's title
+
+**What:** sheet §20 sets a small Iris overline over H1, with the name of the section the page
+is in ("Concepts" over "Caching"). The site has none.
+
+**Why deferred (2026-10-06):** the rest of §20 was CSS. This one needs a `PageTitle` override
+that finds the page's group in the sidebar, and no reader has missed it: the sidebar shows the
+section beside the title.
+
+**What it requires:** the override (Starlight's `PageTitle`, plus one line above the `h1`), the
+group's label from `Astro.locals.starlightRoute.sidebar`, and the brand's overline as
+`#starlight__on-this-page` has it in `dendrite.css`.
+
+---
+
+## Docs — *Every diagnostic* is wider than a phone
+
+**What:** at 375px `how-it-works/diagnostics` scrolls sideways by 14px. It was 83px before the
+headings took the brand's sizes (2026-10-06), so the cause is older than that change: the
+page's H3s are diagnostic names, one unbreakable word each (`output_depends_on_failed_binding`
+is 32 characters).
+
+**Why deferred:** found by a sweep of all pages during the type change, which was not about
+this page.
+
+**What it requires:** `overflow-wrap: anywhere` on those headings (`DiagnosticsTable.astro`), or
+a smaller face for a name that is code, and a look at the page's tables at the same width.
+
+---
+
 ## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
 
 **What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal

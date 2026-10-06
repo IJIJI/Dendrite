@@ -5,6 +5,40 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — a doc page in the brand's type and controls — DONE 2026-10-06
+
+What a doc page showed differently from sheet §20 was broken down into rows, and the
+maintainer picked: no 2px rule under the nav, and everything from the headings to the note.
+One commit, all of it in `apps/docs/src/styles/dendrite.css`. What was built, and why that way:
+
+- **H1 and H2 are Chakra Petch 600**, as the brand README has it ("Display stops at H2"). The
+  op names on a stdlib page are H2s, so they are in the display face too.
+- **The headings are the brand's scale**: 40 / 28 / 20 / 16, with its line heights. They are
+  set through Starlight's own size properties, because Starlight reads each one twice (the
+  heading, and the wrapper its anchor link sits in), and in rem, so they follow the reader's
+  font size as the body does. They hold at every width, where Starlight stepped down on a
+  phone: nine page titles are two lines there. H5 is 16 too, so nothing under H4 is larger.
+- **The sidebar's current page** is an Iris bar, the sunken ground and ink text, square. The
+  bar comes out of the padding, so the label does not move. The fill is the property
+  Starlight names for inline code: ground-2 on light, and dark-3 on dark, where ground-2's
+  own counterpart is the sidebar's colour and would not show.
+- **"On this page"** is the brand's overline (11px, which no Starlight size holds), and the
+  current heading is ink among muted ones.
+- **Previous and next** are plain links under a rule. Starlight's "Previous" and "Next" are
+  bare text inside each link, so they are sized to nothing: off the screen, still in the
+  link's name.
+- **A note** takes the brand's info colour, through the two blues of Starlight's palette that
+  an aside reads, with a 2px bar and ink for its title and links. Notes are the only kind of
+  aside the site has, so the other kinds keep Starlight's colours.
+
+Not built: the rule under the nav (declined), the page's grounds and the sidebar's folding
+groups (left as they are), and the section name above H1 (`backlog.md`).
+
+Checked on all 31 pages at 375 and at 1440 wide: none is wider than the window at 1440. At
+375 one is, *Every diagnostic*, by 14px; with Starlight's sizes it was 83px (`backlog.md`).
+
+---
+
 ## Docs — the landing's field, a fifth darker — DONE 2026-10-06
 
 The copy starts level with the live block (the maintainer's change of the same day), so its
