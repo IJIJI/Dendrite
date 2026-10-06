@@ -84,7 +84,7 @@ export function createStdlib(): Language {
       { name: "b", type: Type.any },
     ],
     output: Type.boolean,
-    category: "comparison",
+    category: "logic",
     description: "True when a and b are the same value.",
     examples: [den`output same = Equals("a", "a")`],
   });
@@ -95,7 +95,7 @@ export function createStdlib(): Language {
       { name: "b", type: Type.any },
     ],
     output: Type.boolean,
-    category: "comparison",
+    category: "logic",
     description: "True when a and b differ.",
     examples: [den`output differ = NotEquals(1, 2)`],
   });
@@ -106,7 +106,7 @@ export function createStdlib(): Language {
       { name: "b", type: Type.number },
     ],
     output: Type.boolean,
-    category: "comparison",
+    category: "logic",
     description: "True when a is greater than b.",
     examples: [den`output bigger = GreaterThan(3, 2)`],
   });
@@ -117,7 +117,7 @@ export function createStdlib(): Language {
       { name: "b", type: Type.number },
     ],
     output: Type.boolean,
-    category: "comparison",
+    category: "logic",
     description: "True when a is less than b.",
     examples: [den`output smaller = LessThan(2, 3)`],
   });

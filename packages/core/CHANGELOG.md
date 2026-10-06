@@ -9,6 +9,14 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 at `^0.5.0`, so a minor release here is always accompanied by a release of both.
 
+## Unreleased
+
+- **Breaking: the comparison ops are in the `logic` segment.** `Equals`, `NotEquals`,
+  `GreaterThan` and `LessThan` carry `category: "logic"`, where a host reading `op.category`
+  saw `"comparison"`. The reason is `>=`: it is sugar over `Not(LessThan(…))`, and with the
+  four in `logic` every symbol's op is in the segment that registers the symbol. The reference
+  has seven pages; `/stdlib/comparison/` is gone, and its entries are on the logic page.
+
 ## 0.5.0
 
 - **A lambda parameter can convert: `(t~: string) => Upper(t)`.** The mark `~` means what it

@@ -112,8 +112,7 @@ these pages up.
 
 | Segment | What is in it |
 | --- | --- |
-| [logic](./logic/) | `And{:den}`, `Or{:den}`, `Xor{:den}`, `Not{:den}` |
-| [comparison](./comparison/) | `Equals{:den}`, `NotEquals{:den}`, `LessThan{:den}`, `GreaterThan{:den}` |
+| [logic](./logic/) | `And{:den}`, `Or{:den}`, `Xor{:den}`, `Not{:den}`, `Equals{:den}`, `NotEquals{:den}`, `LessThan{:den}`, `GreaterThan{:den}` |
 | [control](./control/) | `If{:den}`, `Default{:den}`, `IsSet{:den}` |
 | [array](./array/) | `Length{:den}`, `Concat{:den}`, `Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}` |
 | [arithmetic](./arithmetic/) | `Add{:den}`, `Subtract{:den}`, `Multiply{:den}`, `Divide{:den}` |
