@@ -154,7 +154,10 @@ const { source, ports } = scoresExample;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 48px;
-    align-items: end;
+    /* The row is as tall as the taller block and sits at the foot of the band; in it the two
+       blocks start level, so the headline's top is the live block's top. */
+    align-content: end;
+    align-items: start;
     max-width: 1280px;
     /* The design frame's height (1440 x 600): the copy stays in the band's lower part, where
        the fade is, and off the field's brightest lines. */

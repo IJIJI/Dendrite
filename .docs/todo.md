@@ -28,20 +28,23 @@ After the release: the two symbols that want `?`, below.
 **What:** after the top bar and the pillars (2026-10-06, `done.md`), what a doc page still shows
 differently from sheet §20. Proposed, none decided.
 
-| # | Part | Sheet §20 | Site | Work | Proposal |
+| # | Part | Sheet and brand README | Site, measured 2026-10-06 | Work | Proposal |
 | --- | --- | --- | --- | --- | --- |
-| 1 | The rule under the bar | 2px, ink | 1px hairline | CSS | do |
-| 2 | H1 and H2 | Chakra Petch 600 | Archivo | CSS | do |
-| 3 | The sidebar's active item | an Iris bar on its left, ground-2 fill, ink text | solid Iris fill, white text | CSS | do |
-| 4 | "On this page" | an overline: 11px, capitals, .08em | 18px, sentence case | CSS | do |
-| 5 | Previous and next | plain text with arrows, a 1px rule above | Starlight's boxed links | CSS | maybe |
-| 6 | The section name above H1 | an Iris overline | none | a `PageTitle` override | later |
-| 7 | The page's ground | ground, and dark-0 in dark | white, and dark-1 in dark | palette | leave: decided earlier |
-| 8 | The sidebar's shape | one flat list | groups that fold | structure | leave |
+| a | The rule under the bar | 2px, ink | 1px hairline | CSS | pick |
+| b | H1 and H2, the face | Chakra Petch 600 ("Display stops at H2") | Archivo 600 | CSS | pick |
+| c | The heading sizes | H1 40/1.1, H2 28/1.15, H3 20/1.3, H4 16/1.4 | 42, 35, 29 and Starlight's H4 | CSS | pick apart from b: it changes the density of every page |
+| d | The sidebar's active item | an Iris bar on its left, ground-2 fill, ink text, square | solid Iris fill, white text, 4px corners | CSS | pick |
+| e | "On this page", the title | an overline: 11px, capitals, .08em, ink-2 | 18px, sentence case, ink | CSS | pick |
+| f | "On this page", the current item | ink | Iris | CSS | pick with e |
+| g | Previous and next | plain text with arrows, a 1px rule above | boxed links, 8px corners, a shadow | CSS | maybe: the corners break the brand's radius rule |
+| h | A note | info-soft fill, a 2px bar in the info colour, ink text | Starlight's own blue, a 4px bar, a blue title | CSS | maybe: these colours are not the brand's |
+| i | The section name above H1 | an Iris overline | none | a `PageTitle` override | later |
+| j | The page's ground | ground, and dark-0 in dark | white, and dark-1 in dark | palette | leave: decided earlier |
+| k | The sidebar's shape | one flat list | groups that fold | structure | leave |
 
-Rows 1 to 4 are one commit, all of it in `apps/docs/src/styles/dendrite.css`. Row 2 follows
-the brand README ("Display stops at H2"), and it is what makes a doc page and the landing read
-as one site.
+Each of a to h is one small change in `apps/docs/src/styles/dendrite.css`, and any set of them
+is one commit. Row b follows the brand README, and it is what makes a doc page and the landing
+read as one site.
 
 **Also seen, on the landing:** on a phone the headline sits on the field's full-strength lines,
 because one column makes the band tall and the fade starts 30% down it. An earlier fade under
