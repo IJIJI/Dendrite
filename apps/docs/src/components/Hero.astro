@@ -162,9 +162,11 @@ const { source, ports } = scoresExample;
     align-content: end;
     align-items: start;
     max-width: 1280px;
-    /* The design frame's height (1440 x 600): the copy stays in the band's lower part, where
-       the fade is, and off the field's brightest lines. */
-    min-height: 600px;
+    /* The design frame's height (1440 x 600) where the window has it: the copy stays in the
+       band's lower part, where the fade is. A shorter window gets a shorter hero, down to
+       what the blocks need, so the pillars stay on screen: 9rem is kept for them, which is
+       their cells with three lines of text. */
+    min-height: min(600px, calc(100dvh - var(--sl-nav-height) - 9rem));
     margin: 0 auto;
     padding: 96px 48px 64px;
   }
@@ -308,6 +310,19 @@ const { source, ports } = scoresExample;
       grid-template-columns: minmax(0, 1fr);
       min-height: 0;
       padding: 64px 24px 40px;
+    }
+  }
+
+  /* A short window with the blocks side by side (a small laptop): less room above and below
+     them, and the code area as short as it is in one column. Hero and pillars are then one
+     screen down to a window about 600px high. Under that the page scrolls. */
+  @media (min-width: 961px) and (max-height: 760px) {
+    .dn-hero__inner {
+      padding-block: 48px 32px;
+    }
+
+    .dn-hero__live :global(.cm-scroller) {
+      min-height: 11rem;
     }
   }
 </style>
