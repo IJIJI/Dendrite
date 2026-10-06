@@ -2,7 +2,8 @@
 // The landing hero, brand round 2's option 5z (brand/CHANGES.md, sheet §24): a band that is
 // dark-0 in both themes, the aurora behind it fading into the band, the headline on the left
 // and a live Minimal block where the design draws a code well - a program the reader can
-// play with above the fold. Markup and CSS are brand/aurora/hero.html's, on the brand's
+// play with above the fold. Under it, on the same band, the page's pillars: three equal
+// cells between 1px rules, which take what is left of the window. Markup and CSS are brand/aurora/hero.html's, on the brand's
 // tokens (brand/dendrite-tokens.css), with the corrections `.docs/backlog.md` lists for the
 // design source; the title, lede and actions are the page's frontmatter.
 // The design's buttons carry no icon, so an action's `icon` is not drawn.
@@ -15,42 +16,59 @@ import Live from "./Live";
 const { data } = Astro.locals.starlightRoute.entry;
 // Starlight's 404 page is a splash page with a hero too: it has no hero title, and no actions.
 const { title = data.title, tagline, actions = [] } = data.hero || {};
+const { pillars = [] } = data;
 
 const { source, ports } = scoresExample;
 ---
 
 <section class="dn-hero">
-  <div class="dn-hero__bg" aria-hidden="true">
-    <img src={fallback.src} alt="" class="dn-hero__fallback" />
-  </div>
-  <div class="dn-hero__inner">
-    <div class="dn-hero__copy">
-      <h1 id="_top" data-page-title class="dn-hero__title" set:html={title} />
-      {tagline && <p class="dn-hero__lede" set:html={tagline} />}
-      {
-        actions.length > 0 && (
-          <div class="dn-hero__actions">
-            {actions.map(({ attrs: { class: className, ...attrs } = {}, link, text, variant }) => (
-              <a
-                class:list={[
-                  "dn-btn",
-                  variant === "primary" ? "dn-btn--primary" : "dn-btn--ghost",
-                  className,
-                ]}
-                href={link}
-                {...attrs}
-              >
-                {text}
-              </a>
-            ))}
-          </div>
-        )
-      }
+  <div class="dn-hero__stage">
+    <div class="dn-hero__bg" aria-hidden="true">
+      <img src={fallback.src} alt="" class="dn-hero__fallback" />
     </div>
-    <div class="dn-hero__live">
-      <Live client:only="react" source={source} ports={ports} codeMinHeight="11rem" />
+    <div class="dn-hero__inner">
+      <div class="dn-hero__copy">
+        <h1 id="_top" data-page-title class="dn-hero__title" set:html={title} />
+        {tagline && <p class="dn-hero__lede" set:html={tagline} />}
+        {
+          actions.length > 0 && (
+            <div class="dn-hero__actions">
+              {actions.map(
+                ({ attrs: { class: className, ...attrs } = {}, link, text, variant }) => (
+                  <a
+                    class:list={[
+                      "dn-btn",
+                      variant === "primary" ? "dn-btn--primary" : "dn-btn--ghost",
+                      className,
+                    ]}
+                    href={link}
+                    {...attrs}
+                  >
+                    {text}
+                  </a>
+                ),
+              )}
+            </div>
+          )
+        }
+      </div>
+      <div class="dn-hero__live">
+        <Live client:only="react" source={source} ports={ports} />
+      </div>
     </div>
   </div>
+  {
+    pillars.length > 0 && (
+      <ul class="dn-hero__pillars">
+        {pillars.map((pillar) => (
+          <li>
+            <h2>{pillar.title}</h2>
+            <p>{pillar.text}</p>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 </section>
 
 <script>
@@ -69,12 +87,26 @@ const { source, ports } = scoresExample;
   /* Always the dark band, whatever the page's theme: color-scheme is what the live block's
      light-dark() colours read, so the editor inside is the dark one too. */
   .dn-hero {
-    position: relative;
-    overflow: hidden;
+    /* The band is the page: at least the window under the nav, the pillars taking what the
+       hero leaves, so they end where the window does. */
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--sl-nav-height));
     background: var(--dn-dark-0);
     color: var(--dn-dark-ink);
     color-scheme: dark;
     print-color-adjust: exact;
+  }
+
+  /* What the aurora fills: the hero, not the pillars under it. The rule beneath is the
+     pillars' top one, so it is drawn only when they follow. */
+  .dn-hero__stage {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dn-hero__stage:not(:last-child) {
+    border-bottom: 1px solid var(--dn-dark-border);
   }
 
   .dn-hero__bg {
@@ -137,7 +169,7 @@ const { source, ports } = scoresExample;
   }
 
   .dn-hero__title {
-    margin: 0 0 16px;
+    margin: 0 0 24px;
     font-family: var(--dn-font-display);
     font-weight: var(--dn-font-display-weight);
     /* The design's 56 where the column has room for it, and a tenth of the column where it
@@ -151,7 +183,7 @@ const { source, ports } = scoresExample;
 
   .dn-hero__lede {
     max-width: 40ch;
-    margin: 0 0 24px;
+    margin: 0 0 32px;
     font-family: var(--dn-font-body);
     font-size: var(--dn-text-xl);
     line-height: 1.5;
@@ -167,11 +199,12 @@ const { source, ports } = scoresExample;
   .dn-btn {
     display: inline-flex;
     align-items: center;
-    padding: 10px 16px;
+    padding: 12px 20px;
     border-radius: var(--dn-radius-1);
     font-family: var(--dn-font-body);
     font-weight: 600;
-    font-size: var(--dn-text-md);
+    font-size: var(--dn-text-lg);
+    line-height: 1.5; /* a label, not prose: the page's own line height made the button tall */
     text-decoration: none;
     transition: background var(--dn-motion-fast) var(--dn-ease);
   }
@@ -199,12 +232,70 @@ const { source, ports } = scoresExample;
     outline-offset: 2px;
   }
 
+  /* The live block's code area: taller than its five lines, into the room the band has above
+     it. The height is set on CodeMirror's scroller and not through the editor's own knob
+     (--dendrite-code-min-height, on .cm-editor): the knob does not stretch the scroller, so
+     the sideways scrollbar would float under the last line (backlog.md). */
+  .dn-hero__live :global(.cm-scroller) {
+    min-height: 16rem;
+  }
+
   /* The live block brings its own margin for prose; in the band the grid places it. */
   .dn-hero__live :global(.live) {
     margin: 0;
   }
 
+  /* The pillars: equal cells in the hero's own frame, a 1px rule between two of them. */
+  .dn-hero__pillars {
+    flex: 1; /* the rest of the band's height: the cells and their rules run to its end */
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+    font-family: var(--dn-font-body);
+    font-size: var(--dn-text-lg);
+    line-height: 1.5;
+  }
+
+  .dn-hero__pillars > li {
+    padding: 20px 24px;
+  }
+
+  .dn-hero__pillars > li + li {
+    border-inline-start: 1px solid var(--dn-dark-border);
+  }
+
+  .dn-hero__pillars h2 {
+    margin: 0 0 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--dn-dark-ink);
+  }
+
+  .dn-hero__pillars p {
+    margin: 0;
+    color: var(--dn-dark-ink-2);
+  }
+
   @media (max-width: 960px) {
+    /* One column, as the hero is: the rule between two cells turns with them. */
+    .dn-hero__pillars {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dn-hero__pillars > li + li {
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--dn-dark-border);
+    }
+
+    /* One column has no room above the block: the code area as it was. */
+    .dn-hero__live :global(.cm-scroller) {
+      min-height: 11rem;
+    }
+
     .dn-hero__inner {
       /* minmax(0, ...) and not a bare 1fr: the live block's longest code line is its
          min-content width, and it would widen the column past the window. */

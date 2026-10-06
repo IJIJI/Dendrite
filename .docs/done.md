@@ -5,6 +5,53 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the sheet's top bar, and the landing's pillars — DONE 2026-10-06
+
+Two parts of the brand sheet that round 2 left (§20 and §24), in two commits: the rest of §20
+is proposed in `todo.md`. With the second one, on the maintainer's word, the landing lost its
+body and its hero grew. What was decided, and why:
+
+- **The bar is a `Header` override** (`apps/docs/src/components/Header.astro`): the wordmark on
+  the left, then, held to the right, the section links, a small search in the label face, the
+  GitHub link and the theme picker. The sheet draws neither of the last two. They stay, because
+  without the picker a reader cannot choose a theme.
+- **Starlight's parts are imported from their files** (`@astrojs/starlight/components/*.astro`),
+  not through `virtual:starlight/components/*`, which Starlight ships no types for. The cost: a
+  `components` override of Search, SiteTitle or ThemeSelect in the config would not reach the
+  bar. SocialIcons is the site's own file, so the bar imports that.
+- **The links are a written list, not read from the sidebar.** The bar shows a chosen set (four
+  sections and the playground; Contribute is not one of them). The cost: a renamed section is
+  two edits.
+- **The links show from 72rem.** Beside the other parts they need 1087px. Below that a doc page
+  has its sidebar, which holds every section, and the landing has its two buttons.
+- **The search label is ink-3**, as the sheet draws it. That is 3.7:1 on white, the brand's
+  placeholder ink, and lower than the ink-2 Starlight had.
+- **The pillars are frontmatter** (`pillars`, one field added to the docs schema in
+  `content.config.ts`), drawn by `Hero.astro`. The band is outside the page body, so a
+  component in the MDX could not be as wide as the window. The aurora got a stage of its own
+  inside the band, so the field stops above the cells. The copy is the site's (Declarative,
+  Incremental, Embeddable), not the sheet's: its "Typed structs" was not checked against the
+  language.
+- **A page with a hero is its band and nothing else.** The landing's paragraph went, and the
+  page body and the footer of a hero page are not drawn (`dendrite.css`); both were empty on
+  the landing and the 404. The band is at least the window under the nav, and the pillars
+  take what the hero leaves, so the cells and their rules end where the window does. Two
+  costs: a hero page cannot have a body until that rule changes, and in a tall window the
+  cells are mostly empty (415px of cell for three lines at 1080).
+- **The hero's two blocks grew upward**, into the room the band had above them. The copy:
+  24 and 32px between its parts, and buttons one step larger, with a label's line height
+  (the page's own had made them tall). The live block: a code area of 16rem beside the copy,
+  11rem in one column, where there is no room above.
+- **The code area's height is set on CodeMirror's scroller**, not through the editor's own
+  knob: the knob leaves the sideways scrollbar floating under the last line (`backlog.md`).
+  `Live`'s `codeMinHeight` prop had this one caller, so the prop went with it.
+
+One thing to know: changing `content.config.ts` under a running dev server gave
+`UnknownContentCollectionError` on the MDX pages until the content store was built again. The
+production build was never affected.
+
+---
+
 ## Docs — brand round 2 on the site — DONE 2026-10-06
 
 The handoff of 2026-10-05 from Claude Design (`brand/CHANGES.md`, sheet §22 to §25), in two

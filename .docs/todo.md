@@ -23,6 +23,32 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
+## Docs — the rest of the sheet's docs page (§20)
+
+**What:** after the top bar and the pillars (2026-10-06, `done.md`), what a doc page still shows
+differently from sheet §20. Proposed, none decided.
+
+| # | Part | Sheet §20 | Site | Work | Proposal |
+| --- | --- | --- | --- | --- | --- |
+| 1 | The rule under the bar | 2px, ink | 1px hairline | CSS | do |
+| 2 | H1 and H2 | Chakra Petch 600 | Archivo | CSS | do |
+| 3 | The sidebar's active item | an Iris bar on its left, ground-2 fill, ink text | solid Iris fill, white text | CSS | do |
+| 4 | "On this page" | an overline: 11px, capitals, .08em | 18px, sentence case | CSS | do |
+| 5 | Previous and next | plain text with arrows, a 1px rule above | Starlight's boxed links | CSS | maybe |
+| 6 | The section name above H1 | an Iris overline | none | a `PageTitle` override | later |
+| 7 | The page's ground | ground, and dark-0 in dark | white, and dark-1 in dark | palette | leave: decided earlier |
+| 8 | The sidebar's shape | one flat list | groups that fold | structure | leave |
+
+Rows 1 to 4 are one commit, all of it in `apps/docs/src/styles/dendrite.css`. Row 2 follows
+the brand README ("Display stops at H2"), and it is what makes a doc page and the landing read
+as one site.
+
+**Also seen, on the landing:** on a phone the headline sits on the field's full-strength lines,
+because one column makes the band tall and the fade starts 30% down it. An earlier fade under
+960 would fix it. Not decided.
+
+---
+
 ## Core — the stdlib, configurable per category, maybe per op
 
 **When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from

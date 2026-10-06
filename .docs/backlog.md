@@ -404,15 +404,49 @@ page ran (2026-10-06). The next export from the canvas brings the originals back
    copy column is 568px at the 1280 frame. The site sets three lines. The design decides: a
    shorter second line, a 44px headline, or a wider copy column.
 
-Two more, seen and left alone: at 1440 the hero's copy starts 52px left of the page content
-below it (the hero's 1280 frame against Starlight's 67.5rem measure), and §24's three pillars
-are not built, because everything below the hero stayed.
+§24's three pillars were built later the same day (`done.md`), with the site's copy. The
+maintainer then changed three things the canvas should take as well: the landing has no body
+and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
+12/20 padding at 16px, and the live block's code area is 16rem tall beside the copy.
 
 **Why deferred:** the source is edited in Claude Design, not in this repo.
 
 **What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert
 its svg first and to leave `display` to the stylesheet), decide 5, re-export, and diff the
 export against `Hero.astro`.
+
+---
+
+## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
+
+**What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
+layout). CodeMirror's scroller inside it does not stretch, because its `height: 100%` has no
+definite height to resolve against. When the code is shorter than the minimum and one line is
+wider than the editor, the sideways scrollbar sits under the last line with empty canvas below
+it. At 11rem over five lines the gap was 8px and nobody saw it; at 16rem it was 80px.
+
+**Why deferred (2026-10-06):** found while the landing's live block grew, in a round that left
+the editor alone. The landing sets `min-height` on `.cm-scroller` itself for now
+(`apps/docs/src/components/Hero.astro`).
+
+**What it requires:** let the scroller fill the editor (`flex-grow: 1` on `.cm-scroller` in the
+Minimal and Compact layouts, or the minimum on the scroller), a look at both layouts with a
+long line, and then the landing goes back to the knob.
+
+---
+
+## Docs — the playground's URL is declared four times
+
+**What:** `Header.astro`, `Live.tsx`, `DiagnosticsTable.astro` and `OpsReference.astro` each hold
+the same line, `import.meta.env.PUBLIC_PLAYGROUND_URL ?? "http://localhost:5173/"`, under the
+same comment. **Duplicate Code**: the fallback port changes in four places.
+
+**Why deferred (2026-10-06):** the fourth copy came with the top bar, in a round that changed
+the bar and the pillars and nothing else. Three copies were already there.
+
+**What it requires:** one module in `apps/docs/src` that exports the constant, and four imports.
+It must not be `Live.tsx`: that file pulls the editor in, and two of the readers render on the
+server.
 
 ---
 

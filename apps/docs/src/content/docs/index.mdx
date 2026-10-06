@@ -22,20 +22,14 @@ hero:
     - text: Playground
       link: https://ijiji.github.io/Dendrite/playground/
       variant: secondary
+# The three cells under the hero, on its band (a field this site adds: src/content.config.ts).
+# They are the end of the page. It has no body: the band fills the window, and a hero page's
+# body is not drawn (styles/dendrite.css).
+pillars:
+  - title: Declarative
+    text: A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
+  - title: Incremental
+    text: When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
+  - title: Embeddable
+    text: The vocabulary is yours to extend. What a program reads and produces is what a host declares.
 ---
-
-import { Card, CardGrid } from "@astrojs/starlight/components";
-
-<CardGrid stagger>
-  <Card title="Declarative" icon="pencil">
-    A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
-  </Card>
-  <Card title="Incremental" icon="rocket">
-    When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
-  </Card>
-  <Card title="Embeddable" icon="puzzle">
-    The vocabulary is yours to extend. What a program reads and produces is what a host declares.
-  </Card>
-</CardGrid>
-
-Two ways in. If you are **writing programs**, start with [Learn](./learn/getting-started/) and keep the [standard library](./stdlib/) beside you. If you are **embedding the language** in an application of your own, go to [Host developers](./host/installation/). Either way, [How it works](./how-it-works/the-chain/) is there when you want to know why.

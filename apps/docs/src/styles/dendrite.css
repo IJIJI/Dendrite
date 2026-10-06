@@ -90,12 +90,16 @@
   }
 }
 
-/* Two: the hero sits inside Starlight's content panel, which pads it and holds it to the
-   reading width. The band wants neither, so on this page the padding and the width move from
-   the hero's ancestors to its siblings: the page below the band keeps the measure it had,
-   left-aligned below 72rem and centred above it, as the container was. */
+/* Two: a page with a hero is its band and nothing else. The band fills the window under the
+   nav (Hero.astro), so Starlight's content panel gives up its padding and its reading width,
+   and what would follow the band is not drawn: the page body and the footer, both empty on
+   the landing and on the 404. A hero page that wants a body wants these rules changed first. */
+:root[data-has-hero] {
+  --sl-main-pad: 0; /* Starlight's own knob: the 3vh it leaves under a page */
+}
+
 :root[data-has-hero] main > .content-panel {
-  padding: 0 0 1.5rem;
+  padding: 0;
 }
 
 :root[data-has-hero] main > .content-panel > .sl-container {
@@ -104,14 +108,7 @@
 }
 
 :root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
-  max-width: calc(var(--sl-content-width) + 2 * var(--sl-content-pad-x));
-  padding-inline: var(--sl-content-pad-x);
-}
-
-@media (min-width: 72rem) {
-  :root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
-    margin-inline: auto;
-  }
+  display: none;
 }
 
 /* The brand's corners: square containers, 2px controls. */
