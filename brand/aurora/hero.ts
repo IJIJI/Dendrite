@@ -59,7 +59,11 @@ export function mountAurora(host: HTMLElement, opts: HeroAuroraOptions = {}): ()
       g.appendChild(p);
     }
     svg.appendChild(g);
-    requestAnimationFrame(() => (g.style.opacity = '1'));
+    // A transition starts from a computed style. Reading the opacity computes it at 0 before it
+    // is set to 1. A requestAnimationFrame does not: its callback runs before the frame's styles
+    // are computed, so a frame added from the timer first rendered at 1 and appeared at once.
+    void getComputedStyle(g).opacity;
+    g.style.opacity = '1';
     layers.push(g);
     // keep two frames: the fading-out one and the new one
     while (layers.length > 2) layers.shift()!.remove();

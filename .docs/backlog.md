@@ -386,7 +386,8 @@ export against the patched sheet before replacing it.
 
 **What:** `brand/aurora/hero.html` is the design's markup and CSS for the landing hero. The
 site's `apps/docs/src/components/Hero.astro` departs from it in five places, each found when the
-page ran (2026-10-06). The next export from the canvas brings the originals back.
+page ran (2026-10-06), and `hero.ts` beside it carries one fix. The next export from the canvas
+brings the originals back.
 
 1. **The fallback never hides.** `.dn-hero__bg svg + .dn-hero__fallback` wants the svg before
    the image, and `mountAurora` appends it after. Both fields then show at once, and the baked
@@ -404,6 +405,16 @@ page ran (2026-10-06). The next export from the canvas brings the originals back
    copy column is 568px at the 1280 frame. The site sets three lines. The design decides: a
    shorter second line, a 44px headline, or a wider copy column.
 
+6. **A frame never faded in.** `hero.ts` set a new frame's opacity to 1 inside one
+   `requestAnimationFrame`, which runs before that frame's styles are computed. A frame added
+   by the timer therefore first rendered at 1: the old frame faded out and the new one jumped
+   in. Fixed in `brand/aurora/hero.ts` itself (2026-10-06): the opacity is read once, at 0,
+   and then set. Measured after: old 0.90 to 0, new 0.07 to 0.98, over the same 4 seconds.
+
+Seen in `hero.ts` and not changed: on a resize the current frame is removed and its
+replacement fades in from nothing over 4 seconds, and a frame that was still fading out stays
+on screen at the old size until its timer ends. The field blinks while a window is dragged.
+
 §24's three pillars were built later the same day (`done.md`), with the site's copy. The
 maintainer then changed three things the canvas should take as well: the landing has no body
 and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
@@ -412,8 +423,8 @@ and the pillars fill the window, the copy has 24 and 32px between its parts with
 **Why deferred:** the source is edited in Claude Design, not in this repo.
 
 **What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert
-its svg first and to leave `display` to the stylesheet), decide 5, re-export, and diff the
-export against `Hero.astro`.
+its svg first and to leave `display` to the stylesheet), apply 6 to its `hero.ts`, decide 5,
+re-export, and diff the export against `Hero.astro` and `brand/aurora/hero.ts`.
 
 ---
 
