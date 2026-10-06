@@ -47,6 +47,10 @@ as one site.
 because one column makes the band tall and the fade starts 30% down it. An earlier fade under
 960 would fix it. Not decided.
 
+The example's comment is two lines since 2026-10-06, so the hero's editor no longer scrolls
+sideways from 1152px up. Below about 1135px it still does: the two longest code lines are 54
+characters, 486px, and the editor is narrower than that. Shorter names would fix it. Not decided.
+
 ---
 
 ## Core — the stdlib, configurable per category, maybe per op
