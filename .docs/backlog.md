@@ -428,6 +428,33 @@ re-export, and diff the export against `Hero.astro` and `brand/aurora/hero.ts`.
 
 ---
 
+## Docs — say what a sample's yellow edge means
+
+**What:** a sample that is on a page to show a WARNING wears an amber border with a 2px left
+edge (`.dendrite-warns`, `apps/docs/src/styles/dendrite.css`). Nothing on the block says what
+the colour means: a reader sees a yellow box and has to work it out. The brand rules against
+exactly that: a status always carries a glyph or a word, never colour alone (brand README §3).
+The red edge of a sample that must not compile (`.dendrite-fails`) is the same mechanism and
+has the same gap.
+
+Where the yellow edge is today: two ` ```den warns ` fences (`how-it-works/the-chain`,
+`learn/writing/types`) and the live blocks marked `warns` (`learn/writing/bindings-and-outputs`,
+`learn/writing/lambdas-and-lists`). The red one: three live blocks marked `fails`
+(`bindings-and-outputs`, `inputs`, `types`). The samples on *Every diagnostic* draw an edge of
+their own (`DiagnosticsTable.astro`).
+
+**Why deferred (2026-10-06):** asked for by the maintainer at the end of the restyle round. It
+is a design question first: what the block says, and where.
+
+**What it requires:** pick the form. Candidates: a small tag on the block's top edge with the
+status glyph and a word ("warns", "does not compile"), in the editor's own tag style
+(`.dendrite-tag-warning` is in `packages/editor/style.css`); or a caption under the block; and
+whether the coloured border stays beside it. Two places set the class, `remark-den.ts` for a
+fence and `Live.tsx` for a live block, so a label drawn from the class itself may serve both.
+Do the red edge and the diagnostics page in the same pass, so the three read alike.
+
+---
+
 ## Docs — the section name above a page's title
 
 **What:** sheet §20 sets a small Iris overline over H1, with the name of the section the page
