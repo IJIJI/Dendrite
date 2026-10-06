@@ -5,6 +5,19 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the landing's field, a tenth darker — DONE 2026-10-06
+
+The copy starts level with the live block (the maintainer's change of the same day), so its
+headline sits above where the fade begins, and the text was hard to read on the lines. Five
+candidates were rendered side by side with injected CSS: a fade from the top of the band, a
+soft dark pool behind the copy, the whole field at 45%, a dark halo round each letter, and the
+field on the live block's side only. The maintainer took none of them and asked for the field
+10% darker. The aurora layer is drawn at `opacity: 0.9` (`Hero.astro`): it is blended onto the
+band, so every line moves a tenth of the way to dark-0, and the fade at the foot is unchanged.
+The pool behind the copy is the candidate to return to if the text still reads badly.
+
+---
+
 ## Docs — the sheet's top bar, and the landing's pillars — DONE 2026-10-06
 
 Two parts of the brand sheet that round 2 left (§20 and §24), in two commits: the rest of §20

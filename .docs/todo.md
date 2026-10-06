@@ -46,20 +46,10 @@ Each of a to h is one small change in `apps/docs/src/styles/dendrite.css`, and a
 is one commit. Row b follows the brand README, and it is what makes a doc page and the landing
 read as one site.
 
-**The landing's text is hard to read on the field** (the maintainer, 2026-10-06). The copy
-starts level with the live block since that day, so its headline sits above where the fade
-begins. Five candidates, rendered side by side with injected CSS and none picked:
-
-| # | Candidate | What it does | Cost |
-| --- | --- | --- | --- |
-| A | The fade starts at the top | the field is gone by 70% of the band, so it reads as a strip under the nav | the field loses most of its height |
-| B | A dark pool behind the text | a soft dark-0 ellipse behind the copy block; the lines stop around it | one pseudo-element; proposed |
-| C | The whole field at 45% | every line dimmer | the lines still cross the letters, and the field loses its presence |
-| D | A halo around the letters | a dark-0 stroke behind each glyph, as on a map | the lede's small letters still sit among lines |
-| E | The field on the live block's side only | the left third of the band is plain dark-0 | half the band is empty |
-
-On a phone the same problem is older: one column makes the band tall, and the fade starts 30%
-down it. B covers the phone as well, because the pool follows the copy.
+**Also seen, on the landing:** on a phone the headline sits on the field's strongest lines,
+because one column makes the band tall and the fade starts 30% down it. The field is a tenth
+darker since 2026-10-06 (`done.md`), which helps a little. An earlier fade under 960 would do
+more. Not decided.
 
 The example's comment is two lines since 2026-10-06, so the hero's editor no longer scrolls
 sideways from 1152px up. Below about 1135px it still does: the two longest code lines are 54
