@@ -3,6 +3,8 @@ import { DOCUMENT_VERSION, documentUrl, type EditorDocument } from "@dendrite-la
 import { Editor, type TopBarAction, useEditor } from "@dendrite-lang/editor/react";
 import { useMemo } from "react";
 
+import { sampleEdge } from "../plugins/den-meta";
+
 //? A live example: the real editor, in the page, over a program of its own. Rendered
 // client-only (CodeMirror needs a DOM). Two presets: `minimal` (the default) is a program
 // with settable inputs and live outputs; `compact` adds the panes and the diagnostics line.
@@ -20,13 +22,13 @@ export type LiveProps = Program & {
   /** The code can be typed into. Default true. */
   editable?: boolean;
   /**
-   * The program is here to SHOW a diagnostic: the warning edge a ```den fails fence wears, and
-   * no stale outputs, so the block reads the same on the page as it does after an edit.
+   * The program is here to SHOW a diagnostic: the error edge and the tag a ```den fails fence
+   * wears, and no stale outputs, so the block reads the same on the page as after an edit.
    */
   fails?: boolean;
   /**
-   * The program is here to show a WARNING: the edge a ```den warns fence wears. It compiles, so
-   * its outputs are real ones and stay on screen as usual.
+   * The program is here to show a WARNING: the edge and the tag a ```den warns fence wears. It
+   * compiles, so its outputs are real ones and stay on screen as usual.
    */
   warns?: boolean;
 };
@@ -51,9 +53,10 @@ export default function Live(props: LiveProps) {
     }),
     [program, source, ports],
   );
-  const edge = fails ? " dendrite-fails" : warns ? " dendrite-warns" : "";
+  const edge = sampleEdge({ fails, warns });
   return (
-    <div className={`live not-content${edge}`}>
+    <div className={`live not-content${edge ? ` ${edge.className}` : ""}`}>
+      {edge && <span className={edge.tagClassName}>{edge.label}</span>}
       <Editor document={document}>
         <LiveLayout layout={layout ?? "minimal"} editable={editable ?? true} stale={!fails} />
       </Editor>

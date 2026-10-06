@@ -316,17 +316,36 @@ code.den-diag-warning {
   color: var(--dendrite-warning);
 }
 
-/* A sample that is on the page to SHOW a diagnostic: an edge in that diagnostic's colour -
-   the error colour for a ```den fails fence (or a live block marked fails), the warning colour
-   for a ```den warns one - so a reader does not copy either out as a working program. */
-.dendrite-fails {
+/* A sample that is on the page to SHOW a diagnostic says so twice, so a reader does not copy
+   it out as a working program: an edge in the diagnostic's colour, and on that edge a tag with
+   the words ("does not compile", "compiles with a warning"), because a colour alone says
+   nothing (brand README §3: a status carries a word). The tag is the editor's own status tag;
+   only its place is set here. The edge is drawn on the box that has the border: the block
+   itself for a ```den fence, the layout inside it for a live block (plugins/den-meta.ts). */
+.dendrite-fails,
+.dendrite-warns {
+  position: relative;
+}
+
+.dendrite-fails.dendrite-minimal-layout,
+.dendrite-fails > :is(.dendrite-minimal-layout, .dendrite-compact-layout) {
   border-color: var(--dendrite-error);
   border-left-width: 2px;
 }
 
-.dendrite-warns {
+.dendrite-warns.dendrite-minimal-layout,
+.dendrite-warns > :is(.dendrite-minimal-layout, .dendrite-compact-layout) {
   border-color: var(--dendrite-warning);
   border-left-width: 2px;
+}
+
+/* On the block's top edge, just inside its left corner, half above the line. */
+.dendrite-sample-tag {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 12px;
+  translate: 0 -50%;
 }
 
 /* A live example: the real editor in the page, on a preset that follows its content. The

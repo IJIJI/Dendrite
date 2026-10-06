@@ -5,6 +5,36 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — a sample says what its edge means, and two phone fixes — DONE 2026-10-07
+
+Three small things from the list after the site went live, one commit each.
+
+**A sample that shows a diagnostic carries a tag with the words.** A ` ```den warns ` fence had
+an amber border and nothing that said what the colour meant, against the brand's own rule that
+a status carries a word (README §3). Now a tag sits on the block's top edge: "compiles with a
+warning", or "does not compile" on a red one. It is the editor's own status tag
+(`dendrite-tag`, a dot in the status colour and the word in ink on the soft fill), so the
+docs only place it. Found on the way: a LIVE block marked `warns` or `fails` had no edge at
+all. The class was on its wrapper, and the border is on the layout inside it, so only the two
+fences on the site ever showed a colour. One helper, `sampleEdge` in `plugins/den-meta.ts`,
+now names the class, the tag and the words for both, where each had its own copy of the
+choice. *Every diagnostic* was left as it is: its samples sit under a heading with the
+diagnostic's name and severity, and its one odd block has a label already.
+
+**On one column the landing's fade starts at the top.** The copy is at the top of a tall band
+there, above where the fade began, so the headline and the lede sat on the field's lines. The
+fade now runs from the top to 45% of the band under 960px: the lede is on clear ground and the
+headline on lines of about half their strength. Side by side nothing changed.
+
+***Every diagnostic* no longer scrolls sideways on a phone.** A diagnostic's kind is one
+unbreakable word, and the longest is wider than a phone. It may now break anywhere
+(`DiagnosticsTable.astro`). At 375px the page was 14px too wide; it is 0.
+
+Not done, and why: the landing's long code lines still scroll in a narrow editor. That needs
+the editor to wrap lines (`backlog.md`).
+
+---
+
 ## Docs — the landing on a short window, and the theme picker — DONE 2026-10-07
 
 Two small fixes on the day the site went live, one commit each.

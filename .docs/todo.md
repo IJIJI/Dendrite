@@ -23,23 +23,6 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
-## Docs — the landing in a small window
-
-Two things seen while the landing was built (2026-10-06), neither decided. The doc pages took
-the sheet's type and controls the same day (`done.md`); what is left of that is in `backlog.md`.
-The pillars that a short window cut off were fixed on 2026-10-07 (`done.md`).
-
-**The headline on the field.** On a phone the headline sits on the field's strongest lines,
-because one column makes the band tall and the fade starts 30% down it. The field is a fifth
-darker since 2026-10-06 (`done.md`), which helps a little. An earlier fade under 960 would do
-more. Not decided.
-
-The example's comment is two lines since 2026-10-06, so the hero's editor no longer scrolls
-sideways from 1152px up. Below about 1135px it still does: the two longest code lines are 54
-characters, 486px, and the editor is narrower than that. Shorter names would fix it. Not decided.
-
----
-
 ## Core — the stdlib, configurable per category, maybe per op
 
 **When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from

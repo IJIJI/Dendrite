@@ -428,33 +428,6 @@ re-export, and diff the export against `Hero.astro` and `brand/aurora/hero.ts`.
 
 ---
 
-## Docs — say what a sample's yellow edge means
-
-**What:** a sample that is on a page to show a WARNING wears an amber border with a 2px left
-edge (`.dendrite-warns`, `apps/docs/src/styles/dendrite.css`). Nothing on the block says what
-the colour means: a reader sees a yellow box and has to work it out. The brand rules against
-exactly that: a status always carries a glyph or a word, never colour alone (brand README §3).
-The red edge of a sample that must not compile (`.dendrite-fails`) is the same mechanism and
-has the same gap.
-
-Where the yellow edge is today: two ` ```den warns ` fences (`how-it-works/the-chain`,
-`learn/writing/types`) and the live blocks marked `warns` (`learn/writing/bindings-and-outputs`,
-`learn/writing/lambdas-and-lists`). The red one: three live blocks marked `fails`
-(`bindings-and-outputs`, `inputs`, `types`). The samples on *Every diagnostic* draw an edge of
-their own (`DiagnosticsTable.astro`).
-
-**Why deferred (2026-10-06):** asked for by the maintainer at the end of the restyle round. It
-is a design question first: what the block says, and where.
-
-**What it requires:** pick the form. Candidates: a small tag on the block's top edge with the
-status glyph and a word ("warns", "does not compile"), in the editor's own tag style
-(`.dendrite-tag-warning` is in `packages/editor/style.css`); or a caption under the block; and
-whether the coloured border stays beside it. Two places set the class, `remark-den.ts` for a
-fence and `Live.tsx` for a live block, so a label drawn from the class itself may serve both.
-Do the red edge and the diagnostics page in the same pass, so the three read alike.
-
----
-
 ## Docs — the section name above a page's title
 
 **What:** sheet §20 sets a small Iris overline over H1, with the name of the section the page
@@ -467,21 +440,6 @@ section beside the title.
 **What it requires:** the override (Starlight's `PageTitle`, plus one line above the `h1`), the
 group's label from `Astro.locals.starlightRoute.sidebar`, and the brand's overline as
 `#starlight__on-this-page` has it in `dendrite.css`.
-
----
-
-## Docs — *Every diagnostic* is wider than a phone
-
-**What:** at 375px `how-it-works/diagnostics` scrolls sideways by 14px. It was 83px before the
-headings took the brand's sizes (2026-10-06), so the cause is older than that change: the
-page's H3s are diagnostic names, one unbreakable word each (`output_depends_on_failed_binding`
-is 32 characters).
-
-**Why deferred:** found by a sweep of all pages during the type change, which was not about
-this page.
-
-**What it requires:** `overflow-wrap: anywhere` on those headings (`DiagnosticsTable.astro`), or
-a smaller face for a name that is code, and a look at the page's tables at the same width.
 
 ---
 
@@ -518,6 +476,24 @@ layouts; the decision of item 1; then the `--dendrite-*` values in `packages/edi
 that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
 Neighbours: the code-height entry below, "try cooler background colours", "tune the highlight
 colours" and "the stylesheet per group".
+
+---
+
+## Editor — an option to wrap long lines
+
+**What:** the code area never wraps: a line wider than the editor scrolls sideways
+(`CodeOptions` in `packages/editor/src/code/cm.ts` has `editable` and `gutters`, nothing for
+wrapping). The landing's live block shows it: its two longest lines are 54 characters, 486px,
+so the block scrolls in any window under about 1135px wide, and always on a phone. Sheet §24
+draws that code well with wrapped lines.
+
+**Why deferred (2026-10-07):** the docs cannot do it from outside. Shorter names in the
+example were weighed and dropped: `s => s > $min` fits a small laptop, reads worse than
+`item => item > $threshold`, and still scrolls on a phone.
+
+**What it requires:** a `wrap` option on `CodeOptions` (CodeMirror's `EditorView.lineWrapping`),
+passed through `Editor.Canvas` and the layouts' `code` prop, a line in the editor's README, a
+release, and then `wrap` on the landing's `Live`.
 
 ---
 
