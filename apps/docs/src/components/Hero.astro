@@ -289,6 +289,13 @@ const { source, ports } = scoresExample;
   }
 
   @media (max-width: 960px) {
+    /* One column makes the band tall and puts the copy at its top, above where the fade
+       starts. So here the fade starts at the top and is done before the live block: the lede
+       is on clear ground, and the headline on lines of about half their strength. */
+    .dn-hero__bg::after {
+      background: linear-gradient(180deg, transparent 0%, var(--dn-dark-0) 45%);
+    }
+
     /* One column, as the hero is: the rule between two cells turns with them. */
     .dn-hero__pillars {
       grid-template-columns: minmax(0, 1fr);
