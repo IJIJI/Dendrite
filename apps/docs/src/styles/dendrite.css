@@ -2,7 +2,7 @@
    these map them onto the brand tokens (brand/dendrite-tokens.css; the dark derivations are
    the editor's, packages/editor/style.css). Fonts are self-hosted, as in the playground. */
 
-@import "@fontsource/chakra-petch/600.css"; /* display: the landing headline, nothing else */
+@import "@fontsource/chakra-petch/600.css"; /* display: the landing headline, H1 and H2 */
 @import "@fontsource/archivo/400.css";
 @import "@fontsource/archivo/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
@@ -15,8 +15,10 @@
 
   /* Starlight's ramp runs white → gray-1 … gray-6 → black, TEXT to BACKGROUND in both themes
      (the light theme inverts the greys). Roles it reads: gray-2 is body text, gray-3 muted,
-     gray-5/6 hairlines and inline code, gray-6/7 the nav and sidebar, black the page.
-     Light: the brand's ink ramp down to its ground ramp. */
+     gray-5/6 hairlines and inline code, black the page. gray-7 it keeps one step off the
+     page; here that step is the brand's RAISED surface, for a card or a field.
+     Light: the brand's ink ramp down to its ground ramp, the page on ground as sheet §20 has
+     it, so a code area's white reads as a well. */
   --sl-color-white: #201e1d; /* ink: headings */
   --sl-color-gray-1: #201e1d; /* ink: strong text */
   --sl-color-gray-2: #5c5856; /* ink-2: body text */
@@ -24,33 +26,45 @@
   --sl-color-gray-4: #cfcccb; /* border */
   --sl-color-gray-5: #d9d6d5; /* ground-3: hairline-light, hover */
   --sl-color-gray-6: #e6e4e3; /* ground-2: inline code, hairlines */
-  --sl-color-gray-7: #f3f2f2; /* ground: the nav bar */
-  --sl-color-black: #ffffff; /* ground-1: the page, as the editor's canvas */
+  --sl-color-gray-7: #ffffff; /* ground-1: raised */
+  --sl-color-black: #f3f2f2; /* ground: the page */
   --sl-color-accent: #6366f1; /* iris */
   --sl-color-accent-high: oklch(0.44 0.19 277); /* iris-ink: accent text at paragraph size */
   --sl-color-accent-low: oklch(0.92 0.06 277); /* iris-200 */
   /* Starlight's blue is what a note is drawn in: the brand's info status, and its soft fill. */
   --sl-color-blue: oklch(0.585 0.16 240); /* info */
   --sl-color-blue-low: oklch(0.94 0.05 240); /* info-soft */
+
+  /* One ground for the page, the nav and the sidebar, parted by 1px rules in the brand's
+     border colour - which is a different step of each theme's ramp. */
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-black);
+  --sl-color-hairline: var(--sl-color-gray-4);
+  --sl-color-hairline-light: var(--sl-color-gray-4);
+  --sl-color-hairline-shade: var(--sl-color-gray-4);
 }
 
 :root[data-theme="dark"] {
-  /* Dark: dark-1 page, one step up the ramp, as the editor's panel - dark-0 under a screen
-     of near-white text reads harsh. */
+  /* Dark: the page on dark-0, as sheet §20 has it and as the landing's band is, with dark-1
+     raised on it. It was dark-1 until 2026-10-06, for fear that dark-0 under near-white text
+     reads harsh: that was the editor's case, and a doc page's body text is the softer grey. */
   --sl-color-white: #f3f2f2; /* dark-ink */
   --sl-color-gray-1: #f3f2f2;
   --sl-color-gray-2: #a8a4a2; /* dark-ink-2: body text */
   --sl-color-gray-3: #7d7977; /* dark-ink-3: muted */
   --sl-color-gray-4: #4a4644; /* dark-4 */
   --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
-  --sl-color-gray-6: #2c2a29; /* dark-2: nav and sidebar */
-  --sl-color-gray-7: #141312; /* dark-0: a well below the page (the chain's cards) */
-  --sl-color-black: #201e1d; /* dark-1: the page */
+  --sl-color-gray-6: #2c2a29; /* dark-2 */
+  --sl-color-gray-7: #201e1d; /* dark-1: raised */
+  --sl-color-black: #141312; /* dark-0: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
   --sl-color-accent-low: oklch(0.29 0.1 277);
   --sl-color-blue: oklch(0.75 0.12 240); /* info, on dark */
   --sl-color-blue-low: oklch(0.28 0.05 240); /* info-soft, on dark */
+  --sl-color-hairline: var(--sl-color-gray-5); /* dark-border */
+  --sl-color-hairline-light: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
 }
 
 /* The landing page (and the 404, the other page with a hero). Its hero is a band in the
@@ -72,8 +86,8 @@
     --sl-color-gray-4: var(--dn-dark-4);
     --sl-color-gray-5: var(--dn-dark-3);
     --sl-color-gray-6: var(--dn-dark-2);
-    --sl-color-gray-7: var(--dn-dark-0);
-    --sl-color-black: var(--dn-dark-1);
+    --sl-color-gray-7: var(--dn-dark-1);
+    --sl-color-black: var(--dn-dark-0);
     --sl-color-accent: var(--dn-periwinkle);
     --sl-color-accent-high: var(--dn-iris-300);
     --sl-color-accent-low: var(--dn-iris-900);
@@ -117,8 +131,8 @@
 }
 
 /* A doc page in the brand's type and controls (brand README §4 and §5, sheet §20). Each block
-   below replaces one of Starlight's own looks; the page's grounds, its nav rule and the
-   sidebar's folding groups stay Starlight's, by choice.
+   below replaces one of Starlight's own looks; the nav's 1px rule and the sidebar's folding
+   groups stay Starlight's, by choice.
 
    Headings. The display face, Chakra Petch 600, is for H1 and H2 and stops there. The sizes
    are the brand's scale, 40 / 28 / 20 / 16, in rem so they follow the reader's font size as
@@ -193,7 +207,7 @@ starlight-toc a[aria-current="true"] {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem 2rem;
-  border-top: 1px solid var(--sl-color-gray-5);
+  border-top: 1px solid var(--sl-color-hairline);
   padding-top: 0.75rem;
 }
 

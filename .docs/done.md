@@ -5,6 +5,38 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the page on the sheet's grounds — DONE 2026-10-06
+
+The last row of the §20 breakdown, first left and then asked for by the maintainer after a
+side-by-side render: the page, the nav and the sidebar are one ground, **ground** on light and
+**dark-0** on dark, where the page was white and dark-1 with a nav and sidebar of their own
+colour. All of it is the two palette blocks of `apps/docs/src/styles/dendrite.css`, and one
+line in `Header.astro`. What was decided, and why:
+
+- **`--sl-color-black` is the page; `--sl-color-gray-7` is the brand's raised surface**
+  (ground-1, and dark-1). Starlight keeps gray-7 one step off the page and hardly uses it, so
+  it is free to mean that. The search field takes it, and so do the chain's cards
+  (`Chain.astro`), which were sunken wells on the old page and are raised cards on this one,
+  with no change of their own.
+- **The nav and the sidebar read the page's colour** through Starlight's two properties for
+  them, so the three cannot drift apart again.
+- **The hairlines are the brand's border colour.** The old ones were made for a white page and
+  are too faint on ground. The border is a different step of each theme's ramp (gray-4 on
+  light, gray-5 on dark), so each palette block names its own.
+- **The landing's nav block changed two lines**: it repeats the dark palette for the light
+  theme, so it follows the dark palette's new page and raised steps.
+
+What a reader sees besides the ground: in light, a live block's grey strips merge with the
+page and its white code area reads as a well, as the sheet draws it. In dark, the landing's
+band and the page are one colour, and a code frame is two steps lighter than the page, where
+it was one.
+
+The earlier choice is recorded in the stylesheet: the dark page was dark-1 for fear that dark-0
+under near-white text reads harsh. That was the editor's case; a doc page's body text is the
+softer grey. If long pages do read harsh, the dark half is two values to take back.
+
+---
+
 ## Docs — a doc page in the brand's type and controls — DONE 2026-10-06
 
 What a doc page showed differently from sheet §20 was broken down into rows, and the
@@ -31,8 +63,9 @@ One commit, all of it in `apps/docs/src/styles/dendrite.css`. What was built, an
   an aside reads, with a 2px bar and ink for its title and links. Notes are the only kind of
   aside the site has, so the other kinds keep Starlight's colours.
 
-Not built: the rule under the nav (declined), the page's grounds and the sidebar's folding
-groups (left as they are), and the section name above H1 (`backlog.md`).
+Not built: the rule under the nav (declined), the sidebar's folding groups (left as they
+are), and the section name above H1 (`backlog.md`). The page's grounds followed in the next
+commit (the entry above).
 
 Checked on all 31 pages at 375 and at 1440 wide: none is wider than the window at 1440. At
 375 one is, *Every diagnostic*, by 14px; with Starlight's sizes it was 83px (`backlog.md`).
