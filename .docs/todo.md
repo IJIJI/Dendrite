@@ -23,10 +23,27 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
-## Docs — the landing in a narrow window
+## Docs — the landing in a small window
 
-Two things seen while the landing was built (2026-10-06), neither decided. The doc pages took
-the sheet's type and controls the same day (`done.md`); what is left of that is in `backlog.md`.
+Three things about the landing (2026-10-06 and 07), none decided. The doc pages took the
+sheet's type and controls on the 6th (`done.md`); what is left of that is in `backlog.md`.
+
+**The pillars are cut off on a short window** (the maintainer's smaller laptop, 2026-10-07).
+The landing is meant to be one screen, and it needs 781px of window height: 64 of nav, 601 of
+hero, 116 of pillars. Measured on the dev server:
+
+| Window height | Pillars on screen |
+| --- | --- |
+| 820 | all, and they fill the rest |
+| 780 | all but 1px |
+| 730 | 65 of 116px: cut through the text |
+| 640 and 600 | none: they start under the fold |
+
+The page scrolls by what is missing, so nothing is lost, but the cells look cut. The cause is
+the hero's fixed 600px, the design frame's height, which is more than its blocks need. A fix
+to try: under about 780px of height the hero gives way, with less padding above and below
+(96 and 64 now) and the code area back to 11rem from 16. By the numbers that fits a window
+of about 600px; it wants a look at 1366x768 and 1280x720 laptops before it is called done.
 
 **The headline on the field.** On a phone the headline sits on the field's strongest lines,
 because one column makes the band tall and the fade starts 30% down it. The field is a fifth
