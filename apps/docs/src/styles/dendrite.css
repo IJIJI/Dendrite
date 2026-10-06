@@ -13,6 +13,12 @@
   --sl-font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
   --sl-font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
 
+  /* The scheme of the theme the reader picked, here and in the dark block. Starlight sets it
+     too, but the editor's stylesheet sets `light dark` on :root in a layer the site orders
+     after Starlight's, and that won: an editor block, whose colours are light-dark() pairs,
+     followed the system and not the picker. Unlayered, these two win. */
+  color-scheme: light;
+
   /* Starlight's ramp runs white → gray-1 … gray-6 → black, TEXT to BACKGROUND in both themes
      (the light theme inverts the greys). Roles it reads: gray-2 is body text, gray-3 muted,
      gray-5/6 hairlines and inline code, black the page. gray-7 it keeps one step off the
@@ -45,6 +51,8 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   /* Dark: the page on dark-0, as sheet §20 has it and as the landing's band is, with dark-1
      raised on it. It was dark-1 until 2026-10-06, for fear that dark-0 under near-white text
      reads harsh: that was the editor's case, and a doc page's body text is the softer grey. */

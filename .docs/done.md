@@ -5,6 +5,33 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the landing on a short window, and the theme picker — DONE 2026-10-07
+
+Two small fixes on the day the site went live, one commit each.
+
+**The pillars were cut off on a short window** (the maintainer's smaller laptop). The landing
+is meant to be one screen, and its hero was a fixed 600px, the design frame's height: with the
+nav and the pillars that needs a window 781px high. At 730 the pillars were cut through their
+text, and at 640 they started under the fold. Now the hero's minimum is 600px or what the
+window has left, whichever is less, and a window under 760px high also gets less room above
+and below the blocks and the shorter code area that one column has. Measured from 1920x1080
+down to 1280x595: the pillars are whole and the page does not scroll. Under about 595px of
+height it scrolls. What was tried first and did not work: rows on the band,
+`minmax(min-content, 600px)` over `1fr`. A band with only a minimum height hands its rows all
+the space they ask for, so the hero never gave way. The rule that works keeps 9rem for the
+pillars, which is their cells with three lines of text: it is an estimate, and a cell with
+four lines would be cut by its last line on a short window.
+
+**An editor block ignored the theme picker.** The editor's colours are `light-dark()` pairs,
+so they follow `color-scheme`. Its stylesheet sets `light dark` on `:root`, in the `dendrite`
+layer, which the site orders after Starlight's, and that beat the scheme Starlight sets for
+the picked theme. With the system on dark and the picker on Light the page went light and the
+block stayed dark. The two palette blocks of `dendrite.css` now set the scheme themselves,
+unlayered. Measured on both systems, for each of the picker's three choices: page, block and
+code area agree every time.
+
+---
+
 ## Docs — the page on the sheet's grounds — DONE 2026-10-06
 
 The last row of the §20 breakdown, first left and then asked for by the maintainer after a
