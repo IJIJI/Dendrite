@@ -29,6 +29,9 @@
   --sl-color-accent: #6366f1; /* iris */
   --sl-color-accent-high: oklch(0.44 0.19 277); /* iris-ink: accent text at paragraph size */
   --sl-color-accent-low: oklch(0.92 0.06 277); /* iris-200 */
+  /* Starlight's blue is what a note is drawn in: the brand's info status, and its soft fill. */
+  --sl-color-blue: oklch(0.585 0.16 240); /* info */
+  --sl-color-blue-low: oklch(0.94 0.05 240); /* info-soft */
 }
 
 :root[data-theme="dark"] {
@@ -46,6 +49,8 @@
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
   --sl-color-accent-low: oklch(0.29 0.1 277);
+  --sl-color-blue: oklch(0.75 0.12 240); /* info, on dark */
+  --sl-color-blue-low: oklch(0.28 0.05 240); /* info-soft, on dark */
 }
 
 /* The landing page (and the 404, the other page with a hero). Its hero is a band in the
@@ -109,6 +114,128 @@
 
 :root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
   display: none;
+}
+
+/* A doc page in the brand's type and controls (brand README §4 and §5, sheet §20). Each block
+   below replaces one of Starlight's own looks; the page's grounds, its nav rule and the
+   sidebar's folding groups stay Starlight's, by choice.
+
+   Headings. The display face, Chakra Petch 600, is for H1 and H2 and stops there. The sizes
+   are the brand's scale, 40 / 28 / 20 / 16, in rem so they follow the reader's font size as
+   the body does. Starlight reads a size from these properties twice, for the heading and for
+   the wrapper its anchor link sits in, so the properties are what is set. */
+:root {
+  --sl-text-h1: 2.5rem;
+  --sl-text-h2: 1.75rem;
+  --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1rem;
+  --sl-text-h5: 1rem; /* the scale ends at H4: nothing under it may be larger */
+}
+
+h1#_top,
+.sl-markdown-content :is(h1, h2):not(:where(.not-content *)) {
+  font-family: var(--dn-font-display);
+}
+
+/* The line height is one property too, read by heading and wrapper alike: each level sets
+   the brand's own on both. */
+h1#_top,
+.sl-markdown-content :is(h1, .level-h1) {
+  --sl-line-height-headings: 1.1;
+}
+
+.sl-markdown-content :is(h2, .level-h2) {
+  --sl-line-height-headings: 1.15;
+}
+
+.sl-markdown-content :is(h3, .level-h3) {
+  --sl-line-height-headings: 1.3;
+}
+
+.sl-markdown-content :is(h4, .level-h4) {
+  --sl-line-height-headings: 1.4;
+}
+
+/* The sidebar's current page: an Iris bar on its left, the sunken ground (the one Starlight
+   names for inline code: ground-2, and dark-3 on dark), ink text and square corners, where
+   Starlight draws a solid accent pill. The bar comes out of the padding, so the label stays
+   where the other labels are. */
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  border-radius: 0;
+  border-inline-start: var(--dn-border-w-2) solid var(--sl-color-accent);
+  padding-inline-start: calc(var(--sl-sidebar-item-padding-inline) - var(--dn-border-w-2));
+  background-color: var(--sl-color-bg-inline-code);
+  color: var(--sl-color-white);
+}
+
+/* "On this page": its title is the brand's overline (11px, which no Starlight size holds),
+   and the current heading is ink among muted ones, where Starlight uses the accent. */
+#starlight__on-this-page {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-2);
+}
+
+starlight-toc a[aria-current="true"] {
+  color: var(--sl-color-white);
+}
+
+/* Previous and next: two plain links under a rule, an arrow and the page's name, where
+   Starlight draws two boxes with a shadow and 8px corners. The words "Previous" and "Next"
+   are text of the link with no element of their own, so they are sized to nothing: they
+   leave the screen, the arrow says it, and they stay in the link's name. */
+.pagination-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 2rem;
+  border-top: 1px solid var(--sl-color-gray-5);
+  padding-top: 0.75rem;
+}
+
+.pagination-links a {
+  flex: none;
+  width: auto;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  font-size: 0;
+}
+
+.pagination-links a[rel="next"] {
+  margin-inline-start: auto;
+}
+
+.pagination-links br {
+  display: none;
+}
+
+.pagination-links .link-title {
+  font-size: var(--sl-text-base);
+  line-height: var(--sl-line-height);
+  color: inherit;
+}
+
+.pagination-links a:hover .link-title {
+  color: var(--sl-color-white);
+}
+
+.pagination-links svg {
+  font-size: 1rem;
+}
+
+/* A note: the info colour as a 2px bar and its soft fill (the two blues in the palette
+   above), and ink for its title and its links, where Starlight colours both. Notes are the
+   one kind of aside the site has; the others keep Starlight's colours until a page uses one. */
+.starlight-aside {
+  --sl-color-asides-text-accent: var(--sl-color-white);
+  border-inline-start-width: var(--dn-border-w-2);
 }
 
 /* The brand's corners: square containers, 2px controls. */
