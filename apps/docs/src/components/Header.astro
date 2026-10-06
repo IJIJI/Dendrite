@@ -102,6 +102,15 @@ const links = [
     border-inline-end: 1px solid var(--sl-color-gray-5);
   }
 
+  /* A page with a hero is one dark band in both themes (Hero.astro), so the theme picker
+     changes nothing a reader can see there. It is not shown on such a page, nor the rule that
+     parts it from the GitHub link. The picked theme stays in force, and the picker is on
+     every other page. */
+  :global(:root[data-has-hero]) .right-group :global(starlight-theme-select),
+  :global(:root[data-has-hero]) .social-icons::after {
+    display: none;
+  }
+
   /* From the width Starlight shows the search as a field: the sheet's small one, in the
      label face, its hint in the same muted ink. The button is Search's own markup, hence
      :global. */

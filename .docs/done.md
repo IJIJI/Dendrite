@@ -5,6 +5,24 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the landing stays dark, and its theme picker is hidden — DONE 2026-10-07
+
+The landing has one look, the dark one, in both themes: sheet §24 keeps the hero band dark-0
+whatever the theme, and the part of the page that did follow the theme went when the pillars
+were made to fill the window. So the theme picker changed nothing a reader could see there.
+
+**A full light landing was tried and dropped the same day.** The band on ground, the nav and
+the pillars following the theme, and the field's four Iris tiers reversed so its strong inner
+rings were the darkest. It worked (the picker switched everything at run time, reduced motion
+gave one still frame), and the maintainer did not like it. It also went against the brand,
+which says the aurora is never drawn on a light ground. Nothing of it was committed.
+
+**The picker is hidden on a page with a hero** instead (`Header.astro`), with the rule that
+parts it from the GitHub link: a control that does nothing should not be on the page. The
+picked theme stays in force, and the picker is on every other page.
+
+---
+
 ## Docs — a sample says what its edge means, and two phone fixes — DONE 2026-10-07
 
 Three small things from the list after the site went live, one commit each.
