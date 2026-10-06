@@ -458,6 +458,48 @@ a smaller face for a name that is code, and a look at the page's tables at the s
 
 ---
 
+## Editor — its styling, to fit the site's new look
+
+**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
+type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
+and the playground wear the look they were built with. Where the two differ now:
+
+1. **A block ignores the site's theme picker.** The editor's stylesheet sets
+   `color-scheme: light dark` on `:root`, in its `dendrite` layer, which the docs order after
+   Starlight's. That beats Starlight's own `color-scheme` per theme, so a block follows the
+   system and not the picker. Measured on `learn/getting-started` with the system on dark and
+   the picker on Light: the page is ground, the block stays dark-1 with a dark-2 code area.
+   Older than the restyle, and the one item here that is a defect.
+2. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
+   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
+   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
+   card with a dark-2 code area, and the playground as a whole is a step lighter than the
+   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
+   disagree here, so this is a brand decision before it is a stylesheet change.
+3. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
+   by its 1px border and its white code area alone. That is the sheet's white well, and it
+   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
+   ground.
+4. **The playground's top bar is not the site's.** The site has the wordmark, section links
+   and a small search on the page's ground, over a 1px rule; the playground has
+   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
+   compared in detail.
+5. **Type and controls were not compared**: the site's display face, its button and field
+   shapes, and its sidebar item against the editor's bar items, panes and fields.
+
+**Why deferred (2026-10-06):** the restyle changed the site and left the editor alone on
+purpose, and the editor is a published package: a change to its stylesheet ships in a release.
+
+**What it requires:** the playground beside a doc page, in both themes and in the three
+layouts; the decision of item 2; then the `--dendrite-*` values in `packages/editor/style.css`
+(the properties stay, they are the theming API), the "Theming" table of the editor's README,
+`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. Item 1 is separate and small:
+the docs set `color-scheme` from Starlight's `data-theme`, or set `data-dendrite-theme`.
+Neighbours: the code-height entry below, "try cooler background colours", "tune the highlight
+colours" and "the stylesheet per group".
+
+---
+
 ## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
 
 **What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
