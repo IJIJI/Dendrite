@@ -145,6 +145,40 @@ own text form" below is the other direction (`toText`); design the two together.
 
 ---
 
+## Language — an optional lambda parameter, `(sep?: string) => …`
+
+**What:** a parameter a caller may leave out. Raised beside the converting parameter
+(2026-09-21) and held in `todo.md` for after the 0.5.0 release; moved here on 2026-10-05, the
+maintainer's decision.
+
+**Why deferred:** no consumer, only symmetry with `required: false` on an op input, and the
+higher-order ops are fixed-arity. It is not small either (measured 2026-10-02): the converting
+parameter needed no change to `Type`, and this one does. A caller often knows a function only
+by its type, and the call check counts the parameters in that type, so "may be left out" has to
+live in the function type.
+
+**What it requires:** about eight places read a function type's parameter list (`isCompatible`,
+`typesEqual`, `typeToString`, the call check, contextual typing, the docs' printer). `?` is no
+token today, so it also needs the lexer, the parameter list and the type annotation
+`(string, number?) -> string`. Estimate: a plan, then three commits.
+
+**Four decisions, not taken:**
+
+1. Does `(a, b?) -> r` fit where `(a) -> r` is expected? That changes function subtyping.
+2. Must an optional parameter come last? Trailing only keeps the arity rule small.
+3. What the body reads for an absent argument. Three options, in escalating cost: an
+   `unset`/`null` sentinel, queried with the existing `IsSet` and handled with `Default(x, …)`
+   (preferred when this was first weighed: no nullability unions, only ops that exist); plain
+   `null`, compatible with every type through `isCompatible`; or a written default,
+   `(x: number = 0)`, which must evaluate the default expression.
+4. Is `(t~?: string)` refused, as an op input refuses `convert` with optional?
+
+**`?` has two more claimants** (2026-10-05): `??` for `Default` and `c ? a : b` for `If`, in
+`todo.md` for after 0.6.0. Their plan settles what the lexer does with `?`, `??` and `?:`, this
+spelling included, so read it before planning this entry.
+
+---
+
 ## Language — a return type on a lambda, `(n: number): string => …`
 
 **What:** the AST has `LambdaNode.returnType` and the analyser checks it (`analyser.ts`, the
@@ -203,6 +237,9 @@ is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no
 plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
 remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
 propagation does not cover (an expensive branch, or a read that must throw).
+
+**A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
+(`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
 
 ---
 
@@ -298,11 +335,8 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   `LiteralValue`): there is no `undefined`. An unset input is `null`, and `null` flows anywhere a
   value is expected. Decide whether "not set" should be its own thing, or whether every input
   should always have a default - the Learn page on inputs currently teaches the `null` answer.
-- **More math ops** ([stdlib/index.ts](../packages/core/src/language/stdlib/index.ts)): the
-  arithmetic segment has `Add`, `Subtract`, `Multiply`, `Divide`, `Negate`. Candidates:
-  `Mod` (the Host docs build one as their extension example - if it moves into the stdlib, that
-  page needs a new example), `Min`, `Max`, `Abs`, `Round`, `Floor`, `Ceil`, `Pow`. Add when a
-  program wants one; each is a registration, an evaluator and a documented example.
+- ~~**More math ops**~~ — MOVED 2026-10-05 to `todo.md`, "a math batch", for 0.6.0. `Min` and
+  `Max` were listed here as candidates; both exist, over a list.
 - **`PortOrigin.level` as an enum** ([compose.ts](../packages/core/src/language/compose.ts)): a
   string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
   exported constant would read better at call sites. Low value - close it unless a third level
@@ -345,6 +379,187 @@ Downloads, not in git) still holds 1.0, so the next export would regress the she
 **What it requires:** apply `brand/dendrite-tokens.css` 1.1 to the canvas (sections 4, 5, 6, 8,
 12 and 20), re-export, re-copy into `brand/` keeping the README's licence line, and diff the
 export against the patched sheet before replacing it.
+
+---
+
+## Brand — take the hero's corrections back to the Claude Design source
+
+**What:** `brand/aurora/hero.html` is the design's markup and CSS for the landing hero. The
+site's `apps/docs/src/components/Hero.astro` departs from it in five places, each found when the
+page ran (2026-10-06), and `hero.ts` beside it carries one fix. The next export from the canvas
+brings the originals back.
+
+1. **The fallback never hides.** `.dn-hero__bg svg + .dn-hero__fallback` wants the svg before
+   the image, and `mountAurora` appends it after. Both fields then show at once, and the baked
+   one stays still under the drifting one. The site marks the host from the script and fades
+   the image out while the first frame fades in.
+2. **The reduced-motion rule loses.** `.dn-hero__bg svg { display: none }` is beaten by the
+   inline `display: block` that `hero.ts` sets on its svg. The site adds `!important`.
+3. **One column is wider than a phone.** Under 960 the grid is `1fr`, whose minimum is the
+   widest child. With the live block that is its longest code line. The site uses
+   `minmax(0, 1fr)`.
+4. **The band has no height.** It is as tall as the copy, so the copy starts 20% down the band,
+   above the fade, where §24 wants it in the lower 55%. The site gives the grid the design
+   frame's 600px above 960.
+5. **"Two lines max" cannot hold.** At 56px "recomputed incrementally." is 705px wide, and the
+   copy column is 568px at the 1280 frame. The site sets three lines. The design decides: a
+   shorter second line, a 44px headline, or a wider copy column.
+
+6. **A frame never faded in.** `hero.ts` set a new frame's opacity to 1 inside one
+   `requestAnimationFrame`, which runs before that frame's styles are computed. A frame added
+   by the timer therefore first rendered at 1: the old frame faded out and the new one jumped
+   in. Fixed in `brand/aurora/hero.ts` itself (2026-10-06): the opacity is read once, at 0,
+   and then set. Measured after: old 0.90 to 0, new 0.07 to 0.98, over the same 4 seconds.
+
+Seen in `hero.ts` and not changed: on a resize the current frame is removed and its
+replacement fades in from nothing over 4 seconds, and a frame that was still fading out stays
+on screen at the old size until its timer ends. The field blinks while a window is dragged.
+
+§24's three pillars were built later the same day (`done.md`), with the site's copy. The
+maintainer then changed three things the canvas should take as well: the landing has no body
+and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
+12/20 padding at 16px, and the live block's code area is 16rem tall beside the copy.
+
+**Why deferred:** the source is edited in Claude Design, not in this repo.
+
+**What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert
+its svg first and to leave `display` to the stylesheet), apply 6 to its `hero.ts`, decide 5,
+re-export, and diff the export against `Hero.astro` and `brand/aurora/hero.ts`.
+
+---
+
+## Docs — the section name above a page's title
+
+**What:** sheet §20 sets a small Iris overline over H1, with the name of the section the page
+is in ("Concepts" over "Caching"). The site has none.
+
+**Why deferred (2026-10-06):** the rest of §20 was CSS. This one needs a `PageTitle` override
+that finds the page's group in the sidebar, and no reader has missed it: the sidebar shows the
+section beside the title.
+
+**What it requires:** the override (Starlight's `PageTitle`, plus one line above the `h1`), the
+group's label from `Astro.locals.starlightRoute.sidebar`, and the brand's overline as
+`#starlight__on-this-page` has it in `dendrite.css`.
+
+---
+
+## Docs — *Every diagnostic* is wider than a phone
+
+**What:** at 375px `how-it-works/diagnostics` scrolls sideways by 14px. It was 83px before the
+headings took the brand's sizes (2026-10-06), so the cause is older than that change: the
+page's H3s are diagnostic names, one unbreakable word each (`output_depends_on_failed_binding`
+is 32 characters).
+
+**Why deferred:** found by a sweep of all pages during the type change, which was not about
+this page.
+
+**What it requires:** `overflow-wrap: anywhere` on those headings (`DiagnosticsTable.astro`), or
+a smaller face for a name that is code, and a look at the page's tables at the same width.
+
+---
+
+## Editor — its styling, to fit the site's new look
+
+**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
+type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
+and the playground wear the look they were built with. Where the two differ now:
+
+1. **A block ignores the site's theme picker.** The editor's stylesheet sets
+   `color-scheme: light dark` on `:root`, in its `dendrite` layer, which the docs order after
+   Starlight's. That beats Starlight's own `color-scheme` per theme, so a block follows the
+   system and not the picker. Measured on `learn/getting-started` with the system on dark and
+   the picker on Light: the page is ground, the block stays dark-1 with a dark-2 code area.
+   Older than the restyle, and the one item here that is a defect.
+2. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
+   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
+   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
+   card with a dark-2 code area, and the playground as a whole is a step lighter than the
+   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
+   disagree here, so this is a brand decision before it is a stylesheet change.
+3. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
+   by its 1px border and its white code area alone. That is the sheet's white well, and it
+   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
+   ground.
+4. **The playground's top bar is not the site's.** The site has the wordmark, section links
+   and a small search on the page's ground, over a 1px rule; the playground has
+   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
+   compared in detail.
+5. **Type and controls were not compared**: the site's display face, its button and field
+   shapes, and its sidebar item against the editor's bar items, panes and fields.
+
+**Why deferred (2026-10-06):** the restyle changed the site and left the editor alone on
+purpose, and the editor is a published package: a change to its stylesheet ships in a release.
+
+**What it requires:** the playground beside a doc page, in both themes and in the three
+layouts; the decision of item 2; then the `--dendrite-*` values in `packages/editor/style.css`
+(the properties stay, they are the theming API), the "Theming" table of the editor's README,
+`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. Item 1 is separate and small:
+the docs set `color-scheme` from Starlight's `data-theme`, or set `data-dendrite-theme`.
+Neighbours: the code-height entry below, "try cooler background colours", "tune the highlight
+colours" and "the stylesheet per group".
+
+---
+
+## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
+
+**What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
+layout). CodeMirror's scroller inside it does not stretch, because its `height: 100%` has no
+definite height to resolve against. When the code is shorter than the minimum and one line is
+wider than the editor, the sideways scrollbar sits under the last line with empty canvas below
+it. At 11rem over five lines the gap was 8px and nobody saw it; at 16rem it was 80px.
+
+**Why deferred (2026-10-06):** found while the landing's live block grew, in a round that left
+the editor alone. The landing sets `min-height` on `.cm-scroller` itself for now
+(`apps/docs/src/components/Hero.astro`).
+
+**What it requires:** let the scroller fill the editor (`flex-grow: 1` on `.cm-scroller` in the
+Minimal and Compact layouts, or the minimum on the scroller), a look at both layouts with a
+long line, and then the landing goes back to the knob.
+
+---
+
+## Docs — the playground's URL is declared four times
+
+**What:** `Header.astro`, `Live.tsx`, `DiagnosticsTable.astro` and `OpsReference.astro` each hold
+the same line, `import.meta.env.PUBLIC_PLAYGROUND_URL ?? "http://localhost:5173/"`, under the
+same comment. **Duplicate Code**: the fallback port changes in four places.
+
+**Why deferred (2026-10-06):** the fourth copy came with the top bar, in a round that changed
+the bar and the pillars and nothing else. Three copies were already there.
+
+**What it requires:** one module in `apps/docs/src` that exports the constant, and four imports.
+It must not be `Live.tsx`: that file pulls the editor in, and two of the readers render on the
+server.
+
+---
+
+## Brand — a web app manifest, and its two icons
+
+**What:** `manifest.webmanifest` and a `<link rel="manifest">` on the docs and the playground,
+so a phone or Chrome can install the site as an app: a home-screen icon, a splash screen and a
+name. Brand round 2 (`brand/CHANGES.md`, "Icons wiring") names the icons for it:
+`dendrite-icon-a-square-512.svg` at 512 and as the maskable one (the D sits in the central 56 %,
+inside the 80 % safe circle).
+
+**Why deferred (2026-10-05):** nothing reads a manifest today, and the two PNGs have no reader
+without one. Speculative Generality until somebody wants the site on a home screen.
+
+**What it requires:** two rows in `brand/render.ts` (512, and the same file as the maskable
+icon), the manifest in each app's `public/`, and the link tag in `apps/docs/astro.config.ts` and
+`apps/playground/index.html`. The playground is the likelier consumer: it is the app.
+
+---
+
+## Brand — the VS Code extension icon
+
+**What:** `brand/assets/icons/dendrite-icon-a-512.svg` at 128 px is the marketplace tile of a
+VS Code extension (round 2, "Icons wiring").
+
+**Why deferred (2026-10-05):** the repo has no extension. The icon is wired when one exists
+(`.den` highlighting and diagnostics are what it would carry).
+
+**What it requires:** one row in `brand/render.ts`, and the `icon` field of the extension's
+`package.json`.
 
 ---
 
@@ -1072,14 +1287,8 @@ left open.
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
   higher-order ops already supply param types (`inferInputTypes` + contextual typing) and explicit
   annotations cover standalone lambdas; this only closes the standalone-unannotated gap.
-- **Optional / default params.** `(x?: number)` declined for now (no use case yet — higher-order
-  ops are fixed-arity). Deferred for lack of need, *not* difficulty. Three escalating options:
-  1. **Unset default (preferred).** Trailing-only optional params; an absent arg binds to an
-     `unset`/`null` sentinel, queried with the existing `IsSet` and handled with `Default(x, …)`.
-     Cleanest — no nullability unions, leans entirely on stdlib ops you already have.
-  2. **Null default.** Same idea, absent → `null` (compatible with every type via `isCompatible`).
-  3. **Default values** `(x: number = 0)` — richer but must evaluate the default expression.
-  In all cases the only real cost is the arity-rule surface (trailing-only enforcement).
+- **Optional / default params.** Its own entry now: "Language — an optional lambda parameter"
+  above, which holds the three options for an absent argument that stood here.
 - **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
   (`return { a: …, b: … }`). Needs struct literals + struct types (see *Static field typing for
   FieldAccessNode*). Until then, a lambda returns one value. Keep `return` (lambda, single value)

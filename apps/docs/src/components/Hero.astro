@@ -1,126 +1,313 @@
 ---
-// The splash hero, Starlight's own with two changes: the wordmark stands where the title
-// text was (still the page's <h1>, for the outline and the skip link), and a live Minimal
-// block stands where the image was - a program the reader can play with above the fold.
-// Everything else (tagline, actions, the grid) is Starlight's markup and CSS, copied
-// because a component's <style> is scoped to its own markup.
-import { LinkButton } from "@astrojs/starlight/components";
-import { Image } from "astro:assets";
-
-import dark from "../assets/dendrite-wordmark-dark.svg";
-import light from "../assets/dendrite-wordmark.svg";
+// The landing hero, brand round 2's option 5z (brand/CHANGES.md, sheet §24): a band that is
+// dark-0 in both themes, the aurora behind it fading into the band, the headline on the left
+// and a live Minimal block where the design draws a code well - a program the reader can
+// play with above the fold. Under it, on the same band, the page's pillars: three equal
+// cells between 1px rules, which take what is left of the window. Markup and CSS are brand/aurora/hero.html's, on the brand's
+// tokens (brand/dendrite-tokens.css), with the corrections `.docs/backlog.md` lists for the
+// design source; the title, lede and actions are the page's frontmatter.
+// The design's buttons carry no icon, so an action's `icon` is not drawn.
+// What the band needs from Starlight's own chrome (the nav on the band, the panel it breaks
+// out of) is in styles/dendrite.css, because a component's <style> is scoped to its markup.
+import fallback from "../../../../brand/assets/aurora-warp-hero-1440x600.svg";
 import { scoresExample } from "../examples";
 import Live from "./Live";
 
 const { data } = Astro.locals.starlightRoute.entry;
-const { tagline, actions = [] } = data.hero || {};
+// Starlight's 404 page is a splash page with a hero too: it has no hero title, and no actions.
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+const { pillars = [] } = data;
 
 const { source, ports } = scoresExample;
 ---
 
-<div class="hero">
-  <div class="hero-live">
-    <Live client:only="react" source={source} ports={ports} codeMinHeight="11rem" />
-  </div>
-  <div class="sl-flex stack">
-    <div class="sl-flex copy">
-      <h1 id="_top" data-page-title>
-        <Image src={light} alt="Dendrite" class="wordmark dark:sl-hidden" loading="eager" />
-        <Image src={dark} alt="Dendrite" class="wordmark light:sl-hidden" loading="eager" />
-      </h1>
-      {tagline && <div class="tagline" set:html={tagline} />}
+<section class="dn-hero">
+  <div class="dn-hero__stage">
+    <div class="dn-hero__bg" aria-hidden="true">
+      <img src={fallback.src} alt="" class="dn-hero__fallback" />
     </div>
-    {
-      actions.length > 0 && (
-        <div class="sl-flex actions">
-          {actions.map(
-            ({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
-              <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
-                {text}
-                {icon?.html && <Fragment set:html={icon.html} />}
-              </LinkButton>
-            ),
-          )}
-        </div>
-      )
-    }
+    <div class="dn-hero__inner">
+      <div class="dn-hero__copy">
+        <h1 id="_top" data-page-title class="dn-hero__title" set:html={title} />
+        {tagline && <p class="dn-hero__lede" set:html={tagline} />}
+        {
+          actions.length > 0 && (
+            <div class="dn-hero__actions">
+              {actions.map(
+                ({ attrs: { class: className, ...attrs } = {}, link, text, variant }) => (
+                  <a
+                    class:list={[
+                      "dn-btn",
+                      variant === "primary" ? "dn-btn--primary" : "dn-btn--ghost",
+                      className,
+                    ]}
+                    href={link}
+                    {...attrs}
+                  >
+                    {text}
+                  </a>
+                ),
+              )}
+            </div>
+          )
+        }
+      </div>
+      <div class="dn-hero__live">
+        <Live client:only="react" source={source} ports={ports} />
+      </div>
+    </div>
   </div>
-</div>
+  {
+    pillars.length > 0 && (
+      <ul class="dn-hero__pillars">
+        {pillars.map((pillar) => (
+          <li>
+            <h2>{pillar.title}</h2>
+            <p>{pillar.text}</p>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>
+
+<script>
+  import { mountAurora } from "../../../../brand/aurora/hero";
+
+  // The drifting field takes over from the baked image: mountAurora fades its first frame in,
+  // and the mark below lets the styles fade the image out under it. Without JS the image stays.
+  const host = document.querySelector<HTMLElement>(".dn-hero__bg");
+  if (host) {
+    mountAurora(host);
+    host.classList.add("is-live");
+  }
+</script>
 
 <style>
-  @layer starlight.core {
-    .hero {
-      display: grid;
-      grid-template-columns: 100%;
-      align-items: center;
-      gap: 1.5rem;
-      padding-bottom: 1rem;
+  /* Always the dark band, whatever the page's theme: color-scheme is what the live block's
+     light-dark() colours read, so the editor inside is the dark one too. */
+  .dn-hero {
+    /* The band is the page: at least the window under the nav, the pillars taking what the
+       hero leaves, so they end where the window does. */
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--sl-nav-height));
+    background: var(--dn-dark-0);
+    color: var(--dn-dark-ink);
+    color-scheme: dark;
+    print-color-adjust: exact;
+  }
+
+  /* What the aurora fills: the hero, not the pillars under it. The rule beneath is the
+     pillars' top one, so it is drawn only when they follow. */
+  .dn-hero__stage {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dn-hero__stage:not(:last-child) {
+    border-bottom: 1px solid var(--dn-dark-border);
+  }
+
+  .dn-hero__bg {
+    position: absolute;
+    inset: 0;
+    /* The field a fifth darker than the brand draws it, for the text on it: the layer is
+       blended 80% onto the band, so every line moves a fifth of the way to the band's colour. */
+    opacity: 0.8;
+  }
+
+  /* The fade the copy sits on: transparent at 30%, the band's own colour at 95%. */
+  .dn-hero__bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 30%, var(--dn-dark-0) 95%);
+  }
+
+  .dn-hero__fallback {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* One field at a time. The baked image and the field's first frame are the same picture,
+     so the image fades out in the time the frame fades in (the brand's interval, which is
+     mountAurora's default) and the field seems to start drifting rather than to blink. When
+     motion is not wanted the svg goes and the image stays. The svg is made by the script, so
+     it carries no scope attribute: hence :global. */
+  @media (prefers-reduced-motion: no-preference) {
+    .dn-hero__bg.is-live > .dn-hero__fallback {
+      opacity: 0;
+      transition: opacity var(--dn-aurora-interval) linear;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dn-hero__bg > :global(svg) {
+      display: none !important; /* the script sets display inline */
+    }
+  }
+
+  .dn-hero__inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
+    /* The row is as tall as the taller block and sits at the foot of the band; in it the two
+       blocks start level, so the headline's top is the live block's top. */
+    align-content: end;
+    align-items: start;
+    max-width: 1280px;
+    /* The design frame's height (1440 x 600): the copy stays in the band's lower part, where
+       the fade is, and off the field's brightest lines. */
+    min-height: 600px;
+    margin: 0 auto;
+    padding: 96px 48px 64px;
+  }
+
+  /* What the headline's size is measured against. */
+  .dn-hero__copy {
+    container-type: inline-size;
+  }
+
+  .dn-hero__title {
+    margin: 0 0 24px;
+    font-family: var(--dn-font-display);
+    font-weight: var(--dn-font-display-weight);
+    /* The design's 56 where the column has room for it, and a tenth of the column where it
+       has not: the first line is 9.8em wide, so it always fits, and no word is cut off on a
+       phone. */
+    font-size: clamp(var(--dn-text-2xl), 10cqi, var(--dn-text-4xl));
+    line-height: 1;
+    color: var(--dn-dark-ink);
+    text-wrap: balance;
+  }
+
+  .dn-hero__lede {
+    max-width: 40ch;
+    margin: 0 0 32px;
+    font-family: var(--dn-font-body);
+    font-size: var(--dn-text-xl);
+    line-height: 1.5;
+    color: var(--dn-dark-ink-2);
+  }
+
+  .dn-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .dn-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: var(--dn-radius-1);
+    font-family: var(--dn-font-body);
+    font-weight: 600;
+    font-size: var(--dn-text-lg);
+    line-height: 1.5; /* a label, not prose: the page's own line height made the button tall */
+    text-decoration: none;
+    transition: background var(--dn-motion-fast) var(--dn-ease);
+  }
+
+  .dn-btn--primary {
+    background: var(--dn-periwinkle);
+    color: var(--dn-dark-0);
+  }
+
+  .dn-btn--primary:hover {
+    background: var(--dn-iris-300);
+  }
+
+  .dn-btn--ghost {
+    border: 1px solid var(--dn-dark-ink-2);
+    color: var(--dn-dark-ink);
+  }
+
+  .dn-btn--ghost:hover {
+    background: var(--dn-dark-1);
+  }
+
+  .dn-btn:focus-visible {
+    outline: 2px solid var(--dn-periwinkle);
+    outline-offset: 2px;
+  }
+
+  /* The live block's code area: taller than its five lines, into the room the band has above
+     it. The height is set on CodeMirror's scroller and not through the editor's own knob
+     (--dendrite-code-min-height, on .cm-editor): the knob does not stretch the scroller, so
+     the sideways scrollbar would float under the last line (backlog.md). */
+  .dn-hero__live :global(.cm-scroller) {
+    min-height: 16rem;
+  }
+
+  /* The live block brings its own margin for prose; in the band the grid places it. */
+  .dn-hero__live :global(.live) {
+    margin: 0;
+  }
+
+  /* The pillars: equal cells in the hero's own frame, a 1px rule between two of them. */
+  .dn-hero__pillars {
+    flex: 1; /* the rest of the band's height: the cells and their rules run to its end */
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+    font-family: var(--dn-font-body);
+    font-size: var(--dn-text-lg);
+    line-height: 1.5;
+  }
+
+  .dn-hero__pillars > li {
+    padding: 20px 24px;
+  }
+
+  .dn-hero__pillars > li + li {
+    border-inline-start: 1px solid var(--dn-dark-border);
+  }
+
+  .dn-hero__pillars h2 {
+    margin: 0 0 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--dn-dark-ink);
+  }
+
+  .dn-hero__pillars p {
+    margin: 0;
+    color: var(--dn-dark-ink-2);
+  }
+
+  @media (max-width: 960px) {
+    /* One column, as the hero is: the rule between two cells turns with them. */
+    .dn-hero__pillars {
+      grid-template-columns: minmax(0, 1fr);
     }
 
-    .hero-live {
-      width: 100%;
-      margin-inline: auto;
+    .dn-hero__pillars > li + li {
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--dn-dark-border);
     }
 
-    .stack {
-      flex-direction: column;
-      gap: clamp(1.5rem, calc(1.5rem + 1vw), 2rem);
-      text-align: center;
+    /* One column has no room above the block: the code area as it was. */
+    .dn-hero__live :global(.cm-scroller) {
+      min-height: 11rem;
     }
 
-    .copy {
-      flex-direction: column;
-      gap: 1rem;
-      align-items: center;
-    }
-
-    .copy > * {
-      max-width: 50ch;
-    }
-
-    h1 {
-      margin: 0;
-      line-height: 0;
-    }
-
-    .wordmark {
-      width: min(100%, 22rem);
-      height: auto;
-    }
-
-    .tagline {
-      font-size: clamp(var(--sl-text-base), calc(0.0625rem + 2vw), var(--sl-text-xl));
-      color: var(--sl-color-gray-2);
-    }
-
-    .actions {
-      gap: 1rem 2rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    @media (min-width: 50rem) {
-      .hero {
-        grid-template-columns: 5fr 6fr;
-        gap: 4%;
-        padding-block: clamp(2.5rem, calc(1rem + 10vmin), 8rem);
-      }
-
-      .hero-live {
-        order: 2;
-      }
-
-      .stack {
-        text-align: start;
-      }
-
-      .copy {
-        align-items: flex-start;
-      }
-
-      .actions {
-        justify-content: flex-start;
-      }
+    .dn-hero__inner {
+      /* minmax(0, ...) and not a bare 1fr: the live block's longest code line is its
+         min-content width, and it would widen the column past the window. */
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 0;
+      padding: 64px 24px 40px;
     }
   }
 </style>

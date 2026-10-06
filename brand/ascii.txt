@@ -45,3 +45,6 @@ $ dendrite check beacon.den
 ──────────────────────────────────────────────────
  ▌▶ Dendrite 0.1.0 · declarative dataflow · TypeScript
 ──────────────────────────────────────────────────
+
+== Aurora in terminals ==
+There is no ASCII aurora in this round (parked). Splash screens use the Compact mark above on plain dark-0.

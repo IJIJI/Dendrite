@@ -13,6 +13,9 @@ Fidelity: **high**. Values below are final.
 
 ---
 
+## 0. Round 2 (October 2026)
+See `CHANGES.md`: aurora system (§9), icon set (§10), docs hero 5z in `aurora/hero.html`. Editor surfaces and syntax colours from the 1.1 editor sync are unchanged.
+
 ## 1. The mark
 
 The capital **D of Chakra Petch 600** with a **fork** laid over it. The fork starts at the D's outer left edge, runs horizontally into the counter at half cap height, and splits into two 45° arms. A **gap** knocked out of the D isolates the fork on all sides.
@@ -102,7 +105,13 @@ See `ascii.txt`. Prefix `▌▶` in the accent, one space after. Block art uses 
 - Social/OG 1200×630: `dendrite-og-light.svg`, `dendrite-og-dark.svg`.
 - PNG exports at 16/64/256/1024 can be rendered from the SVGs (they are pure vector); the brand sheet's Files section also offers them.
 
-## 9. Legal
+## 9. Aurora
+A generative contour field used as the brand's only atmospheric imagery: dark-0 ground, thin isolines in four Iris tiers (iris-700 → iris-500 → periwinkle → iris-300). Three fields: **warp** (primary), **dune** and **marble** (alternatives; marble adds a magenta seam). Source in `aurora/aurora.ts`; baked SVGs in `assets/aurora-*.svg` for hero 1440×600 / 1920×800, OG 1200×630, slide 1920×1080, swag 440, icon 512. The docs landing hero drifts slowly via `aurora/hero.ts`; everything else uses the baked files. Composition is fixed (640×360 frame, seed 101) so every size shows the same picture. Always fade to the surface toward the bottom when text sits on it. See `CHANGES.md` for the rules and wiring.
+
+## 10. Icons
+`assets/icons/`: **A** plain dark-0 (favicon, touch icon, PWA, VS Code), **reversed on Iris** (GitHub and npm avatars, anything under 24 px), the **Iris mark** on transparent (inline in docs and READMEs), and **D3** dark-0 with a dim aurora glow (social cards and launch posts only). Rounded (r = 22 %) and square variants of A and D3 at 512.
+
+## 11. Legal
 Code MPL-2.0 (the repository `LICENSE`); brand assets are not covered by the code licence — free to use unaltered to refer to Dendrite, not to modify, use as another app's icon, or combine into a new lockup. Trademark line and contact are placeholders in the sheet (`[owner]`, repo issues with the `brand` label).
 
 ## Files
@@ -110,9 +119,15 @@ Code MPL-2.0 (the repository `LICENSE`); brand assets are not covered by the cod
 dendrite-brand/
   README.md                  this file
   brand-sheet.html           standalone brand sheet (design reference; not in git)
+  CHANGES.md                 round-2 delta and wiring instructions
+  aurora/                    aurora.ts, hero.ts, bake.ts, hero.html
   dendrite-tokens.css        all tokens, light + dark
   ascii.txt                  terminal marks
   README-header.md           repo README banner + badges
   assets/                    16 SVGs (mark ×6, wordmark ×2, stacked ×2, avatar ×2, sticker, banner, og ×2)
+                             + 18 aurora SVGs (3 fields × 6 sizes)
+  assets/icons/              A and D3 icons (rounded + square, 512), avatars, Iris mark
+  render.ts                  node brand/render.ts → the PNGs the site and the avatars use (touch
+                             icon, avatar, OG card from assets/dendrite-og-aurora.svg), via Chrome
 ```
-Tokens 1.1 · September 2026 (editor sync, see the changelog in `dendrite-tokens.css`). The sheet was patched to 1.1 by script (palette, contrast rows, status tags, code samples, syntax cards, version); the Claude Design canvas it was exported from still holds 1.0, so apply the tokens there before the next export.
+Tokens 1.2 · October 2026 (aurora; editor sync from 1.1 retained, see the changelog in `dendrite-tokens.css`). Sheet 1.2 adds §22 Aurora, §23 Icons, §24 Docs landing and §25 Editor surfaces and carries the synced syntax cards, code samples and editor-surface note in its source, so future exports no longer need the script patch.

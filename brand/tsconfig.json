@@ -1,0 +1,11 @@
+{
+  // The brand's scripts (aurora/*.ts, render.ts) belong to no workspace. This file is what
+  // lets ESLint's project service, and an editor, find them; nothing is built from here.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["**/*.ts"]
+}

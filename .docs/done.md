@@ -5,6 +5,198 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the page on the sheet's grounds — DONE 2026-10-06
+
+The last row of the §20 breakdown, first left and then asked for by the maintainer after a
+side-by-side render: the page, the nav and the sidebar are one ground, **ground** on light and
+**dark-0** on dark, where the page was white and dark-1 with a nav and sidebar of their own
+colour. All of it is the two palette blocks of `apps/docs/src/styles/dendrite.css`, and one
+line in `Header.astro`. What was decided, and why:
+
+- **`--sl-color-black` is the page; `--sl-color-gray-7` is the brand's raised surface**
+  (ground-1, and dark-1). Starlight keeps gray-7 one step off the page and hardly uses it, so
+  it is free to mean that. The search field takes it, and so do the chain's cards
+  (`Chain.astro`), which were sunken wells on the old page and are raised cards on this one,
+  with no change of their own.
+- **The nav and the sidebar read the page's colour** through Starlight's two properties for
+  them, so the three cannot drift apart again.
+- **The hairlines are the brand's border colour.** The old ones were made for a white page and
+  are too faint on ground. The border is a different step of each theme's ramp (gray-4 on
+  light, gray-5 on dark), so each palette block names its own.
+- **The landing's nav block changed two lines**: it repeats the dark palette for the light
+  theme, so it follows the dark palette's new page and raised steps.
+
+What a reader sees besides the ground: in light, a live block's grey strips merge with the
+page and its white code area reads as a well, as the sheet draws it. In dark, the landing's
+band and the page are one colour, and a code frame is two steps lighter than the page, where
+it was one.
+
+The earlier choice is recorded in the stylesheet: the dark page was dark-1 for fear that dark-0
+under near-white text reads harsh. That was the editor's case; a doc page's body text is the
+softer grey. If long pages do read harsh, the dark half is two values to take back.
+
+---
+
+## Docs — a doc page in the brand's type and controls — DONE 2026-10-06
+
+What a doc page showed differently from sheet §20 was broken down into rows, and the
+maintainer picked: no 2px rule under the nav, and everything from the headings to the note.
+One commit, all of it in `apps/docs/src/styles/dendrite.css`. What was built, and why that way:
+
+- **H1 and H2 are Chakra Petch 600**, as the brand README has it ("Display stops at H2"). The
+  op names on a stdlib page are H2s, so they are in the display face too.
+- **The headings are the brand's scale**: 40 / 28 / 20 / 16, with its line heights. They are
+  set through Starlight's own size properties, because Starlight reads each one twice (the
+  heading, and the wrapper its anchor link sits in), and in rem, so they follow the reader's
+  font size as the body does. They hold at every width, where Starlight stepped down on a
+  phone: nine page titles are two lines there. H5 is 16 too, so nothing under H4 is larger.
+- **The sidebar's current page** is an Iris bar, the sunken ground and ink text, square. The
+  bar comes out of the padding, so the label does not move. The fill is the property
+  Starlight names for inline code: ground-2 on light, and dark-3 on dark, where ground-2's
+  own counterpart is the sidebar's colour and would not show.
+- **"On this page"** is the brand's overline (11px, which no Starlight size holds), and the
+  current heading is ink among muted ones.
+- **Previous and next** are plain links under a rule. Starlight's "Previous" and "Next" are
+  bare text inside each link, so they are sized to nothing: off the screen, still in the
+  link's name.
+- **A note** takes the brand's info colour, through the two blues of Starlight's palette that
+  an aside reads, with a 2px bar and ink for its title and links. Notes are the only kind of
+  aside the site has, so the other kinds keep Starlight's colours.
+
+Not built: the rule under the nav (declined), the sidebar's folding groups (left as they
+are), and the section name above H1 (`backlog.md`). The page's grounds followed in the next
+commit (the entry above).
+
+Checked on all 31 pages at 375 and at 1440 wide: none is wider than the window at 1440. At
+375 one is, *Every diagnostic*, by 14px; with Starlight's sizes it was 83px (`backlog.md`).
+
+---
+
+## Docs — the landing's field, a fifth darker — DONE 2026-10-06
+
+The copy starts level with the live block (the maintainer's change of the same day), so its
+headline sits above where the fade begins, and the text was hard to read on the lines. Five
+candidates were rendered side by side with injected CSS: a fade from the top of the band, a
+soft dark pool behind the copy, the whole field at 45%, a dark halo round each letter, and the
+field on the live block's side only. The maintainer took none of them and asked for the field
+10% darker, and then for another 10%. The aurora layer is drawn at `opacity: 0.8`
+(`Hero.astro`): it is blended onto the band, so every line moves a fifth of the way to dark-0,
+and the fade at the foot is unchanged.
+The pool behind the copy is the candidate to return to if the text still reads badly.
+
+---
+
+## Docs — the sheet's top bar, and the landing's pillars — DONE 2026-10-06
+
+Two parts of the brand sheet that round 2 left (§20 and §24), in two commits: the rest of §20
+is proposed in `todo.md`. With the second one, on the maintainer's word, the landing lost its
+body and its hero grew. What was decided, and why:
+
+- **The bar is a `Header` override** (`apps/docs/src/components/Header.astro`): the wordmark on
+  the left, then, held to the right, the section links, a small search in the label face, the
+  GitHub link and the theme picker. The sheet draws neither of the last two. They stay, because
+  without the picker a reader cannot choose a theme.
+- **Starlight's parts are imported from their files** (`@astrojs/starlight/components/*.astro`),
+  not through `virtual:starlight/components/*`, which Starlight ships no types for. The cost: a
+  `components` override of Search, SiteTitle or ThemeSelect in the config would not reach the
+  bar. SocialIcons is the site's own file, so the bar imports that.
+- **The links are a written list, not read from the sidebar.** The bar shows a chosen set (four
+  sections and the playground; Contribute is not one of them). The cost: a renamed section is
+  two edits.
+- **The links show from 72rem.** Beside the other parts they need 1087px. Below that a doc page
+  has its sidebar, which holds every section, and the landing has its two buttons.
+- **The search label is ink-3**, as the sheet draws it. That is 3.7:1 on white, the brand's
+  placeholder ink, and lower than the ink-2 Starlight had.
+- **The pillars are frontmatter** (`pillars`, one field added to the docs schema in
+  `content.config.ts`), drawn by `Hero.astro`. The band is outside the page body, so a
+  component in the MDX could not be as wide as the window. The aurora got a stage of its own
+  inside the band, so the field stops above the cells. The copy is the site's (Declarative,
+  Incremental, Embeddable), not the sheet's: its "Typed structs" was not checked against the
+  language.
+- **A page with a hero is its band and nothing else.** The landing's paragraph went, and the
+  page body and the footer of a hero page are not drawn (`dendrite.css`); both were empty on
+  the landing and the 404. The band is at least the window under the nav, and the pillars
+  take what the hero leaves, so the cells and their rules end where the window does. Two
+  costs: a hero page cannot have a body until that rule changes, and in a tall window the
+  cells are mostly empty (415px of cell for three lines at 1080).
+- **The hero's two blocks grew upward**, into the room the band had above them. The copy:
+  24 and 32px between its parts, and buttons one step larger, with a label's line height
+  (the page's own had made them tall). The live block: a code area of 16rem beside the copy,
+  11rem in one column, where there is no room above.
+- **The code area's height is set on CodeMirror's scroller**, not through the editor's own
+  knob: the knob leaves the sideways scrollbar floating under the last line (`backlog.md`).
+  `Live`'s `codeMinHeight` prop had this one caller, so the prop went with it.
+
+One thing to know: changing `content.config.ts` under a running dev server gave
+`UnknownContentCollectionError` on the MDX pages until the content store was built again. The
+production build was never affected.
+
+---
+
+## Docs — brand round 2 on the site — DONE 2026-10-06
+
+The handoff of 2026-10-05 from Claude Design (`brand/CHANGES.md`, sheet §22 to §25), in two
+commits: the icons and the OG card, then the landing hero "5z" (the aurora band, the drift from
+`mountAurora()`, a live block where the design draws a code well). What was decided, and why:
+
+- **The hero's right column is the live block, not the static `beacon.den` well.** §24 itself
+  says "a live code well", and the sample reads struct fields the language may not parse.
+  Nothing of the editor is overridden: `color-scheme: dark` on the band is all its
+  `light-dark()` colours need, and its own dark panel is already dark-1 with a dark-border
+  edge, which is what §24 asks of the well.
+- **The PNGs are baked through headless Chrome** (`brand/render.ts`), not through an SVG
+  library. The aurora strokes are `oklch()` and the OG card sets live text in two fonts; a
+  browser is the one renderer certain to agree with the site. The PNGs are committed, so CI
+  never renders.
+- **The nav is dark on the landing page in both themes**, because §24 puts it on the band. A
+  custom property is computed where it is declared, so the roles Starlight derives from its
+  ramp on `:root` are declared again on the header (`dendrite.css`). The search dialog lives
+  in the header, so on this page it is dark too.
+- **The band leaves the content panel by moving the panel's padding and width to the hero's
+  siblings**, not by viewport arithmetic. `100vw` counts the scrollbar, and Starlight's
+  container is left-aligned, not centred, below 72rem; both put a strip beside the band. The
+  page below keeps its measure: at eight widths from 375 to 1920 its content box is the one
+  Starlight's own rules give, to the tenth of a pixel.
+- **The headline is the design's 56px where the column has room, and a tenth of the column
+  (`10cqi`) where it has not.** Its first line is 9.8em wide, so that line always fits, and
+  no word is cut off on a phone. It is three lines beside the live block: the rule "two lines
+  max" cannot hold with this copy (the entry in `backlog.md`).
+- **`hero.html` was not taken verbatim.** Four of its rules failed when they ran; they are
+  listed in `backlog.md` for the design source.
+
+Not built, on purpose: the three pillars §24 draws (everything below the hero stays), the web
+app manifest and the VS Code icon (no consumer; both in `backlog.md`).
+
+Checked in a browser: both themes, no sideways scroll from 375 to 1920, the live block
+recomputing on the band, the 404 page (the other page with a hero), a doc page untouched, and
+`prefers-reduced-motion` through Chrome's DevTools protocol (the field hidden, one frame, the
+baked image shown).
+
+---
+
+## 0.5.0 on npm — DONE 2026-10-05
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.5.0**, eleven
+days after 0.4.0. A minor because it breaks: a value pushed into an input must fit the input's
+type. Three features in nine commits, each with its reasoning above: boundary validation, `++`,
+and a converting lambda parameter. The editor changed nothing of its own and released as the
+peer range demands.
+
+The runbook (`release-plan.md`, "Every later release") held with nothing added. PR #22 showed
+9 of 9 commits, because every commit was pushed before it opened and nothing was pushed after.
+One GitHub release on core's tag started one `Stage release` run (1m09s, green), and the three
+versions were approved core first.
+
+Checked after approval, from outside the repo: `latest` is 0.5.0 on each package, an
+attestation is on all three, the peer ranges are `^0.5.0`, and a clean `npm install` of the
+three runs a program that uses everything new. `"n = " ++ $n ++ ", " ++ shout(true)` with
+`shout = (t~: string) => Upper(t)` and `n` at 4 gives `"n = 4, TRUE"`; pushing `"oops"` into `n`
+leaves the value at 4 and publishes `input/value_does_not_fit/input n`; the same push through a
+runtime's `register` throws "Value for input 'n' does not fit its type number"; and
+`grammar.symbols` has `++`.
+
+---
+
 ## A converting lambda parameter, `(t~: string) => …` — DONE 2026-10-02
 
 The `convert` flag's second consumer, and the reason the flag was kept (`types-and-text-plan.md`).

@@ -8,33 +8,28 @@ head:
     content: "Dendrite: a declarative dataflow language"
 template: splash
 hero:
-  # The wordmark and a live block are the Hero override's (src/components/Hero.astro).
-  tagline: A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.
+  # The band, the aurora and the live block are the Hero override's (src/components/Hero.astro);
+  # the copy is the brand's (brand/aurora/hero.html). The title is HTML: the break is the
+  # design's, and the space before it keeps the two words apart where the title is read as text.
+  title: Declarative dataflow, <br>recomputed incrementally.
+  tagline: Change an input; only what depends on it runs. Embed the graph in TypeScript.
   actions:
     # Relative, so it works under any base. Frontmatter cannot read env, so the playground
     # link is the deployed URL: a plain link, not the share round trip (the island's "open
     # in playground" carries a document and uses PUBLIC_PLAYGROUND_URL).
     - text: Get started
       link: ./learn/getting-started/
-      icon: right-arrow
-    - text: Try the playground
+    - text: Playground
       link: https://ijiji.github.io/Dendrite/playground/
-      icon: external
-      variant: minimal
+      variant: secondary
+# The three cells under the hero, on its band (a field this site adds: src/content.config.ts).
+# They are the end of the page. It has no body: the band fills the window, and a hero page's
+# body is not drawn (styles/dendrite.css).
+pillars:
+  - title: Declarative
+    text: A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
+  - title: Incremental
+    text: When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
+  - title: Embeddable
+    text: The vocabulary is yours to extend. What a program reads and produces is what a host declares.
 ---
-
-import { Card, CardGrid } from "@astrojs/starlight/components";
-
-<CardGrid stagger>
-  <Card title="Declarative" icon="pencil">
-    A program is a set of bindings and outputs. No sequencing, no mutation, no side effects.
-  </Card>
-  <Card title="Incremental" icon="rocket">
-    When an input changes, only what depends on it recomputes. Outputs pull; nothing pushes.
-  </Card>
-  <Card title="Embeddable" icon="puzzle">
-    The vocabulary is yours to extend. What a program reads and produces is what a host declares.
-  </Card>
-</CardGrid>
-
-Two ways in. If you are **writing programs**, start with [Learn](./learn/getting-started/) and keep the [standard library](./stdlib/) beside you. If you are **embedding the language** in an application of your own, go to [Host developers](./host/installation/). Either way, [How it works](./how-it-works/the-chain/) is there when you want to know why.

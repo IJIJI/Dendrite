@@ -54,6 +54,15 @@
   --dn-iris-800: oklch(0.37 0.15 277);
   --dn-iris-900: oklch(0.29 0.10 277);
 
+  /* Aurora — contour field tiers (see brand sheet §22); seam only in the marble field */
+  --dn-aurora-0: var(--dn-iris-700);
+  --dn-aurora-1: var(--dn-iris-500);
+  --dn-aurora-2: var(--dn-periwinkle);
+  --dn-aurora-3: var(--dn-iris-300);
+  --dn-aurora-seam: oklch(0.6 0.2 330);
+  --dn-aurora-fade-from: 40%;
+  --dn-aurora-interval: 4000ms;
+
   /* Status — same lightness and chroma as Iris */
   --dn-ok: oklch(0.585 0.16 160);  /* fresh, passing */
   --dn-ok-soft: oklch(0.94 0.05 160);
@@ -182,4 +191,5 @@
                    inputs + literals, ink names, ink-2 comments, ink-3 punctuation) and --dn-code-operator
                    split from --dn-code-op; editor surface tokens (--dn-editor-*), --dn-dark-4, --dn-selection;
                    dark values for the six statuses. The sheet still shows 1.0 until regenerated.
+   1.2 · 2026-10 · aurora tiers, seam, fade and interval; icon set (A, D3) documented in the sheet.
 */

@@ -14,10 +14,13 @@ import { remarkTs } from "./src/plugins/remark-ts";
 
 const source = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
+// GitHub Pages serves project sites under /<repo>/ - CI sets DOCS_BASE. Dev stays at /.
+const site = "https://ijiji.github.io";
+const base = process.env.DOCS_BASE ?? "/";
+
 export default defineConfig({
-  site: "https://ijiji.github.io",
-  // GitHub Pages serves project sites under /<repo>/ - CI sets DOCS_BASE. Dev stays at /.
-  base: process.env.DOCS_BASE ?? "/",
+  site,
+  base,
   // Only SVGs so far; the default service wants sharp for nothing.
   image: { service: passthroughImageService() },
   // ```den fences and `…{:den}` inline code, highlighted by the editor's own lexer, and
@@ -42,18 +45,28 @@ export default defineConfig({
         // First, and it matters: it names the cascade layers in order (see the file).
         "./src/styles/layers.css",
         "@dendrite-lang/editor/style.css",
+        // The brand's own tokens (--dn-*), which the landing hero is written in. Custom
+        // properties only, so loading them for every page costs nothing a page can see.
+        "../../brand/dendrite-tokens.css",
         "./src/styles/dendrite.css",
       ],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/IJIJI/Dendrite" }],
       // The social links open in a new tab (Starlight's own component, one attribute added).
       components: {
         SocialIcons: "./src/components/SocialIcons.astro",
-        // The splash hero: the wordmark as the title, a live Minimal block as the image.
+        // The sheet's top bar: the section links and a small search, held to the right.
+        Header: "./src/components/Header.astro",
+        // The splash hero: the aurora band, a live Minimal block where the design's code well is.
         Hero: "./src/components/Hero.astro",
       },
       // Sidebar labels are plain text, so a label that is CODE - `stdlib` - is marked from a
       // script rather than markup; dendrite.css sets it in Kode Mono. Runs before first paint.
       head: [
+        // The brand's icon A (brand/CHANGES.md, "Icons wiring"); the PNGs are baked by
+        // brand/render.ts. A crawler wants the card's image as an absolute URL.
+        { tag: "link", attrs: { rel: "apple-touch-icon", href: `${base}apple-touch-icon.png` } },
+        { tag: "meta", attrs: { property: "og:image", content: `${site}${base}og.png` } },
+        { tag: "meta", attrs: { name: "twitter:image", content: `${site}${base}og.png` } },
         {
           tag: "script",
           content:

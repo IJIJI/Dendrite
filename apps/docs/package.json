@@ -17,6 +17,7 @@
     "@dendrite-lang/core": "workspace:^",
     "@dendrite-lang/editor": "workspace:^",
     "@fontsource/archivo": "^5.3.0",
+    "@fontsource/chakra-petch": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/kode-mono": "^5.3.0",
     "astro": "^7.2.10",

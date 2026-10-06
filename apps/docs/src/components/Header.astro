@@ -1,0 +1,140 @@
+---
+// The site's top bar, as the brand sheet draws it (§20 and §24): the wordmark on the left
+// and, held to the right, the section links and a small search field. The GitHub link and
+// the theme picker are not on the sheet; the site keeps them, last. Starlight's own Header
+// otherwise - its markup and CSS, copied because a component's <style> is scoped to its
+// markup - less the language picker, which one locale has no use for.
+// The parts are Starlight's defaults, imported directly; SocialIcons is this site's own.
+import Search from "@astrojs/starlight/components/Search.astro";
+import SiteTitle from "@astrojs/starlight/components/SiteTitle.astro";
+import ThemeSelect from "@astrojs/starlight/components/ThemeSelect.astro";
+
+import SocialIcons from "./SocialIcons.astro";
+
+// The deployed path in CI (PUBLIC_PLAYGROUND_URL), the playground's dev server otherwise.
+const PLAYGROUND: string = import.meta.env.PUBLIC_PLAYGROUND_URL ?? "http://localhost:5173/";
+
+// Each section's first page, in the sidebar's order (astro.config.ts), then the playground.
+// `code` marks a label that is code, which the sidebar sets in the label face too.
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const links = [
+  { label: "Learn", href: `${base}learn/getting-started/` },
+  { label: "stdlib", href: `${base}stdlib/`, code: true },
+  { label: "How it works", href: `${base}how-it-works/the-chain/` },
+  { label: "Host developers", href: `${base}host/installation/` },
+  { label: "Playground", href: PLAYGROUND },
+];
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <nav class="links" aria-label="Sections">
+    {
+      links.map(({ label, href, code }) => (
+        <a {href} class:list={{ code }}>
+          {label}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="search sl-flex print:hidden">
+    <Search />
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <ThemeSelect />
+  </div>
+</div>
+
+<style>
+  .header {
+    display: flex;
+    gap: var(--sl-nav-gap);
+    align-items: center;
+    height: 100%;
+  }
+
+  /* The wordmark takes the left; its margin holds everything else to the right. */
+  .title-wrapper {
+    /* Prevent long titles overflowing and covering the search and menu buttons on narrow viewports. */
+    overflow: clip;
+    /* Avoid clipping focus ring around link inside title wrapper. */
+    padding: 0.25rem;
+    margin: -0.25rem;
+    margin-inline-end: auto;
+    min-width: 0;
+  }
+
+  .links {
+    display: none; /* until there is room, and never in print: the last rule of this sheet */
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .links a {
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .links a:hover {
+    color: var(--sl-color-white);
+  }
+
+  .links a.code {
+    font-family: var(--dn-font-mono-ui);
+    font-weight: 500;
+  }
+
+  .right-group,
+  .social-icons {
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .social-icons::after {
+    content: "";
+    height: 2rem;
+    border-inline-end: 1px solid var(--sl-color-gray-5);
+  }
+
+  /* From the width Starlight shows the search as a field: the sheet's small one, in the
+     label face, its hint in the same muted ink. The button is Search's own markup, hence
+     :global. */
+  @media (min-width: 50rem) {
+    .search :global(button[data-open-modal]) {
+      width: auto;
+      min-width: 10rem;
+      height: 2rem;
+      border-radius: var(--dn-radius-1);
+      background-color: var(--sl-color-gray-7); /* raised: the nav is the page's ground */
+      color: var(--sl-color-gray-3);
+      font-family: var(--dn-font-mono-ui);
+      font-weight: 500;
+      font-size: var(--dn-text-sm);
+    }
+
+    .search :global(button[data-open-modal]:hover) {
+      color: var(--sl-color-white);
+    }
+
+    .search :global(button[data-open-modal] kbd) {
+      padding: 0;
+      background: none;
+      font: inherit;
+    }
+  }
+
+  /* The links need about 1090px beside the other parts, and Starlight's wide breakpoint
+     gives it. Below that a doc page has its sidebar, which holds every section, and the
+     landing has its two buttons. */
+  @media screen and (min-width: 72rem) {
+    .links {
+      display: flex;
+    }
+  }
+</style>

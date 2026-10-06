@@ -2,6 +2,7 @@
    these map them onto the brand tokens (brand/dendrite-tokens.css; the dark derivations are
    the editor's, packages/editor/style.css). Fonts are self-hosted, as in the playground. */
 
+@import "@fontsource/chakra-petch/600.css"; /* display: the landing headline, H1 and H2 */
 @import "@fontsource/archivo/400.css";
 @import "@fontsource/archivo/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
@@ -14,8 +15,10 @@
 
   /* Starlight's ramp runs white → gray-1 … gray-6 → black, TEXT to BACKGROUND in both themes
      (the light theme inverts the greys). Roles it reads: gray-2 is body text, gray-3 muted,
-     gray-5/6 hairlines and inline code, gray-6/7 the nav and sidebar, black the page.
-     Light: the brand's ink ramp down to its ground ramp. */
+     gray-5/6 hairlines and inline code, black the page. gray-7 it keeps one step off the
+     page; here that step is the brand's RAISED surface, for a card or a field.
+     Light: the brand's ink ramp down to its ground ramp, the page on ground as sheet §20 has
+     it, so a code area's white reads as a well. */
   --sl-color-white: #201e1d; /* ink: headings */
   --sl-color-gray-1: #201e1d; /* ink: strong text */
   --sl-color-gray-2: #5c5856; /* ink-2: body text */
@@ -23,28 +26,230 @@
   --sl-color-gray-4: #cfcccb; /* border */
   --sl-color-gray-5: #d9d6d5; /* ground-3: hairline-light, hover */
   --sl-color-gray-6: #e6e4e3; /* ground-2: inline code, hairlines */
-  --sl-color-gray-7: #f3f2f2; /* ground: the nav bar */
-  --sl-color-black: #ffffff; /* ground-1: the page, as the editor's canvas */
+  --sl-color-gray-7: #ffffff; /* ground-1: raised */
+  --sl-color-black: #f3f2f2; /* ground: the page */
   --sl-color-accent: #6366f1; /* iris */
   --sl-color-accent-high: oklch(0.44 0.19 277); /* iris-ink: accent text at paragraph size */
   --sl-color-accent-low: oklch(0.92 0.06 277); /* iris-200 */
+  /* Starlight's blue is what a note is drawn in: the brand's info status, and its soft fill. */
+  --sl-color-blue: oklch(0.585 0.16 240); /* info */
+  --sl-color-blue-low: oklch(0.94 0.05 240); /* info-soft */
+
+  /* One ground for the page, the nav and the sidebar, parted by 1px rules in the brand's
+     border colour - which is a different step of each theme's ramp. */
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-black);
+  --sl-color-hairline: var(--sl-color-gray-4);
+  --sl-color-hairline-light: var(--sl-color-gray-4);
+  --sl-color-hairline-shade: var(--sl-color-gray-4);
 }
 
 :root[data-theme="dark"] {
-  /* Dark: dark-1 page, one step up the ramp, as the editor's panel - dark-0 under a screen
-     of near-white text reads harsh. */
+  /* Dark: the page on dark-0, as sheet §20 has it and as the landing's band is, with dark-1
+     raised on it. It was dark-1 until 2026-10-06, for fear that dark-0 under near-white text
+     reads harsh: that was the editor's case, and a doc page's body text is the softer grey. */
   --sl-color-white: #f3f2f2; /* dark-ink */
   --sl-color-gray-1: #f3f2f2;
   --sl-color-gray-2: #a8a4a2; /* dark-ink-2: body text */
   --sl-color-gray-3: #7d7977; /* dark-ink-3: muted */
   --sl-color-gray-4: #4a4644; /* dark-4 */
   --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
-  --sl-color-gray-6: #2c2a29; /* dark-2: nav and sidebar */
-  --sl-color-gray-7: #141312; /* dark-0: a well below the page (the chain's cards) */
-  --sl-color-black: #201e1d; /* dark-1: the page */
+  --sl-color-gray-6: #2c2a29; /* dark-2 */
+  --sl-color-gray-7: #201e1d; /* dark-1: raised */
+  --sl-color-black: #141312; /* dark-0: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
   --sl-color-accent-high: oklch(0.84 0.11 277);
   --sl-color-accent-low: oklch(0.29 0.1 277);
+  --sl-color-blue: oklch(0.75 0.12 240); /* info, on dark */
+  --sl-color-blue-low: oklch(0.28 0.05 240); /* info-soft, on dark */
+  --sl-color-hairline: var(--sl-color-gray-5); /* dark-border */
+  --sl-color-hairline-light: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
+}
+
+/* The landing page (and the 404, the other page with a hero). Its hero is a band in the
+   brand's dark-0 across the whole window, in both themes (Hero.astro; sheet §24), and two
+   things of Starlight's own follow from that.
+
+   One: the nav sits on the band, so on this page it wears the dark palette whatever the theme,
+   on dark-0 with the band's rule beneath it. A custom property is computed where it is
+   declared, so the roles Starlight derives from the ramp on :root are derived again here.
+   Screen only: print forces the light palette, and the nav goes with it. */
+@media screen {
+  :root[data-has-hero] .page > .header {
+    color-scheme: dark;
+
+    --sl-color-white: var(--dn-dark-ink);
+    --sl-color-gray-1: var(--dn-dark-ink);
+    --sl-color-gray-2: var(--dn-dark-ink-2);
+    --sl-color-gray-3: var(--dn-dark-ink-3);
+    --sl-color-gray-4: var(--dn-dark-4);
+    --sl-color-gray-5: var(--dn-dark-3);
+    --sl-color-gray-6: var(--dn-dark-2);
+    --sl-color-gray-7: var(--dn-dark-1);
+    --sl-color-black: var(--dn-dark-0);
+    --sl-color-accent: var(--dn-periwinkle);
+    --sl-color-accent-high: var(--dn-iris-300);
+    --sl-color-accent-low: var(--dn-iris-900);
+
+    --sl-color-text: var(--sl-color-gray-2);
+    --sl-color-text-accent: var(--sl-color-accent-high);
+    --sl-color-text-invert: var(--sl-color-accent-low);
+    --sl-color-bg-nav: var(--dn-dark-0);
+    --sl-color-hairline-shade: var(--dn-dark-border);
+  }
+
+  /* The wordmark for a dark ground, though the theme may be the light one. */
+  :root[data-has-hero] .site-title img.light\:sl-hidden {
+    display: block;
+  }
+
+  :root[data-has-hero] .site-title img.dark\:sl-hidden {
+    display: none;
+  }
+}
+
+/* Two: a page with a hero is its band and nothing else. The band fills the window under the
+   nav (Hero.astro), so Starlight's content panel gives up its padding and its reading width,
+   and what would follow the band is not drawn: the page body and the footer, both empty on
+   the landing and on the 404. A hero page that wants a body wants these rules changed first. */
+:root[data-has-hero] {
+  --sl-main-pad: 0; /* Starlight's own knob: the 3vh it leaves under a page */
+}
+
+:root[data-has-hero] main > .content-panel {
+  padding: 0;
+}
+
+:root[data-has-hero] main > .content-panel > .sl-container {
+  max-width: none;
+  margin-inline: 0;
+}
+
+:root[data-has-hero] main > .content-panel > .sl-container > :not(.dn-hero) {
+  display: none;
+}
+
+/* A doc page in the brand's type and controls (brand README §4 and §5, sheet §20). Each block
+   below replaces one of Starlight's own looks; the nav's 1px rule and the sidebar's folding
+   groups stay Starlight's, by choice.
+
+   Headings. The display face, Chakra Petch 600, is for H1 and H2 and stops there. The sizes
+   are the brand's scale, 40 / 28 / 20 / 16, in rem so they follow the reader's font size as
+   the body does. Starlight reads a size from these properties twice, for the heading and for
+   the wrapper its anchor link sits in, so the properties are what is set. */
+:root {
+  --sl-text-h1: 2.5rem;
+  --sl-text-h2: 1.75rem;
+  --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1rem;
+  --sl-text-h5: 1rem; /* the scale ends at H4: nothing under it may be larger */
+}
+
+h1#_top,
+.sl-markdown-content :is(h1, h2):not(:where(.not-content *)) {
+  font-family: var(--dn-font-display);
+}
+
+/* The line height is one property too, read by heading and wrapper alike: each level sets
+   the brand's own on both. */
+h1#_top,
+.sl-markdown-content :is(h1, .level-h1) {
+  --sl-line-height-headings: 1.1;
+}
+
+.sl-markdown-content :is(h2, .level-h2) {
+  --sl-line-height-headings: 1.15;
+}
+
+.sl-markdown-content :is(h3, .level-h3) {
+  --sl-line-height-headings: 1.3;
+}
+
+.sl-markdown-content :is(h4, .level-h4) {
+  --sl-line-height-headings: 1.4;
+}
+
+/* The sidebar's current page: an Iris bar on its left, the sunken ground (the one Starlight
+   names for inline code: ground-2, and dark-3 on dark), ink text and square corners, where
+   Starlight draws a solid accent pill. The bar comes out of the padding, so the label stays
+   where the other labels are. */
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  border-radius: 0;
+  border-inline-start: var(--dn-border-w-2) solid var(--sl-color-accent);
+  padding-inline-start: calc(var(--sl-sidebar-item-padding-inline) - var(--dn-border-w-2));
+  background-color: var(--sl-color-bg-inline-code);
+  color: var(--sl-color-white);
+}
+
+/* "On this page": its title is the brand's overline (11px, which no Starlight size holds),
+   and the current heading is ink among muted ones, where Starlight uses the accent. */
+#starlight__on-this-page {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-2);
+}
+
+starlight-toc a[aria-current="true"] {
+  color: var(--sl-color-white);
+}
+
+/* Previous and next: two plain links under a rule, an arrow and the page's name, where
+   Starlight draws two boxes with a shadow and 8px corners. The words "Previous" and "Next"
+   are text of the link with no element of their own, so they are sized to nothing: they
+   leave the screen, the arrow says it, and they stay in the link's name. */
+.pagination-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 2rem;
+  border-top: 1px solid var(--sl-color-hairline);
+  padding-top: 0.75rem;
+}
+
+.pagination-links a {
+  flex: none;
+  width: auto;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  font-size: 0;
+}
+
+.pagination-links a[rel="next"] {
+  margin-inline-start: auto;
+}
+
+.pagination-links br {
+  display: none;
+}
+
+.pagination-links .link-title {
+  font-size: var(--sl-text-base);
+  line-height: var(--sl-line-height);
+  color: inherit;
+}
+
+.pagination-links a:hover .link-title {
+  color: var(--sl-color-white);
+}
+
+.pagination-links svg {
+  font-size: 1rem;
+}
+
+/* A note: the info colour as a 2px bar and its soft fill (the two blues in the palette
+   above), and ink for its title and its links, where Starlight colours both. Notes are the
+   one kind of aside the site has; the others keep Starlight's colours until a page uses one. */
+.starlight-aside {
+  --sl-color-asides-text-accent: var(--sl-color-white);
+  border-inline-start-width: var(--dn-border-w-2);
 }
 
 /* The brand's corners: square containers, 2px controls. */
