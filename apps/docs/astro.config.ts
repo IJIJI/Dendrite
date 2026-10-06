@@ -54,6 +54,8 @@ export default defineConfig({
       // The social links open in a new tab (Starlight's own component, one attribute added).
       components: {
         SocialIcons: "./src/components/SocialIcons.astro",
+        // The sheet's top bar: the section links and a small search, held to the right.
+        Header: "./src/components/Header.astro",
         // The splash hero: the aurora band, a live Minimal block where the design's code well is.
         Hero: "./src/components/Hero.astro",
       },
