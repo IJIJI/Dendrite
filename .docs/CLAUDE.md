@@ -151,7 +151,9 @@ packages/core/src/language/
   evaluator/  evaluator.ts (evaluate, EvalContext, memoise), types.ts (EvalState, EvalError)
   runtime/    runner.ts (run, createProgramRunner), runtime.ts (createRuntime, ProgramHandle),
               entry.ts (one program state), seed.ts (defaultValueFor), instance.ts (createInstance)
-  stdlib/     index.ts (createStdlib — types, ops, operators)
+  stdlib/     index.ts (createStdlib: installs the segments, in the reference's order), one file
+              per segment (logic, control, array, arithmetic, list, conversion, string: its ops,
+              their evaluators, their symbols), shared.ts (bin, variadic, toList)
   language.ts Language assembly: createLanguage / extendLanguage / parseSource
   compose.ts  composeLayers: vocabulary + port layers -> the descriptor a program is checked against
   environment.ts createEnvironment / forProgram: the pipeline, bound to a composed descriptor
@@ -189,8 +191,9 @@ See `architecture.md` for the layering DAG and full design.
   (type/op/evaluator → descriptor; nud/led/statement/infix/prefix → grammar). A language declares
   no inputs and no outputs: those arrive as **port layers** and compose into the
   `LanguageDescriptor` a program is checked against (`language/compose.ts`).
-- `createLanguage()` = empty base (core grammar only); `createStdlib()` = batteries (types + ops +
-  operators); `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
+- `createLanguage()` = empty base (the core grammar and the primitive types); `createStdlib()` =
+  batteries (ops, evaluators and their symbols, one file per segment); `extendLanguage`/
+  `extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
   `grammar.symbols`.
 

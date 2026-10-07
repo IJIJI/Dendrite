@@ -27,7 +27,8 @@ compose.ts  — composeLayers(vocabulary, global, program) → the LanguageDescr
               analysed and evaluated against, plus provenance; or the problems, each blamed
               on the layer that caused it
   ↑
-stdlib/     — createStdlib(): primitive types, ops, and their operators
+stdlib/     — createStdlib(): ops, their evaluators and their symbols, one file per segment
+              (the primitive types come with createLanguage())
 ```
 
 Consumers of infra (independent of the parser): `analyser/` (`analyse`), `evaluator/`

@@ -74,8 +74,10 @@ src/language/
     runner.ts       - run(), createProgramRunner()
     runtime.ts      - createRuntime(), ProgramHandle
   stdlib/
-    index.ts        - createStdlib() (types + logic/comparison/control/arithmetic/list ops
-                      and their operators)
+    index.ts        - createStdlib(): installs the segments, in the reference's order
+    logic.ts, …     - one file per segment (logic, control, array, arithmetic, list,
+                      conversion, string): its ops, their evaluators, their symbols
+    shared.ts       - the symbol builders (bin, variadic) and the list guard (toList)
   language.ts       - Language assembly: createLanguage / extendLanguage / parseSource
 ```
 

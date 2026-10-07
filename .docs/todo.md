@@ -74,8 +74,7 @@ per-segment pages (already one per `category`) gain "how to include only this".
 
 **When:** in 0.6.0, straight after the restructure above (the maintainer, 2026-10-05, who asked
 for `Clamp` and then chose the full list). Moved from the backlog's code-TODO roundup, where it
-was "more math ops". Its `TODO` is in the arithmetic band of `stdlib/index.ts` and goes when the
-ops land.
+was "more math ops". Its `TODO` is in `stdlib/arithmetic.ts` and goes when the ops land.
 
 **Why after the restructure:** it is the restructure's test. Seven ops in the `arithmetic`
 category should be seven registrations in one file, their tests and a changelog line, and nothing
