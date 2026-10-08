@@ -7,9 +7,9 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.5.0`, so a minor release here is always accompanied by a release of both.
+at `^0.6.0`, so a minor release here is always accompanied by a release of both.
 
-## Unreleased
+## 0.6.0
 
 - **Breaking: a list literal whose items differ in type refuses a function.** `["a", x => x]`
   is the new error `function_in_mixed_list`, and so is a list of two functions of different
