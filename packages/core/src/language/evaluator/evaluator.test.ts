@@ -470,6 +470,24 @@ describe("math ops", () => {
     expect(of("Mod(5, null)")).toBeNull();
   });
 
+  // A text can reach a number input through `any`. Each op computes NaN from it, and so has
+  // no answer. Round once handed the text itself back: it returns its argument when there is
+  // nothing to round away, and the text took that way out.
+  it("a value that is no number has no answer, in each of them", () => {
+    const through = (op: string) => runSource(`let f = x => ${op}\noutput out = f("abc")`).value;
+    const ops = [
+      "Round(x)",
+      "Round(x, 2)",
+      "Floor(x)",
+      "Ceil(x)",
+      "Abs(x)",
+      "Clamp(x, 0, 10)",
+      "Mod(x, 2)",
+      "Pow(x, 2)",
+    ];
+    for (const op of ops) expect(through(op), op).toBeNull();
+  });
+
   // JSON writes a negative zero as 0, so a program never holds one: the evaluator reads it as
   // the zero it would arrive as. `toBe` tells the two apart, which is the point of each line.
   it("a negative zero is zero", () => {

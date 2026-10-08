@@ -170,7 +170,9 @@ export function installArithmetic(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Round",
-    evaluate: ({ value, digits }) => roundTo(value as number, Math.trunc((digits as number) ?? 0)),
+    // Number(): roundTo hands its argument back when there is nothing to round away, so a
+    // value that is no number (text, through `any`) must reach it as NaN, not as itself.
+    evaluate: ({ value, digits }) => roundTo(Number(value), Math.trunc((digits as number) ?? 0)),
   });
 
   lang.registerOp({
