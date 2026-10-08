@@ -5,7 +5,55 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
-## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-09
+## 0.6.0 on npm — DONE 2026-10-08
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.6.0**, three
+days after 0.5.0. A minor because it breaks, in five lines that each touch an edge case: the
+comparison ops are in `logic`; `Divide` by zero and `Average`, `Max` and `Min` of an empty list
+give `null`; a result that is `NaN` or an infinity is `null`; a mixed list literal refuses a
+function; a list that holds a function does not fit `any`. The editor and the link changed
+nothing of their own and released as the peer range demands.
+
+**The group it closed** (grouped 2026-10-05, each row with its own entry below):
+
+| # | Item | Outcome |
+| --- | --- | --- |
+| 1 | The stdlib per segment | Done: one file per segment, `createStdlib({ segments })` |
+| 2 | A math batch | Done: seven ops, and with them `null` for "no answer" |
+| 3 | A mixed list literal refuses a function | Done, with the guard fixed in `isCompatible` |
+| 4 | `AnalysisContext` leaves the public surface | Out: it stays public (the maintainer) |
+| 5 | Strings as lists | Moved, to 0.8 possibly, behind union types |
+
+**The runbook** (`release-plan.md`, "Every later release") held. PR #25 showed 23 of 23
+commits. One GitHub release on core's tag started one `Stage release` run (1m00s, green), and
+the three versions were approved core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.6.0 on each package, an
+attestation is on all three, the peer ranges are `^0.6.0`, and a clean `npm install` of the
+three ran a check of 47 lines, one per thing the release changed, all passing: the versions,
+`logic` alone running `1 >= 2` and failing to lex `-14`, each math op's disputed rule,
+`Divide(1, 0)` and `Max([])` as `null`, a host op's `NaN` as `null`, `["a", x => x]` as
+`function_in_mixed_list`, a runtime and an instance on `Default(Max($states), 0)`, the editor
+colouring `Round` as an op, and the link's fingerprint holding `Clamp`. The live site followed:
+twelve ops on the arithmetic page, `/stdlib/comparison/` a 404 as decided, and the version note
+at 0.6.0.
+
+**What was new in how it was checked:** the check program was written BEFORE approval and run
+twice. On tarballs of the release tree (`yarn pack`) it passed 47 of 47. On 0.5.0 from npm it
+failed 40 of 47. A check that has never failed proves nothing, and one that is first run on the
+published version cannot tell a fault in the release from a fault in itself.
+
+**The custom domain, the same day.** `dendrite-lang.org` was pointed at Pages while this release
+was being built, and the site broke with no commit: it answered 200 for its HTML and 404 for
+every file the HTML asked for, because the build had `/Dendrite/` written in three places and a
+custom domain serves at the root. A change in Settings → Pages does not rebuild the site. The
+deploy workflow now asks Pages for its origin and base path (`actions/configure-pages`), names
+no address, and fails when the deployed page cannot find its stylesheet. It went to `main` as a
+cherry-picked hotfix (PR #24), ahead of the release.
+
+---
+
+## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-08
 
 The last item of the 0.6.0 group, in one commit. It was "a list literal with mixed items hides a
 function behind `any`", found on 2026-10-02 while probing `++`: `["a", x => x]` analysed clean,

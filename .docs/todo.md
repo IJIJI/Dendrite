@@ -6,24 +6,11 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## The 0.6.0 group
-
-The stdlib release, grouped on 2026-10-05. The rows are in the order of the work, and every
-status is the maintainer's word.
-
-| # | Item | Entry | Status |
-| --- | --- | --- | --- |
-| 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
-| 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
-| 3 | A mixed list literal refuses a function | `done.md` | **done** 2026-10-09 |
-| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | **out** 2026-10-08: it stays public |
-| 5 | Strings as lists | `backlog.md` | **moved** 2026-10-08, to 0.8 (possibly) |
-| 6 | The release | `release-plan.md` | **next**: every other row is closed |
-
 ## After 0.6.0
 
-The order the maintainer gave on 2026-10-08. "Possibly" is the maintainer's word for the last
-two.
+0.6.0 is on npm since 2026-10-08, and its group of items is in `done.md` ("0.6.0 on npm").
+What follows is the order the maintainer gave that day. "Possibly" is the maintainer's word for
+the last two.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
