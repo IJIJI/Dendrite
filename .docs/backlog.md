@@ -730,6 +730,12 @@ maintainer then changed three things the canvas should take as well: the landing
 and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
 12/20 padding at 16px, and the live block's code area is 16rem tall beside the copy.
 
+**Two decisions of 2026-10-09 the canvas should take as well** (`todo.md`, 0.6.1). The row
+of copy and block starts at the TOP of the band, where the design has the copy in the lower
+55%: the block has no height until it loads, and a row at the foot made the copy jump 53 px.
+And the editor's dark surfaces sit one step down (panel dark-0, code dark-1), so §20 is the
+rule and §25 is the section to redraw.
+
 **Why deferred:** the source is edited in Claude Design, not in this repo.
 
 **What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert

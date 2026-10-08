@@ -206,15 +206,36 @@ CodeMirror's editor is a flex column already, so one declaration does it.
 `--sl-color-gray-6`. That variable serves more than the frame, so the frame gets a rule of its
 own; which one is found when it is built.
 
-**The plan of part 1, five commits:**
+**The landing's copy jumped when the editor loaded** (reported by the maintainer, 2026-10-09).
+The live block is client-only, so its cell has no height until it loads. The row sat at the
+foot of the band (`align-content: end`), so when the block appeared the row grew UPWARD and the
+copy went with it. Measured on the build:
+
+| Window | Copy's top before the load | After | Jump |
+| --- | --- | --- | --- |
+| 1440 x 900, 1920 x 1080 | 203 px | 150 px | 53 px up |
+| 1280 x 720 | 147 px | 147 px | none: the copy is the taller block there |
+| 800 x 900, one column | 64 px | 64 px | none |
+
+**Decided: the row at the top** (the maintainer's own proposal, chosen from three pictures).
+One value. The copy is at 96 px before and after, 54 px higher than it ended before, and 99 px
+higher on a short window, where the free band is now under the row. Weighed against it: the
+copy anchored at the foot (`align-self: end`: no jump, 53 px lower, the nearest to sheet §24's
+"lower 55%", but the headline's top no longer level with the block's), and a reserved height
+for the block (no jump and no change, at the price of two numbers, 386 and 316 px, that follow
+the example's size). The choice moves the copy further from §24, which the backlog's entry for
+Claude Design records.
+
+**The plan of part 1, six commits:**
 
 | # | Commit | What changes | Proof |
 | --- | --- | --- | --- |
-| 1 | `fix(editor): the code area fills its minimum height` | `packages/editor/style.css`: one rule beside the knob. `Hero.astro`: its three scroller rules become the knob. The editor's changelog. | Scroller and editor the same height at a 22rem minimum; the landing's block the same height as before, at three widths |
-| 2 | `feat(editor): the dark surfaces sit one step down` | `style.css`: four dark values and the comment that argued the other way. `brand/dendrite-tokens.css`: the `--dn-editor-*` mirror, and a 1.3 line. A new test, the guard. The README's styling paragraph, if it names levels. The changelog: every host's default look changes. | Computed styles on a doc page and the playground, both themes; light unchanged |
-| 3 | `docs: the site's code frame sits on dark-1` | `apps/docs/src/styles/dendrite.css` | A TypeScript frame and an editor's code area compute the same colour |
-| 4 | `feat(playground): a favicon of its own` | `apps/playground/public/favicon.svg` and its touch icon, from the brand's reversed avatar; a row in `brand/render.ts` | The two apps' icons differ |
-| 5 | The notes | `todo.md` to `done.md`; the decision recorded for Claude Design in the backlog entry | |
+| 1 | `fix(docs): the landing's copy keeps its place when the editor loads` | `Hero.astro`: the row starts at the top of the band (`align-content: start`), and the two comments that say it sits at the foot | The copy's top is the same before and after the load, at four window sizes |
+| 2 | `fix(editor): the code area fills its minimum height` | `packages/editor/style.css`: one rule beside the knob. `Hero.astro`: its three scroller rules become the knob. The editor's changelog. | Scroller and editor the same height at a 22rem minimum; the landing's block the same height as before, at three widths |
+| 3 | `feat(editor): the dark surfaces sit one step down` | `style.css`: four dark values and the comment that argued the other way. `brand/dendrite-tokens.css`: the `--dn-editor-*` mirror, and a 1.3 line. A new test, the guard. The README's styling paragraph, if it names levels. The changelog: every host's default look changes. | Computed styles on a doc page and the playground, both themes; light unchanged |
+| 4 | `docs: the site's code frame sits on dark-1` | `apps/docs/src/styles/dendrite.css` | A TypeScript frame and an editor's code area compute the same colour |
+| 5 | `feat(playground): a favicon of its own` | `apps/playground/public/favicon.svg` and its touch icon, from the brand's reversed avatar; a row in `brand/render.ts` | The two apps' icons differ |
+| 6 | The notes | `todo.md` to `done.md`; the decision recorded for Claude Design in the backlog entry | |
 
 Then part 2, the release of the editor alone, and its record.
 
