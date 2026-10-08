@@ -11,6 +11,13 @@ at `^0.5.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **`createStdlib({ segments })` takes part of the library.** The segments are `logic`,
+  `control`, `array`, `arithmetic`, `list`, `conversion` and `string`, and the type
+  `StdlibSegment` names them. Every segment stands alone. A symbol comes with the segment that
+  owns its op, so a language without `arithmetic` has no `+` and no `-14` (a negative number is
+  `Negate`'s symbol), and one without `string` has no `++` and no template. The segments
+  install in the library's own order, whatever order the list is in; a name that is no segment
+  throws. `createStdlib()` is the whole library, as before.
 - **Breaking: the comparison ops are in the `logic` segment.** `Equals`, `NotEquals`,
   `GreaterThan` and `LessThan` carry `category: "logic"`, where a host reading `op.category`
   saw `"comparison"`. The reason is `>=`: it is sugar over `Not(LessThan(…))`, and with the

@@ -90,7 +90,7 @@ node-kind registry, and true source-span ranges.
 
 Repo-level / near-term:
 
-- [ ] More stdlib levels (empty / skeleton / base / core / extended); make configuring a language easier.
+- [x] The stdlib in parts — `createStdlib({ segments })` takes the segments a host wants; `createLanguage()` is the empty base. (Was "more stdlib levels: empty / skeleton / base / core / extended".)
 - [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed. More welcome (e.g. `Min`/`Max` over args, `Round`).
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false. (Design in `.docs/todo.md`.)
 - [x] Field typing (for structs) — multilevel struct typing + inheritance + `unknown_field`.

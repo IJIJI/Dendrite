@@ -65,7 +65,8 @@ runtime.updateInputs({ temperature: 30 }); // true
 - **The language**: a parser, an analyser that resolves types and checks every op call, and a
   pull-based evaluator that recomputes only what an input change reaches.
 - **A standard library** of logic, control, array, arithmetic, list, conversion and string ops,
-  with symbols as sugar over them.
+  with symbols as sugar over them. `createStdlib({ segments: ["logic", "arithmetic"] })` takes
+  part of it.
 - **Port layers**: a language declares no inputs or outputs; your application does, in layers
   whose order is authority.
 - **An instance to hold**: five observables and four commands. A program that stops compiling

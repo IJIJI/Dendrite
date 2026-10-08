@@ -192,8 +192,8 @@ See `architecture.md` for the layering DAG and full design.
   no inputs and no outputs: those arrive as **port layers** and compose into the
   `LanguageDescriptor` a program is checked against (`language/compose.ts`).
 - `createLanguage()` = empty base (the core grammar and the primitive types); `createStdlib()` =
-  batteries (ops, evaluators and their symbols, one file per segment); `extendLanguage`/
-  `extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
+  batteries (ops, evaluators and their symbols, one file per segment), and
+  `createStdlib({ segments })` takes some of them; `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
   `grammar.symbols`.
 

@@ -121,6 +121,29 @@ changelog line.
 
 ---
 
+## Core — a call to a name that is no op is reported as an undeclared binding
+
+**What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
+`undeclared_binding_reference`: "'Length' is not declared as a binding or scoped variable". The
+parser builds an op node only when the name is a registered op (`buildCall` in
+`parser/core-grammar.ts`) and reads every other call as the application of a binding, so the
+analyser never sees an op to miss. `unknown_op` is reached only by an op node that came from
+elsewhere: a program stored in `ast` form, or a graph. The message is true and it does not
+help: the author meant an op. The output is dropped and `compile` stays `ok: true`, as for any
+optional output that fails.
+
+**Why deferred:** found 2026-10-07 by the tests of `createStdlib({ segments })`, which make it
+easier to meet: a host leaves a segment out, and an author writes from the full reference. It
+is as old as calls are, and no host takes part of the library yet.
+
+**What it requires:** where the analyser reports an undeclared name in the callee position of
+an application, say that no op and no binding has that name. Decide whether that is a wording
+of `undeclared_binding_reference` or a kind of its own (*Every diagnostic* is generated from
+the registry, so a new kind needs its sample). Naming the nearest op (`Lenght` → `Length`) is a
+further step with a helper of its own. A changelog line.
+
+---
+
 ## Core — a host type with a conversion, and `~` on a type that extends a primitive
 
 **What:** two steps, asked by the maintainer 2026-10-02 once a lambda parameter could convert.
