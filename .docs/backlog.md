@@ -225,6 +225,11 @@ struct in-language (e.g. multi-field lambda return).
 brace depth because `{` is not a token of the language. A struct literal makes `{` one, so it
 brings the brace depth with it: a hole then ends at the `}` that matches, not the first one.
 
+**A precondition, found 2026-10-08:** a struct literal is what would turn "a struct type that
+names itself" (its own entry, further down) from a typing gap into an endless loop. A program
+that can BUILD a `Rec { f: (Rec) -> number }` can apply a function to itself. Close that entry
+first, or with this one.
+
 ---
 
 ## Language — `+` on text
@@ -344,8 +349,10 @@ maintainer asked on 2026-10-08 to look at enabling the untyped case. Probed the 
 | `let self = f => f(f)` | Refused, which is the point |
 
 **Why it is so:** an untyped parameter is `any`, and "a function is never `any`" is what keeps
-the language total in v1. With no recursive types a function cannot be applied to itself, so no
-program can loop. `Map`'s lambda needs no annotation only because the op supplies its type.
+the language total in v1. With no recursive type that a value can have (a struct type may name
+itself, and nothing can fill it: "a struct type that names itself", below) a function cannot be
+applied to itself, so no program can loop. `Map`'s lambda needs no annotation only because the
+op supplies its type.
 
 **Routes, each with its cost:**
 
@@ -364,6 +371,36 @@ program can loop. `Map`'s lambda needs no annotation only because the op supplie
 
 **What it requires:** a plan. **Driving need:** a helper written without annotations, the way
 the lambda handed to `Map` already is.
+
+---
+
+## Core — a struct type that names itself makes self-application typeable
+
+**What:** "every program finishes" was explained by two rules: a name cannot refer to itself,
+and a function is never `any`. A probe of the Z combinator on 2026-10-08 (the maintainer had
+asked whether one could be written) found every route a program can write refused, and one
+route that typing does NOT refuse. A NAMED type may mention itself. With
+`Rec { f: (Rec) -> number }` declared in a port layer, `output o = $r.f($r)` analyses with no
+error. That is the standard way a typed language gets recursion, an iso-recursive type.
+
+**Why it is no loop today:** nothing can give `$r` a value that holds a function. A program
+cannot build a struct. JSON holds no function. And an input pushed with a function inside it is
+refused at the boundary, "does not fit its type Rec" (probed, even for a harmless function).
+What is left is an op the HOST wrote that returns such a struct (not probed), and host code can
+loop without help. *The type system* says all of this since the same day.
+
+**It becomes a real fault with struct literals:** `let r = { f: (x: Rec) => x.f(x) }` and then
+`r.f(r)` is a typed, endless loop. So this entry is a PRECONDITION of "struct literals" below.
+
+**Why deferred:** no consumer and nothing that can use it. Offered to the maintainer as a rule
+to add now, and left for later the same day.
+
+**What it requires:** make it a rule of typing. When the descriptor composes
+(`validateDescriptor`), refuse a struct type that reaches itself through a function-typed field:
+walk each named type's fields, through lists and other structs, and report a new kind when a
+function's parameter or return mentions the type the walk started from. A sample for *Every
+diagnostic*. A struct that names itself in a plain field or a list (`Tree { children: Tree[] }`)
+should stay legal: that is data, and only the function position is the door.
 
 ---
 

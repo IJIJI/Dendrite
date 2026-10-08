@@ -6,7 +6,7 @@ Dendrite is a declarative dataflow language with a pull-based evaluator, designe
 - **First-class functions** — lambdas (`=>`), application, and real lexical closures. Higher-order list ops (`Filter`, `Map`, `Reduce`, …) are ordinary ops with a function-typed input, not a special node kind. There are no loop constructs; iteration is expressed via these ops.
 - **Declarative, no side effects / no sequencing** — no `;`, no mutation, no `box`. A program is a set of `let` bindings + `output`s; multiline = bindings, not statements.
 - **Immutable bindings** — `let x = expr` is a constant within one evaluation cycle (evaluated at most once); different cycles may differ if inputs changed.
-- **Strongly normalising (v1)** — recursion is blocked (self-reference → `binding_cycle`; self-application is untypable, and functions are never `any`).
+- **Strongly normalising (v1)** — recursion is blocked (self-reference → `binding_cycle`; self-application is untypable, and functions are never `any`). One route types and has no value to take it: a struct type that names itself in a function field (`backlog.md`). It must be closed before struct literals exist.
 - **Dendrite has no dependency on Beacon** — Beacon depends on Dendrite, not the other way around.
 
 Example (code-editor syntax):

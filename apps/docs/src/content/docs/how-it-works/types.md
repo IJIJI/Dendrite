@@ -78,16 +78,29 @@ what `incompatible_field_override{:den}` catches.
 
 ## Why a function is never `any{:den}`
 
-This single rule is what makes every Dendrite program terminate.
+This rule is most of what makes every Dendrite program terminate.
 
 Self-application is the shape recursion needs: a function that takes itself. To type it, you
-need somewhere for "a function" to fit loosely, and the only candidate is `any{:den}`. Close
-that door and the shape is untypable: there is no way to write the fixed-point combinator that
-would let a lambda reach itself.
+need a type that contains itself, and a type you write out is finite: annotate the parameter as
+a function, and the argument is always one function too deep for it. What would get around that
+is somewhere for "a function" to fit loosely, and that is `any{:den}`. Close that door and the
+shape is untypable: there is no way to write the fixed-point combinator that would let a lambda
+reach itself.
 
-The other door is a name referring to itself, and that is a `binding_cycle{:den}`.
+Handing a function to a function is a different thing, and it is allowed when the parameter
+says so. `(f: (number) -> number) => f(f(1)){:den}` calls `f{:den}` twice, a number the program
+text fixes. Nothing there reaches back to itself.
 
-Both shut, and what you get is a language that is **strongly normalising**: every program
+The second door is a name referring to itself, and that is a `binding_cycle{:den}`.
+
+There is a third, and what shuts it is not a rule of typing. A *named* type may mention itself,
+so an application can register a struct with a field that is a function over that same struct,
+and then `$r.f($r){:den}` is well typed. What a program lacks is a value to walk through with.
+It cannot build a struct, and an input that is pushed with a function inside it is refused at
+the boundary. Only an op the application wrote could hand a program such a struct, and the
+application's own code can loop without help.
+
+All three shut, and what you get is a language that is **strongly normalising**: every program
 finishes, in time bounded by the program's own size and its data. Which matters most when you
 are the one embedding it, because it means no program a user writes can hang your application.
 You pay for it with no user-written recursion, and you get the list ops instead.
