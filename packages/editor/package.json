@@ -11,7 +11,7 @@
     "dsl",
     "code-editor"
   ],
-  "homepage": "https://ijiji.github.io/Dendrite/host/packages/editor/",
+  "homepage": "https://dendrite-lang.org/host/packages/editor/",
   "bugs": {
     "url": "https://github.com/IJIJI/Dendrite/issues"
   },

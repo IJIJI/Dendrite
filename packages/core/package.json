@@ -12,7 +12,7 @@
     "logic",
     "node-editor"
   ],
-  "homepage": "https://ijiji.github.io/Dendrite/host/packages/core/",
+  "homepage": "https://dendrite-lang.org/host/packages/core/",
   "bugs": {
     "url": "https://github.com/IJIJI/Dendrite/issues"
   },

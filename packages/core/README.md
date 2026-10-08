@@ -1,8 +1,8 @@
-<a href="https://ijiji.github.io/Dendrite/"><img alt="Dendrite" src="https://raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/dendrite-wordmark.png" width="640"></a>
+<a href="https://dendrite-lang.org/"><img alt="Dendrite" src="https://raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/dendrite-wordmark.png" width="640"></a>
 
 <p align="left">
   <a href="https://www.npmjs.com/package/@dendrite-lang/core"><img alt="npm" src="https://img.shields.io/npm/v/%40dendrite-lang%2Fcore?style=flat-square&color=6366f1&labelColor=201e1d&label=npm"></a>
-  <a href="https://ijiji.github.io/Dendrite/host/packages/core/"><img alt="docs" src="https://img.shields.io/badge/docs-core-6366f1?style=flat-square&labelColor=201e1d"></a>
+  <a href="https://dendrite-lang.org/host/packages/core/"><img alt="docs" src="https://img.shields.io/badge/docs-core-6366f1?style=flat-square&labelColor=201e1d"></a>
   <a href="https://github.com/IJIJI/Dendrite/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/npm/l/%40dendrite-lang%2Fcore?style=flat-square&color=6366f1&labelColor=201e1d"></a>
 </p>
 
@@ -14,7 +14,7 @@ A program is a set of named values and outputs. Your application declares what p
 and must produce, pushes values in, and acts on what comes out. When an input changes, only what
 depends on it recomputes. Programs are type-checked before they run, and every program terminates.
 
-📖 **[Documentation](https://ijiji.github.io/Dendrite/)** · 🧪 **[Playground](https://ijiji.github.io/Dendrite/playground/)**
+📖 **[Documentation](https://dendrite-lang.org/)** · 🧪 **[Playground](https://dendrite-lang.org/playground/)**
 
 ## Install
 
@@ -77,11 +77,11 @@ runtime.updateInputs({ temperature: 30 }); // true
 
 ## Where to go next
 
-- [Installation](https://ijiji.github.io/Dendrite/host/installation/) and
-  [Embedding core](https://ijiji.github.io/Dendrite/host/embedding-core/) for hosting programs.
-- [Extending the language](https://ijiji.github.io/Dendrite/host/extending-the-language/) for your
+- [Installation](https://dendrite-lang.org/host/installation/) and
+  [Embedding core](https://dendrite-lang.org/host/embedding-core/) for hosting programs.
+- [Extending the language](https://dendrite-lang.org/host/extending-the-language/) for your
   own types and ops.
-- [Learn](https://ijiji.github.io/Dendrite/learn/getting-started/) for what programs look like.
+- [Learn](https://dendrite-lang.org/learn/getting-started/) for what programs look like.
 
 Pre-1.0: the API can still change between minor versions.
 

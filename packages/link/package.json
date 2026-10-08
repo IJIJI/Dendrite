@@ -10,7 +10,7 @@
     "replica",
     "dataflow"
   ],
-  "homepage": "https://ijiji.github.io/Dendrite/host/packages/link/",
+  "homepage": "https://dendrite-lang.org/host/packages/link/",
   "bugs": {
     "url": "https://github.com/IJIJI/Dendrite/issues"
   },

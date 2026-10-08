@@ -1,7 +1,7 @@
 # Dendrite docs
 
 The documentation site: [Astro](https://astro.build) + [Starlight](https://starlight.astro.build),
-deployed at the root of `ijiji.github.io/Dendrite/` with the playground beside it under
+deployed at the root of `dendrite-lang.org/` with the playground beside it under
 `/playground/` (`.github/workflows/pages.yml` builds and assembles both).
 
 ```sh

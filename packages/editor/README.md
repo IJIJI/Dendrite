@@ -1,8 +1,8 @@
-<a href="https://ijiji.github.io/Dendrite/"><img alt="Dendrite" src="https://raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/dendrite-wordmark.png" width="640"></a>
+<a href="https://dendrite-lang.org/"><img alt="Dendrite" src="https://raw.githubusercontent.com/IJIJI/Dendrite/main/brand/assets/dendrite-wordmark.png" width="640"></a>
 
 <p align="left">
   <a href="https://www.npmjs.com/package/@dendrite-lang/editor"><img alt="npm" src="https://img.shields.io/npm/v/%40dendrite-lang%2Feditor?style=flat-square&color=6366f1&labelColor=201e1d&label=npm"></a>
-  <a href="https://ijiji.github.io/Dendrite/host/packages/editor/"><img alt="docs" src="https://img.shields.io/badge/docs-editor-6366f1?style=flat-square&labelColor=201e1d"></a>
+  <a href="https://dendrite-lang.org/host/packages/editor/"><img alt="docs" src="https://img.shields.io/badge/docs-editor-6366f1?style=flat-square&labelColor=201e1d"></a>
   <a href="https://github.com/IJIJI/Dendrite/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/npm/l/%40dendrite-lang%2Feditor?style=flat-square&color=6366f1&labelColor=201e1d"></a>
 </p>
 
@@ -18,7 +18,7 @@ npm install @dendrite-lang/editor @dendrite-lang/core
 ```
 
 `@dendrite-lang/core` is a peer dependency: install it once, at the top, so the editor and your
-application share one copy. 📖 **[Documentation](https://ijiji.github.io/Dendrite/host/packages/editor/)**
+application share one copy. 📖 **[Documentation](https://dendrite-lang.org/host/packages/editor/)**
 
 ## React
 
