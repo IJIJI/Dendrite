@@ -226,6 +226,17 @@ for the block (no jump and no change, at the price of two numbers, 386 and 316 p
 the example's size). The choice moves the copy further from §24, which the backlog's entry for
 Claude Design records.
 
+**Built and measured (commit 1):** the copy's top is 96, 96, 48 and 64 px before and after the
+load, at 1440 x 900, 1920 x 1080, 1280 x 720 and 800 x 900.
+
+**Open, found while it was measured: on one column the pillars still move.** Under 961 px the
+band has no minimum height, so the block's arrival pushes the pillars down 316 px (800 x 900:
+494 to 810; 390 x 844: 506 to 822). On two columns they do not move: the band's minimum height
+holds the row. The row at the top does not change this. A reserved height for the block's cell
+does (`min-height: 316px` on `.dn-hero__live` in the one-column rule), and that number follows
+the example's size, which is why the reserve lost on two columns. Undecided. If taken, it goes
+with commit 2, which rewrites the block's height rules there anyway.
+
 **The plan of part 1, six commits:**
 
 | # | Commit | What changes | Proof |
