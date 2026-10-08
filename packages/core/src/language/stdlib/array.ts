@@ -60,33 +60,34 @@ export function installArray(lang: Language): void {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The mean of the numbers in list.",
+    description: "The mean of the numbers in list. An empty list has none, and gives null.",
     examples: [den`output mean = Average([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Average",
+    // Of an empty list this is 0 / 0, NaN, which the evaluator reads as null.
     evaluate: ({ list }) => {
       const numbers = toList(list) as number[];
-      return numbers.reduce((sum, n) => sum + n, 0) / numbers.length || 0;
+      return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
     },
   });
 
+  // Max and Min start from the infinity that every number beats, so an empty list leaves it
+  // standing and the evaluator reads it as null: nothing is the largest of nothing. Math.max
+  // and Math.min read a null item as zero, as Average's sum does. reduce (no spread) avoids
+  // call-stack limits on big lists.
   lang.registerOp({
     name: "Max",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The largest number in list.",
+    description: "The largest number in list. An empty list has none, and gives null.",
     examples: [den`output top = Max([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Max",
-    // Empty → 0 (matches Average's convention; the natural "none" for non-negative
-    // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
-    evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
-      return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n > m ? n : m));
-    },
+    evaluate: ({ list }) =>
+      (toList(list) as number[]).reduce((largest, n) => Math.max(largest, n), -Infinity),
   });
 
   lang.registerOp({
@@ -94,17 +95,13 @@ export function installArray(lang: Language): void {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The smallest number in list.",
+    description: "The smallest number in list. An empty list has none, and gives null.",
     examples: [den`output low = Min([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Min",
-    // Empty → 0 (matches Average's convention; the natural "none" for non-negative
-    // ordinals like TallyState). reduce (no spread) avoids call-stack limits on big lists.
-    evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
-      return numbers.length === 0 ? 0 : numbers.reduce((m, n) => (n < m ? n : m));
-    },
+    evaluate: ({ list }) =>
+      (toList(list) as number[]).reduce((smallest, n) => Math.min(smallest, n), Infinity),
   });
 
   lang.registerOp({

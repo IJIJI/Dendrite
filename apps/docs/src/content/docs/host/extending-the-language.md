@@ -181,6 +181,13 @@ An evaluator gets its inputs already evaluated and returns a value. It should no
 bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
 outputs.
 
+A number it returns has to be a real one. `NaN{:ts}` and the infinities are not values a program
+can hold (neither survives JSON, and `NaN{:ts}` is not even equal to itself), so when an evaluator
+returns one, the program gets `null{:den}` in its place. That is the language's "no answer", the
+same one the library's `Divide{:den}` gives for a division by zero, and `IsSet{:den}` and
+`Default{:den}` handle it. It applies to the number an op returns, not to numbers inside a list
+or a struct it returns.
+
 ## A symbol as sugar
 
 ```ts

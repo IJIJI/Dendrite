@@ -216,7 +216,13 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
         }
         const resolved = resolveInputs(node, ctx, state);
         try {
-          return evaluator.evaluate(resolved);
+          // NaN and the infinities are not values a program can hold: they are not JSON, so
+          // they would change on the way to a host, and NaN is not even equal to itself. An op
+          // that computes one has no answer, and no answer is null (a division by zero, the
+          // mean of nothing). Checked here, where every op's result passes, rather than in
+          // each op: no op, a host's included, can forget it.
+          const value = evaluator.evaluate(resolved);
+          return typeof value === "number" && !Number.isFinite(value) ? null : value;
         } catch (e) {
           if (e instanceof EvalError) throw e;
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);

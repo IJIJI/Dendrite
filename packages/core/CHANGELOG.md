@@ -11,6 +11,19 @@ at `^0.5.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Breaking: an op with no answer gives `null`.** `Divide` by zero gave `0`, and so did
+  `Average`, `Max` and `Min` of an empty list. All four give `null` now, as `Find` with no match
+  and `ToNumber("abc")` do: a zero there could not be told from a real one.
+  `Default(Max(states), 0)` says the fallback where one is wanted, and `IsSet` tests for it. The
+  null is the answer of that one op: the next number op reads it as zero, as it reads any null,
+  so `Divide(1, 0) + 1` is `1`.
+- **The evaluator gives `null` for a result that is `NaN` or an infinity,** for every op, a
+  host's included. Neither is JSON, so either changed on its way to a host, and `NaN` is not
+  equal to itself. This is what makes the entry above one rule rather than four, and it fixes
+  two leaks: `Divide(1, null)` was `Infinity`, and a number op fed a non-number through `any`
+  was `NaN`. Only the number an op returns is read; a list it returns is not looked into.
+- **`Max` and `Min` read a `null` item as zero,** as `Average` and the arithmetic ops do.
+  `Max([null, -4])` was `null`, and is `0`.
 - **`createStdlib({ segments })` takes part of the library.** The segments are `logic`,
   `control`, `array`, `arithmetic`, `list`, `conversion` and `string`, and the type
   `StdlibSegment` names them. Every segment stands alone. A symbol comes with the segment that

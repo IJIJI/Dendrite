@@ -185,8 +185,7 @@ describe("application dependsOn", () => {
 
 // ─── Source → parse → analyse → eval (Phase D integration) ───────────────────
 
-function runSource(src: string, output = "out") {
-  const lang = createStdlib();
+function runSource(src: string, output = "out", lang = createStdlib()) {
   const descriptor = withPorts(lang, EMPTY_PORTS);
   const parsed = parseSource(src, lang);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
@@ -286,29 +285,96 @@ describe("array ops", () => {
     expect(value).toEqual([1, 2, 3, 4]);
   });
 
-  it("Average of numbers (empty → 0)", () => {
+  it("Average of numbers (empty → null)", () => {
     expect(runSource("output out = Average([2, 4, 6])").value).toBe(4);
-    expect(runSource("output out = Average([])").value).toBe(0);
+    expect(runSource("output out = Average([])").value).toBeNull();
   });
 
-  it("Max of numbers (empty → 0)", () => {
+  it("Max of numbers (empty → null)", () => {
     expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
-    expect(runSource("output out = Max([])").value).toBe(0);
+    expect(runSource("output out = Max([-3, -20])").value).toBe(-3);
+    expect(runSource("output out = Max([])").value).toBeNull();
   });
 
-  it("Max of numbers (empty → 0)", () => {
-    expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
-    expect(runSource("output out = Max([])").value).toBe(0);
-  });
-
-  it("Min of numbers (empty → 0)", () => {
+  it("Min of numbers (empty → null)", () => {
     expect(runSource("output out = Min([3, 20, 8])").value).toBe(3);
-    expect(runSource("output out = Min([])").value).toBe(0);
+    expect(runSource("output out = Min([])").value).toBeNull();
+  });
+
+  // A null in a list of numbers reads as zero in all three, as it does in Add. Max and Min
+  // kept the null itself until 2026-10-08, when it came first in the list.
+  it("Average, Max and Min read a null item as zero", () => {
+    expect(runSource("output out = Average([null, 4])").value).toBe(2);
+    expect(runSource("output out = Max([null, -4])").value).toBe(0);
+    expect(runSource("output out = Min([null, 4])").value).toBe(0);
   });
 
   it("Includes membership", () => {
     expect(runSource('output out = Includes(["a", "b", "c"], "b")').value).toBe(true);
     expect(runSource('output out = Includes(["a", "b"], "z")').value).toBe(false);
+  });
+});
+
+// An op that computes NaN or an infinity has no answer, and the evaluator gives null for it:
+// neither is a value a program can hold (they are not JSON, and NaN is not equal to itself).
+// The rule is the evaluator's, for every op, so it is shown on the stdlib's own cases and on
+// a host op that knows nothing of it.
+describe("an op with no answer gives null", () => {
+  it("a division by zero", () => {
+    expect(runSource("output out = Divide(1, 0)").value).toBeNull();
+    expect(runSource("output out = Divide(0, 0)").value).toBeNull();
+    expect(runSource("output out = 1 / 0").value).toBeNull();
+    expect(runSource("output out = Divide(9, 2)").value).toBe(4.5);
+  });
+
+  it("a null divisor reads as zero, so it is a division by zero too", () => {
+    expect(runSource("output out = Divide(1, null)").value).toBeNull();
+    expect(runSource("output out = Divide(null, 2)").value).toBe(0);
+  });
+
+  it("IsSet and Default see it", () => {
+    expect(runSource("output out = IsSet(Divide(1, 0))").value).toBe(false);
+    expect(runSource("output out = Default(Divide(1, 0), 7)").value).toBe(7);
+  });
+
+  // The null is the answer of ONE op. The next number op reads it as zero, as it reads any
+  // null, so a program that cares tests it where it arises.
+  it("the next number op reads that null as zero", () => {
+    expect(runSource("output out = Divide(1, 0) + 1").value).toBe(1);
+  });
+
+  it("a non-number that reaches a number op through any", () => {
+    expect(
+      runSource('let double = x => Multiply(x, 2)\noutput out = double("abc")').value,
+    ).toBeNull();
+  });
+
+  it("holds for a host's op, and only for a number", () => {
+    const readings: Record<string, unknown> = {
+      nan: NaN,
+      up: Infinity,
+      down: -Infinity,
+      fine: 21.5,
+      text: "Infinity",
+      list: [Infinity],
+    };
+    const lang = createStdlib();
+    lang.registerOp({
+      name: "Reading",
+      inputs: [{ name: "which", type: Type.string }],
+      output: Type.any,
+    });
+    lang.registerEvaluator({ op: "Reading", evaluate: ({ which }) => readings[which as string] });
+    const reading = (which: string) =>
+      runSource(`output out = Reading("${which}")`, "out", lang).value;
+
+    expect(reading("nan")).toBeNull();
+    expect(reading("up")).toBeNull();
+    expect(reading("down")).toBeNull();
+    expect(reading("fine")).toBe(21.5);
+    expect(reading("text")).toBe("Infinity");
+    // Not looked into: a list an op returns is the op's own business.
+    expect(reading("list")).toEqual([Infinity]);
   });
 });
 
@@ -322,9 +388,9 @@ describe("a list op reads what is not a list as []", () => {
     ["Length(x)", 0],
     ["Concat(x, [1])", [1]],
     ["Flatten(x, 1)", []],
-    ["Average(x)", 0],
-    ["Max(x)", 0],
-    ["Min(x)", 0],
+    ["Average(x)", null],
+    ["Max(x)", null],
+    ["Min(x)", null],
     ['Includes(x, "a")', false],
     ["Filter(x, n => true)", []],
     ["Map(x, n => n)", []],
@@ -577,7 +643,7 @@ describe("as: the value when it fits, null when it does not", () => {
   it("the null is what IsSet, Default and the list ops already handle", () => {
     expect(castOf("output out = IsSet($rows as number[])", 5)).toBe(false);
     expect(castOf("output out = Default($rows as number[], [0])", 5)).toEqual([0]);
-    expect(castOf("output out = Average($rows as number[])", 5)).toBe(0);
+    expect(castOf("output out = Length($rows as number[])", 5)).toBe(0);
   });
 
   it("a struct that lacks a field gives null, and a field read on that null is null", () => {

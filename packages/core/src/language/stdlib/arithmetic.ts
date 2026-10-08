@@ -6,6 +6,9 @@ import { bin, variadic } from "./shared";
 
 //? The arithmetic segment: the ops over numbers, and their symbols. Negative numbers live here
 // too: `-14` is the prefix symbol over Negate, so a language without this segment has none.
+// A null in a number input reads as zero, as a null reads as "" in a text op and as [] in a
+// list op. An op that has no answer (a division by zero) computes NaN or an infinity and
+// leaves it: the evaluator gives null for either, for every op.
 export function installArithmetic(lang: Language): void {
   lang.registerOp({
     name: "Add",
@@ -70,12 +73,13 @@ export function installArithmetic(lang: Language): void {
     ],
     output: Type.number,
     category: "arithmetic",
-    description: "a divided by b; dividing by zero gives zero.",
-    examples: [den`output half = Divide(9, 2)`],
+    description: "a divided by b. Dividing by zero has no answer, and gives null.",
+    examples: [den`output half = Divide(9, 2)`, den`output none = Divide(9, 0)`],
   });
   lang.registerEvaluator({
     op: "Divide",
-    evaluate: ({ a, b }) => ((b as number) === 0 ? 0 : (a as number) / (b as number)),
+    // By zero the quotient is an infinity or NaN, which the evaluator reads as null.
+    evaluate: ({ a, b }) => (a as number) / (b as number),
   });
 
   //TODO: Add more math operations.

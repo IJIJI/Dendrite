@@ -63,7 +63,8 @@ output finalScore = adjusted
 
 let active = Filter($busses, bus => And(bus.enabled, Some(bus.sources, s => Includes($watched, s))))
 
-output tally = Max(Map(active, bus => bus.state))
+// With no active bus there is no largest state: Max gives null, and Default says what idle is.
+output tally = Default(Max(Map(active, bus => bus.state)), 0)
 `,
       {
         types: [

@@ -241,7 +241,8 @@ describe("a cast in the ast form", () => {
     const loaded = env.analyse(revived);
     expect(loaded.ok).toBe(true);
     expect(env.run(loaded.program, { xs: [10, 3] }).get("top")).toBe(10);
-    expect(env.run(loaded.program, { xs: "nope" }).get("top")).toBe(0);
+    // The cast gives null, a list op reads that as [], and the largest of nothing is null.
+    expect(env.run(loaded.program, { xs: "nope" }).get("top")).toBeNull();
   });
 });
 
