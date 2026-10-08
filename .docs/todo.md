@@ -175,6 +175,57 @@ bar and controls, only if the comparison finds something, and its favicon; (6) t
 follow-ups: the hero's knob, the TypeScript code frame if dark moved; (7) part 2 below;
 (8) the release, the editor alone; (9) the decision recorded for Claude Design.
 
+### Part 1: decided from the mock, and the plan
+
+**The mock** (2026-10-09): injected CSS on the built doc page *Examples* and on the playground,
+a switch between "A today" and "B one step down", eight pictures. No source file changed.
+
+**Decided by the maintainer from it:**
+
+- **The dark surfaces: B, one step down, everywhere.** Panel dark-0, code area dark-1, well
+  dark-2, hover dark-3; the bar is dark-0 already. The editor package changes, so the docs and
+  the playground match, and sheet §20 is the rule: §25 is the section to update in the canvas.
+  The site's TypeScript code frame (dark-2) moves to dark-1 with it.
+- **The bar in light keeps ground-2.** It does not take the site's ground.
+
+**The top bar against the site's nav, measured.** In dark they agree already: both are dark-0
+over a 1px rule of dark-3. What differs is shape, and that is left alone (a new shape wants
+thorough consideration and a frame first):
+
+| | The site's nav | The playground's bar |
+| --- | --- | --- |
+| Height | 64 px | 44 px |
+| Wordmark | 40 px | 28 px |
+| Text | 16 px Archivo | 13 px Archivo |
+
+**The height fix is verified.** On a Minimal block with a 22rem minimum, the editor was 352 px
+and its scroller 255 px. With `flex-grow: 1` on `.cm-scroller` the scroller is 352 px:
+CodeMirror's editor is a flex column already, so one declaration does it.
+
+**The site's code frame:** its `pre` is `rgb(44, 42, 41)`, dark-2, the value of
+`--sl-color-gray-6`. That variable serves more than the frame, so the frame gets a rule of its
+own; which one is found when it is built.
+
+**The plan of part 1, five commits:**
+
+| # | Commit | What changes | Proof |
+| --- | --- | --- | --- |
+| 1 | `fix(editor): the code area fills its minimum height` | `packages/editor/style.css`: one rule beside the knob. `Hero.astro`: its three scroller rules become the knob. The editor's changelog. | Scroller and editor the same height at a 22rem minimum; the landing's block the same height as before, at three widths |
+| 2 | `feat(editor): the dark surfaces sit one step down` | `style.css`: four dark values and the comment that argued the other way. `brand/dendrite-tokens.css`: the `--dn-editor-*` mirror, and a 1.3 line. A new test, the guard. The README's styling paragraph, if it names levels. The changelog: every host's default look changes. | Computed styles on a doc page and the playground, both themes; light unchanged |
+| 3 | `docs: the site's code frame sits on dark-1` | `apps/docs/src/styles/dendrite.css` | A TypeScript frame and an editor's code area compute the same colour |
+| 4 | `feat(playground): a favicon of its own` | `apps/playground/public/favicon.svg` and its touch icon, from the brand's reversed avatar; a row in `brand/render.ts` | The two apps' icons differ |
+| 5 | The notes | `todo.md` to `done.md`; the decision recorded for Claude Design in the backlog entry | |
+
+Then part 2, the release of the editor alone, and its record.
+
+**The guard of commit 2:** a test in the editor package that reads `style.css` and
+`brand/dendrite-tokens.css` and holds that `--dendrite-bar`, `-panel`, `-bg`, `-well` and
+`-hover` equal `--dn-editor-bar`, `-page`, `-canvas`, `-well` and `-hover`, in light and in
+dark. If the mirror disagrees today, that is its first finding.
+
+**One rule while this is built:** each docs build of mine leaves a running dev server stale
+(`CLAUDE.md`, Gates). Port 4321 is checked before each one.
+
 ### The code-height fix, in this release
 
 Moved here from the backlog on 2026-10-09, where it was "`--dendrite-code-min-height` leaves
@@ -195,8 +246,8 @@ Minimal and Compact layouts, or the minimum on the scroller), a look at both lay
 long line, and then the landing goes back to the knob.
 
 **From the second handoff:** the knob is `packages/editor/style.css` line 188, Minimal layout
-only. The candidate is `flex-grow: 1` on `.cm-scroller`, in `cm.ts` or beside the knob, and it
-is NOT verified. The check: a line wider than the editor and code shorter than the minimum;
+only. The candidate is `flex-grow: 1` on `.cm-scroller`, in `cm.ts` or beside the knob. It was not
+verified in that handoff; the mock verified it (above). The check: a line wider than the editor and code shorter than the minimum;
 the scrollbar must sit at the bottom of the box, in Minimal and in Compact. Then the three
 `.cm-scroller` rules in `Hero.astro` become the knob.
 
