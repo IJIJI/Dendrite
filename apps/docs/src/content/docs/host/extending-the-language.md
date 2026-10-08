@@ -64,25 +64,22 @@ An op is two registrations: its **definition**, which is what the analyser check
 
 ```ts
 language.registerOp({
-  name: "Mod",
+  name: "Fahrenheit",
   category: "arithmetic",
-  description: "The remainder of a divided by b.",
-  inputs: [
-    { name: "a", type: Type.number },
-    { name: "b", type: Type.number },
-  ],
+  description: "A temperature in degrees Celsius, as degrees Fahrenheit.",
+  inputs: [{ name: "celsius", type: Type.number }],
   output: Type.number,
 });
 
 language.registerEvaluator({
-  op: "Mod",
-  evaluate: ({ a, b }) => (a as number) % (b as number),
+  op: "Fahrenheit",
+  evaluate: ({ celsius }) => (celsius as number) * 1.8 + 32,
 });
 ```
 
-`Mod(7, 2){:den}` now works in any program on this language, with the same checking, the same call
-syntax, and the same named arguments as anything in the standard library. A program cannot tell
-where an op came from.
+`Fahrenheit($reading.celsius){:den}` now works in any program on this language, with the same
+checking, the same call syntax, and the same named arguments as anything in the standard library.
+A program cannot tell where an op came from.
 
 Keep the two halves in step. An op with no evaluator, or an evaluator for an op that does not exist,
 makes the language itself invalid, and composing it **throws** rather than reporting: there is no
@@ -190,6 +187,9 @@ or a struct it returns.
 
 ## A symbol as sugar
 
+A symbol is a second spelling of an op, yours or the library's. The library has `Mod{:den}` and
+gives it no symbol, so `%` is free for an application to assign:
+
 ```ts
 language.registerInfix("%", BP.MULTIPLY, (left, right) =>
   operationNode("Mod", { a: left, b: right }),
@@ -251,11 +251,13 @@ const env = createEnvironment(language);
 ```
 output odd    = 7 % 2 == 1
 output latest = Last([10, 20, 30])
+output warm   = Fahrenheit(21) > 68
 ```
 
 (Shown plain rather than highlighted: the site highlights and checks samples against the standard
-library, which has neither `%` nor `Last`. Your own editor, built from your language, knows both.)
+library, which has none of `%`, `Last` and `Fahrenheit`. Your own editor, built from your
+language, knows all three.)
 
 The editor highlights your ops like its own, because it reads the same language. The diagnostics
-catalogue covers your additions too, since a mistake in a call to `Mod` is the same
+catalogue covers your additions too, since a mistake in a call to `Fahrenheit` is the same
 `op_input_type_mismatch{:den}` as a mistake in a call to `Add{:den}`.

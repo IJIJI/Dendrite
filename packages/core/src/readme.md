@@ -91,7 +91,7 @@ node-kind registry, and true source-span ranges.
 Repo-level / near-term:
 
 - [x] The stdlib in parts — `createStdlib({ segments })` takes the segments a host wants; `createLanguage()` is the empty base. (Was "more stdlib levels: empty / skeleton / base / core / extended".)
-- [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed. More welcome (e.g. `Min`/`Max` over args, `Round`).
+- [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed, then `Mod`/`Pow`/`Abs`/`Round`/`Floor`/`Ceil`/`Clamp` (2026-10-08). More welcome (e.g. `Min`/`Max` over args).
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false. (Design in `.docs/todo.md`.)
 - [x] Field typing (for structs) — multilevel struct typing + inheritance + `unknown_field`.
 - [x] Output dependence — analysis is output-granular: only outputs reachable from a failed binding are dropped; the rest survive.

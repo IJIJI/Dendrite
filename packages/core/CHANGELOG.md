@@ -11,6 +11,22 @@ at `^0.5.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Seven math ops, in the `arithmetic` segment: `Mod`, `Pow`, `Abs`, `Round`, `Floor`, `Ceil`,
+  `Clamp`.** Each rule that languages disagree on is decided:
+  - `Round(value, digits?)` sends a half **away from zero**: `Round(2.5)` is `3` and
+    `Round(-2.5)` is `-3`, where JavaScript's `Math.round` gives `-2`. `digits` may be left out
+    (a whole number) or negative (`Round(1234, -2)` is `1200`), and the decimal point moves
+    without the error of multiplying, so `Round(1.005, 2)` is `1.01`.
+  - `Mod(a, b)` has the **sign of `a`**, as `%` does in JavaScript and C: `Mod(-7, 3)` is `-1`.
+  - `Clamp(value, low, high)` takes its bounds **in either order**: `Clamp(15, 10, 0)` is `10`.
+  - `Mod` by zero, and a `Pow` whose result is no real number (`Pow(-8, 0.5)`) or too large to
+    hold, have no answer and give `null`, by the rule below.
+  - A `null` reads as zero in all seven, as in the arithmetic ops that were there.
+
+  None has a symbol. `Min` and `Max` exist already, over a list.
+
+- **The evaluator reads a negative zero as zero.** JSON writes `-0` as `0`, so a program held a
+  value that changed on its way to a host. `Negate(0)`, `Ceil(-0.5)` and `Mod(-7, 7)` are `0`.
 - **Breaking: an op with no answer gives `null`.** `Divide` by zero gave `0`, and so did
   `Average`, `Max` and `Min` of an empty list. All four give `null` now, as `Find` with no match
   and `ToNumber("abc")` do: a zero there could not be told from a real one.

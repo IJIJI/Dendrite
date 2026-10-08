@@ -378,6 +378,108 @@ describe("an op with no answer gives null", () => {
   });
 });
 
+// The rules of the math ops that a person could have guessed otherwise: where a half goes,
+// which sign a remainder has, what a clamp does with its bounds the wrong way round.
+describe("math ops", () => {
+  const of = (expression: string) => {
+    const { analysed, value } = runSource(`output out = ${expression}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("Round sends a half away from zero", () => {
+    expect(of("Round(2.5)")).toBe(3);
+    expect(of("Round(-2.5)")).toBe(-3);
+    expect(of("Round(2.4)")).toBe(2);
+    expect(of("Round(-2.6)")).toBe(-3);
+    expect(of("Round(7)")).toBe(7);
+  });
+
+  it("Round takes digits, and the decimal point moves without a float error", () => {
+    expect(of("Round(7.3333, 2)")).toBe(7.33);
+    expect(of("Round(1.25, 1)")).toBe(1.3);
+    // 1.005 * 100 is 100.49999999999999: by multiplying, this would be 1.
+    expect(of("Round(1.005, 2)")).toBe(1.01);
+    expect(of("Round(-1.005, 2)")).toBe(-1.01);
+    expect(of("Round(2.5, 0)")).toBe(3);
+  });
+
+  it("Round: negative digits, a fraction of a digit, and more digits than a number has", () => {
+    expect(of("Round(1234, -2)")).toBe(1200);
+    expect(of("Round(1250, -2)")).toBe(1300);
+    // digits is cut to a whole number: 1.9 is 1.
+    expect(of("Round(1.45, 1.9)")).toBe(1.5);
+    // 0.0000001 prints as 1e-7, with an exponent of its own.
+    expect(of("Round(0.0000001, 2)")).toBe(0);
+    expect(of("Round(1.5, 400)")).toBe(1.5);
+  });
+
+  it("Round's digits may be left out with no warning", () => {
+    const { analysed } = runSource("output out = Round(2.5)");
+    expect(analysed.warnings.some((w) => w.kind === "missing_op_input")).toBe(false);
+  });
+
+  it("Floor, Ceil and Abs", () => {
+    expect(of("Floor(7.8)")).toBe(7);
+    expect(of("Floor(-7.2)")).toBe(-8);
+    expect(of("Ceil(7.2)")).toBe(8);
+    expect(of("Ceil(-7.8)")).toBe(-7);
+    expect(of("Abs(-14)")).toBe(14);
+    expect(of("Abs(14)")).toBe(14);
+  });
+
+  it("Clamp holds a value between two bounds, in either order", () => {
+    expect(of("Clamp(15, 0, 10)")).toBe(10);
+    expect(of("Clamp(-3, 0, 10)")).toBe(0);
+    expect(of("Clamp(5, 0, 10)")).toBe(5);
+    expect(of("Clamp(15, 10, 0)")).toBe(10);
+    expect(of("Clamp(-3, 10, 0)")).toBe(0);
+  });
+
+  it("Mod takes the sign of its first number", () => {
+    expect(of("Mod(7, 3)")).toBe(1);
+    expect(of("Mod(-7, 3)")).toBe(-1);
+    expect(of("Mod(7, -3)")).toBe(1);
+    expect(of("Mod(-1, 5)")).toBe(-1);
+    expect(of("Mod(5.5, 2)")).toBe(1.5);
+  });
+
+  it("Pow", () => {
+    expect(of("Pow(2, 10)")).toBe(1024);
+    expect(of("Pow(9, 0.5)")).toBe(3);
+    expect(of("Pow(2, -1)")).toBe(0.5);
+  });
+
+  it("no answer is null: a remainder by zero, a root of a negative, an overflow", () => {
+    expect(of("Mod(5, 0)")).toBeNull();
+    expect(of("Pow(-8, 0.5)")).toBeNull();
+    expect(of("Pow(0, -1)")).toBeNull();
+    expect(of("Pow(10, 400)")).toBeNull();
+  });
+
+  it("a null reads as zero in each of them", () => {
+    expect(of("Round(null)")).toBe(0);
+    expect(of("Floor(null)")).toBe(0);
+    expect(of("Ceil(null)")).toBe(0);
+    expect(of("Abs(null)")).toBe(0);
+    expect(of("Clamp(null, 1, 5)")).toBe(1);
+    expect(of("Mod(null, 5)")).toBe(0);
+    expect(of("Pow(null, 2)")).toBe(0);
+    expect(of("Pow(2, null)")).toBe(1);
+    // A null divisor is a zero divisor.
+    expect(of("Mod(5, null)")).toBeNull();
+  });
+
+  // JSON writes a negative zero as 0, so a program never holds one: the evaluator reads it as
+  // the zero it would arrive as. `toBe` tells the two apart, which is the point of each line.
+  it("a negative zero is zero", () => {
+    expect(of("Round(-0.4)")).toBe(0);
+    expect(of("Ceil(-0.5)")).toBe(0);
+    expect(of("Mod(-7, 7)")).toBe(0);
+    expect(of("Negate(0)")).toBe(0);
+  });
+});
+
 // A list op never throws: a null, or anything that is not a list arriving through `any`, reads
 // as the empty list. `null` fits a list type directly; a `5` or an `"abc"` can only reach a list
 // input through an untyped lambda parameter, so that is how they are delivered here.
