@@ -32,6 +32,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
+      # Where Pages serves this site: its origin, and the path under it. A project site lives
+      # under /<repo>/ and a custom domain at the root, and only Pages knows which this is.
+      # Nothing below names an address, so a change of domain in the repository's settings
+      # needs no change here: run this workflow again and the build follows. (The paths were
+      # written out as /Dendrite/ until 2026-10-08, when a custom domain moved the site to
+      # the root and every file the pages asked for became a 404.)
+      - id: pages
+        uses: actions/configure-pages@v5
+
       # Both apps bundle the language and editor SOURCE via their Vite aliases. The docs'
       # Astro config is the exception: it loads before those aliases exist and imports the
       # editor's published entry (the remark plugin highlights through it), so the editor
@@ -39,7 +48,7 @@ jobs:
       - name: Build playground
         run: yarn workspace dendrite-playground run build
         env:
-          PLAYGROUND_BASE: /Dendrite/playground/
+          PLAYGROUND_BASE: ${{ steps.pages.outputs.base_path }}/playground/
 
       # The editor's published entry imports the core's, so both are built, in order.
       - name: Build the packages (the docs' config imports the editor)
@@ -48,16 +57,15 @@ jobs:
       - name: Build docs
         run: yarn workspace dendrite-docs run build
         env:
-          DOCS_BASE: /Dendrite/
-          PUBLIC_PLAYGROUND_URL: /Dendrite/playground/
+          DOCS_SITE: ${{ steps.pages.outputs.origin }}
+          DOCS_BASE: ${{ steps.pages.outputs.base_path }}/
+          PUBLIC_PLAYGROUND_URL: ${{ steps.pages.outputs.base_path }}/playground/
 
       - name: Assemble the site
         run: |
           mkdir -p site
           cp -r apps/docs/dist/. site/
           cp -r apps/playground/dist site/playground
-
-      - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -73,3 +81,15 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # A site built for one base path and served at another still answers 200 for its HTML,
+      # while every file that HTML asks for is a 404. So the page that was just deployed has
+      # to find its own stylesheet, or this run fails where someone will see it.
+      - name: The deployed page finds its stylesheet
+        shell: bash
+        run: |
+          page="${{ steps.deployment.outputs.page_url }}"
+          origin="$(echo "$page" | sed -E 's#^(https?://[^/]+).*#\1#')"
+          css="$(curl -fsSL --retry 5 --retry-delay 5 "$page" | grep -o 'href="[^"]*\.css"' | head -n 1 | cut -d '"' -f 2)"
+          test -n "$css"
+          curl -fsS --retry 5 --retry-delay 5 -o /dev/null "$origin$css"
