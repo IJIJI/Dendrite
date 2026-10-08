@@ -7,7 +7,20 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.5.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.6.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+
+## 0.6.0
+
+- **No change in the package.** The peer range moves to core `^0.6.0`.
+- **With core 0.6.0: both ends need it.** The handshake's fingerprint is the sorted names of the
+  language's ops and types, and core has seven new ops, so a 0.5.0 end and a 0.6.0 end are
+  refused with the difference named, as any two builds that disagree are. The same holds for
+  `createStdlib({ segments })`: a replica takes the segments its host takes.
+- **With core 0.6.0: a local instance and a replica agree on a missing number.** An op result
+  that was `NaN` or an infinity stayed itself in the host's process and over a MessagePort, and
+  became `null` over a JSON channel. Core gives `null` for it now, before it leaves, and `0`
+  for a negative zero.
+- **The README's links** go to `dendrite-lang.org`.
 
 ## 0.5.0
 

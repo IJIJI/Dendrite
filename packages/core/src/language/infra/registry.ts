@@ -145,7 +145,7 @@ export interface LanguageDescriptor extends Vocabulary {
 //? isCompatible: Structural type compatibility check for the analyser.
 //
 //  Rules (on the structured Type union):
-//    expected = any        → any DATA value (arrays included), NOT a function
+//    expected = any        → any DATA value, NOT a function and NOT a list that holds one
 //    actual   = any | null → usable where any DATA value is expected, NOT a function
 //    arrays                → covariant: T[] compat S[] iff T compat S
 //    functions             → same arity, contravariant params, covariant return
@@ -155,10 +155,16 @@ export interface LanguageDescriptor extends Vocabulary {
 //  (a function cannot be smuggled through an `any` slot). Always call this
 //  function, never inline, so subtyping stays in one place.
 
+// A function, or a list of them at any depth. A list is data only when its items are: until
+// 2026-10-08 the guard below looked at the outermost kind alone, so `[x => x]` fitted `any`
+// where `x => x` did not, and a function could ride into an `any` slot inside a list.
+const holdsFunction = (type: Type): boolean =>
+  type.kind === "function" || (type.kind === "array" && holdsFunction(type.element));
+
 export function isCompatible(actual: Type, expected: Type, descriptor: Vocabulary): boolean {
   // any/null permissive rules apply to DATA only — functions are never `any`.
   if (expected.kind === "name" && expected.name === "any") {
-    return actual.kind !== "function";
+    return !holdsFunction(actual);
   }
   if (actual.kind === "name" && (actual.name === "any" || actual.name === "null")) {
     return expected.kind !== "function";

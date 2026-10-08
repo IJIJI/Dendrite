@@ -1,6 +1,6 @@
 {
   "name": "@dendrite-lang/core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A declarative dataflow language with incremental reactive evaluation, embeddable in TypeScript.",
   "keywords": [
     "dataflow",
@@ -12,7 +12,7 @@
     "logic",
     "node-editor"
   ],
-  "homepage": "https://ijiji.github.io/Dendrite/host/packages/core/",
+  "homepage": "https://dendrite-lang.org/host/packages/core/",
   "bugs": {
     "url": "https://github.com/IJIJI/Dendrite/issues"
   },

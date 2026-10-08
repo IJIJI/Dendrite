@@ -185,8 +185,7 @@ describe("application dependsOn", () => {
 
 // ─── Source → parse → analyse → eval (Phase D integration) ───────────────────
 
-function runSource(src: string, output = "out") {
-  const lang = createStdlib();
+function runSource(src: string, output = "out", lang = createStdlib()) {
   const descriptor = withPorts(lang, EMPTY_PORTS);
   const parsed = parseSource(src, lang);
   if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
@@ -286,29 +285,263 @@ describe("array ops", () => {
     expect(value).toEqual([1, 2, 3, 4]);
   });
 
-  it("Average of numbers (empty → 0)", () => {
+  it("Average of numbers (empty → null)", () => {
     expect(runSource("output out = Average([2, 4, 6])").value).toBe(4);
-    expect(runSource("output out = Average([])").value).toBe(0);
+    expect(runSource("output out = Average([])").value).toBeNull();
   });
 
-  it("Max of numbers (empty → 0)", () => {
+  it("Max of numbers (empty → null)", () => {
     expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
-    expect(runSource("output out = Max([])").value).toBe(0);
+    expect(runSource("output out = Max([-3, -20])").value).toBe(-3);
+    expect(runSource("output out = Max([])").value).toBeNull();
   });
 
-  it("Max of numbers (empty → 0)", () => {
-    expect(runSource("output out = Max([3, 20, 8])").value).toBe(20);
-    expect(runSource("output out = Max([])").value).toBe(0);
-  });
-
-  it("Min of numbers (empty → 0)", () => {
+  it("Min of numbers (empty → null)", () => {
     expect(runSource("output out = Min([3, 20, 8])").value).toBe(3);
-    expect(runSource("output out = Min([])").value).toBe(0);
+    expect(runSource("output out = Min([])").value).toBeNull();
+  });
+
+  // A null in a list of numbers reads as zero in all three, as it does in Add. Max and Min
+  // kept the null itself until 2026-10-08, when it came first in the list.
+  it("Average, Max and Min read a null item as zero", () => {
+    expect(runSource("output out = Average([null, 4])").value).toBe(2);
+    expect(runSource("output out = Max([null, -4])").value).toBe(0);
+    expect(runSource("output out = Min([null, 4])").value).toBe(0);
   });
 
   it("Includes membership", () => {
     expect(runSource('output out = Includes(["a", "b", "c"], "b")').value).toBe(true);
     expect(runSource('output out = Includes(["a", "b"], "z")').value).toBe(false);
+  });
+});
+
+// An op that computes NaN or an infinity has no answer, and the evaluator gives null for it:
+// neither is a value a program can hold (they are not JSON, and NaN is not equal to itself).
+// The rule is the evaluator's, for every op, so it is shown on the stdlib's own cases and on
+// a host op that knows nothing of it.
+describe("an op with no answer gives null", () => {
+  it("a division by zero", () => {
+    expect(runSource("output out = Divide(1, 0)").value).toBeNull();
+    expect(runSource("output out = Divide(0, 0)").value).toBeNull();
+    expect(runSource("output out = 1 / 0").value).toBeNull();
+    expect(runSource("output out = Divide(9, 2)").value).toBe(4.5);
+  });
+
+  it("a null divisor reads as zero, so it is a division by zero too", () => {
+    expect(runSource("output out = Divide(1, null)").value).toBeNull();
+    expect(runSource("output out = Divide(null, 2)").value).toBe(0);
+  });
+
+  it("IsSet and Default see it", () => {
+    expect(runSource("output out = IsSet(Divide(1, 0))").value).toBe(false);
+    expect(runSource("output out = Default(Divide(1, 0), 7)").value).toBe(7);
+  });
+
+  // The null is the answer of ONE op. The next number op reads it as zero, as it reads any
+  // null, so a program that cares tests it where it arises.
+  it("the next number op reads that null as zero", () => {
+    expect(runSource("output out = Divide(1, 0) + 1").value).toBe(1);
+  });
+
+  it("a non-number that reaches a number op through any", () => {
+    expect(
+      runSource('let double = x => Multiply(x, 2)\noutput out = double("abc")').value,
+    ).toBeNull();
+  });
+
+  it("holds for a host's op, and only for a number", () => {
+    const readings: Record<string, unknown> = {
+      nan: NaN,
+      up: Infinity,
+      down: -Infinity,
+      fine: 21.5,
+      text: "Infinity",
+      list: [Infinity],
+    };
+    const lang = createStdlib();
+    lang.registerOp({
+      name: "Reading",
+      inputs: [{ name: "which", type: Type.string }],
+      output: Type.any,
+    });
+    lang.registerEvaluator({ op: "Reading", evaluate: ({ which }) => readings[which as string] });
+    const reading = (which: string) =>
+      runSource(`output out = Reading("${which}")`, "out", lang).value;
+
+    expect(reading("nan")).toBeNull();
+    expect(reading("up")).toBeNull();
+    expect(reading("down")).toBeNull();
+    expect(reading("fine")).toBe(21.5);
+    expect(reading("text")).toBe("Infinity");
+    // Not looked into: a list an op returns is the op's own business.
+    expect(reading("list")).toEqual([Infinity]);
+  });
+});
+
+// A list whose items differ in type is a list of `any`, and a function never fits `any`. The
+// fallback to `any` was the one place a function could ride in a list: Join printed nothing for
+// it, and it could leave through an output, where it is not JSON.
+describe("a mixed list literal refuses a function", () => {
+  const errorsOf = (source: string) => runSource(source).analysed.errors.map((e) => e.kind);
+
+  it("a function beside data", () => {
+    expect(errorsOf('output out = ["a", x => x]')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [1, x => x, 2]")).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("two functions of different types", () => {
+    expect(errorsOf("output out = [x => x, (a, b) => a]")).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [(n: number) => n, (s: string) => s]")).toEqual([
+      "function_in_mixed_list",
+    ]);
+  });
+
+  it("a list of functions beside data, one level down", () => {
+    expect(errorsOf('output out = [["a"], [x => x]]')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [1, [x => x]]")).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("every spelling that builds such a list: Join, a template, ++", () => {
+    expect(errorsOf('output out = Join(["a", x => x])')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = `a{x => x}`")).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf('output out = "a" ++ (x => x)')).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("names the item and its type", () => {
+    const [error] = runSource('output out = ["a", x => x]').analysed.errors;
+    expect(error.message).toContain("Item 2");
+    expect(error.message).toContain("(any) -> any");
+  });
+
+  it("leaves alone a list of one function type, and a mixed list of data", () => {
+    expect(errorsOf("output out = [x => x, y => y]")).toEqual([]);
+    expect(errorsOf('output out = [1, "a", null, [2]]')).toEqual([]);
+  });
+
+  // The same guard in isCompatible: a list that holds a function fits no `any` slot.
+  it("a list of functions is no argument for an any input", () => {
+    expect(errorsOf("output out = Equals([x => x], 1)")).toEqual(["op_input_type_mismatch"]);
+    expect(errorsOf("output out = IsSet([x => x, y => y])")).toEqual(["op_input_type_mismatch"]);
+  });
+});
+
+// The rules of the math ops that a person could have guessed otherwise: where a half goes,
+// which sign a remainder has, what a clamp does with its bounds the wrong way round.
+describe("math ops", () => {
+  const of = (expression: string) => {
+    const { analysed, value } = runSource(`output out = ${expression}`);
+    expect(analysed.errors).toEqual([]);
+    return value;
+  };
+
+  it("Round sends a half away from zero", () => {
+    expect(of("Round(2.5)")).toBe(3);
+    expect(of("Round(-2.5)")).toBe(-3);
+    expect(of("Round(2.4)")).toBe(2);
+    expect(of("Round(-2.6)")).toBe(-3);
+    expect(of("Round(7)")).toBe(7);
+  });
+
+  it("Round takes digits, and the decimal point moves without a float error", () => {
+    expect(of("Round(7.3333, 2)")).toBe(7.33);
+    expect(of("Round(1.25, 1)")).toBe(1.3);
+    // 1.005 * 100 is 100.49999999999999: by multiplying, this would be 1.
+    expect(of("Round(1.005, 2)")).toBe(1.01);
+    expect(of("Round(-1.005, 2)")).toBe(-1.01);
+    expect(of("Round(2.5, 0)")).toBe(3);
+  });
+
+  it("Round: negative digits, a fraction of a digit, and more digits than a number has", () => {
+    expect(of("Round(1234, -2)")).toBe(1200);
+    expect(of("Round(1250, -2)")).toBe(1300);
+    // digits is cut to a whole number: 1.9 is 1.
+    expect(of("Round(1.45, 1.9)")).toBe(1.5);
+    // 0.0000001 prints as 1e-7, with an exponent of its own.
+    expect(of("Round(0.0000001, 2)")).toBe(0);
+    expect(of("Round(1.5, 400)")).toBe(1.5);
+  });
+
+  it("Round's digits may be left out with no warning", () => {
+    const { analysed } = runSource("output out = Round(2.5)");
+    expect(analysed.warnings.some((w) => w.kind === "missing_op_input")).toBe(false);
+  });
+
+  it("Floor, Ceil and Abs", () => {
+    expect(of("Floor(7.8)")).toBe(7);
+    expect(of("Floor(-7.2)")).toBe(-8);
+    expect(of("Ceil(7.2)")).toBe(8);
+    expect(of("Ceil(-7.8)")).toBe(-7);
+    expect(of("Abs(-14)")).toBe(14);
+    expect(of("Abs(14)")).toBe(14);
+  });
+
+  it("Clamp holds a value between two bounds, in either order", () => {
+    expect(of("Clamp(15, 0, 10)")).toBe(10);
+    expect(of("Clamp(-3, 0, 10)")).toBe(0);
+    expect(of("Clamp(5, 0, 10)")).toBe(5);
+    expect(of("Clamp(15, 10, 0)")).toBe(10);
+    expect(of("Clamp(-3, 10, 0)")).toBe(0);
+  });
+
+  it("Mod takes the sign of its first number", () => {
+    expect(of("Mod(7, 3)")).toBe(1);
+    expect(of("Mod(-7, 3)")).toBe(-1);
+    expect(of("Mod(7, -3)")).toBe(1);
+    expect(of("Mod(-1, 5)")).toBe(-1);
+    expect(of("Mod(5.5, 2)")).toBe(1.5);
+  });
+
+  it("Pow", () => {
+    expect(of("Pow(2, 10)")).toBe(1024);
+    expect(of("Pow(9, 0.5)")).toBe(3);
+    expect(of("Pow(2, -1)")).toBe(0.5);
+  });
+
+  it("no answer is null: a remainder by zero, a root of a negative, an overflow", () => {
+    expect(of("Mod(5, 0)")).toBeNull();
+    expect(of("Pow(-8, 0.5)")).toBeNull();
+    expect(of("Pow(0, -1)")).toBeNull();
+    expect(of("Pow(10, 400)")).toBeNull();
+  });
+
+  it("a null reads as zero in each of them", () => {
+    expect(of("Round(null)")).toBe(0);
+    expect(of("Floor(null)")).toBe(0);
+    expect(of("Ceil(null)")).toBe(0);
+    expect(of("Abs(null)")).toBe(0);
+    expect(of("Clamp(null, 1, 5)")).toBe(1);
+    expect(of("Mod(null, 5)")).toBe(0);
+    expect(of("Pow(null, 2)")).toBe(0);
+    expect(of("Pow(2, null)")).toBe(1);
+    // A null divisor is a zero divisor.
+    expect(of("Mod(5, null)")).toBeNull();
+  });
+
+  // A text can reach a number input through `any`. Each op computes NaN from it, and so has
+  // no answer. Round once handed the text itself back: it returns its argument when there is
+  // nothing to round away, and the text took that way out.
+  it("a value that is no number has no answer, in each of them", () => {
+    const through = (op: string) => runSource(`let f = x => ${op}\noutput out = f("abc")`).value;
+    const ops = [
+      "Round(x)",
+      "Round(x, 2)",
+      "Floor(x)",
+      "Ceil(x)",
+      "Abs(x)",
+      "Clamp(x, 0, 10)",
+      "Mod(x, 2)",
+      "Pow(x, 2)",
+    ];
+    for (const op of ops) expect(through(op), op).toBeNull();
+  });
+
+  // JSON writes a negative zero as 0, so a program never holds one: the evaluator reads it as
+  // the zero it would arrive as. `toBe` tells the two apart, which is the point of each line.
+  it("a negative zero is zero", () => {
+    expect(of("Round(-0.4)")).toBe(0);
+    expect(of("Ceil(-0.5)")).toBe(0);
+    expect(of("Mod(-7, 7)")).toBe(0);
+    expect(of("Negate(0)")).toBe(0);
   });
 });
 
@@ -322,9 +555,9 @@ describe("a list op reads what is not a list as []", () => {
     ["Length(x)", 0],
     ["Concat(x, [1])", [1]],
     ["Flatten(x, 1)", []],
-    ["Average(x)", 0],
-    ["Max(x)", 0],
-    ["Min(x)", 0],
+    ["Average(x)", null],
+    ["Max(x)", null],
+    ["Min(x)", null],
     ['Includes(x, "a")', false],
     ["Filter(x, n => true)", []],
     ["Map(x, n => n)", []],
@@ -577,7 +810,7 @@ describe("as: the value when it fits, null when it does not", () => {
   it("the null is what IsSet, Default and the list ops already handle", () => {
     expect(castOf("output out = IsSet($rows as number[])", 5)).toBe(false);
     expect(castOf("output out = Default($rows as number[], [0])", 5)).toEqual([0]);
-    expect(castOf("output out = Average($rows as number[])", 5)).toBe(0);
+    expect(castOf("output out = Length($rows as number[])", 5)).toBe(0);
   });
 
   it("a struct that lacks a field gives null, and a field read on that null is null", () => {

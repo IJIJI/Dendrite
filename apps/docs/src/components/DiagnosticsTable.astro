@@ -433,8 +433,11 @@ const programMatters = (entry: Entry): boolean => entry.stage !== "compose";
     margin-block-end: 0.4rem;
   }
 
+  /* A kind is one unbreakable word, and the longest (32 characters) is wider than a phone:
+     it may break anywhere there, which also lets the heading's flex row shrink to fit. */
   .kind {
     font-size: 0.95rem;
+    overflow-wrap: anywhere;
   }
 
   .severity {

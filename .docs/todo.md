@@ -8,190 +8,102 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ## The 0.6.0 group
 
-The stdlib release, grouped on 2026-10-05. The rows are in the order of the work. "Decided" is
-the maintainer's word; "proposed" is still a suggestion.
+The stdlib release, grouped on 2026-10-05. The rows are in the order of the work, and every
+status is the maintainer's word.
 
 | # | Item | Entry | Status |
 | --- | --- | --- | --- |
-| 1 | The stdlib per category | below | decided |
-| 2 | A math batch, seven ops | below | decided |
-| 3 | A mixed list literal refuses a function | `backlog.md` | proposed |
-| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | proposed |
-| 5 | Strings as lists, with its own plan | below | decided |
+| 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
+| 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
+| 3 | A mixed list literal refuses a function | `done.md` | **done** 2026-10-09 |
+| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | **out** 2026-10-08: it stays public |
+| 5 | Strings as lists | `backlog.md` | **moved** 2026-10-08, to 0.8 (possibly) |
+| 6 | The release | `release-plan.md` | **next**: every other row is closed |
 
-After the release: the two symbols that want `?`, below.
+## After 0.6.0
 
----
+The order the maintainer gave on 2026-10-08. "Possibly" is the maintainer's word for the last
+two.
 
-## Docs — the landing in a narrow window
-
-Two things seen while the landing was built (2026-10-06), neither decided. The doc pages took
-the sheet's type and controls the same day (`done.md`); what is left of that is in `backlog.md`.
-
-**The headline on the field.** On a phone the headline sits on the field's strongest lines,
-because one column makes the band tall and the fade starts 30% down it. The field is a fifth
-darker since 2026-10-06 (`done.md`), which helps a little. An earlier fade under 960 would do
-more. Not decided.
-
-The example's comment is two lines since 2026-10-06, so the hero's editor no longer scrolls
-sideways from 1152px up. Below about 1135px it still does: the two longest code lines are 54
-characters, 486px, and the editor is narrower than that. Shorter names would fix it. Not decided.
-
----
-
-## Core — the stdlib, configurable per category, maybe per op
-
-**When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from
-the backlog, where it was "the stdlib in segments a host can pick", and widened.
-
-**What changed since it was written:** it now owns a smell as well as a feature. `createStdlib()`
-(`packages/core/src/language/stdlib/index.ts`) is one 600-line function in three bands: every
-`registerOp` by category, every `registerEvaluator` far below, then the symbols. It is a **Long
-Method**, and adding an op is two edits a screen apart. The conversion and string ops were added
-in that same style ON PURPOSE (2026-09-20), so this restructure meets one shape, not two.
-
-**Widened to:** a host picks categories, and **possibly single ops** ("maybe even per method",
-the user). Decide whether per-op selection has a named consumer before building it: per category
-has one (Beacon choosing its vocabulary), per op does not yet.
-
-**What adding two categories taught it (2026-09-20):** a new category is **Shotgun Surgery**,
-six edits in five files: an op block in `createStdlib`, an evaluator block a screen below it, a
-`describe` in `evaluator.test.ts`, a docs page (three lines, generated from the descriptor), a
-**hand-written row** in `apps/docs/src/content/docs/stdlib/index.md`, and a changelog line. The
-row is the avoidable one: that table could be generated from the descriptor the way the pages
-are, and then a category is complete the moment its ops are registered. Do that here.
-
-Two helpers sat at module level in `stdlib/index.ts`; on 2026-09-23 they became `Convert` in
-`infra/convert.ts` (it started in `stdlib/`, and moved when the evaluator needed it), and `toList` (a value as a list, the
-list ops' guard) still sits at module level and belongs with the list category. Four EMPTY files
-already sit in `stdlib/` (`collections.ts`, `logic.ts`, `math.ts`, `types.ts`), scaffolding from
-before the split was deferred: fill them or delete them here, not before.
-
-**The original entry:**
-
-**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
-wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
-lighthouse that never needs list ops does not carry them, and the docs can say "your host
-has these".
-
-**Why deferred:** no host exists yet that wants less than everything; the segment names are
-already the ops' `category`, so the split is mostly mechanical when it comes.
-
-**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
-step over the base) with `createStdlib()` composing all of them; operators registered with
-the segment that owns their op; a test that the composition equals today's stdlib; the docs'
-per-segment pages (already one per `category`) gain "how to include only this".
-
-**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
-
----
-
-## Stdlib — a math batch: `Round`, `Floor`, `Ceil`, `Clamp`, `Mod`, `Abs`, `Pow`
-
-**When:** in 0.6.0, straight after the restructure above (the maintainer, 2026-10-05, who asked
-for `Clamp` and then chose the full list). Moved from the backlog's code-TODO roundup, where it
-was "more math ops". Its `TODO` is in the arithmetic band of `stdlib/index.ts` and goes when the
-ops land.
-
-**Why after the restructure:** it is the restructure's test. Seven ops in the `arithmetic`
-category should be seven registrations in one file, their tests and a changelog line, and nothing
-else by hand: the reference page and the index row are generated.
-
-**Not in the batch:** `Min` and `Max`. Both exist, over a list: `Max([a, b])`. `Clamp` can be
-written today as `Min([Max([value, low]), high])` (probed 2026-10-05: 15 into 0..10 gives 10).
-
-**To decide in the plan,** one rule each:
-
-- `Round(value, digits?)`: whether it takes `digits`, and the half rule. JS `Math.round` sends
-  `-2.5` to `-2`.
-- `Clamp(value, low, high)`: what `low > high` gives. The form above lets `high` win.
-- `Mod(a, b)`: the sign for a negative `a` (JS `%` keeps the sign of `a`; a floored result is what
-  cycling through a list wants), and `b = 0`, where `Divide` gives zero.
-- `Pow(base, exponent)`: a result that is no number (a negative base with a fractional exponent).
-- `null` in any input, by the rule the arithmetic ops have today.
-- Symbols: none is asked for. `%` is the one to settle, because of the cost below.
-
-**One cost:** the Host docs build `Mod`, and then `%` as its symbol, as their example of extending
-the language (`host/extending-the-language.md`). With `Mod` in the stdlib that page needs another
-op and another symbol.
-
----
-
-## Language — strings as lists, in some places
-
-**When:** in the release after 0.5.0, after the stdlib restructure above, with its own plan (the
-maintainer, 2026-10-05). Before that: after the types plan (`types-and-text-plan.md`), the
-user's instruction 2026-09-22. Moved from the backlog, where it was "strings and arrays,
-interchangeable"; the wanted direction and the four open edges below are unchanged.
-
-**What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
-through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a
-value that is not a list as `[]`, so both give the empty-list answer instead. The accident ends
-and this entry is where the deliberate version is decided: `Includes("abc", "a")` is the first
-case to settle, and the `Includes`-versus-`Contains` edge below already says why it is not
-obvious.
-
-
-**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
-`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
-recorded here is what the user wants beyond it: text and lists working as one thing.
-
-**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
-**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
-is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
-(`infra/registry.ts`, the single extension point for subtyping):
-
-> a `string` is compatible with `T[]` when a `string` is compatible with `T`
-
-So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
-string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
-array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
-`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
-already exists, whose `inferOutput` can say "every input was a string, so is the result" while
-its evaluator joins instead of collecting.
-
-**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
-edges are open, and each changes what a program means:
-
-- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
-  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
-  string ops use the name `Contains` and leave `Includes` to arrays.
-- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
-  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
-- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
-  string holds a JS string, not an array. Either every array evaluator handles both, or the
-  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
-  The second keeps every existing op untouched, and is the leaning.
-- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
-  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
-
-One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
-list is expected and never be told, which is the opposite of the explicitness the language chose
-for `any`. That is the price of "nothing to declare", and it is why this sits beside the
-implicit-casting question above.
-
-**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
-`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
-host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
-above.
-
-**The alternatives, all costlier**, kept for the discussion:
-
-| Route | How `Length` accepts both | Cost |
+| Release | Holds | Entry |
 | --- | --- | --- |
-| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
-| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
-| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
-| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
-
-**Driving need:** Beacon: a tally label is text built from values.
+| 0.6.1 | The editor's styling, then a docs pass. The editor alone is released. | below |
+| After 0.6.1 | Two symbols that want `?`: `??` and `c ? a : b` | below |
+| 0.7, possibly | Union types, `A \| B` | `backlog.md`, "Language — union types" |
+| 0.8, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
 
 ---
 
-## After the 0.6.0 release — two symbols that want `?`: `??` and `c ? a : b`
+## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
 
-**When:** the first item after 0.6.0 (the maintainer, 2026-10-05), as ONE plan for both. Asked
-the same day, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
+**When:** the release after 0.6.0 (the maintainer, 2026-10-08). Two parts, in this order: the
+editor first, the docs pass afterwards. Part 1 was the backlog entry "Editor — its styling, to
+fit the site's new look", moved here whole. It needs a plan, and the plan starts with a
+decision: item 1 below is the brand's before it is the stylesheet's.
+
+### Part 1: the editor's styling
+
+**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
+type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
+and the playground wear the look they were built with. Where the two differ now:
+
+1. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
+   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
+   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
+   card with a dark-2 code area, and the playground as a whole is a step lighter than the
+   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
+   disagree here, so this is a brand decision before it is a stylesheet change.
+2. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
+   by its 1px border and its white code area alone. That is the sheet's white well, and it
+   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
+   ground.
+3. **The playground's top bar is not the site's.** The site has the wordmark, section links
+   and a small search on the page's ground, over a 1px rule; the playground has
+   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
+   compared in detail.
+4. **Type and controls were not compared**: the site's display face, its button and field
+   shapes, and its sidebar item against the editor's bar items, panes and fields.
+
+**Why it waited (2026-10-06):** the restyle changed the site and left the editor alone on
+purpose, and the editor is a published package: a change to its stylesheet ships in a release.
+That release is 0.6.1.
+
+**What it requires:** the playground beside a doc page, in both themes and in the three
+layouts; the decision of item 1; then the `--dendrite-*` values in `packages/editor/style.css`
+(the properties stay, they are the theming API), the "Theming" table of the editor's README,
+`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. A fifth difference, a block
+that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
+Neighbours, all in `backlog.md`, to take or to leave when this is planned: the code-height
+entry ("`--dendrite-code-min-height` leaves the sideways scrollbar floating"), "try cooler
+background colours", "tune the highlight colours" and "the stylesheet per group".
+
+### Part 2: a docs pass, afterwards
+
+**Scope, decided 2026-10-08 (the maintainer):** three things.
+
+- **The site with the restyled editor in it.** Every page that mounts a block or shows a
+  static one wears the editor's stylesheet: the Learn samples, the stdlib reference, *Every
+  diagnostic*, the landing's live block. Each in both themes, and in the three layouts where
+  a page uses them.
+- **The two known docs faults**, both in `backlog.md`: *Embedding core* shows a call that
+  throws, and a `continues=` chain deeper than one page is assembled in the wrong order.
+- **What the maintainer finds** while reading. "Docs — review the rest of the site after
+  Learn", below, is where those observations collect.
+
+Not in it: "show what every fence produces", sent to the backlog the same day.
+
+**Also decided:** 0.6.1 releases the editor alone. Its number then parts from core's and
+link's, which stay at 0.6.0; the editor's peer range `^0.6.0` allows it, and the publish
+workflow stages only the versions npm lacks (`release-plan.md`). **Left for the plan:** item 1
+of part 1, the dark surfaces ("we'll decide once we get to it").
+
+---
+
+## After 0.6.1 — two symbols that want `?`: `??` and `c ? a : b`
+
+**When:** after 0.6.1, as ONE plan for both. The maintainer placed it first after 0.6.0 on
+2026-10-05, and named 0.6.1 for the editor on 2026-10-08, which comes before it by its number.
+Asked on 2026-10-05, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
 
 **Why one plan:** three ideas want `?`: these two, and the optional lambda parameter
 (`backlog.md`). The first one built fixes what the lexer does with `?`, `??` and `?:`, so the plan
@@ -237,17 +149,3 @@ dashes, the chain) already landed with the samples step, so these pages start fr
 
 **When:** next, alongside the inline TypeScript colouring: the user reads, and the
 observations collect here until there is a section's worth to plan.
-
----
-
-## Docs — show what every fence produces (candidate, not decided)
-
-**What:** run each ```den fence at build time in `remark-den.ts` and show what it produces
-beneath it (its output values, or the diagnostic it raises), the way the ops reference and
-*Every diagnostic* already do. Proposed 2026-09-17 as "the step to add more editors"; left out
-of the samples step because it was never decided.
-
-**Open question:** do it, or send it to the backlog. Deferred until the site review is done
-(2026-09-20): the observations on How it works, Host and the stdlib reference will show whether
-the static fences there want their values, and the pages that most needed it (the ops reference,
-*Every diagnostic*, the Learn samples) already show theirs.

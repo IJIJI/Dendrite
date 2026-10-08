@@ -6,8 +6,19 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.5.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.6.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## 0.6.0
+
+- **No change in the package.** The peer range moves to core `^0.6.0`, and what core changed
+  shows through it. The highlighter colours core's seven new ops (`Mod`, `Pow`, `Abs`, `Round`,
+  `Floor`, `Ceil`, `Clamp`) as ops, because it reads the language it is given. The Diagnostics
+  pane lists core's new `function_in_mixed_list`. And an editor mounted on a language that
+  takes part of the library, `createStdlib({ segments })`, highlights and checks against
+  exactly those segments.
+- **The README's links** go to `dendrite-lang.org`, the site's address since 2026-10-08. The old
+  address forwards, path kept.
 
 ## 0.5.0
 

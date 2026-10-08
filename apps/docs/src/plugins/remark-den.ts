@@ -4,7 +4,7 @@ import type { Code, InlineCode, Root } from "mdast";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 
-import { parseDenMeta } from "./den-meta";
+import { parseDenMeta, sampleEdge } from "./den-meta";
 import { attr, type JsxElement, type JsxText } from "./mdx-jsx";
 
 //? Dendrite in Markdown: a ```den fence, or inline code ending in {:den}, highlighted by the
@@ -36,25 +36,41 @@ const jsxSpans = (code: string): (JsxElement | JsxText)[] =>
       : { type: "text", value: text },
   );
 
-// A `fails` sample wears an error edge and a `warns` one a warning edge, so a reader does not
-// copy either out as working code without knowing what it says.
+// A `fails` sample wears an error edge and a `warns` one a warning edge, each with a tag that
+// says so in words, so a reader does not copy either out as working code without knowing
+// what it is.
 const blockClass = (meta: string | null | undefined): string => {
-  const { fails, warns } = parseDenMeta(meta);
-  const edge = fails ? " dendrite-fails" : warns ? " dendrite-warns" : "";
-  return `not-content dendrite-minimal-layout${edge}`;
+  const edge = sampleEdge(parseDenMeta(meta));
+  return `not-content dendrite-minimal-layout${edge ? ` ${edge.className}` : ""}`;
 };
 
-const blockHtml = (code: string, meta: string | null | undefined): string =>
-  `<div class="${blockClass(meta)}"><div class="dendrite-code"><pre class="dendrite-source"><code>${sourceHtml(code)}</code></pre></div></div>`;
+const blockHtml = (code: string, meta: string | null | undefined): string => {
+  const edge = sampleEdge(parseDenMeta(meta));
+  const tag = edge ? `<span class="${edge.tagClassName}">${edge.label}</span>` : "";
+  return `<div class="${blockClass(meta)}">${tag}<div class="dendrite-code"><pre class="dendrite-source"><code>${sourceHtml(code)}</code></pre></div></div>`;
+};
 
-const blockJsx = (code: string, meta: string | null | undefined): JsxElement =>
-  flow("div", blockClass(meta), [
+const blockJsx = (code: string, meta: string | null | undefined): JsxElement => {
+  const edge = sampleEdge(parseDenMeta(meta));
+  const tag: JsxElement[] = edge
+    ? [
+        {
+          type: "mdxJsxTextElement",
+          name: "span",
+          attributes: [attr("class", edge.tagClassName)],
+          children: [{ type: "text", value: edge.label }],
+        },
+      ]
+    : [];
+  return flow("div", blockClass(meta), [
+    ...tag,
     flow("div", "dendrite-code", [
       flow("pre", "dendrite-source", [
         { type: "mdxJsxTextElement", name: "code", attributes: [], children: jsxSpans(code) },
       ]),
     ]),
   ]);
+};
 
 export const remarkDen: Plugin<[], Root> = () => (tree, file) => {
   const mdx = /\.mdx$/.test(file.path ?? "");

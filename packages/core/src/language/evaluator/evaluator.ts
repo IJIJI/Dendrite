@@ -216,7 +216,17 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
         }
         const resolved = resolveInputs(node, ctx, state);
         try {
-          return evaluator.evaluate(resolved);
+          // NaN and the infinities are not values a program can hold: they are not JSON, so
+          // they would change on the way to a host, and NaN is not even equal to itself. An op
+          // that computes one has no answer, and no answer is null (a division by zero, the
+          // mean of nothing). Checked here, where every op's result passes, rather than in
+          // each op: no op, a host's included, can forget it. A negative zero is the third
+          // number JSON does not hold (it writes 0), and Math.ceil(-0.5) and -7 % 7 both make
+          // one, so it is read as the zero it would arrive as.
+          const value = evaluator.evaluate(resolved);
+          if (typeof value !== "number") return value;
+          if (!Number.isFinite(value)) return null;
+          return Object.is(value, -0) ? 0 : value;
         } catch (e) {
           if (e instanceof EvalError) throw e;
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);

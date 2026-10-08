@@ -11,7 +11,8 @@ in a browser, in node, in a worker. The only runtime dependency is `zod`, for ty
 ## The exports, by what you are doing
 
 **Building a language.** `createStdlib{:ts}`, `createLanguage{:ts}`, `extendLanguage{:ts}`, `extendStdlib{:ts}`, and the
-`Language{:ts}` they return with its `register*` methods. `BP{:ts}` for symbol precedence, `operationNode{:ts}`
+`Language{:ts}` they return with its `register*` methods. `StdlibSegment{:ts}` names the parts
+`createStdlib{:ts}` can take on their own. `BP{:ts}` for symbol precedence, `operationNode{:ts}`
 for building an op node from a symbol. [Extending the language](../../extending-the-language/)
 walks through them.
 

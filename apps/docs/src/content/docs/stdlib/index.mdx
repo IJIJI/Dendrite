@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import SegmentsTable from "../../../components/SegmentsTable.astro";
+
 _These pages are for writing programs. Building on the library, or replacing parts of it, is under [Host developers](../host/extending-the-language/)._
 
 The standard library is a language: the primitive types, the ops every application has, and the
@@ -15,7 +17,7 @@ The pages beside this one are **generated from the library itself**, one per seg
 with its real signature and an example that was run to produce the value shown. They cannot
 drift from the code, because they are read out of it at build time.
 
-This page is the part that is not generated: the conventions all of them assume.
+This page is the part that is written by hand: the conventions all of them assume.
 
 ## Reading a signature
 
@@ -38,25 +40,25 @@ output any   = Or($a, $b, $c)
 output joined = Concat([1, 2], [3], [4, 5])
 ```
 
-`Add(nodes...: number){:den}` means one input called `nodes{:den}` that swallows every argument. Six
-ops work this way: `And{:den}`, `Or{:den}`, `Xor{:den}`, `Add{:den}`, `Multiply{:den}` and
-`Concat{:den}`.
+`Add(nodes...: number){:den}` means one input called `nodes{:den}` that swallows every argument.
+Any op whose signature has the `...{:den}` works this way: `And{:den}`, `Multiply{:den}` and
+`Concat{:den}` are three more.
 
 The symbol form of a variadic op takes two at a time, so `1 + 2 + 3{:den}` nests where
 `Add(1, 2, 3){:den}` does not. Same answer; the op form says "sum these" more directly.
 
 An input marked `?` may be left out: `Join(parts~: string[], separator?: string){:den}` joins with
-nothing between the parts when it gets no separator. One op has one so far. Leaving out any
-*other* input is a `missing_op_input{:den}` warning, with the type's default standing in.
+nothing between the parts when it gets no separator. Leaving out an input that is *not* marked
+is a `missing_op_input{:den}` warning, with the type's default standing in.
 
 An input marked `~` converts what it is given. `parts~: string[]{:den}` accepts a list of
 anything, and each value in it becomes text before `Join{:den}` runs, so `Join([1, 2], ", "){:den}`
 is `"1, 2"` with no `ToString{:den}` and no warning. The conversion is the op's, declared on that
-one input and written under its signature; nothing else in the language converts on its own,
-and `Join{:den}` is the only op in the library that does. A host can declare the mark on an op of
-its own with `convert: true{:ts}`, and a lambda can carry it on a parameter,
-`(t~: string) => Upper(t){:den}` ([Naming a function](../learn/writing/lambdas-and-lists/#naming-a-function)).
-The shape still has to match: `Join(5){:den}` is a type error.
+one input and written under its signature; nothing else in the language converts on its own.
+A host can declare the mark on an op of its own with `convert: true{:ts}`, and a lambda can
+carry it on a parameter, `(t~: string) => Upper(t){:den}`
+([Naming a function](../learn/writing/lambdas-and-lists/#naming-a-function)). The shape still
+has to match: `Join(5){:den}` is a type error.
 
 ## `any{:den}` in a signature
 
@@ -89,8 +91,8 @@ produced. When they differ, the editor is right.
 
 ## Function-typed inputs
 
-An input written `(number) -> boolean{:den}` wants a function. Six list ops have one, and
-between them they are how iteration is expressed:
+An input written `(number) -> boolean{:den}` wants a function. The [list](./list/) ops have
+one, and between them they are how iteration is expressed:
 
 ```den
 let items = [4, 8, 15, 16, 23]
@@ -108,24 +110,16 @@ annotate it.
 ## The segments
 
 The ops are grouped, and the grouping is real: it is a field on each op, which is what splits
-these pages up.
+these pages up, and what fills this table.
 
-| Segment | What is in it |
-| --- | --- |
-| [logic](./logic/) | `And{:den}`, `Or{:den}`, `Xor{:den}`, `Not{:den}` |
-| [comparison](./comparison/) | `Equals{:den}`, `NotEquals{:den}`, `LessThan{:den}`, `GreaterThan{:den}` |
-| [control](./control/) | `If{:den}`, `Default{:den}`, `IsSet{:den}` |
-| [array](./array/) | `Length{:den}`, `Concat{:den}`, `Includes{:den}`, `Average{:den}`, `Min{:den}`, `Max{:den}`, `Flatten{:den}` |
-| [arithmetic](./arithmetic/) | `Add{:den}`, `Subtract{:den}`, `Multiply{:den}`, `Divide{:den}` |
-| [list](./list/) | `Filter{:den}`, `Map{:den}`, `Reduce{:den}`, `Find{:den}`, `Some{:den}`, `Every{:den}` |
-| [conversion](./conversion/) | `ToString{:den}`, `ToNumber{:den}`, `ToBool{:den}` |
-| [string](./string/) | `Join{:den}`, `Upper{:den}`, `Lower{:den}`, `Trim{:den}`, `Contains{:den}`, `StartsWith{:den}`, `EndsWith{:den}` |
+<SegmentsTable />
 
-Today an application takes the whole library or none of it. The segments are the seam along
-which that will change, so that an application which never touches a list need not carry the
-list ops, and these pages can tell you which segments *your* application has. Until then, if
-you are reading this inside somebody's product, assume all of them and check the editor's own
-lists for anything extra.
+An application need not take all of them. One that never touches a list can leave the list ops
+out, and a program on it that calls `Filter{:den}` is told the name is not declared. A symbol
+goes with its segment, so an application without arithmetic has no `+{:den}` either. If you are
+reading this inside somebody's product, the editor's own lists say which ops it has, and what
+it added. Choosing the segments is one line for whoever built the application, and
+[Extending the language](../host/extending-the-language/) shows it.
 
 ## What your application adds
 
@@ -133,4 +127,3 @@ Everything here is the floor, not the ceiling. An application embedding Dendrite
 own types and its own ops, and those behave exactly like these: same call syntax, same checking,
 same reference format if it generates one. You cannot tell from a program whether `Filter{:den}`
 came from the standard library or from the application, and that is the point.
-what happens to a program that uses them.

@@ -21,9 +21,13 @@ separate things, none needed by the check that shipped.
   `schema` and `fields`, by `isPorts`, and by the editor's `controlFor`. **Driving need:** a
   user-declared input that is one of a few names.
 - **A value that crosses an `any`.** An `implicit_any_cast` is a warning, and nothing checks the
-  value at runtime: with `$whatever: any` holding 5, `Length($whatever)` is `5.length`, so an
-  output declared `number` holds `undefined` and no error is raised (found 2026-09-19; *Types
-  in practice* says so). **Requires:** a `valueFits` call where an `any`-typed argument meets a
+  value at runtime, so an op can be handed a value of the wrong type and answer with one (found
+  2026-09-19; *Types in practice* says so). What is left of it, probed 2026-10-08 with a text
+  reaching a number input through an untyped lambda parameter: `Add("abc", 1)` is the TEXT
+  `"0abc1"`, JavaScript's `+`, in an output declared `number`, and `GreaterThan("abc", 1)` is a
+  quiet `false`. Two older cases are closed: a list op reads what is not a list as `[]`
+  (N.1 of `types-and-text-plan.md`), and a number op that computes `NaN` from the value gives
+  `null` (the evaluator's rule, `done.md`). **Requires:** a `valueFits` call where an `any`-typed argument meets a
   concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
   call, not per pushed value, and the cast (`as`) is the explicit way to check today.
 - **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
@@ -57,7 +61,101 @@ its own feature (see "struct literals" below for the neighbouring gap).
 
 ---
 
+## Language — strings as lists (possibly 0.8)
+
+**Where it stands (2026-10-08):** moved out of 0.6.0 by the maintainer, possibly to **0.8**,
+after union types (possibly 0.7) and with `Split`, `Slice` and `Replace` ("the rest of the
+string ops", below). It was in `todo.md` from 2026-09-22. Two answers of that day change the
+direction recorded further down, and a third view is on the table:
+
+- **`Includes("abc", "bc")` is `true`** (the maintainer): one op for "is it in there", as
+  `"abc".includes("bc")` in JavaScript and `"bc" in "abc"` in Python. Text is then NOT a list
+  of letters for this op, since `Includes(["a", "b", "c"], "bc")` is `false`. So the model is
+  no longer one rule in `isCompatible`: it is "some ops take text or a list, and each does
+  what is natural for text". `Contains` becomes a second name for the same thing: keep it, or
+  remove it with a breaking line.
+- **`Map` over text: both are wanted** (the maintainer), the letters and the text as a whole,
+  and the spelling is open: "a way to split by letter, or two types".
+- **Proposed in answer, not decided:** keep text as text and make the split visible.
+  `Map(Split(name, ""), Upper)` and a `Join` for the letters, `Upper(name)` for the whole.
+  `Length` and `Includes` accept text, the two ops with one obvious meaning for it; `Map`,
+  `Filter` and `Reduce` over text are a type error that names `Split`. The argument: the
+  language converts nothing by itself (`ToString`, `as` and `~` are all written out), and a
+  text that silently acts as a list is that kind of conversion. It gives both things with no
+  second type. It is NOT the wish recorded below, "nothing to declare", so it is the
+  maintainer's to take or to leave.
+- **Why unions first helps:** an op that takes text or a list can then say so,
+  `Length(value: string | any[])`, the honest signature this entry could not have.
+- **A `null` in an op that takes both:** `""` or `[]`? The `null` rules of 2026-10-08
+  (`done.md`) made the question: an op reads a `null` as the empty value of the type it wanted.
+
+**What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
+through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a
+value that is not a list as `[]`, so both give the empty-list answer instead. The accident ends
+and this entry is where the deliberate version is decided: `Includes("abc", "a")` is the first
+case to settle, and the `Includes`-versus-`Contains` edge below already says why it is not
+obvious.
+
+
+**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
+`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
+recorded here is what the user wants beyond it: text and lists working as one thing.
+
+**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
+**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
+is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
+(`infra/registry.ts`, the single extension point for subtyping):
+
+> a `string` is compatible with `T[]` when a `string` is compatible with `T`
+
+So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
+string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
+array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
+`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
+already exists, whose `inferOutput` can say "every input was a string, so is the result" while
+its evaluator joins instead of collecting.
+
+**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
+edges are open, and each changes what a program means:
+
+- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
+  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
+  string ops use the name `Contains` and leave `Includes` to arrays.
+- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
+  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
+- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
+  string holds a JS string, not an array. Either every array evaluator handles both, or the
+  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
+  The second keeps every existing op untouched, and is the leaning.
+- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
+  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
+
+One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
+list is expected and never be told, which is the opposite of the explicitness the language chose
+for `any`. That is the price of "nothing to declare", and it is why this sits beside the
+implicit-casting question above.
+
+**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
+`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
+host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
+above.
+
+**The alternatives, all costlier**, kept for the discussion:
+
+| Route | How `Length` accepts both | Cost |
+| --- | --- | --- |
+| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
+| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
+| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
+| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
+
+**Driving need:** Beacon: a tally label is text built from values.
+
+---
+
 ## Stdlib — the rest of the string ops
+
+**When:** with strings as lists, above: possibly 0.8 (the maintainer, 2026-10-08).
 
 **What:** `Replace` (first match or every match: decide), `Split` (by code point when the
 separator is empty, per the Unicode note above), and a `Slice` that arrays want too.
@@ -68,6 +166,50 @@ left out by the Speculative Generality guard.
 
 **What it requires:** ordinary ops with fixed signatures, an explicit rule each for `null` and
 the empty string, and an entry on the generated `string` reference page, which costs nothing.
+
+---
+
+## Stdlib — `Clamp` with one bound
+
+**What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")
+and `Min([x, 10])` ("at most 10") today, and `Max` for "at least" is a spelling people get the
+wrong way round. The maintainer asked on 2026-10-08 whether the bounds should be optional.
+
+**Why deferred:** kept as it is, the maintainer's decision the same day. Required to optional is
+no break, so waiting loses nothing, and each route has a cost that wants a consumer first.
+
+**Two routes:**
+
+- **Optional bounds**, `Clamp(value, low?, high?)`: `Clamp(x, 0)` and `Clamp(x, high: 10)`. The
+  trap: a bound that is LEFT OUT would mean "no bound", while a bound that is `null` reads as
+  zero, as every null in a number input does. `Clamp(x, 0, $max)` with `$max` unset then clamps
+  everything to 0, exactly where a host input feeds the bound. The fix is that a `null` bound
+  means "no bound" too, which makes `Clamp` the one exception to "a null reads as zero". It
+  also splits the op's rule: with two bounds their order does not matter, with one the name
+  decides. NumPy's `clip(a, min=None, max=None)` is the precedent; CSS, C++ and Rust keep both.
+- **Two ops**, `AtLeast(value, low)` and `AtMost(value, high)`, as Kotlin's `coerceAtLeast` and
+  `coerceAtMost`: no optional input and no exception, at the price of two more names.
+
+**What it requires:** either is a registration in `stdlib/arithmetic.ts`, its tests and a
+changelog line.
+
+---
+
+## Stdlib — what the math batch left out: symbols, and `digits` on `Floor` and `Ceil`
+
+**What:** two things offered with the seven math ops (2026-10-08) and not taken.
+
+- **No symbol** for `Mod` or `Pow`. `%` and `^` (or `**`) are the usual ones. A symbol can be
+  added without a break: a host's own registration of the same symbol replaces the library's.
+  The Host docs use `%` over the library's `Mod` as their example of a symbol, so giving `%` to
+  the library means that page needs another.
+- **`Floor` and `Ceil` take one number.** `Round` has `digits`; `Floor(7.89, 1)` as `7.8` is the
+  same move, through `roundTo`'s decimal shift in `stdlib/arithmetic.ts`.
+
+**Why deferred:** Speculative Generality, both: none was asked for.
+
+**What it requires:** a registration each. A symbol wants its tier: `BP.MULTIPLY` for `%`, and
+a new tier above it for a power, which binds tighter and to the right.
 
 ---
 
@@ -82,6 +224,11 @@ struct in-language (e.g. multi-field lambda return).
 **A template hole is `{…}` (decided 2026-09-21, `types-and-text-plan.md`), and its lexer keeps no
 brace depth because `{` is not a token of the language. A struct literal makes `{` one, so it
 brings the brace depth with it: a hole then ends at the `}` that matches, not the first one.
+
+**A precondition, found 2026-10-08:** a struct literal is what would turn "a struct type that
+names itself" (its own entry, further down) from a typing gap into an endless loop. A program
+that can BUILD a `Rec { f: (Rec) -> number }` can apply a function to itself. Close that entry
+first, or with this one.
 
 ---
 
@@ -100,24 +247,26 @@ variadic branch of `validateInputs` analyses all items before it checks them, th
 
 ---
 
-## Core — a list literal with mixed items hides a function behind `any`
+## Core — a call to a name that is no op is reported as an undeclared binding
 
-**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
-`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
-`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
-and the function goes in with the rest, although a function is never `any` everywhere else.
-A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
-`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
-fault of the `convert` flag, which it is not: no converting input is needed to see it.
+**What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
+`undeclared_binding_reference`: "'Length' is not declared as a binding or scoped variable". The
+parser builds an op node only when the name is a registered op (`buildCall` in
+`parser/core-grammar.ts`) and reads every other call as the application of a binding, so the
+analyser never sees an op to miss. `unknown_op` is reached only by an op node that came from
+elsewhere: a program stored in `ast` form, or a graph. The message is true and it does not
+help: the author meant an op. The output is dropped and `compile` stays `ok: true`, as for any
+optional output that fails.
 
-**Why deferred:** not a regression, and not the operator's or the flag's. It has been so since
-list literals took their element type from their items.
+**Why deferred:** found 2026-10-07 by the tests of `createStdlib({ segments })`, which make it
+easier to meet: a host leaves a segment out, and an author writes from the full reference. It
+is as old as calls are, and no host takes part of the library yet.
 
-**What it requires:** where the analyser derives a list literal's element type, a function
-item among items of another type is an error rather than a reason to say `any`. Decide the
-kind (a new one, or the mismatch the op would have raised) and whether two functions of
-different signatures count. A test per spelling above. It tightens a behaviour, so it wants a
-changelog line.
+**What it requires:** where the analyser reports an undeclared name in the callee position of
+an application, say that no op and no binding has that name. Decide whether that is a wording
+of `undeclared_binding_reference` or a kind of its own (*Every diagnostic* is generated from
+the registry, so a new kind needs its sample). Naming the nearest op (`Lenght` → `Length`) is a
+further step with a helper of its own. A changelog line.
 
 ---
 
@@ -142,6 +291,116 @@ pass the type's `schema` (a `Grade` of 11), and what is it when it does not; `nu
 function on `TypeDefinition` and one more case in each of those two functions. Like `schema`
 it is a function, so it cannot travel in the layer an instance persists. "A type defines its
 own text form" below is the other direction (`toText`); design the two together.
+
+---
+
+## Language — union types, `A | B` (possibly 0.7)
+
+**What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
+0.6.1, "possibly", with strings as lists after it. It is the general answer behind several
+entries in this file: a mixed list (`function_in_mixed_list`, 0.6.0, is the patch that stands in
+for it), `If` with two branch types, explicit nullability, an honest signature for an op that
+takes text or a list, `+` on text, and an enum as a union of literals.
+
+**What it touches**, sized on 2026-10-08 when it was weighed against that patch:
+
+| Area | Work |
+| --- | --- |
+| The type (`infra/types.ts`) | A `union` kind and its rules: flatten, remove duplicates, `any` absorbs |
+| `isCompatible` | Two new rules (`A` fits `B \| C` when it fits one; `A \| B` fits `C` when both do), and how they meet `any`, `null`, lists, functions and `extends` |
+| Printing and equality | `(string \| (any) -> any)[]` needs brackets; equality is by set |
+| Syntax | A `\|` in a type annotation. `\|\|` is a symbol today, a single `\|` is no token |
+| Analyser | A mixed list and an `If` with two branch types get a union. About 30 places in core switch on a type's kind |
+| Boundary check, defaults, saved programs | A value fits a union when it fits a member (`fits.ts`); a union needs a default (`seed.ts`); saved documents get a new shape (`serialise.ts`) |
+| Editor | The type picker, the control for a union-typed input, the highlighter |
+| Docs | The two pages on types, the reference's printer, new diagnostics with their samples |
+
+**Three decisions come first, and each changes programs that run today:**
+
+1. **How a program narrows.** A `number | string` fits neither a `number` input nor a `string`
+   input. `as` exists; a type test does not.
+2. **Whether `null` is a member.** `number | null` is the strict choice, and then every `Divide`
+   result needs a `Default` ("explicit nullability", at the end of this file).
+3. **What becomes of `any`.** `If(c, 1, "a") + 1` runs today with an `implicit_any_cast` warning.
+   With unions it is an error until it is narrowed.
+
+**What it does not do:** make `["a", x => x]` usable. The list becomes legal, with the type
+`(string | (any) -> any)[]`, and then `Join`, `Length` and `Map` all refuse it, because a
+function still does not fit `any`. The error moves from the literal to every use, and an output
+that may hold a function wants a rule of its own.
+
+**Size:** a release of its own. A plan with the three decisions, then about ten commits: an
+estimate that was not measured, and it may be more. The type rules in detail are under "Type
+system — deferred" at the end of this file.
+
+---
+
+## Language — a function in an untyped parameter
+
+**What:** a lambda takes a function only through a parameter with a WRITTEN function type. The
+maintainer asked on 2026-10-08 to look at enabling the untyped case. Probed the same day:
+
+| Program | Result |
+| --- | --- |
+| `let apply = (f: (number) -> number, x: number) => f(x)`, then `apply(n => n + 1, 2)` | `3` |
+| `let twice = (f: (number) -> number) => (x: number) => f(f(x))`, then `twice(n => n * 3)(2)` | `18` |
+| `let apply = (f, x) => f(x)` | `app_callee_not_function`: `f` is `any`, and `any` cannot be called |
+| `let id = x => x`, then `id(n => n)` | `app_argument_type_mismatch`: a function never fits `any` |
+| `let self = f => f(f)` | Refused, which is the point |
+
+**Why it is so:** an untyped parameter is `any`, and "a function is never `any`" is what keeps
+the language total in v1. With no recursive type that a value can have (a struct type may name
+itself, and nothing can fill it: "a struct type that names itself", below) a function cannot be
+applied to itself, so no program can loop. `Map`'s lambda needs no annotation only because the
+op supplies its type.
+
+**Routes, each with its cost:**
+
+- **Infer the parameter's type from the body** ("lambda param-type inference from body usage",
+  in the lambdas list at the end of this file). `(f, x) => f(x)` calls `f` with one argument, so
+  `f` is a function of one parameter. `f => f(f)` needs a type that contains itself, and an
+  occurs check refuses that, so the language stays total with no new rule. Local constraint
+  collection, not full Hindley-Milner.
+- **Let a function into `any`**, and guard recursion at run time with a fuel or step limit
+  ("relax functions-⊄-`any`", same list). It gives up the static guarantee, and it needs a
+  decision on what a program that runs out of fuel puts on its outputs.
+- **After union types** (above), or with them: they change what `any` means, so this is decided
+  on their ground rather than before them.
+
+**Related:** `function_in_mixed_list` (0.6.0) is the same guard at another position.
+
+**What it requires:** a plan. **Driving need:** a helper written without annotations, the way
+the lambda handed to `Map` already is.
+
+---
+
+## Core — a struct type that names itself makes self-application typeable
+
+**What:** "every program finishes" was explained by two rules: a name cannot refer to itself,
+and a function is never `any`. A probe of the Z combinator on 2026-10-08 (the maintainer had
+asked whether one could be written) found every route a program can write refused, and one
+route that typing does NOT refuse. A NAMED type may mention itself. With
+`Rec { f: (Rec) -> number }` declared in a port layer, `output o = $r.f($r)` analyses with no
+error. That is the standard way a typed language gets recursion, an iso-recursive type.
+
+**Why it is no loop today:** nothing can give `$r` a value that holds a function. A program
+cannot build a struct. JSON holds no function. And an input pushed with a function inside it is
+refused at the boundary, "does not fit its type Rec" (probed, even for a harmless function).
+What is left is an op the HOST wrote that returns such a struct (not probed), and host code can
+loop without help. *The type system* says all of this since the same day.
+
+**It becomes a real fault with struct literals:** `let r = { f: (x: Rec) => x.f(x) }` and then
+`r.f(r)` is a typed, endless loop. So this entry is a PRECONDITION of "struct literals" below.
+
+**Why deferred:** no consumer and nothing that can use it. Offered to the maintainer as a rule
+to add now, and left for later the same day.
+
+**What it requires:** make it a rule of typing. When the descriptor composes
+(`validateDescriptor`), refuse a struct type that reaches itself through a function-typed field:
+walk each named type's fields, through lists and other structs, and report a new kind when a
+function's parameter or return mentions the type the walk started from. A sample for *Every
+diagnostic*. A struct that names itself in a plain field or a list (`Tree { children: Tree[] }`)
+should stay legal: that is data, and only the function position is the door.
 
 ---
 
@@ -243,6 +502,49 @@ propagation does not cover (an expensive branch, or a read that must throw).
 
 ---
 
+## Language — a `null` that goes through arithmetic
+
+**What:** an op with no answer gives `null` (2026-10-08, `done.md`), and the next number op
+reads that `null` as zero: `Divide(1, 0) + 1` is `1`, and
+`` `total {Add(ToNumber("abc"), 1)}` `` is `total 1`. So "no answer" lasts one step. The
+alternative is SQL's: a number op that is handed a `null` gives `null`, and the absence reaches
+the output unless a `Default` stops it.
+
+**Why deferred:** it was option D when the `null` rule was chosen, and the only one too large
+for the math batch. It changes every arithmetic op, and it needs answers the batch did not:
+
+- **The comparisons.** `GreaterThan(null, -1)` is `true` today, the null read as zero. If
+  arithmetic propagates, a comparison with no value has to be something: `false`, as SQL treats
+  unknown in a filter, or `null`, which `If` then reads as false.
+- **A `null` inside a list of numbers.** `Average([null, 4])` is `2`: the null counts as an item
+  worth zero. SQL's `AVG` skips it and gives `4`. `Max` and `Min` read it as zero too.
+- **The other segments.** A text op reads `null` as `""` and a list op as `[]`, both on purpose
+  (`types-and-text-plan.md`). Numbers would be the one type whose empty value is not used, on
+  the argument that `""` and `[]` look empty and `0` does not.
+- **The types.** It is the runtime half of "explicit nullability via union types" (the last
+  entry of this file): with `T | null` the checker could demand the `Default`.
+
+**What it requires:** its own plan. **Driving need:** a program whose total must not look valid
+when one of its parts is missing.
+
+---
+
+## Core — a `NaN` inside a list an op returns is not read
+
+**What:** the evaluator gives `null` for an op result that is `NaN` or an infinity, and `0` for
+a negative zero (2026-10-08). It reads the value an op RETURNS, when that is a number. A list or
+a struct an op returns is not looked into, so a host op that returns `[NaN]` hands a program a
+value JSON cannot carry. The stdlib cannot make one: a lambda's result inside `Map` comes from
+op calls, and each of those is read on its own.
+
+**Why deferred:** a deliberate ceiling. Walking every list an op returns costs per item on
+every call, and no host op is known to return such a list.
+
+**What it requires:** the walk, behind a measurement, or the check where an output leaves for
+the host, which is per output rather than per op. Decide which when a host op leaks one.
+
+---
+
 ## Subtyping — Beacon-side representation (precondition before declaring extends)
 
 **What:** Actually declare subtype relationships like `TallyState extends number` in the Beacon package.
@@ -304,8 +606,11 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 
 - **Missing-input defaults for structural types** ([analyser.ts](../packages/core/src/language/analyser/analyser.ts) `validateInputs`):
   the type-default placeholder only consults the registry for NAMED types — a missing array-typed
-  input gets a `null` literal (typed `T[]`), so `Length(null)` throws at runtime. Should derive `[]`
-  structurally for arrays; decide behaviour for function-typed inputs (probably an error).
+  or function-typed input gets a `null` literal. The array half no longer bites: `Length()` is
+  `0` with a `missing_op_input` warning, since a list op reads `null` as `[]`. The function half
+  does (probed 2026-10-08): `Filter([1, 2])` is the same WARNING at analysis and then throws
+  `host_error`, "predicate is not a function", when it runs. A missing function input should be
+  an error, since no default can stand in for it.
 - **Output-mode semantics review** (analyser `validateOutputs`): should a program with a missing/
   failed REQUIRED output still produce the partial CoreProgram it does today (ok:false + program)?
   And should `desired`/`optional` get more feedback on poisoned deps? One coherent decision pass.
@@ -335,8 +640,13 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   `LiteralValue`): there is no `undefined`. An unset input is `null`, and `null` flows anywhere a
   value is expected. Decide whether "not set" should be its own thing, or whether every input
   should always have a default - the Learn page on inputs currently teaches the `null` answer.
-- ~~**More math ops**~~ — MOVED 2026-10-05 to `todo.md`, "a math batch", for 0.6.0. `Min` and
-  `Max` were listed here as candidates; both exist, over a list.
+- ~~**More math ops**~~ — DONE 2026-10-08 (`done.md`, "a math batch"): seven ops, and the `TODO`
+  comment is gone. `Min` and `Max` were listed here as candidates; both exist, over a list.
+- **One error shape for every stage?** ([evaluator/types.ts](../packages/core/src/language/evaluator/types.ts),
+  above `EvalError`): a parse or an analysis problem is a plain record with a `kind`, collected
+  into a list; an evaluation problem is a thrown `EvalError`. The `TODO` asks whether the first
+  two want the class too. They are never thrown, so probably not: close it with the eval error
+  surface review above. (The comment had no entry until the sweep of 2026-10-08.)
 - **`PortOrigin.level` as an enum** ([compose.ts](../packages/core/src/language/compose.ts)): a
   string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
   exported constant would read better at call sites. Low value - close it unless a third level
@@ -443,60 +753,21 @@ group's label from `Astro.locals.starlightRoute.sidebar`, and the brand's overli
 
 ---
 
-## Docs — *Every diagnostic* is wider than a phone
+## Editor — an option to wrap long lines — REJECTED 2026-10-07
 
-**What:** at 375px `how-it-works/diagnostics` scrolls sideways by 14px. It was 83px before the
-headings took the brand's sizes (2026-10-06), so the cause is older than that change: the
-page's H3s are diagnostic names, one unbreakable word each (`output_depends_on_failed_binding`
-is 32 characters).
+**What:** the code area never wraps: a line wider than the editor scrolls sideways
+(`CodeOptions` in `packages/editor/src/code/cm.ts` has `editable` and `gutters`, nothing for
+wrapping). The landing's live block shows it: its two longest lines are 54 characters, 486px,
+so the block scrolls in any window under about 1135px wide, and always on a phone. Sheet §24
+draws that code well with wrapped lines.
 
-**Why deferred:** found by a sweep of all pages during the type change, which was not about
-this page.
+**Why rejected:** the maintainer does not think it is needed (2026-10-07). A code line that
+is wider than a narrow editor scrolls sideways, on the landing as anywhere, and that is fine.
+Shorter names in the landing's example were weighed too and dropped: `s => s > $min` fits a
+small laptop, reads worse than `item => item > $threshold`, and still scrolls on a phone.
 
-**What it requires:** `overflow-wrap: anywhere` on those headings (`DiagnosticsTable.astro`), or
-a smaller face for a name that is code, and a look at the page's tables at the same width.
-
----
-
-## Editor — its styling, to fit the site's new look
-
-**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
-type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
-and the playground wear the look they were built with. Where the two differ now:
-
-1. **A block ignores the site's theme picker.** The editor's stylesheet sets
-   `color-scheme: light dark` on `:root`, in its `dendrite` layer, which the docs order after
-   Starlight's. That beats Starlight's own `color-scheme` per theme, so a block follows the
-   system and not the picker. Measured on `learn/getting-started` with the system on dark and
-   the picker on Light: the page is ground, the block stays dark-1 with a dark-2 code area.
-   Older than the restyle, and the one item here that is a defect.
-2. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
-   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
-   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
-   card with a dark-2 code area, and the playground as a whole is a step lighter than the
-   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
-   disagree here, so this is a brand decision before it is a stylesheet change.
-3. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
-   by its 1px border and its white code area alone. That is the sheet's white well, and it
-   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
-   ground.
-4. **The playground's top bar is not the site's.** The site has the wordmark, section links
-   and a small search on the page's ground, over a 1px rule; the playground has
-   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
-   compared in detail.
-5. **Type and controls were not compared**: the site's display face, its button and field
-   shapes, and its sidebar item against the editor's bar items, panes and fields.
-
-**Why deferred (2026-10-06):** the restyle changed the site and left the editor alone on
-purpose, and the editor is a published package: a change to its stylesheet ships in a release.
-
-**What it requires:** the playground beside a doc page, in both themes and in the three
-layouts; the decision of item 2; then the `--dendrite-*` values in `packages/editor/style.css`
-(the properties stay, they are the theming API), the "Theming" table of the editor's README,
-`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. Item 1 is separate and small:
-the docs set `color-scheme` from Starlight's `data-theme`, or set `data-dendrite-theme`.
-Neighbours: the code-height entry below, "try cooler background colours", "tune the highlight
-colours" and "the stylesheet per group".
+If it comes back: a `wrap` option on `CodeOptions` (CodeMirror's `EditorView.lineWrapping`),
+passed through `Editor.Canvas` and the layouts' `code` prop.
 
 ---
 
@@ -827,6 +1098,24 @@ the call site than `<Icon name="trash" />`.
 
 ---
 
+## Docs — show what every fence produces
+
+**What:** run each ```den fence at build time in `remark-den.ts` and show what it produces
+beneath it (its output values, or the diagnostic it raises), the way the ops reference and
+*Every diagnostic* already do. Proposed 2026-09-17 as "the step to add more editors"; left out
+of the samples step because it was never decided.
+
+**Why deferred:** sent here by the maintainer on 2026-10-08, after three weeks as a candidate in
+`todo.md`. No reader asked for it, and the pages that most needed it (the ops reference, *Every
+diagnostic*, the Learn samples) show their values already. It is not part of the 0.6.1 docs
+pass.
+
+**What it requires:** `remark-den.ts` running each fence through the pipeline at build time;
+a sample with inputs needs values to run on (the `inputs=` meta declares types, not values);
+and the block's markup for the produced rows, which `OpsReference.astro` has.
+
+---
+
 ## Docs — squiggles on the diagnostics page's static samples
 
 **What:** every sample on *Every diagnostic* now shows the diagnostic it produces, as a line
@@ -879,7 +1168,23 @@ and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`,
 technically a breaking change for nobody.
 
 **What it requires:** export the result and diagnostic types by name instead of `export *`, and
-leave `AnalysisContext` internal. Do it at the same minor release as the operator-naming aliases.
+leave `AnalysisContext` internal, at a minor release. The release it was first tied to, the one
+with the operator-naming aliases, was 0.4.0, which renamed outright and went without it.
+
+**Decided 2026-10-08: it stays public for now** (the maintainer), so it is not in 0.6.0. No
+file outside core's analyser reads it (checked that day, every package and app).
+
+**Who might want it one day,** weighed for that decision:
+
+| A future need | Does it need this type public? |
+| --- | --- |
+| A language service asks which names are in scope | No: it needs that answer, from a query API |
+| A host writes its own analysis pass or lint rule | Yes, a context type. No such extension point exists, and one would get a narrower type by design |
+| `inferOutput` gets more to read | No: it would take a narrow argument |
+| The Rete adapter wants types per node | No: the `CoreProgram` carries them |
+
+One asymmetry to remember: adding an export later is no break, and removing one is. Each release
+it stays public is a release in which a host may come to import it.
 
 ---
 
@@ -1108,26 +1413,6 @@ once several documents exist.
 
 ---
 
-## Playground — its own lint setup (it left the root's coverage)
-
-**→ Absorbed by [editor-plan.md](editor-plan.md) Phase 0:** the workspace conversion (one lockfile,
-node-modules linker) lets the root ESLint config cover every package again, so the playground
-needs no setup of its own. The requirements below become moot once Phase 0 lands.
-
-**What:** ESLint *inside* the playground project — own `eslint.config.mjs`, own devDeps, own `lint`
-script — plus a `yarn lint` step in `playground-check.yml`.
-
-**Why it came up:** CI now treats the playground as the standalone project it already is (own
-lockfile, own node_modules linker, own workflow, own repo later), so the root ESLint config ignores
-`playground/**`. Linting it from the root would type-resolve its sources against dependencies the
-core project never installs — green locally, fragile in CI. The trade left the playground unlinted.
-
-**What it requires:** `eslint` + `typescript-eslint` in `playground/package.json`, a config mirroring
-the root's rules (`no-unused-vars` with `^_`, `no-explicit-any` warn, `projectService`), a
-`"lint": "eslint ."` script, and one more step in the playground workflow.
-
----
-
 ## Prelude / global helper bindings (shared across programs)
 
 **What:** A prelude — one or more `.den` files of (lambda) bindings — parsed + analysed once and made
@@ -1184,7 +1469,7 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
 
 **What:** `Grammar` (`parser/grammar.ts`) is four maps and a set. The parser reads them directly
 (`nuds`, `leds`, `wordLeds` through `ledFor`, `statements`), and the editor reads `statements`,
-`operatorTokens` and, since the safe cast, `wordLeds`, for its `keyword` and `operator` classes.
+`symbols` and, since the safe cast, `wordLeds`, for its `keyword` and `symbol` classes.
 Adding `wordLeds` (2026-09-23) touched `grammar.ts`, `language.ts` and `parser.ts`;
 `mergeGrammar` was added in the same commit so that `extendLanguage` no longer copies each
 collection by hand, which is the one site a new collection no longer touches. A new entry kind
@@ -1211,7 +1496,7 @@ still touches `grammar.ts`, the `Language` interface and its factory, and the pa
   before choosing:
   - **Namespaced keys.** `keyOf` gains a prefix, every `registerNud`/`registerLed` key changes
     (`"("` becomes `"punct:("`, `"ident"` becomes `"kind:ident"`), and the editor's reads of
-    `operatorTokens` and `statements` are untouched. Mechanical, one file for the keys, but
+    `symbols` and `statements` are untouched. Mechanical, one file for the keys, but
     `registerInfix`/`registerPrefix` and every stdlib symbol registration go through it.
   - **Text keys, kinds reserved.** An identifier is keyed by its text, a kind by its name, and a
     word that equals a kind name (`number`, `string`) is refused at registration. One map, no
@@ -1281,12 +1566,15 @@ left open.
   totality guard for v1 — it cleanly blocks the Z combinator (`(number, any) => number` can't
   swallow a function), but it's blunt, not fully principled. When deliberate recursion (`letrec`)
   is added, revisit: allow functions under `any` again, guarded instead by a runtime fuel/step
-  limit and/or proper recursion detection. Ties to the recursion/`letrec` item above.
+  limit and/or proper recursion detection. Ties to the recursion/`letrec` item above. It is one
+  of the routes in "Language — a function in an untyped parameter" (asked 2026-10-08).
 - **Lambda param-type inference from body usage.** Collect the expected type at each use site of a
   param (each op input slot is typed) and meet them into the most specific common type; conflicting
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
   higher-order ops already supply param types (`inferInputTypes` + contextual typing) and explicit
-  annotations cover standalone lambdas; this only closes the standalone-unannotated gap.
+  annotations cover standalone lambdas; this only closes the standalone-unannotated gap. That gap
+  is what "Language — a function in an untyped parameter" asks about (2026-10-08), and this is
+  the route there that keeps the language total.
 - **Optional / default params.** Its own entry now: "Language — an optional lambda parameter"
   above, which holds the three options for an absent argument that stood here.
 - **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
@@ -1306,7 +1594,9 @@ left open.
   - **Union element types** (`[1, "a"]` → `(number | string)[]`) depend on the union-types work below.
   Both deferred — homogeneous inference covers the common case; revisit when heterogeneous collections
   or generic ops become a real need.
-- **Explicit nullability via union types.** Today `null` is compatible with every type (a bottom
+- **Explicit nullability via union types.** (The release-level view, what unions touch and the
+  three decisions they force, is "Language — union types" further up: possibly 0.7.) Today
+  `null` is compatible with every type (a bottom
   type), giving *implicit* nullability + an `implicit_any_cast` warning when it flows into a concrete
   type. The sound alternative is strict-null + unions (`T | null`): a new `{ kind: "union"; members }`
   `Type` variant; `isCompatible` distribution (`A` ⊆ `B|C` iff A⊆B or A⊆C; `A|B` ⊆ `C` iff both);

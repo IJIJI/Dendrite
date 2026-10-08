@@ -90,6 +90,14 @@ unset list is 0 and `Find{:den}` over one is `null{:den}`, and a field of `null{
 again, so `Find(buses, b => b.id == 9).name{:den}` is simply unset when no bus matches. Nothing
 throws.
 
+`null{:den}` is also what an op gives when it has no answer: `Find{:den}` with no match,
+`ToNumber{:den}` of text that is no number, a division by zero, the largest of an empty list.
+Going the other way, an op that is handed a `null{:den}` reads it as the empty value of the type
+it wanted: a list op as an empty list, a text op as empty text, a number op as zero. The two
+meet, so a missing answer lasts one step: `Divide(1, 0) + 1{:den}` is `1`, because the sum reads
+the missing quotient as zero. When the difference matters, say so where it arises, with
+`Default(Divide(a, b), 0){:den}` or `IsSet{:den}`.
+
 ## Converting on purpose
 
 Nothing converts on its own. A number is never read as a boolean, and text that happens to hold

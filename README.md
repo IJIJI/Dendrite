@@ -12,4 +12,4 @@
 
 Dendrite lets you express logic as a graph of connected nodes. When inputs change, only the affected nodes recompute, making evaluation fast and predictable. Write programs in code, or build them visually using the block flow editor.
 
-Read the docs at **[ijiji.github.io/Dendrite](https://ijiji.github.io/Dendrite/)**, try it in the **[playground](https://ijiji.github.io/Dendrite/playground/)** (fully client-side; its README is [here](apps/playground/README.md)).
+Read the docs at **[dendrite-lang.org](https://dendrite-lang.org/)**, try it in the **[playground](https://dendrite-lang.org/playground/)** (fully client-side; its README is [here](apps/playground/README.md)).

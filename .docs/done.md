@@ -5,6 +5,295 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-09
+
+The last item of the 0.6.0 group, in one commit. It was "a list literal with mixed items hides a
+function behind `any`", found on 2026-10-02 while probing `++`: `["a", x => x]` analysed clean,
+`Join` printed nothing for the function, and the function could leave through an output, where
+it is not JSON. It was never a loop: an item typed `any` cannot be called.
+
+**Decided by the maintainer on 2026-10-08:** an error with a kind of its own,
+`function_in_mixed_list`, and two functions of different types are the same error. It is the
+existing rule at one more position: items that differ make a list of `any`, and a function is
+never `any`.
+
+**What was weighed against it:**
+
+| Option | Why not |
+| --- | --- |
+| A general kind, `list_item_type_mismatch` | It fits the family of names, but `[1, "a"]` stays legal, so the name promises a check that does not exist |
+| Reuse `op_input_type_mismatch` | No op is involved |
+| Refuse every function in a list | It removes a real use: a host op that takes a list of functions |
+| A warning | The function still reaches an output |
+| Union types, so the list has a true type | The clean answer, and a release of its own (`backlog.md`). It would not make the list usable either: every op would refuse it at the use. When it lands, this kind retires. |
+
+**What building it found: the rule stopped at the first bracket.** `isCompatible` refused a
+function where `any` was expected by looking at the outermost kind, so `[x => x]` fitted `any`
+where `x => x` did not. `Equals([x => x], 1)` was accepted, and so was `[["a"], [x => x]]`, the
+same hole one level down, which the new check would have missed. So the fix went into
+`isCompatible` (`holdsFunction`: a function, or a list of them at any depth), the one place that
+decides whether a type fits, and the list literal asks it one question: does each item fit
+`any`? No rule about functions lives in the analyser. This went beyond the decision, and was
+flagged at the handover.
+
+**Probed first, and safe:** variadic inputs. `Pick(1, x => x)` on a host op with a variadic
+`any` input, and `Concat(["a"], [x => x])`, were both `op_input_type_mismatch` already: each
+item of a variadic input is checked on its own.
+
+**What stays legal:** a list in which every item is the same function type, `[x => x, y => y]`,
+which keeps that type; and a mixed list of data, `[1, "a", null, [2]]`. Neither fits an `any`
+slot if it holds a function, so a list of functions still has no stdlib op that takes it. A
+host op typed for it does.
+
+**When union types land** (`backlog.md`, possibly 0.7) the kind retires: the list gets a true
+type, and every op refuses it at the use instead.
+
+---
+
+## Stdlib — a math batch, and one answer for "no answer" — DONE 2026-10-08
+
+The second item of the 0.6.0 group, in four commits. It was "a math batch" in `todo.md`, asked
+for as `Clamp` and widened to seven ops: `Mod`, `Pow`, `Abs`, `Round`, `Floor`, `Ceil`, `Clamp`.
+Deciding what `Mod(5, 0)` gives turned into the larger half of the work, a rule for the whole
+language, and that came first.
+
+**It was the restructure's test, and the restructure passed.** Seven ops were seven
+registrations in `stdlib/arithmetic.ts`, their tests and a changelog entry. The reference page
+and the index table showed twelve arithmetic ops with no edit to either.
+
+### "No answer" is `null`, for every op
+
+**The rule:** an op that has no answer gives `null`: `Divide` by zero, `Mod` by zero, a `Pow`
+with no real result, and `Average`, `Max` and `Min` of an empty list, beside `Find` with no
+match and `ToNumber("abc")`, which already did. **Breaking** for the four that gave `0`.
+
+**Where it lives:** in the evaluator, at the one place an op is called. A result that is `NaN`
+or an infinity becomes `null`, so the ops hold no guard of their own: `Divide` is `a / b`, and
+`Max` starts from `-Infinity` so that an empty list leaves it standing. It is the reasoning that
+put boundary validation in `setInput`: one check, where every caller routes through. A host's op
+is covered, and no later op can forget it.
+
+**What was weighed**, with a probe of every segment in view:
+
+| Option | Why not |
+| --- | --- |
+| Zero, always (the first recommendation) | A number op would always give a number, as a text op always gives text, and nothing would break. But a zero that is a guess cannot be told from a real one, which is the argument that made `ToNumber` give `null` on 2026-09-20. The maintainer chose `null`. |
+| `null` in arithmetic only | One op would change instead of four, and the rule would carry an exception for three list ops. |
+| `NaN`, as JavaScript | It is not JSON (the probe had `Divide(1, null)` as `Infinity` here and `null` after the wire), it is not equal to itself, and it spreads with no diagnostic. |
+| `null` that propagates, as SQL | The only option where the absence survives a sum. Too large for this batch, so a backlog entry. |
+
+**The other languages**, for the record: Python and Postgres stop the program; JavaScript, C and
+float arithmetic in Rust and Swift give `Infinity` or `NaN`; a spreadsheet gives an error value
+in the cell; SQLite and MySQL give `NULL`; Elm and Pony (integers) and the proof assistants give
+zero. The typed ones split as this language now does: a PARSE gives an optional (Swift's
+`Int("abc")` is `nil`), and here arithmetic does too.
+
+**The cost that was accepted:** a `number` output may hold `null`, and a tally program writes
+its idle value: `Default(Max(states), 0)`. The `0` for an empty list had been chosen so that "no
+sources" read as idle; the playground's tally example says it aloud now.
+
+**Two limits, both in the changelog.** The `null` lasts ONE step: the next number op reads it
+as zero, so `Divide(1, 0) + 1` is `1`. And only the number an op returns is read, not a number
+inside a list it returns. Each is a backlog entry.
+
+### How a `null` is read, which the probe showed was already one rule
+
+A `null` input reads as the empty value of the type the op wanted: `0` for a number, `""` for
+text, `[]` for a list, `false` for a boolean. Nobody had written it down for numbers, where it
+is JavaScript's coercion rather than a decision, and the probe found the two places it did not
+hold. `Divide(1, null)` was `Infinity`, because the zero guard tested `b === 0`. And
+`Max([null, -4])` was `null`, where `Average([null, 4])` read the null as zero: `Max` and `Min`
+use `Math.max` and `Math.min` now, which read it the same way.
+
+### The seven ops: each rule that languages disagree on
+
+| Rule | Chosen | Weighed |
+| --- | --- | --- |
+| Where a half goes in `Round` | Away from zero: `2.5` is `3`, `-2.5` is `-3` | JavaScript's `Math.round`, which sends `-2.5` to `-2` |
+| `Round`'s `digits` | Optional, the library's second such input; may be negative | A whole number only, with `Round(x * 10) / 10` for a decimal |
+| The sign of `Mod` | The first number's, as `%` in JavaScript and C: `Mod(-1, 5)` is `-1` | The divisor's (Python, Excel), recommended for an index or a clock, shown with both tables. The maintainer chose the first. |
+| `Clamp` with `low > high` | The bounds work in either order | `high` wins (what `Min([Max(…)])` gave); `low` wins (CSS) |
+| Optional bounds on `Clamp` | No, asked and kept as it is | A bound left out would mean "no bound" while a `null` bound reads as zero. Backlog. |
+| Symbols | None | `%` and `^`: not asked for. Backlog. |
+
+**`Round` does not multiply.** `1.005 * 100` is `100.49999999999999`, so the obvious
+implementation rounds `1.005` to `1` at two decimals. `roundTo` moves the decimal point through
+the exponent of the number's own text instead, and a test holds `1.01`.
+
+**Found by probing, after the commit:** `Round("abc")`, a text through `any`, gave the text
+back. `roundTo` returns its argument when there is nothing to round away, and the text left by
+that return. One line (`Number(value)`) and a test over all seven ops. The probe had been
+written to rewrite a stale backlog line, not to test `Round`.
+
+**A negative zero is zero**, added to the evaluator's rule and flagged as not approved in
+advance: `Round(-0.4)`, `Ceil(-0.5)` and `Mod(-7, 7)` each make `-0`, JSON writes it as `0`, and
+a test's `toBe(0)` tells the two apart where a program cannot.
+
+**The Host docs** taught `Mod` as their example of a new op. It is `Fahrenheit(celsius)` now,
+which fits the page's own `Reading` type, and `%` stays as the example of a symbol, over the
+library's `Mod`.
+
+### A sweep of stale notes, in the same commit
+
+Five lines in `backlog.md` that the first day of this chat had found stale: the `AnalysisContext`
+entry waited for a release that had passed; the `Grammar` entry named `operatorTokens`, which is
+`symbols`; "missing-input defaults" said `Length(null)` throws, where it is `0` and the live
+half is a missing FUNCTION input (`Filter([1, 2])` throws when it runs); the line about a value
+that crosses an `any` gave an example that N.1 had closed; and a `TODO` in `evaluator/types.ts`
+had no entry. "Playground — its own lint setup" is closed and gone: the root ESLint config reads
+`apps/playground` since the workspace conversion (checked on one of its files).
+
+---
+
+## Core — the stdlib in one file per segment, and `createStdlib({ segments })` — DONE 2026-10-08
+
+The first item of the 0.6.0 group, in four commits: the comparison ops join `logic`, the move
+to one file per segment, the option, the docs. It was "the stdlib, configurable per category,
+maybe per op" in `todo.md`, and before that "the stdlib in segments a host can pick" in the
+backlog. Two smells went with it. `createStdlib()` was one 835-line function with every op a
+screen away from its evaluator (**Long Method**), and a new category was six edits in five
+files (**Shotgun Surgery**).
+
+**What a host has now:** `createStdlib({ segments: ["logic", "arithmetic"] })`, the type
+`StdlibSegment`, and seven segments that each stand alone: `logic`, `control`, `array`,
+`arithmetic`, `list`, `conversion`, `string`.
+
+**What adding to the library costs now.** An op is a `registerOp` and a `registerEvaluator`
+next to each other in its segment's file, a test and a changelog line; its reference entry
+and its place in the index table are generated. A segment is a file, one line in `SEGMENTS`
+(`stdlib/index.ts`), one line in the test's list, and a three-line `.mdx` page, which the docs
+build demands by name if it is missing.
+
+**The decisions, and what was weighed against each:**
+
+| Decision | Chosen | Weighed, and why not |
+| --- | --- | --- |
+| How a host picks | One option on `createStdlib`; the installers are internal | One exported builder per segment, the shape the entry first wrote: a host would nest seven `extendLanguage` calls, and "take logic and arithmetic" would not read as one line |
+| `>=` is `Not(LessThan(…))`, two segments | `logic` absorbs `comparison` | "Comparison brings logic" (a rule in `createStdlib` that nobody reads); real ops `GreaterOrEqual` / `LessOrEqual` (honest diagnostics, but five docs pages teach the desugar and it was no part of a restructure); a `predicate` segment (the word is already the function input of `Filter`) |
+| `array` and `list` | Two segments | One: no symbol crosses them, and the docs lean on "the ops that take a function" |
+| Per-op choice | Not built | No consumer; per segment has Beacon |
+| `extendStdlib(ext, options)` | Not built | No consumer: `extendLanguage(ext, createStdlib({ segments }))` is the route. "Symmetry" is the argument that sent the optional lambda parameter to the backlog the same week |
+| Order | The library's own, whatever the list's | The descriptor's order is the reference's order, and it must not depend on a call site |
+| A name that is no segment | Throws | It is a mistake in host code, as an op without an evaluator is |
+| The old URL `/stdlib/comparison/` | 404 | A redirect is three lines, and nobody is named who would follow it |
+| The op tests | Stay in `evaluator.test.ts` | Moving them was churn the entry never asked for |
+
+**"Segment" and "category" are two words on purpose.** A segment is the stdlib's unit, a
+closed set. `category` is the field on an op, free text for a host. They meet in one rule a
+test holds: every op a segment installs carries the segment's name as its `category`, because
+that is what a reference page selects by.
+
+**The move was proved, not reviewed.** A throwaway script dumped the library before and after:
+all 39 op definitions in order, every evaluator's function text, the grammar's keys with each
+led's binding power, and twelve programs (one or more per symbol) with their parse tree and
+value. The two dumps were identical. Two things about that dump are worth keeping. Evaluators
+were compared by name, not in order: the old file registered the list evaluators before the
+arithmetic ones, each now follows its op, and nothing reads that order (a keyed map; the link's
+fingerprint sorts op names). And an imported function reads `(0, import_shared.toList)(x)` in
+transpiled text where a local one reads `toList(x)`, so the script dropped the module prefix
+before comparing; without that, every list evaluator "changed".
+
+**What the plan had wrong, found by running things:**
+
+- A call to an op that is not installed is `undeclared_binding_reference`, not `unknown_op`:
+  the parser builds an op node only for a registered name and reads any other call as a
+  binding applied. The message does not help someone who meant an op, and segments make it
+  easier to meet, so it is a backlog entry now.
+- `compile` came back `ok: true` for that program, with the error on its list, exactly as its
+  own comment warns. The probe read `ok` first and reported a clean compile.
+- A template on a language without `string` is `unexpected_token`, not `syntax_error`.
+- `"toString" in SEGMENTS` is true, so the name check reads the list of names, and a test
+  holds it.
+- The operators page has no segment column: "comparison" there is the meaning of `<`. Another
+  chat's review caught that before commit 1 edited it.
+
+**Docs.** The index's table is `SegmentsTable.astro`, read from the descriptor like the pages
+beside it, each op linked to its entry. Four hand-written counts on that page ("Six ops work
+this way", "One op has one so far") became examples: a count is a fact somebody has to
+remember to update, which is the smell the table had. The segment pages' descriptions stopped
+listing ops for the same reason.
+
+**Not done, deliberately:** a `defineOp(lang, def, evaluator)` helper (two calls per op is the
+public shape, and a second way to register is a second thing to learn); a dynamic route in
+place of the seven `.mdx` pages (the sidebar is generated from the folder).
+
+---
+
+## Docs — the landing stays dark, and its theme picker is hidden — DONE 2026-10-07
+
+The landing has one look, the dark one, in both themes: sheet §24 keeps the hero band dark-0
+whatever the theme, and the part of the page that did follow the theme went when the pillars
+were made to fill the window. So the theme picker changed nothing a reader could see there.
+
+**A full light landing was tried and dropped the same day.** The band on ground, the nav and
+the pillars following the theme, and the field's four Iris tiers reversed so its strong inner
+rings were the darkest. It worked (the picker switched everything at run time, reduced motion
+gave one still frame), and the maintainer did not like it. It also went against the brand,
+which says the aurora is never drawn on a light ground. Nothing of it was committed.
+
+**The picker is hidden on a page with a hero** instead (`Header.astro`), with the rule that
+parts it from the GitHub link: a control that does nothing should not be on the page. The
+picked theme stays in force, and the picker is on every other page.
+
+---
+
+## Docs — a sample says what its edge means, and two phone fixes — DONE 2026-10-07
+
+Three small things from the list after the site went live, one commit each.
+
+**A sample that shows a diagnostic carries a tag with the words.** A ` ```den warns ` fence had
+an amber border and nothing that said what the colour meant, against the brand's own rule that
+a status carries a word (README §3). Now a tag sits on the block's top edge: "compiles with a
+warning", or "does not compile" on a red one. It is the editor's own status tag
+(`dendrite-tag`, a dot in the status colour and the word in ink on the soft fill), so the
+docs only place it. Found on the way: a LIVE block marked `warns` or `fails` had no edge at
+all. The class was on its wrapper, and the border is on the layout inside it, so only the two
+fences on the site ever showed a colour. One helper, `sampleEdge` in `plugins/den-meta.ts`,
+now names the class, the tag and the words for both, where each had its own copy of the
+choice. *Every diagnostic* was left as it is: its samples sit under a heading with the
+diagnostic's name and severity, and its one odd block has a label already.
+
+**On one column the landing's fade starts at the top.** The copy is at the top of a tall band
+there, above where the fade began, so the headline and the lede sat on the field's lines. The
+fade now runs from the top to 45% of the band under 960px: the lede is on clear ground and the
+headline on lines of about half their strength. Side by side nothing changed.
+
+***Every diagnostic* no longer scrolls sideways on a phone.** A diagnostic's kind is one
+unbreakable word, and the longest is wider than a phone. It may now break anywhere
+(`DiagnosticsTable.astro`). At 375px the page was 14px too wide; it is 0.
+
+Not done, and why: the landing's long code lines still scroll in a narrow editor. That needs
+the editor to wrap lines (`backlog.md`).
+
+---
+
+## Docs — the landing on a short window, and the theme picker — DONE 2026-10-07
+
+Two small fixes on the day the site went live, one commit each.
+
+**The pillars were cut off on a short window** (the maintainer's smaller laptop). The landing
+is meant to be one screen, and its hero was a fixed 600px, the design frame's height: with the
+nav and the pillars that needs a window 781px high. At 730 the pillars were cut through their
+text, and at 640 they started under the fold. Now the hero's minimum is 600px or what the
+window has left, whichever is less, and a window under 760px high also gets less room above
+and below the blocks and the shorter code area that one column has. Measured from 1920x1080
+down to 1280x595: the pillars are whole and the page does not scroll. Under about 595px of
+height it scrolls. What was tried first and did not work: rows on the band,
+`minmax(min-content, 600px)` over `1fr`. A band with only a minimum height hands its rows all
+the space they ask for, so the hero never gave way. The rule that works keeps 9rem for the
+pillars, which is their cells with three lines of text: it is an estimate, and a cell with
+four lines would be cut by its last line on a short window.
+
+**An editor block ignored the theme picker.** The editor's colours are `light-dark()` pairs,
+so they follow `color-scheme`. Its stylesheet sets `light dark` on `:root`, in the `dendrite`
+layer, which the site orders after Starlight's, and that beat the scheme Starlight sets for
+the picked theme. With the system on dark and the picker on Light the page went light and the
+block stayed dark. The two palette blocks of `dendrite.css` now set the scheme themselves,
+unlayered. Measured on both systems, for each of the picker's three choices: page, block and
+code area agree every time.
+
+---
+
 ## Docs — the page on the sheet's grounds — DONE 2026-10-06
 
 The last row of the §20 breakdown, first left and then asked for by the maintainer after a

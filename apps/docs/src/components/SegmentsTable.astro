@@ -1,0 +1,53 @@
+---
+// The stdlib's segments and what is in each, from the descriptor at build time: one row per
+// op `category`, in the order the library installs them, each op linked to its entry on the
+// segment's page (OpsReference.astro gives every op an anchor of its name). Derived rather
+// than written, as those pages are: an op is on this table the moment it is registered.
+import { createStdlib } from "@dendrite-lang/core";
+import { sourceHtml } from "@dendrite-lang/editor";
+
+const language = createStdlib();
+
+// A Map keeps insertion order, and the descriptor keeps registration order.
+const segments = new Map<string, string[]>();
+for (const op of language.descriptor.ops.values()) {
+  if (!op.category) throw new Error(`stdlib op '${op.name}' has no category`);
+  segments.set(op.category, [...(segments.get(op.category) ?? []), op.name]);
+}
+
+// The one thing a new segment still needs by hand is its page: the sidebar is generated from
+// the folder. A segment without one fails the build here, rather than leaving a dead link.
+const pages = Object.keys(import.meta.glob("../content/docs/stdlib/*.mdx"));
+for (const segment of segments.keys()) {
+  if (!pages.some((page) => page.endsWith(`/${segment}.mdx`))) {
+    throw new Error(`stdlib segment '${segment}' has no page: add stdlib/${segment}.mdx`);
+  }
+}
+---
+
+<table>
+  <thead>
+    <tr><th>Segment</th><th>What is in it</th></tr>
+  </thead>
+  <tbody>
+    {
+      [...segments].map(([segment, ops]) => (
+        <tr>
+          <td>
+            <a href={`./${segment}/`}>{segment}</a>
+          </td>
+          <td>
+            {ops.map((name, index) => (
+              <>
+                {index > 0 && ", "}
+                <a href={`./${segment}/#${name}`}>
+                  <code class="den" set:html={sourceHtml(name, language)} />
+                </a>
+              </>
+            ))}
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>

@@ -38,7 +38,7 @@ export {
 } from "./language/compose";
 
 // ── standard library ─────────────────────────────────────────────────────────
-export { createStdlib, extendStdlib } from "./language/stdlib";
+export { createStdlib, extendStdlib, type StdlibSegment } from "./language/stdlib";
 
 // ── analysis ─────────────────────────────────────────────────────────────────
 export { analyse, getOutputType, validateDescriptor } from "./language/analyser/analyser";

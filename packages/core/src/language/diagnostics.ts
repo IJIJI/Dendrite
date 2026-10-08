@@ -386,6 +386,13 @@ export const diagnostics = {
       output x = f as (number) -> boolean
     `,
   },
+  function_in_mixed_list: {
+    stage: "analyse",
+    severity: "error",
+    message:
+      "A list whose items differ in type holds a function. Such a list is a list of any, and a function is never any. A list in which every item is the same function type is allowed.",
+    example: den`output x = ["a", n => n]`,
+  },
   lambda_return_type_mismatch: {
     stage: "analyse",
     severity: "error",

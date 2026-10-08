@@ -7,7 +7,62 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.5.0`, so a minor release here is always accompanied by a release of both.
+at `^0.6.0`, so a minor release here is always accompanied by a release of both.
+
+## 0.6.0
+
+- **Breaking: a list literal whose items differ in type refuses a function.** `["a", x => x]`
+  is the new error `function_in_mixed_list`, and so is a list of two functions of different
+  types. Such a list is a list of `any`, and a function is never `any`: until now it analysed
+  clean, `Join` printed nothing for the function, and the function could leave through an
+  output, where it is not JSON. A template and `++` build the same list, so `` `a{x => x}` `` and
+  `"a" ++ (x => x)` are refused too. A list in which every item is the same function type is
+  still allowed.
+- **Breaking: a list that holds a function no longer fits `any`.** `isCompatible` looked at the
+  outermost kind alone, so `Equals([x => x], 1)` was accepted where `Equals(x => x, 1)` was not.
+  It reads through a list at any depth now, and the first is `op_input_type_mismatch` too.
+
+- **Seven math ops, in the `arithmetic` segment: `Mod`, `Pow`, `Abs`, `Round`, `Floor`, `Ceil`,
+  `Clamp`.** Each rule that languages disagree on is decided:
+  - `Round(value, digits?)` sends a half **away from zero**: `Round(2.5)` is `3` and
+    `Round(-2.5)` is `-3`, where JavaScript's `Math.round` gives `-2`. `digits` may be left out
+    (a whole number) or negative (`Round(1234, -2)` is `1200`), and the decimal point moves
+    without the error of multiplying, so `Round(1.005, 2)` is `1.01`.
+  - `Mod(a, b)` has the **sign of `a`**, as `%` does in JavaScript and C: `Mod(-7, 3)` is `-1`.
+  - `Clamp(value, low, high)` takes its bounds **in either order**: `Clamp(15, 10, 0)` is `10`.
+  - `Mod` by zero, and a `Pow` whose result is no real number (`Pow(-8, 0.5)`) or too large to
+    hold, have no answer and give `null`, by the rule below.
+  - A `null` reads as zero in all seven, as in the arithmetic ops that were there.
+
+  None has a symbol. `Min` and `Max` exist already, over a list.
+
+- **The evaluator reads a negative zero as zero.** JSON writes `-0` as `0`, so a program held a
+  value that changed on its way to a host. `Negate(0)`, `Ceil(-0.5)` and `Mod(-7, 7)` are `0`.
+- **Breaking: an op with no answer gives `null`.** `Divide` by zero gave `0`, and so did
+  `Average`, `Max` and `Min` of an empty list. All four give `null` now, as `Find` with no match
+  and `ToNumber("abc")` do: a zero there could not be told from a real one.
+  `Default(Max(states), 0)` says the fallback where one is wanted, and `IsSet` tests for it. The
+  null is the answer of that one op: the next number op reads it as zero, as it reads any null,
+  so `Divide(1, 0) + 1` is `1`.
+- **The evaluator gives `null` for a result that is `NaN` or an infinity,** for every op, a
+  host's included. Neither is JSON, so either changed on its way to a host, and `NaN` is not
+  equal to itself. This is what makes the entry above one rule rather than four, and it fixes
+  two leaks: `Divide(1, null)` was `Infinity`, and a number op fed a non-number through `any`
+  was `NaN`. Only the number an op returns is read; a list it returns is not looked into.
+- **`Max` and `Min` read a `null` item as zero,** as `Average` and the arithmetic ops do.
+  `Max([null, -4])` was `null`, and is `0`.
+- **`createStdlib({ segments })` takes part of the library.** The segments are `logic`,
+  `control`, `array`, `arithmetic`, `list`, `conversion` and `string`, and the type
+  `StdlibSegment` names them. Every segment stands alone. A symbol comes with the segment that
+  owns its op, so a language without `arithmetic` has no `+` and no `-14` (a negative number is
+  `Negate`'s symbol), and one without `string` has no `++` and no template. The segments
+  install in the library's own order, whatever order the list is in; a name that is no segment
+  throws. `createStdlib()` is the whole library, as before.
+- **Breaking: the comparison ops are in the `logic` segment.** `Equals`, `NotEquals`,
+  `GreaterThan` and `LessThan` carry `category: "logic"`, where a host reading `op.category`
+  saw `"comparison"`. The reason is `>=`: it is sugar over `Not(LessThan(…))`, and with the
+  four in `logic` every symbol's op is in the segment that registers the symbol. The reference
+  has seven pages; `/stdlib/comparison/` is gone, and its entries are on the logic page.
 
 ## 0.5.0
 

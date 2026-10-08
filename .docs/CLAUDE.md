@@ -6,7 +6,7 @@ Dendrite is a declarative dataflow language with a pull-based evaluator, designe
 - **First-class functions** — lambdas (`=>`), application, and real lexical closures. Higher-order list ops (`Filter`, `Map`, `Reduce`, …) are ordinary ops with a function-typed input, not a special node kind. There are no loop constructs; iteration is expressed via these ops.
 - **Declarative, no side effects / no sequencing** — no `;`, no mutation, no `box`. A program is a set of `let` bindings + `output`s; multiline = bindings, not statements.
 - **Immutable bindings** — `let x = expr` is a constant within one evaluation cycle (evaluated at most once); different cycles may differ if inputs changed.
-- **Strongly normalising (v1)** — recursion is blocked (self-reference → `binding_cycle`; self-application is untypable, and functions are never `any`).
+- **Strongly normalising (v1)** — recursion is blocked (self-reference → `binding_cycle`; self-application is untypable, and functions are never `any`). One route types and has no value to take it: a struct type that names itself in a function field (`backlog.md`). It must be closed before struct literals exist.
 - **Dendrite has no dependency on Beacon** — Beacon depends on Dendrite, not the other way around.
 
 Example (code-editor syntax):
@@ -28,8 +28,8 @@ output result  = status
 | `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.5.0** (2026-10-05). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
 | `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.5.0** (2026-10-05). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
-| `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `ijiji.github.io/Dendrite/playground/` |
-| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `ijiji.github.io/Dendrite/` |
+| `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
+| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `dendrite-lang.org/` |
 
 ---
 
@@ -151,7 +151,9 @@ packages/core/src/language/
   evaluator/  evaluator.ts (evaluate, EvalContext, memoise), types.ts (EvalState, EvalError)
   runtime/    runner.ts (run, createProgramRunner), runtime.ts (createRuntime, ProgramHandle),
               entry.ts (one program state), seed.ts (defaultValueFor), instance.ts (createInstance)
-  stdlib/     index.ts (createStdlib — types, ops, operators)
+  stdlib/     index.ts (createStdlib: installs the segments, in the reference's order), one file
+              per segment (logic, control, array, arithmetic, list, conversion, string: its ops,
+              their evaluators, their symbols), shared.ts (bin, variadic, toList)
   language.ts Language assembly: createLanguage / extendLanguage / parseSource
   compose.ts  composeLayers: vocabulary + port layers -> the descriptor a program is checked against
   environment.ts createEnvironment / forProgram: the pipeline, bound to a composed descriptor
@@ -167,7 +169,7 @@ See `architecture.md` for the layering DAG and full design.
 - **Structured `Type`** (`{kind:"name"|"array"|"function"}`) — no type strings. Only named types are
   registered; **arrays and functions are structural** (`Type.array` / `Type.fn`), no auto-`T[]`.
 - **`isCompatible`** (registry.ts, always call it): `any`/`null` data rules + **functions-⊄-`any`**
-  guard; array covariance; function contravariant-params/covariant-return; `extends` chain (subtyping
+  guard, which reads through a list at any depth (`[x => x]` does not fit `any` either); array covariance; function contravariant-params/covariant-return; `extends` chain (subtyping
   is implemented).
 
 ### Evaluation
@@ -177,6 +179,9 @@ See `architecture.md` for the layering DAG and full design.
   fresh per closure application) + `localBindings` (lambda params, **local-first** so they shadow
   globals).
 - **changedInputs optional** — `undefined` = "all changed" (no caching), used by `run()`.
+- **A number an op returns is a JSON number.** The evaluator, at the one place an op is called,
+  gives `null` for `NaN` and the infinities and `0` for a negative zero. So an op holds no guard
+  for "no answer": it computes (`a / b`), and the evaluator reads the result.
 
 ### Functions
 - **Lambda → `Type.fn`**, application via `resolveAppArgs`; **closures capture `localBindings`**.
@@ -189,8 +194,9 @@ See `architecture.md` for the layering DAG and full design.
   (type/op/evaluator → descriptor; nud/led/statement/infix/prefix → grammar). A language declares
   no inputs and no outputs: those arrive as **port layers** and compose into the
   `LanguageDescriptor` a program is checked against (`language/compose.ts`).
-- `createLanguage()` = empty base (core grammar only); `createStdlib()` = batteries (types + ops +
-  operators); `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
+- `createLanguage()` = empty base (the core grammar and the primitive types); `createStdlib()` =
+  batteries (ops, evaluators and their symbols, one file per segment), and
+  `createStdlib({ segments })` takes some of them; `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
   `grammar.symbols`.
 
@@ -214,3 +220,7 @@ See `architecture.md` for the layering DAG and full design.
 - Arrays/functions are structural — never "register" them.
 - `bodyScope ?? nodeCache` for inline-node caching (bodyScope when inside a lambda body).
 - Raw `ASTNode`s carry no inferred `type` — the analyser produces typed `CNode`s.
+- **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
+  `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
+  READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts
+  one step, and a program that cares tests it where it arises (`Default`, `IsSet`).

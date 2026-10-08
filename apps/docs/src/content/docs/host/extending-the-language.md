@@ -26,6 +26,19 @@ const language = createStdlib();
 Start from `createStdlib(){:ts}` to build on the standard library, or `createLanguage(){:ts}` for the bare
 grammar with no ops at all. Register before you create an environment from it.
 
+You can also take part of the library. Its ops come in segments, one per page of the
+[reference](../../stdlib/), and `segments{:ts}` names the ones you want:
+
+```ts
+const small = createStdlib({ segments: ["logic", "control", "arithmetic"] });
+```
+
+Every segment stands alone, and a symbol comes with the segment that owns its op. So a language
+without `"arithmetic"{:ts}` has no `+{:den}`, and no `-14{:den}` either, because a negative
+number is the symbol of `Negate{:den}`. One without `"string"{:ts}` has no `++{:den}` and no
+template. A program that calls an op you left out is told the name is not declared, as for any
+name it does not know. The type `StdlibSegment{:ts}` is the list of names.
+
 ## A type with fields
 
 ```ts
@@ -51,25 +64,22 @@ An op is two registrations: its **definition**, which is what the analyser check
 
 ```ts
 language.registerOp({
-  name: "Mod",
+  name: "Fahrenheit",
   category: "arithmetic",
-  description: "The remainder of a divided by b.",
-  inputs: [
-    { name: "a", type: Type.number },
-    { name: "b", type: Type.number },
-  ],
+  description: "A temperature in degrees Celsius, as degrees Fahrenheit.",
+  inputs: [{ name: "celsius", type: Type.number }],
   output: Type.number,
 });
 
 language.registerEvaluator({
-  op: "Mod",
-  evaluate: ({ a, b }) => (a as number) % (b as number),
+  op: "Fahrenheit",
+  evaluate: ({ celsius }) => (celsius as number) * 1.8 + 32,
 });
 ```
 
-`Mod(7, 2){:den}` now works in any program on this language, with the same checking, the same call
-syntax, and the same named arguments as anything in the standard library. A program cannot tell
-where an op came from.
+`Fahrenheit($reading.celsius){:den}` now works in any program on this language, with the same
+checking, the same call syntax, and the same named arguments as anything in the standard library.
+A program cannot tell where an op came from.
 
 Keep the two halves in step. An op with no evaluator, or an evaluator for an op that does not exist,
 makes the language itself invalid, and composing it **throws** rather than reporting: there is no
@@ -168,7 +178,17 @@ An evaluator gets its inputs already evaluated and returns a value. It should no
 bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
 outputs.
 
+A number it returns has to be a real one. `NaN{:ts}` and the infinities are not values a program
+can hold (neither survives JSON, and `NaN{:ts}` is not even equal to itself), so when an evaluator
+returns one, the program gets `null{:den}` in its place. That is the language's "no answer", the
+same one the library's `Divide{:den}` gives for a division by zero, and `IsSet{:den}` and
+`Default{:den}` handle it. It applies to the number an op returns, not to numbers inside a list
+or a struct it returns.
+
 ## A symbol as sugar
+
+A symbol is a second spelling of an op, yours or the library's. The library has `Mod{:den}` and
+gives it no symbol, so `%` is free for an application to assign:
 
 ```ts
 language.registerInfix("%", BP.MULTIPLY, (left, right) =>
@@ -231,11 +251,13 @@ const env = createEnvironment(language);
 ```
 output odd    = 7 % 2 == 1
 output latest = Last([10, 20, 30])
+output warm   = Fahrenheit(21) > 68
 ```
 
 (Shown plain rather than highlighted: the site highlights and checks samples against the standard
-library, which has neither `%` nor `Last`. Your own editor, built from your language, knows both.)
+library, which has none of `%`, `Last` and `Fahrenheit`. Your own editor, built from your
+language, knows all three.)
 
 The editor highlights your ops like its own, because it reads the same language. The diagnostics
-catalogue covers your additions too, since a mistake in a call to `Mod` is the same
+catalogue covers your additions too, since a mistake in a call to `Fahrenheit` is the same
 `op_input_type_mismatch{:den}` as a mistake in a call to `Add{:den}`.

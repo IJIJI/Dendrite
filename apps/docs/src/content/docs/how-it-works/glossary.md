@@ -35,9 +35,10 @@ real lexical closure over what surrounded it.
 **Higher-order op**: an op with a function-typed input, such as `Filter{:den}`. Not a special
 kind of op; just an op whose input happens to be a function.
 
-**Strongly normalising**: every program finishes. Guaranteed by two rules: a name cannot refer
-to itself, and a function is never accepted where `any{:den}` is expected. See
-[the type system](../types/).
+**Strongly normalising**: every program finishes. Two rules guarantee it for anything a program
+can write: a name cannot refer to itself, and a function is never accepted where `any{:den}` is
+expected. See [the type system](../types/), which also covers the one route that typing leaves
+open and why no value can take it.
 
 ## Types
 

@@ -74,8 +74,10 @@ src/language/
     runner.ts       - run(), createProgramRunner()
     runtime.ts      - createRuntime(), ProgramHandle
   stdlib/
-    index.ts        - createStdlib() (types + logic/comparison/control/arithmetic/list ops
-                      and their operators)
+    index.ts        - createStdlib(): installs the segments, in the reference's order
+    logic.ts, …     - one file per segment (logic, control, array, arithmetic, list,
+                      conversion, string): its ops, their evaluators, their symbols
+    shared.ts       - the symbol builders (bin, variadic) and the list guard (toList)
   language.ts       - Language assembly: createLanguage / extendLanguage / parseSource
 ```
 
@@ -88,8 +90,8 @@ node-kind registry, and true source-span ranges.
 
 Repo-level / near-term:
 
-- [ ] More stdlib levels (empty / skeleton / base / core / extended); make configuring a language easier.
-- [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed. More welcome (e.g. `Min`/`Max` over args, `Round`).
+- [x] The stdlib in parts — `createStdlib({ segments })` takes the segments a host wants; `createLanguage()` is the empty base. (Was "more stdlib levels: empty / skeleton / base / core / extended".)
+- [x] Array + math ops — `Concat`/`Flatten`/`Average`/`Max`/`Min`/`Includes` landed, then `Mod`/`Pow`/`Abs`/`Round`/`Floor`/`Ceil`/`Clamp` (2026-10-08). More welcome (e.g. `Min`/`Max` over args).
 - [ ] Coercion operations. E.g. toBoolean(value) -> Converts e.g. a non 0 number to true, 0 to false. (Design in `.docs/todo.md`.)
 - [x] Field typing (for structs) — multilevel struct typing + inheritance + `unknown_field`.
 - [x] Output dependence — analysis is output-granular: only outputs reachable from a failed binding are dropped; the rest survive.

@@ -27,3 +27,31 @@ export function parseDenMeta(meta: string | null | undefined): DenMeta {
     inputs: /inputs="([^"]*)"/.exec(words)?.[1],
   };
 }
+
+/**
+ * What a sample that is there to show a diagnostic wears, and says: the class of its coloured
+ * edge, and a status tag with the words, because a colour alone says nothing. One definition
+ * for the two things that draw such a sample, a ```den fence (remark-den.ts) and a live block
+ * (Live.tsx). The tag's classes are the editor's own status tag.
+ */
+export interface SampleEdge {
+  className: string;
+  tagClassName: string;
+  label: string;
+}
+
+export function sampleEdge(sample: { fails?: boolean; warns?: boolean }): SampleEdge | undefined {
+  if (sample.fails)
+    return {
+      className: "dendrite-fails",
+      tagClassName: "dendrite-sample-tag dendrite-tag dendrite-tag-error",
+      label: "does not compile",
+    };
+  if (sample.warns)
+    return {
+      className: "dendrite-warns",
+      tagClassName: "dendrite-sample-tag dendrite-tag dendrite-tag-warning",
+      label: "compiles with a warning",
+    };
+  return undefined;
+}

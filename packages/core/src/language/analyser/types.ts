@@ -25,6 +25,7 @@ export type AnalysisErrorKind =
   | "invalid_convert_param" // `(t~) => …` or `(t~: Bus) => …`: the mark needs a written type Convert has a rule for
   | "binding_type_mismatch" // A binding's value is incompatible with the type its annotation states
   | "cast_to_function" // `as (…) -> T`: a closure carries no signature, so it cannot be checked at runtime
+  | "function_in_mixed_list" // `["a", x => x]`: items that differ make a list of any, and a function is never any
   | "app_callee_not_function" // Application callee is not function-typed
   | "app_argument_mismatch" // Application args don't resolve to the params (arity/name/overlap/missing)
   | "app_argument_type_mismatch"; // A resolved application argument has an incompatible type
