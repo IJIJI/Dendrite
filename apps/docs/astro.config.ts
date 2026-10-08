@@ -14,8 +14,11 @@ import { remarkTs } from "./src/plugins/remark-ts";
 
 const source = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
-// GitHub Pages serves project sites under /<repo>/ - CI sets DOCS_BASE. Dev stays at /.
-const site = "https://ijiji.github.io";
+// Where the site is served: its origin, and the path under it. The deploy workflow passes
+// both, read from Pages itself (pages.yml), because a project site lives under /<repo>/ and a
+// custom domain at the root, and writing either down here is how the two came apart. Dev and
+// a local build are at the root, and name the public address in their absolute URLs.
+const site = process.env.DOCS_SITE ?? "https://dendrite-lang.org";
 const base = process.env.DOCS_BASE ?? "/";
 
 export default defineConfig({
