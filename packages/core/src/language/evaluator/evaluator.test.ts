@@ -378,6 +378,53 @@ describe("an op with no answer gives null", () => {
   });
 });
 
+// A list whose items differ in type is a list of `any`, and a function never fits `any`. The
+// fallback to `any` was the one place a function could ride in a list: Join printed nothing for
+// it, and it could leave through an output, where it is not JSON.
+describe("a mixed list literal refuses a function", () => {
+  const errorsOf = (source: string) => runSource(source).analysed.errors.map((e) => e.kind);
+
+  it("a function beside data", () => {
+    expect(errorsOf('output out = ["a", x => x]')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [1, x => x, 2]")).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("two functions of different types", () => {
+    expect(errorsOf("output out = [x => x, (a, b) => a]")).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [(n: number) => n, (s: string) => s]")).toEqual([
+      "function_in_mixed_list",
+    ]);
+  });
+
+  it("a list of functions beside data, one level down", () => {
+    expect(errorsOf('output out = [["a"], [x => x]]')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = [1, [x => x]]")).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("every spelling that builds such a list: Join, a template, ++", () => {
+    expect(errorsOf('output out = Join(["a", x => x])')).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf("output out = `a{x => x}`")).toEqual(["function_in_mixed_list"]);
+    expect(errorsOf('output out = "a" ++ (x => x)')).toEqual(["function_in_mixed_list"]);
+  });
+
+  it("names the item and its type", () => {
+    const [error] = runSource('output out = ["a", x => x]').analysed.errors;
+    expect(error.message).toContain("Item 2");
+    expect(error.message).toContain("(any) -> any");
+  });
+
+  it("leaves alone a list of one function type, and a mixed list of data", () => {
+    expect(errorsOf("output out = [x => x, y => y]")).toEqual([]);
+    expect(errorsOf('output out = [1, "a", null, [2]]')).toEqual([]);
+  });
+
+  // The same guard in isCompatible: a list that holds a function fits no `any` slot.
+  it("a list of functions is no argument for an any input", () => {
+    expect(errorsOf("output out = Equals([x => x], 1)")).toEqual(["op_input_type_mismatch"]);
+    expect(errorsOf("output out = IsSet([x => x, y => y])")).toEqual(["op_input_type_mismatch"]);
+  });
+});
+
 // The rules of the math ops that a person could have guessed otherwise: where a half goes,
 // which sign a remainder has, what a clamp does with its bounds the wrong way round.
 describe("math ops", () => {

@@ -11,6 +11,17 @@ at `^0.5.0`, so a minor release here is always accompanied by a release of both.
 
 ## Unreleased
 
+- **Breaking: a list literal whose items differ in type refuses a function.** `["a", x => x]`
+  is the new error `function_in_mixed_list`, and so is a list of two functions of different
+  types. Such a list is a list of `any`, and a function is never `any`: until now it analysed
+  clean, `Join` printed nothing for the function, and the function could leave through an
+  output, where it is not JSON. A template and `++` build the same list, so `` `a{x => x}` `` and
+  `"a" ++ (x => x)` are refused too. A list in which every item is the same function type is
+  still allowed.
+- **Breaking: a list that holds a function no longer fits `any`.** `isCompatible` looked at the
+  outermost kind alone, so `Equals([x => x], 1)` was accepted where `Equals(x => x, 1)` was not.
+  It reads through a list at any depth now, and the first is `op_input_type_mismatch` too.
+
 - **Seven math ops, in the `arithmetic` segment: `Mod`, `Pow`, `Abs`, `Round`, `Floor`, `Ceil`,
   `Clamp`.** Each rule that languages disagree on is decided:
   - `Round(value, digits?)` sends a half **away from zero**: `Round(2.5)` is `3` and

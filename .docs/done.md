@@ -5,6 +5,51 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-09
+
+The last item of the 0.6.0 group, in one commit. It was "a list literal with mixed items hides a
+function behind `any`", found on 2026-10-02 while probing `++`: `["a", x => x]` analysed clean,
+`Join` printed nothing for the function, and the function could leave through an output, where
+it is not JSON. It was never a loop: an item typed `any` cannot be called.
+
+**Decided by the maintainer on 2026-10-08:** an error with a kind of its own,
+`function_in_mixed_list`, and two functions of different types are the same error. It is the
+existing rule at one more position: items that differ make a list of `any`, and a function is
+never `any`.
+
+**What was weighed against it:**
+
+| Option | Why not |
+| --- | --- |
+| A general kind, `list_item_type_mismatch` | It fits the family of names, but `[1, "a"]` stays legal, so the name promises a check that does not exist |
+| Reuse `op_input_type_mismatch` | No op is involved |
+| Refuse every function in a list | It removes a real use: a host op that takes a list of functions |
+| A warning | The function still reaches an output |
+| Union types, so the list has a true type | The clean answer, and a release of its own (`backlog.md`). It would not make the list usable either: every op would refuse it at the use. When it lands, this kind retires. |
+
+**What building it found: the rule stopped at the first bracket.** `isCompatible` refused a
+function where `any` was expected by looking at the outermost kind, so `[x => x]` fitted `any`
+where `x => x` did not. `Equals([x => x], 1)` was accepted, and so was `[["a"], [x => x]]`, the
+same hole one level down, which the new check would have missed. So the fix went into
+`isCompatible` (`holdsFunction`: a function, or a list of them at any depth), the one place that
+decides whether a type fits, and the list literal asks it one question: does each item fit
+`any`? No rule about functions lives in the analyser. This went beyond the decision, and was
+flagged at the handover.
+
+**Probed first, and safe:** variadic inputs. `Pick(1, x => x)` on a host op with a variadic
+`any` input, and `Concat(["a"], [x => x])`, were both `op_input_type_mismatch` already: each
+item of a variadic input is checked on its own.
+
+**What stays legal:** a list in which every item is the same function type, `[x => x, y => y]`,
+which keeps that type; and a mixed list of data, `[1, "a", null, [2]]`. Neither fits an `any`
+slot if it holds a function, so a list of functions still has no stdlib op that takes it. A
+host op typed for it does.
+
+**When union types land** (`backlog.md`, possibly 0.7) the kind retires: the list gets a true
+type, and every op refuses it at the use instead.
+
+---
+
 ## Stdlib — a math batch, and one answer for "no answer" — DONE 2026-10-08
 
 The second item of the 0.6.0 group, in four commits. It was "a math batch" in `todo.md`, asked

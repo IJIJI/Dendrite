@@ -169,7 +169,7 @@ See `architecture.md` for the layering DAG and full design.
 - **Structured `Type`** (`{kind:"name"|"array"|"function"}`) — no type strings. Only named types are
   registered; **arrays and functions are structural** (`Type.array` / `Type.fn`), no auto-`T[]`.
 - **`isCompatible`** (registry.ts, always call it): `any`/`null` data rules + **functions-⊄-`any`**
-  guard; array covariance; function contravariant-params/covariant-return; `extends` chain (subtyping
+  guard, which reads through a list at any depth (`[x => x]` does not fit `any` either); array covariance; function contravariant-params/covariant-return; `extends` chain (subtyping
   is implemented).
 
 ### Evaluation

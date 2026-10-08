@@ -100,6 +100,21 @@ describe("isCompatible", () => {
     expect(isCompatible(Type.null, Type.boolean, lang.descriptor)).toBe(true);
   });
 
+  // The totality guard, at every depth: a list is data only when its items are. The guard
+  // once looked at the outermost kind alone, so a list of functions fitted `any`.
+  it("a function never fits any, and neither does a list that holds one", () => {
+    const lang = testLang();
+    const fn = Type.fn([Type.any], Type.any);
+    expect(isCompatible(fn, Type.any, lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.array(fn), Type.any, lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.array(Type.array(fn)), Type.any, lang.descriptor)).toBe(false);
+    expect(isCompatible(Type.array(fn), Type.array(Type.any), lang.descriptor)).toBe(false);
+    // Lists of data still do, and a list of one function type fits its own type.
+    expect(isCompatible(Type.array(Type.number), Type.any, lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.array(Type.array(Type.any)), Type.any, lang.descriptor)).toBe(true);
+    expect(isCompatible(Type.array(fn), Type.array(fn), lang.descriptor)).toBe(true);
+  });
+
   it("exact match → compatible", () => {
     const lang = testLang();
     expect(isCompatible(Type.string, Type.string, lang.descriptor)).toBe(true);

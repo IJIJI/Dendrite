@@ -518,6 +518,27 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         itemTypes.length > 0 && itemTypes.every((t) => typesEqual(t, itemTypes[0]))
           ? itemTypes[0]
           : Type.any;
+      // A list of `any` holds data, and a function never fits `any` (isCompatible, the
+      // totality guard). The fallback above was the one place a function could ride in one:
+      // into Join, which printed nothing for it, and out through an output, where it is not
+      // JSON. So each item of such a list has to fit `any`. A list whose items share ONE
+      // function type keeps that type, never reaches here as `any`, and is fine.
+      if (isAny(elementType)) {
+        const at = cItems.findIndex(
+          (ci) => ci.kind !== "error" && !isCompatible(getOutputType(ci), Type.any, ctx.descriptor),
+        );
+        if (at !== -1) {
+          const item = cItems[at];
+          const itemType = typeToString(getOutputType(item));
+          ctx.errors.push({
+            kind: "function_in_mixed_list",
+            name: itemType, // as cast_to_function does: the offending type, there being no name
+            message: `Item ${at + 1} of this list has type '${itemType}'. The items differ in type, so the list is a list of 'any', and a function never fits 'any'`,
+            source: item.source ?? node.source,
+          });
+          return errorNode(undefined, node.source);
+        }
+      }
       return {
         ...node,
         type: elementType,

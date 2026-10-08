@@ -15,10 +15,10 @@ status is the maintainer's word.
 | --- | --- | --- | --- |
 | 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
 | 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
-| 3 | A mixed list literal refuses a function | below | **decided** 2026-10-08, and next |
+| 3 | A mixed list literal refuses a function | `done.md` | **done** 2026-10-09 |
 | 4 | `AnalysisContext` leaves the public surface | `backlog.md` | **out** 2026-10-08: it stays public |
 | 5 | Strings as lists | `backlog.md` | **moved** 2026-10-08, to 0.8 (possibly) |
-| 6 | The release | `release-plan.md` | after row 3 |
+| 6 | The release | `release-plan.md` | **next**: every other row is closed |
 
 ## After 0.6.0
 
@@ -31,48 +31,6 @@ two.
 | After 0.6.1 | Two symbols that want `?`: `??` and `c ? a : b` | below |
 | 0.7, possibly | Union types, `A \| B` | `backlog.md`, "Language — union types" |
 | 0.8, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
-
----
-
-## Core — a mixed list literal refuses a function
-
-**When:** next, the last item of 0.6.0 (the maintainer, 2026-10-08). Moved from the backlog,
-where it was "a list literal with mixed items hides a function behind `any`".
-
-**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
-`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
-`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
-and the function goes in with the rest, although a function is never `any` everywhere else.
-A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
-`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
-fault of the `convert` flag, which it is not: no converting input is needed to see it.
-
-**Probed again 2026-10-08:** two functions of different types hide the same way,
-`[x => x, (a, b) => a]` is `any[]` with no error. And the hole is not a loop: an item typed `any`
-cannot be called (`app_callee_not_function`), so the language stays total. What it lets through
-is a function in an OUTPUT, which is not JSON, the same fault a `NaN` was.
-
-**Decided 2026-10-08 (the maintainer):**
-
-- **An error, with a kind of its own: `function_in_mixed_list`.** It is the existing rule at one
-  more position: items that differ make a list of `any`, and a function is never `any`.
-- **Two functions of different types are the same error.** No type fits both except `any`.
-
-**What was weighed against it:**
-
-| Option | Why not |
-| --- | --- |
-| A general kind, `list_item_type_mismatch` | It fits the family of names, but `[1, "a"]` stays legal, so the name promises a check that does not exist |
-| Reuse `op_input_type_mismatch` | No op is involved |
-| Refuse every function in a list | It removes a real use: a host op that takes a list of functions |
-| A warning | The function still reaches an output |
-| Union types, so the list has a true type | The clean answer, and a release of its own (`backlog.md`). It would not make the list usable either: every op would refuse it at the use. When it lands, this kind retires. |
-
-**What it requires:** the analyser's `array` case, where the element type falls back to `any`
-(`analyser.ts`); an entry in `diagnostics.ts` with a sample, which puts the kind on *Every
-diagnostic* by itself; a test per spelling (`["a", x => x]`, inside `Join`, in a template, with
-`++`, and two functions that differ); and a look at variadic inputs, which fall back to `any` the
-same way in `validateInputs` and were NOT probed. A changelog line: it tightens a behaviour.
 
 ---
 
