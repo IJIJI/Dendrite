@@ -61,7 +61,101 @@ its own feature (see "struct literals" below for the neighbouring gap).
 
 ---
 
+## Language — strings as lists (possibly 0.8)
+
+**Where it stands (2026-10-08):** moved out of 0.6.0 by the maintainer, possibly to **0.8**,
+after union types (possibly 0.7) and with `Split`, `Slice` and `Replace` ("the rest of the
+string ops", below). It was in `todo.md` from 2026-09-22. Two answers of that day change the
+direction recorded further down, and a third view is on the table:
+
+- **`Includes("abc", "bc")` is `true`** (the maintainer): one op for "is it in there", as
+  `"abc".includes("bc")` in JavaScript and `"bc" in "abc"` in Python. Text is then NOT a list
+  of letters for this op, since `Includes(["a", "b", "c"], "bc")` is `false`. So the model is
+  no longer one rule in `isCompatible`: it is "some ops take text or a list, and each does
+  what is natural for text". `Contains` becomes a second name for the same thing: keep it, or
+  remove it with a breaking line.
+- **`Map` over text: both are wanted** (the maintainer), the letters and the text as a whole,
+  and the spelling is open: "a way to split by letter, or two types".
+- **Proposed in answer, not decided:** keep text as text and make the split visible.
+  `Map(Split(name, ""), Upper)` and a `Join` for the letters, `Upper(name)` for the whole.
+  `Length` and `Includes` accept text, the two ops with one obvious meaning for it; `Map`,
+  `Filter` and `Reduce` over text are a type error that names `Split`. The argument: the
+  language converts nothing by itself (`ToString`, `as` and `~` are all written out), and a
+  text that silently acts as a list is that kind of conversion. It gives both things with no
+  second type. It is NOT the wish recorded below, "nothing to declare", so it is the
+  maintainer's to take or to leave.
+- **Why unions first helps:** an op that takes text or a list can then say so,
+  `Length(value: string | any[])`, the honest signature this entry could not have.
+- **A `null` in an op that takes both:** `""` or `[]`? The `null` rules of 2026-10-08
+  (`done.md`) made the question: an op reads a `null` as the empty value of the type it wanted.
+
+**What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
+through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a
+value that is not a list as `[]`, so both give the empty-list answer instead. The accident ends
+and this entry is where the deliberate version is decided: `Includes("abc", "a")` is the first
+case to settle, and the `Includes`-versus-`Contains` edge below already says why it is not
+obvious.
+
+
+**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
+`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
+recorded here is what the user wants beyond it: text and lists working as one thing.
+
+**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
+**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
+is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
+(`infra/registry.ts`, the single extension point for subtyping):
+
+> a `string` is compatible with `T[]` when a `string` is compatible with `T`
+
+So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
+string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
+array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
+`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
+already exists, whose `inferOutput` can say "every input was a string, so is the result" while
+its evaluator joins instead of collecting.
+
+**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
+edges are open, and each changes what a program means:
+
+- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
+  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
+  string ops use the name `Contains` and leave `Includes` to arrays.
+- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
+  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
+- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
+  string holds a JS string, not an array. Either every array evaluator handles both, or the
+  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
+  The second keeps every existing op untouched, and is the leaning.
+- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
+  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
+
+One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
+list is expected and never be told, which is the opposite of the explicitness the language chose
+for `any`. That is the price of "nothing to declare", and it is why this sits beside the
+implicit-casting question above.
+
+**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
+`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
+host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
+above.
+
+**The alternatives, all costlier**, kept for the discussion:
+
+| Route | How `Length` accepts both | Cost |
+| --- | --- | --- |
+| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
+| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
+| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
+| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
+
+**Driving need:** Beacon: a tally label is text built from values.
+
+---
+
 ## Stdlib — the rest of the string ops
+
+**When:** with strings as lists, above: possibly 0.8 (the maintainer, 2026-10-08).
 
 **What:** `Replace` (first match or every match: decide), `Split` (by code point when the
 separator is empty, per the Unicode note above), and a `Slice` that arrays want too.
@@ -148,27 +242,6 @@ variadic branch of `validateInputs` analyses all items before it checks them, th
 
 ---
 
-## Core — a list literal with mixed items hides a function behind `any`
-
-**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
-`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
-`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
-and the function goes in with the rest, although a function is never `any` everywhere else.
-A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
-`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
-fault of the `convert` flag, which it is not: no converting input is needed to see it.
-
-**Why deferred:** not a regression, and not the operator's or the flag's. It has been so since
-list literals took their element type from their items.
-
-**What it requires:** where the analyser derives a list literal's element type, a function
-item among items of another type is an error rather than a reason to say `any`. Decide the
-kind (a new one, or the mismatch the op would have raised) and whether two functions of
-different signatures count. A test per spelling above. It tightens a behaviour, so it wants a
-changelog line.
-
----
-
 ## Core — a call to a name that is no op is reported as an undeclared binding
 
 **What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
@@ -213,6 +286,84 @@ pass the type's `schema` (a `Grade` of 11), and what is it when it does not; `nu
 function on `TypeDefinition` and one more case in each of those two functions. Like `schema`
 it is a function, so it cannot travel in the layer an instance persists. "A type defines its
 own text form" below is the other direction (`toText`); design the two together.
+
+---
+
+## Language — union types, `A | B` (possibly 0.7)
+
+**What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
+0.6.1, "possibly", with strings as lists after it. It is the general answer behind several
+entries in this file: a mixed list (`function_in_mixed_list`, 0.6.0, is the patch that stands in
+for it), `If` with two branch types, explicit nullability, an honest signature for an op that
+takes text or a list, `+` on text, and an enum as a union of literals.
+
+**What it touches**, sized on 2026-10-08 when it was weighed against that patch:
+
+| Area | Work |
+| --- | --- |
+| The type (`infra/types.ts`) | A `union` kind and its rules: flatten, remove duplicates, `any` absorbs |
+| `isCompatible` | Two new rules (`A` fits `B \| C` when it fits one; `A \| B` fits `C` when both do), and how they meet `any`, `null`, lists, functions and `extends` |
+| Printing and equality | `(string \| (any) -> any)[]` needs brackets; equality is by set |
+| Syntax | A `\|` in a type annotation. `\|\|` is a symbol today, a single `\|` is no token |
+| Analyser | A mixed list and an `If` with two branch types get a union. About 30 places in core switch on a type's kind |
+| Boundary check, defaults, saved programs | A value fits a union when it fits a member (`fits.ts`); a union needs a default (`seed.ts`); saved documents get a new shape (`serialise.ts`) |
+| Editor | The type picker, the control for a union-typed input, the highlighter |
+| Docs | The two pages on types, the reference's printer, new diagnostics with their samples |
+
+**Three decisions come first, and each changes programs that run today:**
+
+1. **How a program narrows.** A `number | string` fits neither a `number` input nor a `string`
+   input. `as` exists; a type test does not.
+2. **Whether `null` is a member.** `number | null` is the strict choice, and then every `Divide`
+   result needs a `Default` ("explicit nullability", at the end of this file).
+3. **What becomes of `any`.** `If(c, 1, "a") + 1` runs today with an `implicit_any_cast` warning.
+   With unions it is an error until it is narrowed.
+
+**What it does not do:** make `["a", x => x]` usable. The list becomes legal, with the type
+`(string | (any) -> any)[]`, and then `Join`, `Length` and `Map` all refuse it, because a
+function still does not fit `any`. The error moves from the literal to every use, and an output
+that may hold a function wants a rule of its own.
+
+**Size:** a release of its own. A plan with the three decisions, then about ten commits: an
+estimate that was not measured, and it may be more. The type rules in detail are under "Type
+system — deferred" at the end of this file.
+
+---
+
+## Language — a function in an untyped parameter
+
+**What:** a lambda takes a function only through a parameter with a WRITTEN function type. The
+maintainer asked on 2026-10-08 to look at enabling the untyped case. Probed the same day:
+
+| Program | Result |
+| --- | --- |
+| `let apply = (f: (number) -> number, x: number) => f(x)`, then `apply(n => n + 1, 2)` | `3` |
+| `let twice = (f: (number) -> number) => (x: number) => f(f(x))`, then `twice(n => n * 3)(2)` | `18` |
+| `let apply = (f, x) => f(x)` | `app_callee_not_function`: `f` is `any`, and `any` cannot be called |
+| `let id = x => x`, then `id(n => n)` | `app_argument_type_mismatch`: a function never fits `any` |
+| `let self = f => f(f)` | Refused, which is the point |
+
+**Why it is so:** an untyped parameter is `any`, and "a function is never `any`" is what keeps
+the language total in v1. With no recursive types a function cannot be applied to itself, so no
+program can loop. `Map`'s lambda needs no annotation only because the op supplies its type.
+
+**Routes, each with its cost:**
+
+- **Infer the parameter's type from the body** ("lambda param-type inference from body usage",
+  in the lambdas list at the end of this file). `(f, x) => f(x)` calls `f` with one argument, so
+  `f` is a function of one parameter. `f => f(f)` needs a type that contains itself, and an
+  occurs check refuses that, so the language stays total with no new rule. Local constraint
+  collection, not full Hindley-Milner.
+- **Let a function into `any`**, and guard recursion at run time with a fuel or step limit
+  ("relax functions-⊄-`any`", same list). It gives up the static guarantee, and it needs a
+  decision on what a program that runs out of fuel puts on its outputs.
+- **After union types** (above), or with them: they change what `any` means, so this is decided
+  on their ground rather than before them.
+
+**Related:** `function_in_mixed_list` (0.6.0) is the same guard at another position.
+
+**What it requires:** a plan. **Driving need:** a helper written without annotations, the way
+the lambda handed to `Map` already is.
 
 ---
 
@@ -910,6 +1061,24 @@ the call site than `<Icon name="trash" />`.
 
 ---
 
+## Docs — show what every fence produces
+
+**What:** run each ```den fence at build time in `remark-den.ts` and show what it produces
+beneath it (its output values, or the diagnostic it raises), the way the ops reference and
+*Every diagnostic* already do. Proposed 2026-09-17 as "the step to add more editors"; left out
+of the samples step because it was never decided.
+
+**Why deferred:** sent here by the maintainer on 2026-10-08, after three weeks as a candidate in
+`todo.md`. No reader asked for it, and the pages that most needed it (the ops reference, *Every
+diagnostic*, the Learn samples) show their values already. It is not part of the 0.6.1 docs
+pass.
+
+**What it requires:** `remark-den.ts` running each fence through the pipeline at build time;
+a sample with inputs needs values to run on (the `inputs=` meta declares types, not values);
+and the block's markup for the produced rows, which `OpsReference.astro` has.
+
+---
+
 ## Docs — squiggles on the diagnostics page's static samples
 
 **What:** every sample on *Every diagnostic* now shows the diagnostic it produces, as a line
@@ -962,9 +1131,23 @@ and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`,
 technically a breaking change for nobody.
 
 **What it requires:** export the result and diagnostic types by name instead of `export *`, and
-leave `AnalysisContext` internal. Do it at a minor release: it is proposed for 0.6.0 (`todo.md`,
-"The 0.6.0 group"). The release it was first tied to, the one with the operator-naming aliases,
-was 0.4.0, which renamed outright and went without it.
+leave `AnalysisContext` internal, at a minor release. The release it was first tied to, the one
+with the operator-naming aliases, was 0.4.0, which renamed outright and went without it.
+
+**Decided 2026-10-08: it stays public for now** (the maintainer), so it is not in 0.6.0. No
+file outside core's analyser reads it (checked that day, every package and app).
+
+**Who might want it one day,** weighed for that decision:
+
+| A future need | Does it need this type public? |
+| --- | --- |
+| A language service asks which names are in scope | No: it needs that answer, from a query API |
+| A host writes its own analysis pass or lint rule | Yes, a context type. No such extension point exists, and one would get a narrower type by design |
+| `inferOutput` gets more to read | No: it would take a narrow argument |
+| The Rete adapter wants types per node | No: the `CoreProgram` carries them |
+
+One asymmetry to remember: adding an export later is no break, and removing one is. Each release
+it stays public is a release in which a host may come to import it.
 
 ---
 
@@ -1346,12 +1529,15 @@ left open.
   totality guard for v1 — it cleanly blocks the Z combinator (`(number, any) => number` can't
   swallow a function), but it's blunt, not fully principled. When deliberate recursion (`letrec`)
   is added, revisit: allow functions under `any` again, guarded instead by a runtime fuel/step
-  limit and/or proper recursion detection. Ties to the recursion/`letrec` item above.
+  limit and/or proper recursion detection. Ties to the recursion/`letrec` item above. It is one
+  of the routes in "Language — a function in an untyped parameter" (asked 2026-10-08).
 - **Lambda param-type inference from body usage.** Collect the expected type at each use site of a
   param (each op input slot is typed) and meet them into the most specific common type; conflicting
   uses → type error. Local constraint collection, not full Hindley-Milner. Lower priority because
   higher-order ops already supply param types (`inferInputTypes` + contextual typing) and explicit
-  annotations cover standalone lambdas; this only closes the standalone-unannotated gap.
+  annotations cover standalone lambdas; this only closes the standalone-unannotated gap. That gap
+  is what "Language — a function in an untyped parameter" asks about (2026-10-08), and this is
+  the route there that keeps the language total.
 - **Optional / default params.** Its own entry now: "Language — an optional lambda parameter"
   above, which holds the three options for an absent argument that stood here.
 - **Multi-field lambda return.** "Several named outputs from a lambda" = returning a **struct**
@@ -1371,7 +1557,9 @@ left open.
   - **Union element types** (`[1, "a"]` → `(number | string)[]`) depend on the union-types work below.
   Both deferred — homogeneous inference covers the common case; revisit when heterogeneous collections
   or generic ops become a real need.
-- **Explicit nullability via union types.** Today `null` is compatible with every type (a bottom
+- **Explicit nullability via union types.** (The release-level view, what unions touch and the
+  three decisions they force, is "Language — union types" further up: possibly 0.7.) Today
+  `null` is compatible with every type (a bottom
   type), giving *implicit* nullability + an `implicit_any_cast` warning when it flows into a concrete
   type. The sound alternative is strict-null + unions (`T | null`): a new `{ kind: "union"; members }`
   `Type` variant; `isCompatible` distribution (`A` ⊆ `B|C` iff A⊆B or A⊆C; `A|B` ⊆ `C` iff both);

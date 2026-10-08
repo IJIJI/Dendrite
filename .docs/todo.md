@@ -8,95 +8,71 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ## The 0.6.0 group
 
-The stdlib release, grouped on 2026-10-05. The rows are in the order of the work. "Decided" is
-the maintainer's word; "proposed" is still a suggestion.
+The stdlib release, grouped on 2026-10-05. The rows are in the order of the work, and every
+status is the maintainer's word.
 
 | # | Item | Entry | Status |
 | --- | --- | --- | --- |
 | 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
 | 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
-| 3 | A mixed list literal refuses a function | `backlog.md` | proposed |
-| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | proposed |
-| 5 | Strings as lists, with its own plan | below | decided |
+| 3 | A mixed list literal refuses a function | below | **decided** 2026-10-08, and next |
+| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | **out** 2026-10-08: it stays public |
+| 5 | Strings as lists | `backlog.md` | **moved** 2026-10-08, to 0.8 (possibly) |
+| 6 | The release | `release-plan.md` | after row 3 |
 
-After the release, both below: **0.6.1**, the editor's styling and then a docs pass; and after
-that the two symbols that want `?`.
+## After 0.6.0
+
+The order the maintainer gave on 2026-10-08. "Possibly" is the maintainer's word for the last
+two.
+
+| Release | Holds | Entry |
+| --- | --- | --- |
+| 0.6.1 | The editor's styling, then a docs pass. The editor alone is released. | below |
+| After 0.6.1 | Two symbols that want `?`: `??` and `c ? a : b` | below |
+| 0.7, possibly | Union types, `A \| B` | `backlog.md`, "Language — union types" |
+| 0.8, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
 
 ---
 
-## Language — strings as lists, in some places
+## Core — a mixed list literal refuses a function
 
-**When:** in 0.6.0, after the stdlib restructure and the math batch (both in `done.md`,
-2026-10-08), with its own plan (the maintainer, 2026-10-05). Before that: after the types plan
-(`types-and-text-plan.md`), the user's instruction 2026-09-22. Moved from the backlog, where it
-was "strings and arrays, interchangeable"; the wanted direction and the four open edges below
-are unchanged.
+**When:** next, the last item of 0.6.0 (the maintainer, 2026-10-08). Moved from the backlog,
+where it was "a list literal with mixed items hides a function behind `any`".
 
-**What the `null` rules of 2026-10-08 add to it:** an op with no answer gives `null`, and a
-`null` input reads as the empty value of its type, `""` for text and `[]` for a list. A plan
-for text as a list has to say which of the two a `null` is when one op could read it as either.
+**What:** `["a", x => x]` analyses with no error, and so does everything built on it:
+`Join(["a", x => x])`, `` `a{x => x}` `` and `"a" ++ (x => x)` all give `"a"`, and
+`Length(["a", x => x])` is 2. A list literal whose items differ in type falls back to `any[]`,
+and the function goes in with the rest, although a function is never `any` everywhere else.
+A list of functions alone is caught: `Join([x => x])` and `` `{x => x}` `` are
+`op_input_type_mismatch`. Found 2026-10-02 while probing `++`, and first recorded here as a
+fault of the `convert` flag, which it is not: no converting input is needed to see it.
 
-**What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
-through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a
-value that is not a list as `[]`, so both give the empty-list answer instead. The accident ends
-and this entry is where the deliberate version is decided: `Includes("abc", "a")` is the first
-case to settle, and the `Includes`-versus-`Contains` edge below already says why it is not
-obvious.
+**Probed again 2026-10-08:** two functions of different types hide the same way,
+`[x => x, (a, b) => a]` is `any[]` with no error. And the hole is not a loop: an item typed `any`
+cannot be called (`app_callee_not_function`), so the language stays total. What it lets through
+is a function in an OUTPUT, which is not JSON, the same fault a `NaN` was.
 
+**Decided 2026-10-08 (the maintainer):**
 
-**Why this exists:** until 2026-09-20 a Dendrite program could not build a string at all:
-`Concat` is arrays only and `Add` is numbers only. `Join` closed that gap (see `done.md`). What is
-recorded here is what the user wants beyond it: text and lists working as one thing.
+- **An error, with a kind of its own: `function_in_mixed_list`.** It is the existing rule at one
+  more position: items that differ make a list of `any`, and a function is never `any`.
+- **Two functions of different types are the same error.** No type fits both except `any`.
 
-**The compatibility wanted** (the user, 2026-09-20): strings and arrays work interchangeably,
-**with nothing to declare**: no union written in a signature, no `sequence` supertype. A string
-is handled as an array of one-letter strings. As a rule, that is one line in `isCompatible`
-(`infra/registry.ts`, the single extension point for subtyping):
+**What was weighed against it:**
 
-> a `string` is compatible with `T[]` when a `string` is compatible with `T`
+| Option | Why not |
+| --- | --- |
+| A general kind, `list_item_type_mismatch` | It fits the family of names, but `[1, "a"]` stays legal, so the name promises a check that does not exist |
+| Reuse `op_input_type_mismatch` | No op is involved |
+| Refuse every function in a list | It removes a real use: a host op that takes a list of functions |
+| A warning | The function still reaches an output |
+| Union types, so the list has a true type | The clean answer, and a release of its own (`backlog.md`). It would not make the list usable either: every op would refuse it at the use. When it lands, this kind retires. |
 
-So `string` fits `string[]`, and through array covariance `any[]`. The runtime value stays a real
-string, and a string still prints as `string`: no `char[]` anywhere. It is one direction only: an
-array of strings is not a string. What it buys with no new op: `Length`, `Includes`, `Filter`,
-`Map`, `Reduce`, `Find`, `Some` and `Every` over text, and string building from the `Concat` that
-already exists, whose `inferOutput` can say "every input was a string, so is the result" while
-its evaluator joins instead of collecting.
-
-**DISCUSS FURTHER before building.** This is the wanted direction, not a settled design. Four
-edges are open, and each changes what a program means:
-
-- **`Includes("abc", "bc")`.** As an array, a string contains *elements*, so this is `false` and
-  only `"b"` is `true`. Surprising enough that substrings want their own op, which is why the
-  string ops use the name `Contains` and leave `Includes` to arrays.
-- **What `Map` gives back.** `Map("abc", Upper)` is an array of one-letter strings, not `"ABC"`,
-  unless the op joins. `inferOutput` can decide per op, but every op has to be decided.
-- **Where the string becomes an array.** A host that declared an input `any[]` and receives a
-  string holds a JS string, not an array. Either every array evaluator handles both, or the
-  evaluator coerces with `[...s]` in ONE place, when a declared array input receives a string.
-  The second keeps every existing op untouched, and is the leaning.
-- **Unicode.** Iterate by code point (`[...s]`), never by UTF-16 unit, or `"é"` and every emoji
-  split in half. Grapheme clusters are a third step and want `Intl.Segmenter`.
-
-One cost to say out loud: it makes `string` quietly polymorphic. A program can pass text where a
-list is expected and never be told, which is the opposite of the explicitness the language chose
-for `any`. That is the price of "nothing to declare", and it is why this sits beside the
-implicit-casting question above.
-
-**Ruled out: a string REPRESENTED as an array of chars.** Every string type would print as
-`char[]` (arrays are structural), `char` would be a primitive with no literal to write it, the
-host boundary would hold one thing while claiming another, and "char" invites the Unicode mistake
-above.
-
-**The alternatives, all costlier**, kept for the discussion:
-
-| Route | How `Length` accepts both | Cost |
-| --- | --- | --- |
-| Union types | `Length(value: string \| any[])` | The general answer and the biggest: a `union` kind, `isCompatible` distribution, `typeToString`, inference |
-| A `sequence` supertype | `Length(value: sequence)` | One `isCompatible` rule plus `inferOutput` per op, but a new concept to declare, which is what the user does not want |
-| `char extends string` | `Split(s) -> char[]`, `Join(char[]) -> string` | Array ops over text only where asked for; the length-1 invariant needs boundary validation |
-| Two op families | `Length` and `TextLength` | No type work, and a reference that reads twice as long |
-
-**Driving need:** Beacon: a tally label is text built from values.
+**What it requires:** the analyser's `array` case, where the element type falls back to `any`
+(`analyser.ts`); an entry in `diagnostics.ts` with a sample, which puts the kind on *Every
+diagnostic* by itself; a test per spelling (`["a", x => x]`, inside `Join`, in a template, with
+`++`, and two functions that differ); and a look at variadic inputs, which fall back to `any` the
+same way in `validateInputs` and were NOT probed. A changelog line: it tightens a behaviour.
 
 ---
 
@@ -145,21 +121,23 @@ background colours", "tune the highlight colours" and "the stylesheet per group"
 
 ### Part 2: a docs pass, afterwards
 
-**What:** a pass over the docs site once the editor has its new look. Named by the maintainer
-with the release, and **its scope is not set yet**. Two things it may hold, and it may hold
-both:
+**Scope, decided 2026-10-08 (the maintainer):** three things.
 
 - **The site with the restyled editor in it.** Every page that mounts a block or shows a
   static one wears the editor's stylesheet: the Learn samples, the stdlib reference, *Every
   diagnostic*, the landing's live block. Each in both themes, and in the three layouts where
-  a page uses them. This part follows from part 1 whatever else is decided.
-- **The content review that is already open**: "Docs — review the rest of the site after
-  Learn" and "Docs — show what every fence produces", both below, and the docs entries in
-  `backlog.md` (*Embedding core* shows a call that throws; samples with list and JSON inputs).
+  a page uses them.
+- **The two known docs faults**, both in `backlog.md`: *Embedding core* shows a call that
+  throws, and a `continues=` chain deeper than one page is assembled in the wrong order.
+- **What the maintainer finds** while reading. "Docs — review the rest of the site after
+  Learn", below, is where those observations collect.
 
-**To settle when 0.6.1 is planned:** which of the two, and which packages 0.6.1 releases. A
-stylesheet change is the editor's alone, and the publish workflow stages only the versions npm
-lacks (`release-plan.md`).
+Not in it: "show what every fence produces", sent to the backlog the same day.
+
+**Also decided:** 0.6.1 releases the editor alone. Its number then parts from core's and
+link's, which stay at 0.6.0; the editor's peer range `^0.6.0` allows it, and the publish
+workflow stages only the versions npm lacks (`release-plan.md`). **Left for the plan:** item 1
+of part 1, the dark surfaces ("we'll decide once we get to it").
 
 ---
 
@@ -213,17 +191,3 @@ dashes, the chain) already landed with the samples step, so these pages start fr
 
 **When:** next, alongside the inline TypeScript colouring: the user reads, and the
 observations collect here until there is a section's worth to plan.
-
----
-
-## Docs — show what every fence produces (candidate, not decided)
-
-**What:** run each ```den fence at build time in `remark-den.ts` and show what it produces
-beneath it (its output values, or the diagnostic it raises), the way the ops reference and
-*Every diagnostic* already do. Proposed 2026-09-17 as "the step to add more editors"; left out
-of the samples step because it was never decided.
-
-**Open question:** do it, or send it to the backlog. Deferred until the site review is done
-(2026-09-20): the observations on How it works, Host and the stdlib reference will show whether
-the static fences there want their values, and the pages that most needed it (the ops reference,
-*Every diagnostic*, the Learn samples) already show theirs.
