@@ -13,7 +13,7 @@ the maintainer's word; "proposed" is still a suggestion.
 
 | # | Item | Entry | Status |
 | --- | --- | --- | --- |
-| 1 | The stdlib per category | below | decided |
+| 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
 | 2 | A math batch, seven ops | below | decided |
 | 3 | A mixed list literal refuses a function | `backlog.md` | proposed |
 | 4 | `AnalysisContext` leaves the public surface | `backlog.md` | proposed |
@@ -23,58 +23,12 @@ After the release: the two symbols that want `?`, below.
 
 ---
 
-## Core — the stdlib, configurable per category, maybe per op
-
-**When:** straight after the conversion and string ops (the plan of 2026-09-20). Moved here from
-the backlog, where it was "the stdlib in segments a host can pick", and widened.
-
-**What changed since it was written:** it now owns a smell as well as a feature. `createStdlib()`
-(`packages/core/src/language/stdlib/index.ts`) is one 600-line function in three bands: every
-`registerOp` by category, every `registerEvaluator` far below, then the symbols. It is a **Long
-Method**, and adding an op is two edits a screen apart. The conversion and string ops were added
-in that same style ON PURPOSE (2026-09-20), so this restructure meets one shape, not two.
-
-**Widened to:** a host picks categories, and **possibly single ops** ("maybe even per method",
-the user). Decide whether per-op selection has a named consumer before building it: per category
-has one (Beacon choosing its vocabulary), per op does not yet.
-
-**What adding two categories taught it (2026-09-20):** a new category is **Shotgun Surgery**,
-six edits in five files: an op block in `createStdlib`, an evaluator block a screen below it, a
-`describe` in `evaluator.test.ts`, a docs page (three lines, generated from the descriptor), a
-**hand-written row** in `apps/docs/src/content/docs/stdlib/index.md`, and a changelog line. The
-row is the avoidable one: that table could be generated from the descriptor the way the pages
-are, and then a category is complete the moment its ops are registered. Do that here.
-
-Two helpers sat at module level in `stdlib/index.ts`; on 2026-09-23 they became `Convert` in
-`infra/convert.ts` (it started in `stdlib/`, and moved when the evaluator needed it), and `toList` (a value as a list, the
-list ops' guard) still sits at module level and belongs with the list category. Four EMPTY files
-already sit in `stdlib/` (`collections.ts`, `logic.ts`, `math.ts`, `types.ts`), scaffolding from
-before the split was deferred: fill them or delete them here, not before.
-
-**The original entry:**
-
-**What:** `createStdlib()` is all or nothing. A host should be able to take the segments it
-wants - logic, comparison, control, array, arithmetic, list - and leave the rest, so a
-lighthouse that never needs list ops does not carry them, and the docs can say "your host
-has these".
-
-**Why deferred:** no host exists yet that wants less than everything; the segment names are
-already the ops' `category`, so the split is mostly mechanical when it comes.
-
-**What it requires:** one builder per segment (`createLogic()`, … each an `extendLanguage`
-step over the base) with `createStdlib()` composing all of them; operators registered with
-the segment that owns their op; a test that the composition equals today's stdlib; the docs'
-per-segment pages (already one per `category`) gain "how to include only this".
-
-**Driving need:** Beacon choosing its vocabulary; the docs' promise that a host picks parts.
-
----
-
 ## Stdlib — a math batch: `Round`, `Floor`, `Ceil`, `Clamp`, `Mod`, `Abs`, `Pow`
 
-**When:** in 0.6.0, straight after the restructure above (the maintainer, 2026-10-05, who asked
-for `Clamp` and then chose the full list). Moved from the backlog's code-TODO roundup, where it
-was "more math ops". Its `TODO` is in `stdlib/arithmetic.ts` and goes when the ops land.
+**When:** in 0.6.0, and next: the restructure it waited for is in (`done.md`, 2026-10-08). The
+maintainer asked for `Clamp` on 2026-10-05 and then chose the full list. Moved from the
+backlog's code-TODO roundup, where it was "more math ops". Its `TODO` is in
+`stdlib/arithmetic.ts` and goes when the ops land.
 
 **Why after the restructure:** it is the restructure's test. Seven ops in the `arithmetic`
 category should be seven registrations in one file, their tests and a changelog line, and nothing
@@ -102,8 +56,8 @@ op and another symbol.
 
 ## Language — strings as lists, in some places
 
-**When:** in the release after 0.5.0, after the stdlib restructure above, with its own plan (the
-maintainer, 2026-10-05). Before that: after the types plan (`types-and-text-plan.md`), the
+**When:** in the release after 0.5.0, after the stdlib restructure (`done.md`, 2026-10-08) and
+the math batch above, with its own plan (the maintainer, 2026-10-05). Before that: after the types plan (`types-and-text-plan.md`), the
 user's instruction 2026-09-22. Moved from the backlog, where it was "strings and arrays,
 interchangeable"; the wanted direction and the four open edges below are unchanged.
 

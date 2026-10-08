@@ -26,6 +26,19 @@ const language = createStdlib();
 Start from `createStdlib(){:ts}` to build on the standard library, or `createLanguage(){:ts}` for the bare
 grammar with no ops at all. Register before you create an environment from it.
 
+You can also take part of the library. Its ops come in segments, one per page of the
+[reference](../../stdlib/), and `segments{:ts}` names the ones you want:
+
+```ts
+const small = createStdlib({ segments: ["logic", "control", "arithmetic"] });
+```
+
+Every segment stands alone, and a symbol comes with the segment that owns its op. So a language
+without `"arithmetic"{:ts}` has no `+{:den}`, and no `-14{:den}` either, because a negative
+number is the symbol of `Negate{:den}`. One without `"string"{:ts}` has no `++{:den}` and no
+template. A program that calls an op you left out is told the name is not declared, as for any
+name it does not know. The type `StdlibSegment{:ts}` is the list of names.
+
 ## A type with fields
 
 ```ts

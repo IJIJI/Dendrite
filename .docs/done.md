@@ -5,6 +5,80 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Core — the stdlib in one file per segment, and `createStdlib({ segments })` — DONE 2026-10-08
+
+The first item of the 0.6.0 group, in four commits: the comparison ops join `logic`, the move
+to one file per segment, the option, the docs. It was "the stdlib, configurable per category,
+maybe per op" in `todo.md`, and before that "the stdlib in segments a host can pick" in the
+backlog. Two smells went with it. `createStdlib()` was one 835-line function with every op a
+screen away from its evaluator (**Long Method**), and a new category was six edits in five
+files (**Shotgun Surgery**).
+
+**What a host has now:** `createStdlib({ segments: ["logic", "arithmetic"] })`, the type
+`StdlibSegment`, and seven segments that each stand alone: `logic`, `control`, `array`,
+`arithmetic`, `list`, `conversion`, `string`.
+
+**What adding to the library costs now.** An op is a `registerOp` and a `registerEvaluator`
+next to each other in its segment's file, a test and a changelog line; its reference entry
+and its place in the index table are generated. A segment is a file, one line in `SEGMENTS`
+(`stdlib/index.ts`), one line in the test's list, and a three-line `.mdx` page, which the docs
+build demands by name if it is missing.
+
+**The decisions, and what was weighed against each:**
+
+| Decision | Chosen | Weighed, and why not |
+| --- | --- | --- |
+| How a host picks | One option on `createStdlib`; the installers are internal | One exported builder per segment, the shape the entry first wrote: a host would nest seven `extendLanguage` calls, and "take logic and arithmetic" would not read as one line |
+| `>=` is `Not(LessThan(…))`, two segments | `logic` absorbs `comparison` | "Comparison brings logic" (a rule in `createStdlib` that nobody reads); real ops `GreaterOrEqual` / `LessOrEqual` (honest diagnostics, but five docs pages teach the desugar and it was no part of a restructure); a `predicate` segment (the word is already the function input of `Filter`) |
+| `array` and `list` | Two segments | One: no symbol crosses them, and the docs lean on "the ops that take a function" |
+| Per-op choice | Not built | No consumer; per segment has Beacon |
+| `extendStdlib(ext, options)` | Not built | No consumer: `extendLanguage(ext, createStdlib({ segments }))` is the route. "Symmetry" is the argument that sent the optional lambda parameter to the backlog the same week |
+| Order | The library's own, whatever the list's | The descriptor's order is the reference's order, and it must not depend on a call site |
+| A name that is no segment | Throws | It is a mistake in host code, as an op without an evaluator is |
+| The old URL `/stdlib/comparison/` | 404 | A redirect is three lines, and nobody is named who would follow it |
+| The op tests | Stay in `evaluator.test.ts` | Moving them was churn the entry never asked for |
+
+**"Segment" and "category" are two words on purpose.** A segment is the stdlib's unit, a
+closed set. `category` is the field on an op, free text for a host. They meet in one rule a
+test holds: every op a segment installs carries the segment's name as its `category`, because
+that is what a reference page selects by.
+
+**The move was proved, not reviewed.** A throwaway script dumped the library before and after:
+all 39 op definitions in order, every evaluator's function text, the grammar's keys with each
+led's binding power, and twelve programs (one or more per symbol) with their parse tree and
+value. The two dumps were identical. Two things about that dump are worth keeping. Evaluators
+were compared by name, not in order: the old file registered the list evaluators before the
+arithmetic ones, each now follows its op, and nothing reads that order (a keyed map; the link's
+fingerprint sorts op names). And an imported function reads `(0, import_shared.toList)(x)` in
+transpiled text where a local one reads `toList(x)`, so the script dropped the module prefix
+before comparing; without that, every list evaluator "changed".
+
+**What the plan had wrong, found by running things:**
+
+- A call to an op that is not installed is `undeclared_binding_reference`, not `unknown_op`:
+  the parser builds an op node only for a registered name and reads any other call as a
+  binding applied. The message does not help someone who meant an op, and segments make it
+  easier to meet, so it is a backlog entry now.
+- `compile` came back `ok: true` for that program, with the error on its list, exactly as its
+  own comment warns. The probe read `ok` first and reported a clean compile.
+- A template on a language without `string` is `unexpected_token`, not `syntax_error`.
+- `"toString" in SEGMENTS` is true, so the name check reads the list of names, and a test
+  holds it.
+- The operators page has no segment column: "comparison" there is the meaning of `<`. Another
+  chat's review caught that before commit 1 edited it.
+
+**Docs.** The index's table is `SegmentsTable.astro`, read from the descriptor like the pages
+beside it, each op linked to its entry. Four hand-written counts on that page ("Six ops work
+this way", "One op has one so far") became examples: a count is a fact somebody has to
+remember to update, which is the smell the table had. The segment pages' descriptions stopped
+listing ops for the same reason.
+
+**Not done, deliberately:** a `defineOp(lang, def, evaluator)` helper (two calls per op is the
+public shape, and a second way to register is a second thing to learn); a dynamic route in
+place of the seven `.mdx` pages (the sidebar is generated from the folder).
+
+---
+
 ## Docs — the landing stays dark, and its theme picker is hidden — DONE 2026-10-07
 
 The landing has one look, the dark one, in both themes: sheet §24 keeps the hero band dark-0
