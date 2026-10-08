@@ -67,7 +67,11 @@ Do not judge a gate by searching its output: `astro check` colours it, so a sear
 matches nothing while the command exits 1. The docs build reads core and the editor from their
 `dist`, and Astro caches rendered `.md` pages in `apps/docs/.astro`: after a change to either
 package, rebuild both and delete that cache before the docs build, or the site shows the old
-highlighter while every test passes (the tests alias package source).
+highlighter while every test passes (the tests alias package source). A running dev server
+shares that folder: a build beside it leaves its content store stale (on 2026-10-09 the landing
+had lost its pillars that way, with the build and the live site correct). Check port 4321
+before a docs build, and say so when it is taken: the dev server then wants a restart on a
+deleted cache.
 
 **Commits are the maintainer's, and so is the index.** Hand over one table per commit - the
 files as rows, with what changed in each - plus the exact `git add` and a one-line message, then

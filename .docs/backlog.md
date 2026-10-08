@@ -771,24 +771,6 @@ passed through `Editor.Canvas` and the layouts' `code` prop.
 
 ---
 
-## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
-
-**What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
-layout). CodeMirror's scroller inside it does not stretch, because its `height: 100%` has no
-definite height to resolve against. When the code is shorter than the minimum and one line is
-wider than the editor, the sideways scrollbar sits under the last line with empty canvas below
-it. At 11rem over five lines the gap was 8px and nobody saw it; at 16rem it was 80px.
-
-**Why deferred (2026-10-06):** found while the landing's live block grew, in a round that left
-the editor alone. The landing sets `min-height` on `.cm-scroller` itself for now
-(`apps/docs/src/components/Hero.astro`).
-
-**What it requires:** let the scroller fill the editor (`flex-grow: 1` on `.cm-scroller` in the
-Minimal and Compact layouts, or the minimum on the scroller), a look at both layouts with a
-long line, and then the landing goes back to the knob.
-
----
-
 ## Docs — the playground's URL is declared four times
 
 **What:** `Header.astro`, `Live.tsx`, `DiagnosticsTable.astro` and `OpsReference.astro` each hold
