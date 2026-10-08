@@ -14,52 +14,27 @@ the maintainer's word; "proposed" is still a suggestion.
 | # | Item | Entry | Status |
 | --- | --- | --- | --- |
 | 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
-| 2 | A math batch, seven ops | below | decided |
+| 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
 | 3 | A mixed list literal refuses a function | `backlog.md` | proposed |
 | 4 | `AnalysisContext` leaves the public surface | `backlog.md` | proposed |
 | 5 | Strings as lists, with its own plan | below | decided |
 
-After the release: the two symbols that want `?`, below.
-
----
-
-## Stdlib — a math batch: `Round`, `Floor`, `Ceil`, `Clamp`, `Mod`, `Abs`, `Pow`
-
-**When:** in 0.6.0, and next: the restructure it waited for is in (`done.md`, 2026-10-08). The
-maintainer asked for `Clamp` on 2026-10-05 and then chose the full list. Moved from the
-backlog's code-TODO roundup, where it was "more math ops". Its `TODO` is in
-`stdlib/arithmetic.ts` and goes when the ops land.
-
-**Why after the restructure:** it is the restructure's test. Seven ops in the `arithmetic`
-category should be seven registrations in one file, their tests and a changelog line, and nothing
-else by hand: the reference page and the index row are generated.
-
-**Not in the batch:** `Min` and `Max`. Both exist, over a list: `Max([a, b])`. `Clamp` can be
-written today as `Min([Max([value, low]), high])` (probed 2026-10-05: 15 into 0..10 gives 10).
-
-**To decide in the plan,** one rule each:
-
-- `Round(value, digits?)`: whether it takes `digits`, and the half rule. JS `Math.round` sends
-  `-2.5` to `-2`.
-- `Clamp(value, low, high)`: what `low > high` gives. The form above lets `high` win.
-- `Mod(a, b)`: the sign for a negative `a` (JS `%` keeps the sign of `a`; a floored result is what
-  cycling through a list wants), and `b = 0`, where `Divide` gives zero.
-- `Pow(base, exponent)`: a result that is no number (a negative base with a fractional exponent).
-- `null` in any input, by the rule the arithmetic ops have today.
-- Symbols: none is asked for. `%` is the one to settle, because of the cost below.
-
-**One cost:** the Host docs build `Mod`, and then `%` as its symbol, as their example of extending
-the language (`host/extending-the-language.md`). With `Mod` in the stdlib that page needs another
-op and another symbol.
+After the release, both below: **0.6.1**, the editor's styling and then a docs pass; and after
+that the two symbols that want `?`.
 
 ---
 
 ## Language — strings as lists, in some places
 
-**When:** in the release after 0.5.0, after the stdlib restructure (`done.md`, 2026-10-08) and
-the math batch above, with its own plan (the maintainer, 2026-10-05). Before that: after the types plan (`types-and-text-plan.md`), the
-user's instruction 2026-09-22. Moved from the backlog, where it was "strings and arrays,
-interchangeable"; the wanted direction and the four open edges below are unchanged.
+**When:** in 0.6.0, after the stdlib restructure and the math batch (both in `done.md`,
+2026-10-08), with its own plan (the maintainer, 2026-10-05). Before that: after the types plan
+(`types-and-text-plan.md`), the user's instruction 2026-09-22. Moved from the backlog, where it
+was "strings and arrays, interchangeable"; the wanted direction and the four open edges below
+are unchanged.
+
+**What the `null` rules of 2026-10-08 add to it:** an op with no answer gives `null`, and a
+`null` input reads as the empty value of its type, `""` for text and `[]` for a list. A plan
+for text as a list has to say which of the two a `null` is when one op could read it as either.
 
 **What milestone N.1 of the plan does to it:** `Length("abc")` and `Includes("abc", "a")` WORKED
 through `any`, by accident (`"abc".length`, `"abc".includes`). N.1 makes every list op read a
@@ -125,10 +100,74 @@ above.
 
 ---
 
-## After the 0.6.0 release — two symbols that want `?`: `??` and `c ? a : b`
+## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
 
-**When:** the first item after 0.6.0 (the maintainer, 2026-10-05), as ONE plan for both. Asked
-the same day, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
+**When:** the release after 0.6.0 (the maintainer, 2026-10-08). Two parts, in this order: the
+editor first, the docs pass afterwards. Part 1 was the backlog entry "Editor — its styling, to
+fit the site's new look", moved here whole. It needs a plan, and the plan starts with a
+decision: item 1 below is the brand's before it is the stylesheet's.
+
+### Part 1: the editor's styling
+
+**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
+type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
+and the playground wear the look they were built with. Where the two differ now:
+
+1. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
+   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
+   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
+   card with a dark-2 code area, and the playground as a whole is a step lighter than the
+   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
+   disagree here, so this is a brand decision before it is a stylesheet change.
+2. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
+   by its 1px border and its white code area alone. That is the sheet's white well, and it
+   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
+   ground.
+3. **The playground's top bar is not the site's.** The site has the wordmark, section links
+   and a small search on the page's ground, over a 1px rule; the playground has
+   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
+   compared in detail.
+4. **Type and controls were not compared**: the site's display face, its button and field
+   shapes, and its sidebar item against the editor's bar items, panes and fields.
+
+**Why it waited (2026-10-06):** the restyle changed the site and left the editor alone on
+purpose, and the editor is a published package: a change to its stylesheet ships in a release.
+That release is 0.6.1.
+
+**What it requires:** the playground beside a doc page, in both themes and in the three
+layouts; the decision of item 1; then the `--dendrite-*` values in `packages/editor/style.css`
+(the properties stay, they are the theming API), the "Theming" table of the editor's README,
+`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. A fifth difference, a block
+that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
+Neighbours, all in `backlog.md`, to take or to leave when this is planned: the code-height
+entry ("`--dendrite-code-min-height` leaves the sideways scrollbar floating"), "try cooler
+background colours", "tune the highlight colours" and "the stylesheet per group".
+
+### Part 2: a docs pass, afterwards
+
+**What:** a pass over the docs site once the editor has its new look. Named by the maintainer
+with the release, and **its scope is not set yet**. Two things it may hold, and it may hold
+both:
+
+- **The site with the restyled editor in it.** Every page that mounts a block or shows a
+  static one wears the editor's stylesheet: the Learn samples, the stdlib reference, *Every
+  diagnostic*, the landing's live block. Each in both themes, and in the three layouts where
+  a page uses them. This part follows from part 1 whatever else is decided.
+- **The content review that is already open**: "Docs — review the rest of the site after
+  Learn" and "Docs — show what every fence produces", both below, and the docs entries in
+  `backlog.md` (*Embedding core* shows a call that throws; samples with list and JSON inputs).
+
+**To settle when 0.6.1 is planned:** which of the two, and which packages 0.6.1 releases. A
+stylesheet change is the editor's alone, and the publish workflow stages only the versions npm
+lacks (`release-plan.md`).
+
+---
+
+## After 0.6.1 — two symbols that want `?`: `??` and `c ? a : b`
+
+**When:** after 0.6.1, as ONE plan for both. The maintainer placed it first after 0.6.0 on
+2026-10-05, and named 0.6.1 for the editor on 2026-10-08, which comes before it by its number.
+Asked on 2026-10-05, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
 
 **Why one plan:** three ideas want `?`: these two, and the optional lambda parameter
 (`backlog.md`). The first one built fixes what the lexer does with `?`, `??` and `?:`, so the plan

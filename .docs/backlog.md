@@ -21,9 +21,13 @@ separate things, none needed by the check that shipped.
   `schema` and `fields`, by `isPorts`, and by the editor's `controlFor`. **Driving need:** a
   user-declared input that is one of a few names.
 - **A value that crosses an `any`.** An `implicit_any_cast` is a warning, and nothing checks the
-  value at runtime: with `$whatever: any` holding 5, `Length($whatever)` is `5.length`, so an
-  output declared `number` holds `undefined` and no error is raised (found 2026-09-19; *Types
-  in practice* says so). **Requires:** a `valueFits` call where an `any`-typed argument meets a
+  value at runtime, so an op can be handed a value of the wrong type and answer with one (found
+  2026-09-19; *Types in practice* says so). What is left of it, probed 2026-10-08 with a text
+  reaching a number input through an untyped lambda parameter: `Add("abc", 1)` is the TEXT
+  `"0abc1"`, JavaScript's `+`, in an output declared `number`, and `GreaterThan("abc", 1)` is a
+  quiet `false`. Two older cases are closed: a list op reads what is not a list as `[]`
+  (N.1 of `types-and-text-plan.md`), and a number op that computes `NaN` from the value gives
+  `null` (the evaluator's rule, `done.md`). **Requires:** a `valueFits` call where an `any`-typed argument meets a
   concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
   call, not per pushed value, and the cast (`as`) is the explicit way to check today.
 - **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
@@ -68,6 +72,50 @@ left out by the Speculative Generality guard.
 
 **What it requires:** ordinary ops with fixed signatures, an explicit rule each for `null` and
 the empty string, and an entry on the generated `string` reference page, which costs nothing.
+
+---
+
+## Stdlib — `Clamp` with one bound
+
+**What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")
+and `Min([x, 10])` ("at most 10") today, and `Max` for "at least" is a spelling people get the
+wrong way round. The maintainer asked on 2026-10-08 whether the bounds should be optional.
+
+**Why deferred:** kept as it is, the maintainer's decision the same day. Required to optional is
+no break, so waiting loses nothing, and each route has a cost that wants a consumer first.
+
+**Two routes:**
+
+- **Optional bounds**, `Clamp(value, low?, high?)`: `Clamp(x, 0)` and `Clamp(x, high: 10)`. The
+  trap: a bound that is LEFT OUT would mean "no bound", while a bound that is `null` reads as
+  zero, as every null in a number input does. `Clamp(x, 0, $max)` with `$max` unset then clamps
+  everything to 0, exactly where a host input feeds the bound. The fix is that a `null` bound
+  means "no bound" too, which makes `Clamp` the one exception to "a null reads as zero". It
+  also splits the op's rule: with two bounds their order does not matter, with one the name
+  decides. NumPy's `clip(a, min=None, max=None)` is the precedent; CSS, C++ and Rust keep both.
+- **Two ops**, `AtLeast(value, low)` and `AtMost(value, high)`, as Kotlin's `coerceAtLeast` and
+  `coerceAtMost`: no optional input and no exception, at the price of two more names.
+
+**What it requires:** either is a registration in `stdlib/arithmetic.ts`, its tests and a
+changelog line.
+
+---
+
+## Stdlib — what the math batch left out: symbols, and `digits` on `Floor` and `Ceil`
+
+**What:** two things offered with the seven math ops (2026-10-08) and not taken.
+
+- **No symbol** for `Mod` or `Pow`. `%` and `^` (or `**`) are the usual ones. A symbol can be
+  added without a break: a host's own registration of the same symbol replaces the library's.
+  The Host docs use `%` over the library's `Mod` as their example of a symbol, so giving `%` to
+  the library means that page needs another.
+- **`Floor` and `Ceil` take one number.** `Round` has `digits`; `Floor(7.89, 1)` as `7.8` is the
+  same move, through `roundTo`'s decimal shift in `stdlib/arithmetic.ts`.
+
+**Why deferred:** Speculative Generality, both: none was asked for.
+
+**What it requires:** a registration each. A symbol wants its tier: `BP.MULTIPLY` for `%`, and
+a new tier above it for a power, which binds tighter and to the right.
 
 ---
 
@@ -266,6 +314,49 @@ propagation does not cover (an expensive branch, or a read that must throw).
 
 ---
 
+## Language — a `null` that goes through arithmetic
+
+**What:** an op with no answer gives `null` (2026-10-08, `done.md`), and the next number op
+reads that `null` as zero: `Divide(1, 0) + 1` is `1`, and
+`` `total {Add(ToNumber("abc"), 1)}` `` is `total 1`. So "no answer" lasts one step. The
+alternative is SQL's: a number op that is handed a `null` gives `null`, and the absence reaches
+the output unless a `Default` stops it.
+
+**Why deferred:** it was option D when the `null` rule was chosen, and the only one too large
+for the math batch. It changes every arithmetic op, and it needs answers the batch did not:
+
+- **The comparisons.** `GreaterThan(null, -1)` is `true` today, the null read as zero. If
+  arithmetic propagates, a comparison with no value has to be something: `false`, as SQL treats
+  unknown in a filter, or `null`, which `If` then reads as false.
+- **A `null` inside a list of numbers.** `Average([null, 4])` is `2`: the null counts as an item
+  worth zero. SQL's `AVG` skips it and gives `4`. `Max` and `Min` read it as zero too.
+- **The other segments.** A text op reads `null` as `""` and a list op as `[]`, both on purpose
+  (`types-and-text-plan.md`). Numbers would be the one type whose empty value is not used, on
+  the argument that `""` and `[]` look empty and `0` does not.
+- **The types.** It is the runtime half of "explicit nullability via union types" (the last
+  entry of this file): with `T | null` the checker could demand the `Default`.
+
+**What it requires:** its own plan. **Driving need:** a program whose total must not look valid
+when one of its parts is missing.
+
+---
+
+## Core — a `NaN` inside a list an op returns is not read
+
+**What:** the evaluator gives `null` for an op result that is `NaN` or an infinity, and `0` for
+a negative zero (2026-10-08). It reads the value an op RETURNS, when that is a number. A list or
+a struct an op returns is not looked into, so a host op that returns `[NaN]` hands a program a
+value JSON cannot carry. The stdlib cannot make one: a lambda's result inside `Map` comes from
+op calls, and each of those is read on its own.
+
+**Why deferred:** a deliberate ceiling. Walking every list an op returns costs per item on
+every call, and no host op is known to return such a list.
+
+**What it requires:** the walk, behind a measurement, or the check where an output leaves for
+the host, which is per output rather than per op. Decide which when a host op leaks one.
+
+---
+
 ## Subtyping — Beacon-side representation (precondition before declaring extends)
 
 **What:** Actually declare subtype relationships like `TallyState extends number` in the Beacon package.
@@ -327,8 +418,11 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 
 - **Missing-input defaults for structural types** ([analyser.ts](../packages/core/src/language/analyser/analyser.ts) `validateInputs`):
   the type-default placeholder only consults the registry for NAMED types — a missing array-typed
-  input gets a `null` literal (typed `T[]`), so `Length(null)` throws at runtime. Should derive `[]`
-  structurally for arrays; decide behaviour for function-typed inputs (probably an error).
+  or function-typed input gets a `null` literal. The array half no longer bites: `Length()` is
+  `0` with a `missing_op_input` warning, since a list op reads `null` as `[]`. The function half
+  does (probed 2026-10-08): `Filter([1, 2])` is the same WARNING at analysis and then throws
+  `host_error`, "predicate is not a function", when it runs. A missing function input should be
+  an error, since no default can stand in for it.
 - **Output-mode semantics review** (analyser `validateOutputs`): should a program with a missing/
   failed REQUIRED output still produce the partial CoreProgram it does today (ok:false + program)?
   And should `desired`/`optional` get more feedback on poisoned deps? One coherent decision pass.
@@ -358,8 +452,13 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   `LiteralValue`): there is no `undefined`. An unset input is `null`, and `null` flows anywhere a
   value is expected. Decide whether "not set" should be its own thing, or whether every input
   should always have a default - the Learn page on inputs currently teaches the `null` answer.
-- ~~**More math ops**~~ — MOVED 2026-10-05 to `todo.md`, "a math batch", for 0.6.0. `Min` and
-  `Max` were listed here as candidates; both exist, over a list.
+- ~~**More math ops**~~ — DONE 2026-10-08 (`done.md`, "a math batch"): seven ops, and the `TODO`
+  comment is gone. `Min` and `Max` were listed here as candidates; both exist, over a list.
+- **One error shape for every stage?** ([evaluator/types.ts](../packages/core/src/language/evaluator/types.ts),
+  above `EvalError`): a parse or an analysis problem is a plain record with a `kind`, collected
+  into a list; an evaluation problem is a thrown `EvalError`. The `TODO` asks whether the first
+  two want the class too. They are never thrown, so probably not: close it with the eval error
+  surface review above. (The comment had no entry until the sweep of 2026-10-08.)
 - **`PortOrigin.level` as an enum** ([compose.ts](../packages/core/src/language/compose.ts)): a
   string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
   exported constant would read better at call sites. Low value - close it unless a third level
@@ -463,42 +562,6 @@ section beside the title.
 **What it requires:** the override (Starlight's `PageTitle`, plus one line above the `h1`), the
 group's label from `Astro.locals.starlightRoute.sidebar`, and the brand's overline as
 `#starlight__on-this-page` has it in `dendrite.css`.
-
----
-
-## Editor — its styling, to fit the site's new look
-
-**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
-type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
-and the playground wear the look they were built with. Where the two differ now:
-
-1. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
-   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
-   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
-   card with a dark-2 code area, and the playground as a whole is a step lighter than the
-   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
-   disagree here, so this is a brand decision before it is a stylesheet change.
-2. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
-   by its 1px border and its white code area alone. That is the sheet's white well, and it
-   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
-   ground.
-3. **The playground's top bar is not the site's.** The site has the wordmark, section links
-   and a small search on the page's ground, over a 1px rule; the playground has
-   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
-   compared in detail.
-4. **Type and controls were not compared**: the site's display face, its button and field
-   shapes, and its sidebar item against the editor's bar items, panes and fields.
-
-**Why deferred (2026-10-06):** the restyle changed the site and left the editor alone on
-purpose, and the editor is a published package: a change to its stylesheet ships in a release.
-
-**What it requires:** the playground beside a doc page, in both themes and in the three
-layouts; the decision of item 1; then the `--dendrite-*` values in `packages/editor/style.css`
-(the properties stay, they are the theming API), the "Theming" table of the editor's README,
-`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. A fifth difference, a block
-that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
-Neighbours: the code-height entry below, "try cooler background colours", "tune the highlight
-colours" and "the stylesheet per group".
 
 ---
 
@@ -899,7 +962,9 @@ and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`,
 technically a breaking change for nobody.
 
 **What it requires:** export the result and diagnostic types by name instead of `export *`, and
-leave `AnalysisContext` internal. Do it at the same minor release as the operator-naming aliases.
+leave `AnalysisContext` internal. Do it at a minor release: it is proposed for 0.6.0 (`todo.md`,
+"The 0.6.0 group"). The release it was first tied to, the one with the operator-naming aliases,
+was 0.4.0, which renamed outright and went without it.
 
 ---
 
@@ -1128,26 +1193,6 @@ once several documents exist.
 
 ---
 
-## Playground — its own lint setup (it left the root's coverage)
-
-**→ Absorbed by [editor-plan.md](editor-plan.md) Phase 0:** the workspace conversion (one lockfile,
-node-modules linker) lets the root ESLint config cover every package again, so the playground
-needs no setup of its own. The requirements below become moot once Phase 0 lands.
-
-**What:** ESLint *inside* the playground project — own `eslint.config.mjs`, own devDeps, own `lint`
-script — plus a `yarn lint` step in `playground-check.yml`.
-
-**Why it came up:** CI now treats the playground as the standalone project it already is (own
-lockfile, own node_modules linker, own workflow, own repo later), so the root ESLint config ignores
-`playground/**`. Linting it from the root would type-resolve its sources against dependencies the
-core project never installs — green locally, fragile in CI. The trade left the playground unlinted.
-
-**What it requires:** `eslint` + `typescript-eslint` in `playground/package.json`, a config mirroring
-the root's rules (`no-unused-vars` with `^_`, `no-explicit-any` warn, `projectService`), a
-`"lint": "eslint ."` script, and one more step in the playground workflow.
-
----
-
 ## Prelude / global helper bindings (shared across programs)
 
 **What:** A prelude — one or more `.den` files of (lambda) bindings — parsed + analysed once and made
@@ -1204,7 +1249,7 @@ These are architecturally specified but unbuilt. Listed here for completeness; s
 
 **What:** `Grammar` (`parser/grammar.ts`) is four maps and a set. The parser reads them directly
 (`nuds`, `leds`, `wordLeds` through `ledFor`, `statements`), and the editor reads `statements`,
-`operatorTokens` and, since the safe cast, `wordLeds`, for its `keyword` and `operator` classes.
+`symbols` and, since the safe cast, `wordLeds`, for its `keyword` and `symbol` classes.
 Adding `wordLeds` (2026-09-23) touched `grammar.ts`, `language.ts` and `parser.ts`;
 `mergeGrammar` was added in the same commit so that `extendLanguage` no longer copies each
 collection by hand, which is the one site a new collection no longer touches. A new entry kind
@@ -1231,7 +1276,7 @@ still touches `grammar.ts`, the `Language` interface and its factory, and the pa
   before choosing:
   - **Namespaced keys.** `keyOf` gains a prefix, every `registerNud`/`registerLed` key changes
     (`"("` becomes `"punct:("`, `"ident"` becomes `"kind:ident"`), and the editor's reads of
-    `operatorTokens` and `statements` are untouched. Mechanical, one file for the keys, but
+    `symbols` and `statements` are untouched. Mechanical, one file for the keys, but
     `registerInfix`/`registerPrefix` and every stdlib symbol registration go through it.
   - **Text keys, kinds reserved.** An identifier is keyed by its text, a kind by its name, and a
     word that equals a kind name (`number`, `string`) is refused at registration. One map, no

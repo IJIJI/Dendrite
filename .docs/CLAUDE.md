@@ -179,6 +179,9 @@ See `architecture.md` for the layering DAG and full design.
   fresh per closure application) + `localBindings` (lambda params, **local-first** so they shadow
   globals).
 - **changedInputs optional** — `undefined` = "all changed" (no caching), used by `run()`.
+- **A number an op returns is a JSON number.** The evaluator, at the one place an op is called,
+  gives `null` for `NaN` and the infinities and `0` for a negative zero. So an op holds no guard
+  for "no answer": it computes (`a / b`), and the evaluator reads the result.
 
 ### Functions
 - **Lambda → `Type.fn`**, application via `resolveAppArgs`; **closures capture `localBindings`**.
@@ -217,3 +220,7 @@ See `architecture.md` for the layering DAG and full design.
 - Arrays/functions are structural — never "register" them.
 - `bodyScope ?? nodeCache` for inline-node caching (bodyScope when inside a lambda body).
 - Raw `ASTNode`s carry no inferred `type` — the analyser produces typed `CNode`s.
+- **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
+  `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
+  READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts
+  one step, and a program that cares tests it where it arises (`Default`, `IsSet`).

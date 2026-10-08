@@ -5,6 +5,101 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Stdlib — a math batch, and one answer for "no answer" — DONE 2026-10-08
+
+The second item of the 0.6.0 group, in four commits. It was "a math batch" in `todo.md`, asked
+for as `Clamp` and widened to seven ops: `Mod`, `Pow`, `Abs`, `Round`, `Floor`, `Ceil`, `Clamp`.
+Deciding what `Mod(5, 0)` gives turned into the larger half of the work, a rule for the whole
+language, and that came first.
+
+**It was the restructure's test, and the restructure passed.** Seven ops were seven
+registrations in `stdlib/arithmetic.ts`, their tests and a changelog entry. The reference page
+and the index table showed twelve arithmetic ops with no edit to either.
+
+### "No answer" is `null`, for every op
+
+**The rule:** an op that has no answer gives `null`: `Divide` by zero, `Mod` by zero, a `Pow`
+with no real result, and `Average`, `Max` and `Min` of an empty list, beside `Find` with no
+match and `ToNumber("abc")`, which already did. **Breaking** for the four that gave `0`.
+
+**Where it lives:** in the evaluator, at the one place an op is called. A result that is `NaN`
+or an infinity becomes `null`, so the ops hold no guard of their own: `Divide` is `a / b`, and
+`Max` starts from `-Infinity` so that an empty list leaves it standing. It is the reasoning that
+put boundary validation in `setInput`: one check, where every caller routes through. A host's op
+is covered, and no later op can forget it.
+
+**What was weighed**, with a probe of every segment in view:
+
+| Option | Why not |
+| --- | --- |
+| Zero, always (the first recommendation) | A number op would always give a number, as a text op always gives text, and nothing would break. But a zero that is a guess cannot be told from a real one, which is the argument that made `ToNumber` give `null` on 2026-09-20. The maintainer chose `null`. |
+| `null` in arithmetic only | One op would change instead of four, and the rule would carry an exception for three list ops. |
+| `NaN`, as JavaScript | It is not JSON (the probe had `Divide(1, null)` as `Infinity` here and `null` after the wire), it is not equal to itself, and it spreads with no diagnostic. |
+| `null` that propagates, as SQL | The only option where the absence survives a sum. Too large for this batch, so a backlog entry. |
+
+**The other languages**, for the record: Python and Postgres stop the program; JavaScript, C and
+float arithmetic in Rust and Swift give `Infinity` or `NaN`; a spreadsheet gives an error value
+in the cell; SQLite and MySQL give `NULL`; Elm and Pony (integers) and the proof assistants give
+zero. The typed ones split as this language now does: a PARSE gives an optional (Swift's
+`Int("abc")` is `nil`), and here arithmetic does too.
+
+**The cost that was accepted:** a `number` output may hold `null`, and a tally program writes
+its idle value: `Default(Max(states), 0)`. The `0` for an empty list had been chosen so that "no
+sources" read as idle; the playground's tally example says it aloud now.
+
+**Two limits, both in the changelog.** The `null` lasts ONE step: the next number op reads it
+as zero, so `Divide(1, 0) + 1` is `1`. And only the number an op returns is read, not a number
+inside a list it returns. Each is a backlog entry.
+
+### How a `null` is read, which the probe showed was already one rule
+
+A `null` input reads as the empty value of the type the op wanted: `0` for a number, `""` for
+text, `[]` for a list, `false` for a boolean. Nobody had written it down for numbers, where it
+is JavaScript's coercion rather than a decision, and the probe found the two places it did not
+hold. `Divide(1, null)` was `Infinity`, because the zero guard tested `b === 0`. And
+`Max([null, -4])` was `null`, where `Average([null, 4])` read the null as zero: `Max` and `Min`
+use `Math.max` and `Math.min` now, which read it the same way.
+
+### The seven ops: each rule that languages disagree on
+
+| Rule | Chosen | Weighed |
+| --- | --- | --- |
+| Where a half goes in `Round` | Away from zero: `2.5` is `3`, `-2.5` is `-3` | JavaScript's `Math.round`, which sends `-2.5` to `-2` |
+| `Round`'s `digits` | Optional, the library's second such input; may be negative | A whole number only, with `Round(x * 10) / 10` for a decimal |
+| The sign of `Mod` | The first number's, as `%` in JavaScript and C: `Mod(-1, 5)` is `-1` | The divisor's (Python, Excel), recommended for an index or a clock, shown with both tables. The maintainer chose the first. |
+| `Clamp` with `low > high` | The bounds work in either order | `high` wins (what `Min([Max(…)])` gave); `low` wins (CSS) |
+| Optional bounds on `Clamp` | No, asked and kept as it is | A bound left out would mean "no bound" while a `null` bound reads as zero. Backlog. |
+| Symbols | None | `%` and `^`: not asked for. Backlog. |
+
+**`Round` does not multiply.** `1.005 * 100` is `100.49999999999999`, so the obvious
+implementation rounds `1.005` to `1` at two decimals. `roundTo` moves the decimal point through
+the exponent of the number's own text instead, and a test holds `1.01`.
+
+**Found by probing, after the commit:** `Round("abc")`, a text through `any`, gave the text
+back. `roundTo` returns its argument when there is nothing to round away, and the text left by
+that return. One line (`Number(value)`) and a test over all seven ops. The probe had been
+written to rewrite a stale backlog line, not to test `Round`.
+
+**A negative zero is zero**, added to the evaluator's rule and flagged as not approved in
+advance: `Round(-0.4)`, `Ceil(-0.5)` and `Mod(-7, 7)` each make `-0`, JSON writes it as `0`, and
+a test's `toBe(0)` tells the two apart where a program cannot.
+
+**The Host docs** taught `Mod` as their example of a new op. It is `Fahrenheit(celsius)` now,
+which fits the page's own `Reading` type, and `%` stays as the example of a symbol, over the
+library's `Mod`.
+
+### A sweep of stale notes, in the same commit
+
+Five lines in `backlog.md` that the first day of this chat had found stale: the `AnalysisContext`
+entry waited for a release that had passed; the `Grammar` entry named `operatorTokens`, which is
+`symbols`; "missing-input defaults" said `Length(null)` throws, where it is `0` and the live
+half is a missing FUNCTION input (`Filter([1, 2])` throws when it runs); the line about a value
+that crosses an `any` gave an example that N.1 had closed; and a `TODO` in `evaluator/types.ts`
+had no entry. "Playground — its own lint setup" is closed and gone: the root ESLint config reads
+`apps/playground` since the workspace conversion (checked on one of its files).
+
+---
+
 ## Core — the stdlib in one file per segment, and `createStdlib({ segments })` — DONE 2026-10-08
 
 The first item of the 0.6.0 group, in four commits: the comparison ops join `logic`, the move
