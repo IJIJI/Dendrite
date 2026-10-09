@@ -265,19 +265,21 @@ starlight-toc a[aria-current="true"] {
   --sl-border-radius: 0;
 }
 
+/* Dendrite blocks - a ```den fence, DenCode, the reference's examples - are the editor's own
+   static Source markup and wear its stylesheet (customCss loads it); `not-content` keeps
+   Starlight's prose rules off them. Only the inline form is styled here, and the site's own
+   rules for `code` and `pre` leave a block out the same way: they are in no cascade layer, so
+   inside one they would beat the editor's stylesheet. They did until 2026-10-09, and a static
+   sample was drawn at 12.6px beside a live one at 14px. */
+
 .sl-link-button,
-.sl-markdown-content code,
-.sl-markdown-content pre {
+.sl-markdown-content :is(code, pre):not(:where(.not-content *)) {
   border-radius: 2px;
 }
 
-.sl-markdown-content code {
+.sl-markdown-content code:not(:where(.not-content *)) {
   font-size: 0.9em;
 }
-
-/* Dendrite blocks - a ```den fence, DenCode, the reference's examples - are the editor's own
-   static Source markup and wear its stylesheet (customCss loads it); `not-content` keeps
-   Starlight's prose rules off them. Only the inline form is styled here. */
 
 .op .signature code {
   font-size: 0.85em;

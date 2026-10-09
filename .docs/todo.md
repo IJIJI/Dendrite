@@ -91,6 +91,28 @@ variable and goes with it, as the mock showed it.
 | 4 | **Every diagnostic has two tags for one word.** The heading's badge (`.severity`) is Starlight's red and orange: pink text, IBM Plex Mono 11.2px, upper case. The sample under it shows the editor's status tag: ink on the soft fill, Kode Mono 11px, a dot. The brand has one status tag (README section 3). | Badge `rgb(78, 34, 50)` and `rgb(78, 64, 34)`; tag `oklch(0.28 0.06 25)` and `oklch(0.28 0.05 75)`. | `apps/docs/src/components/DiagnosticsTable.astro`: the heading wears the editor's tag, and `.severity` goes. The same component draws the edge and the text of an "as if" block in Starlight's orange, where a `warns` fence has `--dendrite-warning`: the same commit. | A few lines |
 | 5 | **In light, the search field's border is not the brand's.** Starlight draws it in gray-5, which is ground-3 here. An editor field has the brand's border. In dark both are dark-3. | Search `rgb(217, 214, 213)`, an editor field `rgb(207, 204, 203)`. | `dendrite.css` | One line |
 
+**Row 2 was larger than the row says, found while it was built.** The same rule sized every
+`<code>` in a block, and that is three more things than a tag and a value. Measured on all 30
+pages at 1440 px, the old build against the new one:
+
+| | Before | With the rule kept out of a block |
+| --- | --- | --- |
+| A static Dendrite sample, 121 of them | 12.6px | 14px, which is the live editor's size |
+| A TypeScript frame, 32 of them | 12.96px | 14px, which is what Expressive Code asks for (`.875rem`) |
+| A type tag | 12.6px or 11.7px | 11px |
+| An output value | 11.7px | 13px |
+| Static samples that scroll sideways | 0 | 0 |
+| TypeScript frames that scroll sideways | 4 | 8 |
+| A static sample's corners, inside its square block | 2px | 0 |
+
+So until now a static sample was a tenth smaller than a live one on the same page, against
+what `style.css` and `DenCode.astro` both say ("a static block and a live one are
+indistinguishable"). The column holds 79 characters at 14px. **Open, for the maintainer: the
+eight frames with a longer line** (*Installation*'s import is 101): on *The type system*,
+*Ports and layers*, *Installation*, *Embedding core*, the core package page, and three on the
+link package page. Four of them scrolled before. Rewrapping them is a content edit, not in the
+commit that fixes the rule.
+
 **Looked at and found in order:**
 
 - **The landing.** The block's panel is dark-0 on the dark-0 band, so the block is its 1px
