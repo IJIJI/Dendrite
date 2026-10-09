@@ -27,8 +27,9 @@ Nothing here knows CodeMirror or the language internals.
   a single-slot fallback, preset ids as one-shot entry links), Back/Forward, and the top bar's
   content: `File ▸ Load example ▸ …`, the Share icon, the document title.
 - `src/main.tsx` — `createRoot`; imports the brand fonts (Fontsource, self-hosted: Archivo 400/600,
-  IBM Plex Mono 400/400 italic/600, Kode Mono 500) and the editor stylesheet. The favicon in `public/` is the brand's
-  avatar mark.
+  IBM Plex Mono 400/400 italic/600, Kode Mono 500) and the editor stylesheet. The favicon and the touch icon in `public/` are
+  the brand's reversed avatar (a white mark on Iris), where the docs wear icon A (dark-0): a
+  playground tab is not a docs tab. `brand/render.ts` renders the touch icon.
 - `src/examples.ts` — presets as documents: `doc(source, ports)`.
 - `src/style.css` — page layout only; everything inside the editor is themed through the
   package's `--dendrite-*` variables.
