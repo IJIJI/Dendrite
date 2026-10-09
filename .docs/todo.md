@@ -27,21 +27,10 @@ the last two.
 
 **Both parts are built** (2026-10-09). `done.md` has them: "Editor — its styling, to fit the
 site's new look" for part 1, and "Docs — the docs pass of 0.6.1" for part 2. Nothing is
-released. Open: two things the pass left, then the release.
+released. Open: what the maintainer finds while reading, which does not hold the release, and
+the release.
 
 ### Open from the docs pass
-
-Each waits for the maintainer, and none of them holds the release.
-
-**Three rules name a step of the grey ramp where they mean "the border".** No step of
-Starlight's ramp is the border in both themes; `--sl-color-hairline` is. The nav's two rules
-were corrected in the pass. These were not:
-
-| Where | Reads | Off in |
-| --- | --- | --- |
-| `DiagnosticsTable.astro`, the rule between two entries | gray-5 | Light: ground-3, not the border |
-| `Chain.astro`, a step's box and its arrows, five declarations | gray-4 | Dark: dark-4, not dark-3 |
-| `Chain.astro`, a substep's dashed box | gray-5 | Light, and it may be meant lighter |
 
 **What the maintainer finds while reading.** "Docs — review the rest of the site after Learn",
 below, is where those observations collect. Two have entries of their own, below: "Docs —

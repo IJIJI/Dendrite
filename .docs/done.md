@@ -117,6 +117,16 @@ tree diagram on the core package page, in a fence that names none. Proof: on all
 because it ignores `apps/docs/src/content/`: a sample with a longer line scrolls again, and
 nothing says so.
 
+**The other rules on a grey step, the day after (2026-10-10).** Row 5's cause had three more
+cases, and they went the same way: the rule between two entries of *Every diagnostic*, and
+every line of the chain figure (a step's box, an arrow and its head, a substep's dashed box)
+read `--sl-color-hairline` now. The figure's lines were gray-4, the border in light and dark-4
+in dark; the dashed box and the entries' rule were gray-5, the border in dark and ground-3 in
+light. Measured on *The chain* and on *Every diagnostic*: each equals the rule under the nav,
+in both themes. The dashed box might have been meant lighter than a solid one; its dash says
+that it is the lesser box, and the site has one border colour. No rule the site owns names a
+step of the ramp for a border any more.
+
 **Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
 (`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
 things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*

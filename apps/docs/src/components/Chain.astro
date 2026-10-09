@@ -100,12 +100,15 @@ const BREAK_AFTER = "raw program";
     list-style: none;
   }
 
+  /* Every line of the figure is the brand's border, a box's edge and an arrow alike: the
+     hairline, which is that colour in both themes. A step of the grey ramp is not: gray-4 is
+     the border in light and a step lighter than it in dark. */
   .stage {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     padding: 0.7rem 0.9rem;
-    border: 1px solid var(--sl-color-gray-4);
+    border: 1px solid var(--sl-color-hairline);
     background: var(--sl-color-gray-7);
   }
 
@@ -141,7 +144,7 @@ const BREAK_AFTER = "raw program";
     display: block;
     width: 1px;
     height: 1.4rem;
-    background: var(--sl-color-gray-4);
+    background: var(--sl-color-hairline);
     position: relative;
   }
 
@@ -152,8 +155,8 @@ const BREAK_AFTER = "raw program";
     bottom: 0;
     width: 7px;
     height: 7px;
-    border-right: 1px solid var(--sl-color-gray-4);
-    border-bottom: 1px solid var(--sl-color-gray-4);
+    border-right: 1px solid var(--sl-color-hairline);
+    border-bottom: 1px solid var(--sl-color-hairline);
     transform: rotate(45deg);
   }
 
@@ -172,7 +175,7 @@ const BREAK_AFTER = "raw program";
     align-items: center;
     margin-top: 0.35rem;
     padding: 0.2rem 0.45rem;
-    border: 1px dashed var(--sl-color-gray-5);
+    border: 1px dashed var(--sl-color-hairline);
   }
 
   .substep.current {
@@ -218,9 +221,9 @@ const BREAK_AFTER = "raw program";
       inset-inline-end: 0;
       bottom: -3px;
       border-right: 0;
-      border-top: 1px solid var(--sl-color-gray-4);
+      border-top: 1px solid var(--sl-color-hairline);
       border-bottom: 0;
-      border-inline-end: 1px solid var(--sl-color-gray-4);
+      border-inline-end: 1px solid var(--sl-color-hairline);
     }
   }
 </style>
