@@ -208,7 +208,8 @@ const programMatters = (entry: Entry): boolean => entry.stage !== "compose";
           <div class="diagnostic">
             <h3 id={entry.kind}>
               <code class="kind">{entry.kind}</code>
-              <span class={`severity ${entry.severity}`}>{entry.severity}</span>
+              {/* The editor's status tag, the one the sample's own rows wear below. */}
+              <span class={`dendrite-tag dendrite-tag-${entry.severity}`}>{entry.severity}</span>
             </h3>
             <p>{entry.message}</p>
             {entry.builtAsGraph ? (
@@ -440,26 +441,6 @@ const programMatters = (entry: Entry): boolean => entry.stage !== "compose";
     overflow-wrap: anywhere;
   }
 
-  .severity {
-    padding: 0.05rem 0.4rem;
-    border-radius: 2px;
-    font-family: var(--sl-font-mono);
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .severity.error {
-    background: var(--sl-color-red-low, #4b1113);
-    color: var(--sl-color-red-high, #f78f8f);
-  }
-
-  .severity.warning {
-    background: var(--sl-color-orange-low, #4a2a0a);
-    color: var(--sl-color-orange-high, #f0b77c);
-  }
-
   .triggered-by {
     font-size: 0.95rem;
     color: var(--sl-color-gray-3);
@@ -511,13 +492,15 @@ const programMatters = (entry: Entry): boolean => entry.stage !== "compose";
     letter-spacing: 0.04em;
   }
 
-  /* The Dendrite a graph sample would be if the syntax allowed it: the warning edge a
-     ```den fails fence wears, because it is not a program anyone can run. */
+  /* The Dendrite a graph sample would be if the syntax allowed it: the edge a ```den warns
+     fence wears (styles/dendrite.css), because it is not a program anyone can run. */
   .diagnostic :global(.dendrite-minimal-layout:has(.as-if)) {
-    border-color: var(--sl-color-orange, #d97706);
+    border-color: var(--dendrite-warning);
     border-left-width: 2px;
   }
 
+  /* Its label keeps Starlight's orange for text: the editor's warning colour is made for an
+     edge and a dot, and as 11px text on the light ground its contrast is 2.3 to 1. */
   .as-if {
     color: var(--sl-color-orange-high, #f0b77c);
   }
