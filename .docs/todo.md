@@ -46,6 +46,14 @@ smaller size. Rewrapping is a content edit on six pages:
 | the link package page | 3 | 52, 35 and 27 px |
 | *The type system* | 1 | 42 px |
 
+**Started 2026-10-09, not edited yet.** A scan of every `ts`, `tsx` and `sh` fence found 12
+lines over 77 characters. 77 is the safe width: a frame is 718 px, its padding takes about
+64 px, and a character is 8.4 px, so the 79 above was an estimate. The lines, by file and
+line: `host/embedding-core.md` 143, 148, 161; `host/installation.md` 41;
+`host/packages/editor.md` 78; `host/packages/link.md` 22, 32, 98, 99;
+`how-it-works/ports-and-layers.md` 31; `how-it-works/types.md` 12, 14. Proof when done: the
+page crawl of the pass reports no frame that scrolls sideways, and the samples test passes.
+
 **Three rules name a step of the grey ramp where they mean "the border".** No step of
 Starlight's ramp is the border in both themes; `--sl-color-hairline` is. The nav's two rules
 were corrected in the pass. These were not:
