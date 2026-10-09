@@ -24,266 +24,13 @@ the last two.
 ## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
 
 **When:** the release after 0.6.0 (the maintainer, 2026-10-08). Two parts, in this order: the
-editor first, the docs pass afterwards. Part 1 was the backlog entry "Editor — its styling, to
-fit the site's new look", moved here whole. It needs a plan, and the plan starts with a
-decision: item 1 below is the brand's before it is the stylesheet's.
+editor first, the docs pass afterwards.
 
-### Part 1: the editor's styling
+**Part 1 is done** (2026-10-09, six commits; `done.md`, "Editor — its styling, to fit the
+site's new look"). It is not released. Open: part 2, then the release of the editor alone, and
+its record.
 
-**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
-type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
-and the playground wear the look they were built with. Where the two differ now:
-
-1. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
-   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
-   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
-   card with a dark-2 code area, and the playground as a whole is a step lighter than the
-   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
-   disagree here, so this is a brand decision before it is a stylesheet change.
-2. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
-   by its 1px border and its white code area alone. That is the sheet's white well, and it
-   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
-   ground.
-3. **The playground's top bar is not the site's.** The site has the wordmark, section links
-   and a small search on the page's ground, over a 1px rule; the playground has
-   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
-   compared in detail.
-4. **Type and controls were not compared**: the site's display face, its button and field
-   shapes, and its sidebar item against the editor's bar items, panes and fields.
-
-**Why it waited (2026-10-06):** the restyle changed the site and left the editor alone on
-purpose, and the editor is a published package: a change to its stylesheet ships in a release.
-That release is 0.6.1.
-
-**What it requires:** the playground beside a doc page, in both themes and in the three
-layouts; the decision of item 1; then the `--dendrite-*` values in `packages/editor/style.css`
-(the properties stay, they are the theming API), the "Theming" table of the editor's README,
-`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. A fifth difference, a block
-that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
-Neighbours in `backlog.md`, to take or to leave when this is planned: "try cooler background
-colours", "tune the highlight colours" and "the stylesheet per group". The code-height entry
-is taken: it is below.
-
-### Part 1, as it stands on 2026-10-09
-
-**Decided by the maintainer that day:**
-
-- **Values, not shapes.** Colours, levels, rules and sizes that exist; the names of the
-  `--dendrite-*` variables stay, they are the theming API. A new shape (another top bar,
-  another button) is possible, and only after thorough consideration: it needs a frame from
-  Claude Design first, so it does not ride in by itself.
-- **Where the difference is seen:** the docs site follows the sheet now, and did not before.
-  The editor is still in the old docs style, and what shows most is its surfaces.
-- **The playground's top bar is decided from a mock**, beside the site's nav.
-- **The dark surfaces are decided from a mock too** ("we'll decide once we get to it").
-- **The playground gets a favicon of its own, in this release:** the brand's reversed avatar
-  (`brand/assets/icons/dendrite-avatar-square.svg`: an Iris field, a white D and fork), where
-  both apps have icon A today, an identical file. The brand's own rule asks for it under 24 px
-  ("below 24 px always the reversed avatar", `brand/CHANGES.md`), and the same file wires icon
-  A to the favicon, so the two lines disagree. The work: the playground's `favicon.svg`, and a
-  row in `brand/render.ts` for its touch icon.
-
-**How far this goes without Claude Design: all of it, while it changes values only.** The
-decisions by eye are made on a mock in the REAL page: injected CSS, no source change, a doc
-page and the playground side by side, both themes. That shows real markup and real content,
-which a frame in the canvas does not. Claude Design is needed for a new shape, and AFTERWARDS,
-to take the result back so that sheet §20 and §25 stop disagreeing ("Brand — take the hero's
-corrections back to the Claude Design source", `backlog.md`).
-
-**Measured on a doc page, dark theme** (the second handoff, from the chat that restyled the
-site; the editor's column checked against `packages/editor/style.css`):
-
-| Surface | Level | Value |
-| --- | --- | --- |
-| Site: page, nav, sidebar | dark-0 | `#141312` |
-| Site: raised (search, cards) | dark-1 | `#201e1d` |
-| Site: the TypeScript code frame | dark-2 | `#2c2a29` |
-| Site: inline code | dark-3 | `#3a3735` |
-| Editor: bar | dark-0 | `--dendrite-bar` |
-| Editor: panel, which is the block | dark-1 | `--dendrite-panel` |
-| Editor: code area | dark-2 | `--dendrite-bg` |
-| Editor: well, hover | dark-3, dark-4 | `--dendrite-well`, `--dendrite-hover` |
-
-**The three options for the dark surfaces:**
-
-- **A. Leave the values.** A block stays a dark-1 card with a dark-2 code area. No release is
-  needed for this item.
-- **B. Move the editor one step down:** panel dark-0, code dark-1, well dark-2, hover dark-3.
-  The bar is dark-0 already, so bar and panel become one ground and need a 1px rule, which is
-  how the site parts its nav. The site's TypeScript code frame (dark-2) must then move too, or
-  the two kinds of code block differ.
-- **C. Override `--dendrite-*` in the docs' stylesheet only.** The playground stays as it is.
-
-A precedent, not a decision: the maintainer chose the sheet's dark-0 page for the site over
-the same worry, that dark-0 under near-white text reads harsh.
-
-**Light theme.** The editor's panel equals the site's page (ground `#f3f2f2`), so a Minimal
-block is its 1px border and its white code area, as the sheet has it. Compact and Full were
-not checked. The editor's bar is ground-2 `#e6e4e3`; the site's nav is ground over a 1px rule
-(`#cfcccb`).
-
-**A guard to add:** a test that the editor stylesheet's values equal the `--dn-editor-*`
-mirror in `brand/dendrite-tokens.css`. The palette lives in the canvas, the sheet, the tokens
-file and the editor's stylesheet (39 `--dendrite-*` variables with hex literals, no `--dn-*`
-token, because it ships alone), and nothing compares the last two.
-
-**Files:** `packages/editor/style.css` (the values, lines 16 to 36), `packages/editor/src/code/cm.ts`
-(CodeMirror's chrome, from the same variables), `packages/editor/README.md` (the "Styling"
-paragraph), `brand/dendrite-tokens.css` (`--dn-editor-*`), `apps/playground/src/style.css` and
-`App.tsx` (the playground's own chrome and top bar), `apps/docs/src/styles/dendrite.css` (the
-site's palette, which reads some editor values), `apps/docs/src/components/Hero.astro` (the
-height workaround).
-
-**Traps the second handoff names:**
-
-- **Cascade layers.** The editor's sheet is in `@layer dendrite`; the docs order the layers
-  `starlight, dendrite` (`apps/docs/src/styles/layers.css`). An unlayered docs rule wins.
-- **Two `color-scheme` lines in `dendrite.css` must stay.** They make a block follow the
-  site's theme picker; the editor's `:root { color-scheme: light dark }` beat Starlight's
-  before that fix.
-- **The landing's hero forces `color-scheme: dark`**, so its block is the dark editor in both
-  site themes. The landing stays dark by decision, and its theme picker is hidden.
-- **The docs reuse editor classes:** `.dendrite-tag` for the sample tags, and the red and
-  amber edges target `.dendrite-minimal-layout` and `.dendrite-compact-layout`. A renamed
-  class or a changed border breaks them silently.
-- **No test pins a colour.** The gates do not catch a visual regression: measure computed
-  styles, do not judge by eye.
-- **A docs build while the dev server runs leaves the dev server stale** (504 on
-  `@codemirror_*` modules, no live block): touch `apps/docs/astro.config.ts`, reload twice. A
-  changed remark plugin needs the same restart. Seen again on 2026-10-09 in another form: the
-  landing's three pillars were gone on the dev server, with the build and the live site
-  correct. Its content store (`apps/docs/.astro/data-store.json`) held no `pillars` field at
-  all, after docs builds had deleted and rewritten that folder beside it. The remedy that is
-  certain: stop the dev server, delete `apps/docs/.astro`, start it again.
-- **Headless Chrome with a temp profile per run filled the C: drive** (33 profiles, 1.6 GB).
-  Use the Browser pane.
-- **A built trial costs a round.** A light landing was built, disliked and reverted; a
-  picture got a one-word answer.
-
-**How to verify:** the launch configs `docs` (4321), `playground` and `docs-preview` (4322,
-serves the build). The matrix is light and dark, times Minimal, Compact and Full, times a doc
-page, the landing and the playground; and the system on dark with the picker on Light, and
-the reverse. The pages that mount the editor: `Live.tsx`, `DenCode.astro`,
-`OpsReference.astro`, `DiagnosticsTable.astro`, and the playground's `App.tsx`.
-
-**Rejected, not to be reopened:** a line-wrap option for the editor, and a light landing.
-
-**The order:** (1) the mock for the dark surfaces and the top bar, and the maintainer picks;
-(2) a plan, then approval; (3) the height fix, its own commit; (4) the surface values in
-`style.css`, the tokens and the README, one commit, with the guard; (5) the playground's top
-bar and controls, only if the comparison finds something, and its favicon; (6) the docs'
-follow-ups: the hero's knob, the TypeScript code frame if dark moved; (7) part 2 below;
-(8) the release, the editor alone; (9) the decision recorded for Claude Design.
-
-### Part 1: decided from the mock, and the plan
-
-**The mock** (2026-10-09): injected CSS on the built doc page *Examples* and on the playground,
-a switch between "A today" and "B one step down", eight pictures. No source file changed.
-
-**Decided by the maintainer from it:**
-
-- **The dark surfaces: B, one step down, everywhere.** Panel dark-0, code area dark-1, well
-  dark-2, hover dark-3; the bar is dark-0 already. The editor package changes, so the docs and
-  the playground match, and sheet §20 is the rule: §25 is the section to update in the canvas.
-  The site's TypeScript code frame (dark-2) moves to dark-1 with it.
-- **The bar in light keeps ground-2.** It does not take the site's ground.
-
-**The top bar against the site's nav, measured.** In dark they agree already: both are dark-0
-over a 1px rule of dark-3. What differs is shape, and that is left alone (a new shape wants
-thorough consideration and a frame first):
-
-| | The site's nav | The playground's bar |
-| --- | --- | --- |
-| Height | 64 px | 44 px |
-| Wordmark | 40 px | 28 px |
-| Text | 16 px Archivo | 13 px Archivo |
-
-**The height fix is verified.** On a Minimal block with a 22rem minimum, the editor was 352 px
-and its scroller 255 px. With `flex-grow: 1` on `.cm-scroller` the scroller is 352 px:
-CodeMirror's editor is a flex column already, so one declaration does it.
-
-**The site's code frame:** its `pre` is `rgb(44, 42, 41)`, dark-2, the value of
-`--sl-color-gray-6`. That variable serves more than the frame, so the frame gets a rule of its
-own; which one is found when it is built.
-
-**The landing's copy jumped when the editor loaded** (reported by the maintainer, 2026-10-09).
-The live block is client-only, so its cell has no height until it loads. The row sat at the
-foot of the band (`align-content: end`), so when the block appeared the row grew UPWARD and the
-copy went with it. Measured on the build:
-
-| Window | Copy's top before the load | After | Jump |
-| --- | --- | --- | --- |
-| 1440 x 900, 1920 x 1080 | 203 px | 150 px | 53 px up |
-| 1280 x 720 | 147 px | 147 px | none: the copy is the taller block there |
-| 800 x 900, one column | 64 px | 64 px | none |
-
-**Decided: the row at the top** (the maintainer's own proposal, chosen from three pictures).
-One value. The copy is at 96 px before and after, 54 px higher than it ended before, and 99 px
-higher on a short window, where the free band is now under the row. Weighed against it: the
-copy anchored at the foot (`align-self: end`: no jump, 53 px lower, the nearest to sheet §24's
-"lower 55%", but the headline's top no longer level with the block's), and a reserved height
-for the block (no jump and no change, at the price of two numbers, 386 and 316 px, that follow
-the example's size). The choice moves the copy further from §24, which the backlog's entry for
-Claude Design records.
-
-**Built and measured (commit 1):** the copy's top is 96, 96, 48 and 64 px before and after the
-load, at 1440 x 900, 1920 x 1080, 1280 x 720 and 800 x 900.
-
-**Found while it was measured, and left as it is: on one column the pillars still move.**
-Under 961 px the band has no minimum height, so the block's arrival pushes the pillars down 316 px (800 x 900:
-494 to 810; 390 x 844: 506 to 822). On two columns they do not move: the band's minimum height
-holds the row. The row at the top does not change this. A reserved height for the block's cell
-does (`min-height: 316px` on `.dn-hero__live` in the one-column rule), and that number follows
-the example's size, which is why the reserve lost on two columns. **Decided by the maintainer
-(2026-10-09): no reserve.** The pillars move on one column when the block loads.
-
-**The plan of part 1, six commits:**
-
-| # | Commit | What changes | Proof |
-| --- | --- | --- | --- |
-| 1 | `fix(docs): the landing's copy keeps its place when the editor loads` | `Hero.astro`: the row starts at the top of the band (`align-content: start`), and the two comments that say it sits at the foot | The copy's top is the same before and after the load, at four window sizes |
-| 2 | `fix(editor): the code area fills its minimum height` | `packages/editor/style.css`: one rule beside the knob. `Hero.astro`: its three scroller rules become the knob. The editor's changelog. | Scroller and editor the same height at a 22rem minimum; the landing's block the same height as before, at three widths |
-| 3 | `feat(editor): the dark surfaces sit one step down` | `style.css`: four dark values and the comment that argued the other way. `brand/dendrite-tokens.css`: the `--dn-editor-*` mirror, and a 1.3 line. A new test, the guard. The README's styling paragraph, if it names levels. The changelog: every host's default look changes. | Computed styles on a doc page and the playground, both themes; light unchanged |
-| 4 | `docs: the site's code frame sits on dark-1` | `apps/docs/src/styles/dendrite.css` | A TypeScript frame and an editor's code area compute the same colour |
-| 5 | `feat(playground): a favicon of its own` | `apps/playground/public/favicon.svg` and its touch icon, from the brand's reversed avatar; a row in `brand/render.ts` | The two apps' icons differ |
-| 6 | The notes | `todo.md` to `done.md`; the decision recorded for Claude Design in the backlog entry | |
-
-Then part 2, the release of the editor alone, and its record.
-
-**The guard of commit 2:** a test in the editor package that reads `style.css` and
-`brand/dendrite-tokens.css` and holds that `--dendrite-bar`, `-panel`, `-bg`, `-well` and
-`-hover` equal `--dn-editor-bar`, `-page`, `-canvas`, `-well` and `-hover`, in light and in
-dark. If the mirror disagrees today, that is its first finding.
-
-**One rule while this is built:** each docs build of mine leaves a running dev server stale
-(`CLAUDE.md`, Gates). Port 4321 is checked before each one.
-
-### The code-height fix, in this release
-
-Moved here from the backlog on 2026-10-09, where it was "`--dendrite-code-min-height` leaves
-the sideways scrollbar floating".
-
-**What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
-layout). CodeMirror's scroller inside it does not stretch, because its `height: 100%` has no
-definite height to resolve against. When the code is shorter than the minimum and one line is
-wider than the editor, the sideways scrollbar sits under the last line with empty canvas below
-it. At 11rem over five lines the gap was 8px and nobody saw it; at 16rem it was 80px.
-
-**Why deferred (2026-10-06):** found while the landing's live block grew, in a round that left
-the editor alone. The landing sets `min-height` on `.cm-scroller` itself for now
-(`apps/docs/src/components/Hero.astro`).
-
-**What it requires:** let the scroller fill the editor (`flex-grow: 1` on `.cm-scroller` in the
-Minimal and Compact layouts, or the minimum on the scroller), a look at both layouts with a
-long line, and then the landing goes back to the knob.
-
-**From the second handoff:** the knob is `packages/editor/style.css` line 188, Minimal layout
-only. The candidate is `flex-grow: 1` on `.cm-scroller`, in `cm.ts` or beside the knob. It was not
-verified in that handoff; the mock verified it (above). The check: a line wider than the editor and code shorter than the minimum;
-the scrollbar must sit at the bottom of the box, in Minimal and in Compact. Then the three
-`.cm-scroller` rules in `Hero.astro` become the knob.
-
-### Part 2: a docs pass, afterwards
+### Part 2: a docs pass
 
 **Scope, decided 2026-10-08 (the maintainer):** three things.
 
@@ -298,10 +45,37 @@ the scrollbar must sit at the bottom of the box, in Minimal and in Compact. Then
 
 Not in it: "show what every fence produces", sent to the backlog the same day.
 
-**Also decided:** 0.6.1 releases the editor alone. Its number then parts from core's and
-link's, which stay at 0.6.0; the editor's peer range `^0.6.0` allows it, and the publish
-workflow stages only the versions npm lacks (`release-plan.md`). **Left for the plan:** item 1
-of part 1, the dark surfaces ("we'll decide once we get to it").
+**Carried from part 1, to look at in the same pass.** Part 1 changed the dark surfaces and
+nothing else of the editor's look, so three of its observations are still open:
+
+- **Light, in Compact and Full.** In light a block's panel is the page's colour (both are
+  ground), so a block is its 1px border and its white code area. That is the sheet's white
+  well, and it suits Minimal. Compact, Full and their panes were not looked at on the site's
+  ground.
+- **Type and controls were not compared:** the site's display face, its button and field
+  shapes and its sidebar item, against the editor's bar items, panes and fields. A difference
+  of VALUE is this release's. A difference of SHAPE is the backlog's ("Editor — the top bar in
+  the site's shape" says why).
+- **In dark, hover and border are one colour now:** dark-3, in `--dendrite-hover` and in
+  `--dendrite-border`. The brand's ramp names dark-3 for both. A hovered row or button that
+  has a border may lose its edge: look at the port rows, the menu items and the bar's buttons.
+
+**How to look.** The launch configs `docs` (4321), `playground` and `docs-preview` (4322,
+serves the build). The matrix is light and dark, times Minimal, Compact and Full, times a doc
+page, the landing and the playground; and the system on dark with the picker on Light, and
+the reverse. The pages that mount the editor: `Live.tsx`, `DenCode.astro`,
+`OpsReference.astro`, `DiagnosticsTable.astro`, and the playground's `App.tsx`. One test pins
+colours, and only the five surfaces (`packages/editor/src/style.test.ts`), so measure computed
+styles. A decision by eye is made on a mock in the real page (injected CSS, no source change),
+not on a built trial. The traps are in `done.md`, under part 1.
+
+### The release
+
+0.6.1 releases the editor alone. Its number then parts from core's and link's, which stay at
+0.6.0; the editor's peer range `^0.6.0` allows it, and the publish workflow stages only the
+versions npm lacks (`release-plan.md`, "Every later release"). The editor's changelog holds two
+lines under "Unreleased": the dark surfaces, which change every host's default look, and the
+code-height fix. After the record, the canvas takes tokens 1.3 (`backlog.md`, "Brand canvas").
 
 ---
 

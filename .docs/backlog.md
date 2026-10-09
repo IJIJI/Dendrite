@@ -693,7 +693,10 @@ export against the patched sheet before replacing it.
 **And tokens 1.3 (2026-10-09):** the editor's dark surfaces went one step down the ramp (page
 dark-0, canvas dark-1, well dark-2, hover dark-3), shipped in editor 0.6.1. The sheet's §25 and
 its editor cards still draw 1.1, so the canvas takes 1.3 in the same round. `--dn-dark-4` has
-one reader left, the docs site's `--sl-color-gray-4`.
+one reader left, the docs site's `--sl-color-gray-4`. The same day the playground took the
+reversed avatar as its favicon and touch icon, where the sheet's icon section and
+`brand/CHANGES.md` ("Icons wiring") name icon A for every favicon; `brand/README.md` says
+which app wears which.
 
 ---
 
@@ -735,7 +738,7 @@ maintainer then changed three things the canvas should take as well: the landing
 and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
 12/20 padding at 16px, and the live block's code area is 16rem tall beside the copy.
 
-**Two decisions of 2026-10-09 the canvas should take as well** (`todo.md`, 0.6.1). The row
+**Two decisions of 2026-10-09 the canvas should take as well** (`done.md`, 0.6.1 part 1). The row
 of copy and block starts at the TOP of the band, where the design has the copy in the lower
 55%: the block has no height until it loads, and a row at the foot made the copy jump 53 px.
 And the editor's dark surfaces sit one step down (panel dark-0, code dark-1), so §20 is the
@@ -949,6 +952,29 @@ split pays once the layouts land and the file passes ~1200 lines.
 
 **What it requires:** a CSS entry in `tsup.config.ts`, the `./style.css` export pointing at
 `dist/`, the `@layer dendrite` wrapper kept around the bundle.
+
+---
+
+## Editor — the top bar in the site's shape
+
+**What:** the playground's `Editor.TopBar` and the site's nav are two shapes. Measured on
+2026-10-09 in dark, where their colours agree (both dark-0 over a 1px rule of dark-3):
+
+| | The site's nav | The playground's bar |
+| --- | --- | --- |
+| Height | 64 px | 44 px |
+| Wordmark | 40 px | 28 px |
+| Text | 16 px Archivo | 13 px Archivo |
+
+In light the colours differ too, and by decision: the bar keeps ground-2, the nav is on ground.
+Going from the docs to the playground changes the chrome until this is taken.
+
+**Why deferred (2026-10-09):** 0.6.1 changes values, not shapes (the maintainer). A new shape
+wants thorough consideration, and a frame from Claude Design first.
+
+**What it requires:** the frame; then the bar's height, its wordmark and its text size in
+`packages/editor/style.css`, and a look at what a taller bar costs the Full layout on a short
+window.
 
 ---
 
