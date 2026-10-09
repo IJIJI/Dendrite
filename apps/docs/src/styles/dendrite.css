@@ -283,6 +283,17 @@ starlight-toc a[aria-current="true"] {
   font-size: 0.85em;
 }
 
+/* A fence in another language (```ts, ```sh) is Expressive Code's frame, and its code sits on
+   the editor's canvas: a TypeScript block and a Dendrite block on one page are one surface,
+   in both themes. Starlight gives the frame gray-6 in dark, which is dark-2 here, a step
+   above the canvas since the editor's dark surfaces went down one (editor 0.6.1). The two
+   variables are an editor frame's code and a terminal frame's. A frame with a title has a
+   third for its tab, --ec-frm-edActTabBg: no page has such a frame, so it is not set. */
+.expressive-code {
+  --ec-frm-edBg: var(--dendrite-bg);
+  --ec-frm-trmBg: var(--dendrite-bg);
+}
+
 /* An inline snippet nothing highlights - a package name, a path, a version range - takes the
    editor's identifier colour rather than Starlight's, which is the body text's own grey: a name
    in a box should read as a name, and it then matches an identifier inside a Dendrite snippet.
