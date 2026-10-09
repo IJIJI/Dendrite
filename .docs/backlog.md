@@ -1222,6 +1222,29 @@ it stays public is a release in which a host may come to import it.
 
 ---
 
+## Core — `instance.setProgram` trusts a saved program's ports
+
+**What:** `setProgram(saved)` writes `saved.ports` into the instance's persisted layer and
+THEN recompiles (`runtime/instance.ts`). Ports that are not ports, for example an object with
+`inputs` and no `outputs`, make `composeLayers` throw `layer.ports.outputs is not iterable`, a
+raw `TypeError` out of a command that is documented to report through the observables. The
+layer is already replaced, so the instance stays broken: the next `setProgram`, with a sound
+program, throws the same error. Probed on 2026-10-09.
+
+**Who can reach it:** a caller that defeats the types (plain JavaScript, a cast, a blob read
+from storage and handed over unchecked). TypeScript refuses it, `env.load` answers
+`malformed_program`, and the link checks an incoming program with `isSavedProgram` before it
+reaches the instance (`packages/link/src/protocol.ts`).
+
+**Why deferred:** found in passing, while the *Embedding core* sample was probed for the docs
+pass of 0.6.1. Not a docs matter, and no typed host can do it.
+
+**What it requires:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, a
+`malformed_program` diagnostic where it fails (the instance keeps its program, stale), and a
+test that a refused program leaves the next one working.
+
+---
+
 ## Core — what an instance hands a host when a program fails
 
 **What:** two related knobs an instance does not have. Today a failed compile leaves the last
