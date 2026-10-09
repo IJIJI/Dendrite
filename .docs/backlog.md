@@ -690,6 +690,11 @@ Downloads, not in git) still holds 1.0, so the next export would regress the she
 12 and 20), re-export, re-copy into `brand/` keeping the README's licence line, and diff the
 export against the patched sheet before replacing it.
 
+**And tokens 1.3 (2026-10-09):** the editor's dark surfaces went one step down the ramp (page
+dark-0, canvas dark-1, well dark-2, hover dark-3), shipped in editor 0.6.1. The sheet's §25 and
+its editor cards still draw 1.1, so the canvas takes 1.3 in the same round. `--dn-dark-4` has
+one reader left, the docs site's `--sl-color-gray-4`.
+
 ---
 
 ## Brand — take the hero's corrections back to the Claude Design source
@@ -944,6 +949,21 @@ split pays once the layouts land and the file passes ~1200 lines.
 
 **What it requires:** a CSS entry in `tsup.config.ts`, the `./style.css` export pointing at
 `dist/`, the `@layer dendrite` wrapper kept around the bundle.
+
+---
+
+## Editor — `@types/node` is not declared in the package
+
+**What:** `packages/editor/vitest.config.ts` and `src/style.test.ts` import `node:url` and
+`node:fs`. The package has no `@types/node` of its own: the types reach it because core, the
+playground and the docs declare the package and Yarn hoists it. The rule for bins (`CLAUDE.md`,
+Workspaces) is that every workspace declares what it uses.
+
+**Why deferred:** found on 2026-10-09 while the surface guard was written, in a commit about
+colours. Typecheck passes today.
+
+**What it requires:** `@types/node` in the editor's `devDependencies`, at the version the other
+workspaces have, and a `yarn install` for the lockfile.
 
 ---
 

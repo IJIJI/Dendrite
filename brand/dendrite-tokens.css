@@ -28,7 +28,8 @@
   --dn-dark-4: #4a4644;  /* dark hover, one step past dark-3 (derived, 2026-09) */
 
   /* Editor surfaces (@dendrite-lang/editor) — three levels, bar < page < canvas, 1px rules only.
-     Dark runs one step up the ramp: dark-0 under a full screen of near-white text read as harsh. */
+     Dark is the ramp from its first step, as §20 has it: page dark-0, canvas dark-1. The bar is
+     dark-0 too, so on dark the bar and the page are one level with a 1px rule between them. */
   --dn-editor-bar: var(--dn-ground-2);  /* top bar */
   --dn-editor-page: var(--dn-ground);  /* side column */
   --dn-editor-canvas: var(--dn-ground-1);  /* code, fields, popovers */
@@ -153,10 +154,10 @@
     --dn-border-strong: var(--dn-dark-ink);
     --dn-iris: var(--dn-periwinkle);
     --dn-editor-bar: var(--dn-dark-0);
-    --dn-editor-page: var(--dn-dark-1);
-    --dn-editor-canvas: var(--dn-dark-2);
-    --dn-editor-well: var(--dn-dark-3);
-    --dn-editor-hover: var(--dn-dark-4);
+    --dn-editor-page: var(--dn-dark-0);
+    --dn-editor-canvas: var(--dn-dark-1);
+    --dn-editor-well: var(--dn-dark-2);
+    --dn-editor-hover: var(--dn-dark-3);
     --dn-selection: var(--dn-iris-900);
     /* Status on dark (derived: base at the dark code lightness, soft at L 0.28) */
     --dn-ok: oklch(0.75 0.13 160);
@@ -192,4 +193,7 @@
                    split from --dn-code-op; editor surface tokens (--dn-editor-*), --dn-dark-4, --dn-selection;
                    dark values for the six statuses. The sheet still shows 1.0 until regenerated.
    1.2 · 2026-10 · aurora tiers, seam, fade and interval; icon set (A, D3) documented in the sheet.
+   1.3 · 2026-10 · editor surfaces on dark, one step down the ramp: page dark-0, canvas dark-1, well dark-2,
+                   hover dark-3 (they were dark-1 to dark-4). §20 is the rule; the sheet's §25 still shows
+                   1.1 until it is redrawn. Shipped in @dendrite-lang/editor 0.6.1.
 */

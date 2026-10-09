@@ -65,7 +65,7 @@ Text: ink `#201e1d`, ink-2 `#5c5856`, ink-3 `#8a8583` (placeholders/disabled onl
 Borders: `#cfcccb` light, `#3a3735` dark.
 Iris ramp 100–900, statuses (ok / warn / error / info / cached / stale, each with a `-soft` fill, light and dark), and the syntax tokens are in `dendrite-tokens.css` (OKLCH). Dark-theme values sit under `@media (prefers-color-scheme: dark)`.
 
-**Editor surfaces** (`--dn-editor-*`, tokens 1.1): three levels with 1px rules — bar ground-2, page ground, canvas ground-1; on dark one step up the ramp, dark-0 / dark-1 / dark-2, because dark-0 under a full screen of near-white text read as harsh. Selection is iris-200 (iris-900 on dark); the active line is a 6 % ink veil.
+**Editor surfaces** (`--dn-editor-*`, tokens 1.3): three levels with 1px rules — bar ground-2, page ground, canvas ground-1; on dark the ramp from its first step, bar and page dark-0, canvas dark-1 (until 1.3 they sat one step up, dark-0 / dark-1 / dark-2). Selection is iris-200 (iris-900 on dark); the active line is a 6 % ink veil.
 
 **Syntax** (tokens 1.1, as the editor ships it): keywords magenta at weight 600, ops (`Filter`, `Map`) iris, declared names ink, `$inputs` and `true / false / null` orange, strings green, numbers amber, operators (`=> = >=`) blue, punctuation ink-3, comments ink-2 italic. Every hue sits at text-level contrast on both canvases.
 

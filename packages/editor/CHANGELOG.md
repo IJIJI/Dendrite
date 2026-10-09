@@ -11,6 +11,13 @@ of core needs a release here too, even if nothing in this package changed.
 
 ## Unreleased
 
+- **The dark theme sits one step down the brand's ramp. Every host's default look changes.**
+  The panels go from `#201e1d` to `#141312`, the code area from `#2c2a29` to `#201e1d`, the wells
+  from `#3a3735` to `#2c2a29` and the hover from `#4a4644` to `#3a3735`. The top bar keeps
+  `#141312`, so in dark it is the panels' colour, with its 1px rule between the two. The light
+  theme does not change. A host that wants the old look sets `--dendrite-panel`, `--dendrite-bg`,
+  `--dendrite-well` and `--dendrite-hover` to the old values; a host that already sets them sees
+  no change.
 - **Fixed: `--dendrite-code-min-height` fills the code area.** The knob set a minimum height on
   the editor, and CodeMirror's scroller inside it kept the height of the code. With code shorter
   than the minimum and a line wider than the editor, the sideways scrollbar sat under the last
