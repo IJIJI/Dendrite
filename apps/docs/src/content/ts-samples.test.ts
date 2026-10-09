@@ -174,6 +174,25 @@ const pageScripts = new Map(
 );
 
 /**
+ * The pages a unit continues, ROOT FIRST: for a C that continues B, which continues A, it is
+ * [A, B]. That is the order their code stands in, each page on top of the one it continues.
+ * The walk goes the other way, from the unit up, so every page it meets goes in FRONT.
+ */
+function ancestors(unit: Unit, pages: ReadonlyMap<string, Unit>): Unit[] {
+  const chain: Unit[] = [];
+  const seen = new Set<string>();
+  for (let next = unit.continues; next; ) {
+    if (seen.has(next)) throw new Error(`${unit.label}: its continues= chain loops at ${next}`);
+    seen.add(next);
+    const parent = pages.get(next);
+    if (!parent) throw new Error(`${unit.label}: continues="${next}", which has no TypeScript`);
+    chain.unshift(parent);
+    next = parent.continues;
+  }
+  return chain;
+}
+
+/**
  * One unit as a single script: the prelude, what it continues, then its own fences. `"all"` is
  * what the typechecker sees; `"runs"` keeps only the fences tagged to execute, at every level
  * of the chain, so a fence that throws by design is never in the script that runs.
@@ -186,20 +205,10 @@ function assemble(unit: Unit, which: "all" | "runs" = "all"): Virtual {
     { label: "src/examples/host/prelude.ts", sourceLine: 1, text: prelude },
   ];
 
-  const seen = new Set<string>();
-  for (let next = unit.continues; next; ) {
-    if (seen.has(next)) throw new Error(`${unit.label}: its continues= chain loops at ${next}`);
-    seen.add(next);
-    const parent = pageScripts.get(next);
-    if (!parent) throw new Error(`${unit.label}: continues="${next}", which has no TypeScript`);
-    for (const fence of kept(parent.fences)) {
-      parts.push({ label: parent.file, sourceLine: fence.line, text: fence.code });
+  for (const page of [...ancestors(unit, pageScripts), unit]) {
+    for (const fence of kept(page.fences)) {
+      parts.push({ label: page.file, sourceLine: fence.line, text: fence.code });
     }
-    next = parent.continues;
-  }
-
-  for (const fence of kept(unit.fences)) {
-    parts.push({ label: unit.file, sourceLine: fence.line, text: fence.code });
   }
 
   const segments: Segment[] = [];
@@ -354,6 +363,23 @@ describe("the TypeScript samples that run", () => {
 
   it.for(runs.map((run) => [run.unit.label, run] as const))("%s", ([label, run]) => {
     expect(() => execute(label, run.text)).not.toThrow();
+  });
+});
+
+describe("a continues= chain", () => {
+  // No page on the site continues a page that continues another, so three made-up ones do.
+  it("is read from its root, so each page stands on the one it continues", () => {
+    const page = (file: string, continues?: string): Unit => ({
+      label: file,
+      file,
+      fences: [],
+      jsx: false,
+      continues,
+    });
+    const pages = new Map(
+      [page("a.md"), page("b.md", "a.md"), page("c.md", "b.md")].map((unit) => [unit.file, unit]),
+    );
+    expect(ancestors(pages.get("c.md")!, pages).map((unit) => unit.file)).toEqual(["a.md", "b.md"]);
   });
 });
 
