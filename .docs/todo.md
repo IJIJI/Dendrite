@@ -23,102 +23,32 @@ the last two.
 
 ## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
 
-**When:** the release after 0.6.0 (the maintainer, 2026-10-08). Two parts, in this order: the
-editor first, the docs pass afterwards.
+**When:** the release after 0.6.0 (the maintainer, 2026-10-08).
 
-**Part 1 is done** (2026-10-09, six commits; `done.md`, "Editor — its styling, to fit the
-site's new look"). It is not released. Open: part 2, then the release of the editor alone, and
-its record.
+**Both parts are built** (2026-10-09). `done.md` has them: "Editor — its styling, to fit the
+site's new look" for part 1, and "Docs — the docs pass of 0.6.1" for part 2. Nothing is
+released. Open: three things the pass left, then the release.
 
-### Part 2: a docs pass
+### Open from the docs pass
 
-**Scope, decided 2026-10-08 (the maintainer):** three things.
+Each waits for the maintainer, and none of them holds the release.
 
-- **The site with the restyled editor in it.** Every page that mounts a block or shows a
-  static one wears the editor's stylesheet: the Learn samples, the stdlib reference, *Every
-  diagnostic*, the landing's live block. Each in both themes, and in the three layouts where
-  a page uses them.
-- **The two known docs faults**, both in `backlog.md`: *Embedding core* shows a call that
-  throws, and a `continues=` chain deeper than one page is assembled in the wrong order.
-- **What the maintainer finds** while reading. "Docs — review the rest of the site after
-  Learn", below, is where those observations collect. The first one has its own entry:
-  "Docs — *How a program runs* gets simpler", below.
+**Eight TypeScript frames have a line longer than the column.** A frame is 14px since the
+pass, and the column holds 79 characters. Four of the eight scrolled sideways before, at the
+smaller size. Rewrapping is a content edit on six pages:
 
-Not in it: "show what every fence produces", sent to the backlog the same day.
-
-**Carried from part 1, to look at in the same pass.** Part 1 changed the dark surfaces and
-nothing else of the editor's look, so three of its observations are still open:
-
-- **Light, in Compact and Full.** In light a block's panel is the page's colour (both are
-  ground), so a block is its 1px border and its white code area. That is the sheet's white
-  well, and it suits Minimal. Compact, Full and their panes were not looked at on the site's
-  ground.
-- **Type and controls were not compared:** the site's display face, its button and field
-  shapes and its sidebar item, against the editor's bar items, panes and fields. A difference
-  of VALUE is this release's. A difference of SHAPE is the backlog's ("Editor — the top bar in
-  the site's shape" says why).
-- **In dark, hover and border are one colour now:** dark-3, in `--dendrite-hover` and in
-  `--dendrite-border`. The brand's ramp names dark-3 for both. A hovered row or button that
-  has a border may lose its edge: look at the port rows, the menu items and the bar's buttons.
-
-**How to look.** The launch configs `docs` (4321), `playground` and `docs-preview` (4322,
-serves the build). The matrix is light and dark, times Minimal, Compact and Full, times a doc
-page, the landing and the playground; and the system on dark with the picker on Light, and
-the reverse. The pages that mount the editor: `Live.tsx`, `DenCode.astro`,
-`OpsReference.astro`, `DiagnosticsTable.astro`, and the playground's `App.tsx`. One test pins
-colours, and only the five surfaces (`packages/editor/src/style.test.ts`), so measure computed
-styles. A decision by eye is made on a mock in the real page (injected CSS, no source change),
-not on a built trial. The traps are in `done.md`, under part 1.
-
-### Part 2: the visual pass, 2026-10-09
-
-Run on the built site (`docs-preview`) and on the playground, at 1440 x 900, by computed
-styles and seven pictures: the landing; *Examples* (Minimal and Compact) in both themes; *Types
-in practice* (a sample with a warning); *Arithmetic*; *Every diagnostic*; the playground in
-both themes. No source file changed.
-
-**Decided 2026-10-09 (the maintainer): rows 1, 2, 4 and 5 are taken**, one commit each. **Row
-3 is decided from a mock**: one picture of *Types in practice* with the same paragraphs twice,
-the chip on dark-3 and on dark-2, and the sidebar's current page under each. **Decided from
-it (the maintainer): the chip on dark-2.** The sidebar's current page reads the same
-variable and goes with it, as the mock showed it.
-
-| # | Finding | Measured | Where the fix is | Size |
-| --- | --- | --- | --- | --- |
-| 1 | **An output value is not in the editor's mono.** `.dendrite-output-value` is a `<code>`, and the stylesheet gives it no font, so it takes the browser's `monospace`. | Playground: `monospace` 13px, beside a name in IBM Plex Mono 13px. Docs: IBM Plex Mono 11.7px, because Starlight styles `code`. | `packages/editor/style.css`: `font: inherit` on the value. It ships in 0.6.1. | One declaration |
-| 2 | **The site's prose rule reaches into a block.** `.sl-markdown-content code { font-size: 0.9em }` (`dendrite.css`) is unlayered and does not leave out `.not-content`, so it beats the editor's layered sizes. | A type tag is 12.6px in a Minimal strip and 11.7px in a pane, where the editor says 11px. An output value is 11.7px in a 13px row. | `apps/docs/src/styles/dendrite.css`: the rule leaves out `.not-content`, as Starlight's own prose rules do. | One selector |
-| 3 | **In dark, an inline code chip is a step lighter than an editor well.** The site's chip is dark-3 (`--sl-color-bg-inline-code`). The editor's well and tag went to dark-2 in part 1; before, both were dark-3. In light both are ground-2. The sidebar's current page reads the same variable. | Chip `rgb(58, 55, 53)`, well `rgb(44, 42, 41)`. | `dendrite.css`, the dark block, if the chip moves. By the tokens a dark well is dark-2. On a dark-0 page a dark-2 chip shows less. | One line, after a mock |
-| 4 | **Every diagnostic has two tags for one word.** The heading's badge (`.severity`) is Starlight's red and orange: pink text, IBM Plex Mono 11.2px, upper case. The sample under it shows the editor's status tag: ink on the soft fill, Kode Mono 11px, a dot. The brand has one status tag (README section 3). | Badge `rgb(78, 34, 50)` and `rgb(78, 64, 34)`; tag `oklch(0.28 0.06 25)` and `oklch(0.28 0.05 75)`. | `apps/docs/src/components/DiagnosticsTable.astro`: the heading wears the editor's tag, and `.severity` goes. The same component draws the edge and the text of an "as if" block in Starlight's orange, where a `warns` fence has `--dendrite-warning`: the same commit. | A few lines |
-| 5 | **In light, the search field's border is not the brand's.** Starlight draws it in gray-5, which is ground-3 here. An editor field has the brand's border. In dark both are dark-3. | Search `rgb(217, 214, 213)`, an editor field `rgb(207, 204, 203)`. | `dendrite.css` | One line |
-
-**Row 2 was larger than the row says, found while it was built.** The same rule sized every
-`<code>` in a block, and that is three more things than a tag and a value. Measured on all 30
-pages at 1440 px, the old build against the new one:
-
-| | Before | With the rule kept out of a block |
+| Page | Frames | Over by, at 1440 px |
 | --- | --- | --- |
-| A static Dendrite sample, 121 of them | 12.6px | 14px, which is the live editor's size |
-| A TypeScript frame, 32 of them | 12.96px | 14px, which is what Expressive Code asks for (`.875rem`) |
-| A type tag | 12.6px or 11.7px | 11px |
-| An output value | 11.7px | 13px |
-| Static samples that scroll sideways | 0 | 0 |
-| TypeScript frames that scroll sideways | 4 | 8 |
-| A static sample's corners, inside its square block | 2px | 0 |
+| *Installation* | 1 | 193 px (the import is 101 characters) |
+| the core package page | 1 | 110 px |
+| *Ports and layers* | 1 | 101 px |
+| *Embedding core* | 1 | 69 px |
+| the link package page | 3 | 52, 35 and 27 px |
+| *The type system* | 1 | 42 px |
 
-So until now a static sample was a tenth smaller than a live one on the same page, against
-what `style.css` and `DenCode.astro` both say ("a static block and a live one are
-indistinguishable"). The column holds 79 characters at 14px. **Open, for the maintainer: the
-eight frames with a longer line** (*Installation*'s import is 101): on *The type system*,
-*Ports and layers*, *Installation*, *Embedding core*, the core package page, and three on the
-link package page. Four of them scrolled before. Rewrapping them is a content edit, not in the
-commit that fixes the rule.
-
-**Row 5 has neighbours, found while it was built.** The cause is a rule that names a step of
-Starlight's grey ramp where it means "the border". No single step is the border in both
-themes: gray-5 is right in dark and a step light in light, gray-4 is right in light and a step
-light in dark. `--sl-color-hairline` is the border in both. The search field and the divider
-beside it, both in the nav, were taken with row 5. **Open, for the maintainer**, the site's
-other rules of this kind:
+**Three rules name a step of the grey ramp where they mean "the border".** No step of
+Starlight's ramp is the border in both themes; `--sl-color-hairline` is. The nav's two rules
+were corrected in the pass. These were not:
 
 | Where | Reads | Off in |
 | --- | --- | --- |
@@ -126,77 +56,18 @@ other rules of this kind:
 | `Chain.astro`, a step's box and its arrows, five declarations | gray-4 | Dark: dark-4, not dark-3 |
 | `Chain.astro`, a substep's dashed box | gray-5 | Light, and it may be meant lighter |
 
-**Looked at and found in order:**
-
-- **The landing.** The block's panel is dark-0 on the dark-0 band, so the block is its 1px
-  rule (dark-3) and its dark-1 code area and field.
-- **Light, in Compact and Full** (carried from part 1). Compact has no ground of its own: its
-  panes are on the page's ground, the code is the white well, a field is white in the brand's
-  border, and the diagnostics line is on ground under a rule. Full, in the playground: the
-  bar on ground-2 over a rule, the side column on ground, the code white. Compact's cut code
-  lines are the backlog's "Compact is not compact enough", not this.
-- **Type and controls** (carried). Where the site and the editor draw the same thing, the
-  values agree: a field is 2px corners on the raised ground in the border colour (but row 5),
-  an overline is Archivo 11px 600 in both, code is IBM Plex Mono 14px in both. The editor's
-  panes are 14px Archivo where a page is 16px, and its bar 13px: density, which is shape, and
-  the backlog's ("Editor — the top bar in the site's shape").
-- **Hover and border in dark** (carried). Closed by reading the stylesheet: `--dendrite-hover`
-  has one use, the pressed state of the icon button, which has no border. No element holds
-  both. And one gain: a well (dark-2) is no longer the border's colour, as it was at dark-3.
-- **The theme picker against the system**, both ways, on a reload: a block follows the picker.
-- **The dark surfaces on every page type:** page dark-0, block dark-0, code and static source
-  and the TypeScript blocks dark-1, wells and tags dark-2, the red and amber edges and their
-  tags as before.
-
-**Two traps of the Browser pane, both nearly reported as faults:**
-
-- **A hidden pane's clock stands still.** `document.timeline` does not advance, so a
-  transition never ends. After a theme switch IN the page, a property with a transition
-  (a field's border, an icon button's colour) reads as the OLD theme's value. Reload on the
-  theme (`localStorage["starlight-theme"]`), or finish the animations first:
-  `document.getAnimations().forEach((a) => a.finish())`.
-- **After a navigation or a reload, set the viewport again before a picture**, or the picture
-  is the top-left corner unscaled. A picture may also time out once: take it again.
-
-### Part 2: the two known faults, as plans
-
-**A. *Embedding core* shows a call that throws.** Probed on 2026-10-09: on Installation's
-instance `instance.setInput("limit", 35)` throws `'limit' is not a program-level input`. Three
-ways, and the first is the proposal:
-
-1. **A fence under "Four commands" that gives the program an input of its own**, with a command
-   the table above it lists:
-   `instance.setProgram(serialiseSource("output alert = $temperature > $limit", { inputs: [{ name: "limit", type: Type.number, default: 25 }], outputs: [] }))`.
-   Then the two-line contrast is tagged `runs` and gains claims. Probed: no diagnostics,
-   `alert` is `false` at 20, `true` after `updateInputs({ temperature: 30 })`, `false` after
-   `setInput("limit", 35)`; `setInput("temperature", 1)` throws, as the sentence under it says;
-   and the page's later fence (the broken program) still gives `stale: true`. `outputs: []`
-   has to be written.
-2. **Installation's instance declares `limit` from the start.** The first sample a host reads
-   grows by a concept, and the two package pages that continue it are checked against it.
-3. **The contrast loses its second line.** It then shows one kind of input.
-
-**B. A `continues=` chain deeper than one page is assembled in the wrong order.** `assemble()`
-in `ts-samples.test.ts` pushes each ancestor as it walks up, so a three-page chain reads
-prelude, parent, grandparent, page. Latent: every chain is one page deep. The plan: the walk
-becomes a small function that takes the page map and returns the chain ROOT FIRST, `assemble`
-reads it, and a test gives it three hand-made units. No fixture page.
-
-**Decided 2026-10-09 (the maintainer), after more explanation of both: A takes way 1, and B
-is built in full**, the function with its test. For B the smaller size was the same change
-checked once by a throwaway script, with no test left behind.
-
-**The commits, once the rows are decided** (each row that is taken is one commit, in this
-order): the output value's font (editor, with a changelog line); the prose rule; the severity
-tag; the search border; *Embedding core*; the chain; the chip on dark-2; the notes.
+**What the maintainer finds while reading.** "Docs — review the rest of the site after Learn",
+below, is where those observations collect. Two have entries of their own, below: "Docs —
+*How a program runs* gets simpler" and "Core — two styles for setting an input".
 
 ### The release
 
 0.6.1 releases the editor alone. Its number then parts from core's and link's, which stay at
 0.6.0; the editor's peer range `^0.6.0` allows it, and the publish workflow stages only the
-versions npm lacks (`release-plan.md`, "Every later release"). The editor's changelog holds two
-lines under "Unreleased": the dark surfaces, which change every host's default look, and the
-code-height fix. After the record, the canvas takes tokens 1.3 (`backlog.md`, "Brand canvas").
+versions npm lacks (`release-plan.md`, "Every later release"). The editor's changelog holds
+three lines under "Unreleased": the dark surfaces, which change every host's default look, the
+code-height fix, and an output value's font. After the record, the canvas takes tokens 1.3
+(`backlog.md`, "Brand canvas").
 
 ---
 

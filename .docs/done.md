@@ -5,6 +5,127 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Docs — the docs pass of 0.6.1 (part 2): the site with the restyled editor, and two known faults — DONE 2026-10-09
+
+Part 2 of 0.6.1, the same day as part 1 (the entry below). Its scope was three things, decided
+on 2026-10-08: the site with the restyled editor in it, the two known docs faults, and what
+the maintainer finds while reading. The first two are done here. The third goes on, in
+`todo.md`. Seven commits:
+
+| # | Commit | What it did |
+| --- | --- | --- |
+| 1 | `2cb5109` `fix(editor): an output's value is drawn in the editor's mono` | `font: inherit` on `.dendrite-output-value`. The one fault of the pass that is in the package. |
+| 2 | `10300aa` `fix(docs): the site's code size stays out of an editor block` | The site's rules for `code` and `pre` leave out `.not-content`. Every sample and frame is 14px. |
+| 3 | `5550da1` `fix(docs): a diagnostic's severity is the editor's status tag` | The heading of an entry wears `dendrite-tag`; 19 lines of `.severity` go. |
+| 4 | `aadff79` `fix(docs): the nav's rules are the brand's border in light` | The search field's border and the divider beside it read `--sl-color-hairline`. |
+| 5 | `cbececd` `docs: Embedding core's two kinds of input run, with their results` | A `setProgram` fence gives the program an input; the contrast is tagged `runs`. |
+| 6 | `71c897f` `fix(docs): a continues= chain is assembled from its root` | `ancestors()` returns the chain root first, with a test of three made-up pages. |
+| 7 | `25e6017` `docs: the inline code chip sits on dark-2` | `--sl-color-bg-inline-code` in the dark block. |
+
+**How the pass was run.** On the built site (`docs-preview`) and on the playground, at
+1440 x 900, by computed styles and pictures: the landing; *Examples* (Minimal and Compact) in
+both themes; *Types in practice*; *Arithmetic*; *Every diagnostic*; the playground in both
+themes. No source file changed until the findings were decided.
+
+**The five findings.** All five were taken (the maintainer, 2026-10-09). Rows 1, 2, 4 and 5
+are older than this release. Row 3 is new: part 1 caused it.
+
+| # | Finding | Measured |
+| --- | --- | --- |
+| 1 | An output value was a `<code>` with no font, so a browser drew it in its own `monospace`. | Playground: `monospace` 13px beside a name in IBM Plex Mono 13px. |
+| 2 | The site's `.sl-markdown-content code { font-size: 0.9em }` is in no cascade layer and did not leave out `.not-content`, so inside a block it beat the editor's layered sizes. | A type tag 12.6px or 11.7px, where the editor says 11px. |
+| 3 | In dark an inline code chip (dark-3) was a step lighter than an editor well, which part 1 moved to dark-2. | `rgb(58, 55, 53)` against `rgb(44, 42, 41)`. |
+| 4 | *Every diagnostic* had two tags for one word: Starlight's pink badge in the heading, the brand's status tag in the sample under it. | Two fills, two fonts, one upper case. |
+| 5 | In light the search field's border was Starlight's gray-5 (ground-3), not the brand's border. | `rgb(217, 214, 213)` against `rgb(207, 204, 203)`. |
+
+**Row 2 was larger than its row.** The rule sized every `<code>` in a block, which is all
+static Dendrite samples and all TypeScript frames too. That was found by measuring every page
+before and after the change (30 pages at 1440 px, each loaded in an iframe of that width from
+one page, the old build's numbers kept in `localStorage` across the rebuild):
+
+| | Before | After |
+| --- | --- | --- |
+| A static Dendrite sample, 121 of them | 12.6px | 14px, the live editor's size |
+| A TypeScript frame, 32 of them | 12.96px | 14px, what Expressive Code asks for (`.875rem`) |
+| A type tag | 12.6px or 11.7px | 11px |
+| An output value | 11.7px | 13px |
+| Static samples that scroll sideways | 0 | 0 |
+| TypeScript frames that scroll sideways | 4 | 8 |
+
+So a static sample had been a tenth smaller than a live one on the same page, against what
+`style.css` and `DenCode.astro` both say. The narrow alternative (only the tag and the value)
+was offered and not taken: the maintainer looked at the result ("Docs look fine now") and
+committed it. The eight
+frames are open in `todo.md`. Two side effects, both right: a static sample's `pre` lost the
+2px corners it had inside its square block, and a TypeScript frame's corners are Expressive
+Code's own 1px.
+
+**Row 3, from a mock.** One picture of *Types in practice* with the same paragraphs twice, the
+chip on dark-3 and on dark-2, and the sidebar's current page under each, because that reads
+the same variable. The maintainer chose dark-2. The chip is fainter on the dark-0 page, and
+it is the level the tokens give a sunken ground. A first mock of two whole-page pictures showed
+no difference to the eye: at this size the two greys want to stand side by side in ONE picture.
+
+**Row 4.** The heading's word is lower case now, as the editor's pane prints it. The "as if"
+block's edge reads `--dendrite-warning`, as a `warns` fence does. Its label keeps Starlight's
+orange for its TEXT, on purpose: as 11px text on the light ground the editor's warning colour
+has a contrast of 2.3 to 1. That colour is made for an edge and a dot.
+
+**Row 5.** The cause is a rule that names a step of Starlight's grey ramp where it means "the
+border": gray-5 is the border in dark and a step light in light. `--sl-color-hairline` is the
+border in both. The divider beside the search field had the same fault and went with it. The
+hover's border had to be said again in `Header.astro`: that sheet is in no cascade layer, so
+the new border would have held Starlight's layered hover down. Three more rules of the kind
+are open in `todo.md`.
+
+**Looked at and found in order.** The three items carried from part 1 are closed. Light, in
+Compact and Full: Compact has no ground of its own, its panes are on the page's ground and its
+code is the white well; Full has the bar on ground-2 over a rule. Type and controls: where the
+site and the editor draw the same thing, the values agree (but row 5); the editor's smaller
+type is density, which is shape, and the backlog's. Hover and border in dark: `--dendrite-hover`
+has one use, the pressed state of an icon button, which has no border, so no element holds
+both; and a well (dark-2) is no longer the border's colour, as it was at dark-3. The theme
+picker wins over the system both ways. The landing's block is its 1px rule and its code area
+on the band.
+
+**Fault A: *Embedding core* showed a call that throws.** The page continues Installation, whose
+instance has one input, the host's `temperature`; `instance.setInput("limit", 35)` threw. The
+fault was found on 2026-09-21 by running the samples, and the fence was left untagged, which
+kept the suite green and the page wrong. Three ways were
+weighed: a `setProgram` fence under "Four commands" that brings a `limit` input (taken);
+Installation declaring `limit` from the start (the first sample a host reads grows by a
+concept); the contrast losing its second line (it then shows one kind of input). The page now
+runs whole, and its two new results are claims the test checks. Proof that they are checked: a
+`// false` changed to `// true` on purpose failed with "the page says true, the code gives
+false". `outputs: []` has to be written in a program's ports.
+
+**Fault B: a `continues=` chain was assembled in the wrong order.** `assemble()` pushed each
+page as it walked up, so C on B on A came out B, A, C. Latent: every chain on the site is two
+pages. The walk is its own function now, `ancestors(unit, pages)`, which takes the page map so
+a test needs no fixture page. Proof: with the old order put back on purpose, only the new case
+failed and the eleven others passed, which is the fault being latent, seen.
+
+**Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
+(`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
+things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*
+gets simpler, and the two styles for setting an input.
+
+**Traps of the Browser pane**, each nearly reported as a fault of the site:
+
+- **A hidden pane's clock stands still.** `document.timeline` does not advance, so a
+  transition never ends. After a theme switch IN the page, a property with a transition (a
+  field's border, an icon button's colour) reads as the OLD theme's value. Reload on the theme
+  (`localStorage["starlight-theme"]`), or finish the animations first:
+  `document.getAnimations().forEach((a) => a.finish())`.
+- **After a navigation or a reload, set the viewport again before a picture**, or the picture
+  is the top-left corner unscaled. A picture may time out; take it again, and go on by numbers
+  when it keeps failing.
+- **The console keeps old lines across navigations.** Three "404" lines came from a crawl that
+  had followed the GitHub link as a local path. `performance.getEntriesByType("resource")`
+  with `responseStatus === 404` says what THIS page failed to load.
+
+---
+
 ## Editor — its styling, to fit the site's new look (0.6.1, part 1) — DONE 2026-10-09
 
 The docs site took the brand sheet's look on 2026-10-06 (the entries below: the grounds, the
