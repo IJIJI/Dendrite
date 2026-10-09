@@ -75,7 +75,10 @@ A layout is only a composition of blocks, and the blocks are public:
       <Editor.Canvas />
     </Editor.Column>
     <Editor.Column size="20rem">
-      <Editor.Inputs title="Live state" readOnly={(name) => live.has(name)} />
+      <Editor.Inputs
+        title="Live state"
+        readOnly={(name) => live.has(name)}
+      />
       <Editor.Outputs />
       <Editor.Diagnostics />
     </Editor.Column>

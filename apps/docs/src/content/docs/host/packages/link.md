@@ -19,7 +19,10 @@ You own the pipe.**
 import { serveInstance, webSocketChannel } from "@dendrite-lang/link";
 
 wss.on("connection", (socket) => {
-  const stop = serveInstance(instance, webSocketChannel(socket), { language, onError });
+  const stop = serveInstance(instance, webSocketChannel(socket), {
+    language,
+    onError,
+  });
   socket.on("close", stop);
 });
 ```
@@ -29,7 +32,10 @@ wss.on("connection", (socket) => {
 import { connectInstance, webSocketChannel } from "@dendrite-lang/link";
 import { attach } from "@dendrite-lang/editor";
 
-const replica = await connectInstance(language, webSocketChannel(new WebSocket(url)));
+const replica = await connectInstance(
+  language,
+  webSocketChannel(new WebSocket(url)),
+);
 // <Editor connection={attach(language, replica)} />
 ```
 
@@ -95,8 +101,10 @@ import { type Observable } from "@dendrite-lang/core";
 
 interface Channel<Out, In> {
   send(message: Out): void;
-  onMessage(listener: (message: In) => void): () => void; // returns unsubscribe
-  status?: Observable<"connected" | "disconnected">; // absent means always connected
+  // Returns its own unsubscribe.
+  onMessage(listener: (message: In) => void): () => void;
+  // Absent means always connected.
+  status?: Observable<"connected" | "disconnected">;
 }
 ```
 

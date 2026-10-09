@@ -28,7 +28,11 @@ allowed to rename.
 ## A layer is data
 
 ```ts sketch
-{ id: "host", ports: { types?, inputs, outputs }, policy: { editable, feeds, persisted } }
+{
+  id: "host",
+  ports: { types?, inputs, outputs },
+  policy: { editable, feeds, persisted },
+}
 ```
 
 Three fields of policy, and core reads them as fields. It never branches on a layer's *kind*:

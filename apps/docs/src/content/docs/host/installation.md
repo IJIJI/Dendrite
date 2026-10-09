@@ -38,7 +38,13 @@ descriptor is which. Install core once, at the top.
 A host that runs programs builds four objects, each from the one before.
 
 ```ts runs
-import { createEnvironment, createStdlib, Policy, serialiseSource, Type } from "@dendrite-lang/core";
+import {
+  createEnvironment,
+  createStdlib,
+  Policy,
+  serialiseSource,
+  Type,
+} from "@dendrite-lang/core";
 
 // 1. A language: the vocabulary programs may use.
 const language = createStdlib();

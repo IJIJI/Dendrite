@@ -105,6 +105,18 @@ pages. The walk is its own function now, `ancestors(unit, pages)`, which takes t
 a test needs no fixture page. Proof: with the old order put back on purpose, only the new case
 failed and the eleven others passed, which is the fault being latent, seen.
 
+**The long lines, the day after (2026-10-10).** At 14px a frame is 718 px wide, its padding
+takes about 64 px and a character is 8.4 px, so 77 characters is the widest line that surely
+fits; the 79 of the pass was an estimate. Thirteen lines on seven pages were over it and were
+rewrapped by hand: an import broken over lines, an object literal opened, a trailing comment
+moved to its own line, two sketches. Two things the scan taught. A claim is a LINE rule, so
+the prose after `// 10` went to a comment line of its own and the claim stayed whole. And the
+first scan read only fences that name a language: the last frame that still scrolled was the
+tree diagram on the core package page, in a fence that names none. Proof: on all 30 pages, of
+121 static samples and 33 frames, none scrolls sideways. Prettier does not hold this width,
+because it ignores `apps/docs/src/content/`: a sample with a longer line scrolls again, and
+nothing says so.
+
 **Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
 (`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
 things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*

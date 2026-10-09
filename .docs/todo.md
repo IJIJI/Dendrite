@@ -27,32 +27,11 @@ the last two.
 
 **Both parts are built** (2026-10-09). `done.md` has them: "Editor — its styling, to fit the
 site's new look" for part 1, and "Docs — the docs pass of 0.6.1" for part 2. Nothing is
-released. Open: three things the pass left, then the release.
+released. Open: two things the pass left, then the release.
 
 ### Open from the docs pass
 
 Each waits for the maintainer, and none of them holds the release.
-
-**Eight TypeScript frames have a line longer than the column.** A frame is 14px since the
-pass, and the column holds 79 characters. Four of the eight scrolled sideways before, at the
-smaller size. Rewrapping is a content edit on six pages:
-
-| Page | Frames | Over by, at 1440 px |
-| --- | --- | --- |
-| *Installation* | 1 | 193 px (the import is 101 characters) |
-| the core package page | 1 | 110 px |
-| *Ports and layers* | 1 | 101 px |
-| *Embedding core* | 1 | 69 px |
-| the link package page | 3 | 52, 35 and 27 px |
-| *The type system* | 1 | 42 px |
-
-**Started 2026-10-09, not edited yet.** A scan of every `ts`, `tsx` and `sh` fence found 12
-lines over 77 characters. 77 is the safe width: a frame is 718 px, its padding takes about
-64 px, and a character is 8.4 px, so the 79 above was an estimate. The lines, by file and
-line: `host/embedding-core.md` 143, 148, 161; `host/installation.md` 41;
-`host/packages/editor.md` 78; `host/packages/link.md` 22, 32, 98, 99;
-`how-it-works/ports-and-layers.md` 31; `how-it-works/types.md` 12, 14. Proof when done: the
-page crawl of the pass reports no frame that scrolls sideways, and the samples test passes.
 
 **Three rules name a step of the grey ramp where they mean "the border".** No step of
 Starlight's ramp is the border in both themes; `--sl-color-hairline` is. The nav's two rules

@@ -140,12 +140,19 @@ a reason, and the lower ones are there when you need less.
 The lower two take a compiled program directly:
 
 ```ts runs
-import { createProgramRunner, type PortLayer, run } from "@dendrite-lang/core";
+import {
+  createProgramRunner,
+  type PortLayer,
+  run,
+} from "@dendrite-lang/core";
 
 const layer: PortLayer = {
   id: "sample",
   policy: Policy.user,
-  ports: { inputs: [{ name: "n", type: Type.number, default: 0 }], outputs: [] },
+  ports: {
+    inputs: [{ name: "n", type: Type.number, default: 0 }],
+    outputs: [],
+  },
 };
 
 const composed = env.forProgram([], [layer]);
@@ -158,7 +165,8 @@ const { descriptor } = composed.environment;
 run(program, descriptor, { n: 4 }).get("doubled"); // 8
 
 const runner = createProgramRunner(program, descriptor);
-runner.run({ n: 5 }).get("doubled"); // 10, and only what `n` reaches recomputes next time
+runner.run({ n: 5 }).get("doubled"); // 10
+// The next time, only what `n` reaches recomputes.
 ```
 
 They are deliberately separate rather than one object with options. Each is the smallest thing that
