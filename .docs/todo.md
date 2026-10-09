@@ -113,6 +113,19 @@ eight frames with a longer line** (*Installation*'s import is 101): on *The type
 link package page. Four of them scrolled before. Rewrapping them is a content edit, not in the
 commit that fixes the rule.
 
+**Row 5 has neighbours, found while it was built.** The cause is a rule that names a step of
+Starlight's grey ramp where it means "the border". No single step is the border in both
+themes: gray-5 is right in dark and a step light in light, gray-4 is right in light and a step
+light in dark. `--sl-color-hairline` is the border in both. The search field and the divider
+beside it, both in the nav, were taken with row 5. **Open, for the maintainer**, the site's
+other rules of this kind:
+
+| Where | Reads | Off in |
+| --- | --- | --- |
+| `DiagnosticsTable.astro`, the rule between two entries | gray-5 | Light: ground-3, not the border |
+| `Chain.astro`, a step's box and its arrows, five declarations | gray-4 | Dark: dark-4, not dark-3 |
+| `Chain.astro`, a substep's dashed box | gray-5 | Light, and it may be meant lighter |
+
 **Looked at and found in order:**
 
 - **The landing.** The block's panel is dark-0 on the dark-0 band, so the block is its 1px

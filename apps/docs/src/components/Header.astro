@@ -96,10 +96,13 @@ const links = [
     align-items: center;
   }
 
+  /* The nav's 1px rules, this one and the search field's below, are the brand's border.
+     Starlight draws both in gray-5, which is the border in dark and a step lighter than it
+     in light; the hairline is the border in both. */
   .social-icons::after {
     content: "";
     height: 2rem;
-    border-inline-end: 1px solid var(--sl-color-gray-5);
+    border-inline-end: 1px solid var(--sl-color-hairline);
   }
 
   /* A page with a hero is one dark band in both themes (Hero.astro), so the theme picker
@@ -119,6 +122,7 @@ const links = [
       width: auto;
       min-width: 10rem;
       height: 2rem;
+      border-color: var(--sl-color-hairline);
       border-radius: var(--dn-radius-1);
       background-color: var(--sl-color-gray-7); /* raised: the nav is the page's ground */
       color: var(--sl-color-gray-3);
@@ -127,7 +131,10 @@ const links = [
       font-size: var(--dn-text-sm);
     }
 
+    /* The border is Starlight's own hover, said again: this sheet is in no cascade layer, so
+       the border set above would hold it down. */
     .search :global(button[data-open-modal]:hover) {
+      border-color: var(--sl-color-gray-2);
       color: var(--sl-color-white);
     }
 
