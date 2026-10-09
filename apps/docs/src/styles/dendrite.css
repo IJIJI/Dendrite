@@ -61,8 +61,8 @@
   --sl-color-gray-2: #a8a4a2; /* dark-ink-2: body text */
   --sl-color-gray-3: #7d7977; /* dark-ink-3: muted */
   --sl-color-gray-4: #4a4644; /* dark-4 */
-  --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
-  --sl-color-gray-6: #2c2a29; /* dark-2 */
+  --sl-color-gray-5: #3a3735; /* dark-3: hairline-light */
+  --sl-color-gray-6: #2c2a29; /* dark-2: inline code */
   --sl-color-gray-7: #201e1d; /* dark-1: raised */
   --sl-color-black: #141312; /* dark-0: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
@@ -73,6 +73,10 @@
   --sl-color-hairline: var(--sl-color-gray-5); /* dark-border */
   --sl-color-hairline-light: var(--sl-color-gray-5);
   --sl-color-hairline-shade: var(--sl-color-gray-5);
+  /* Inline code, and the sidebar's current page with it: the sunken ground, which on dark is
+     dark-2, the level of an editor well. Starlight has it a step lighter here, on gray-5. In
+     light its gray-6 is ground-2 already. */
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
 }
 
 /* The landing page (and the 404, the other page with a hero). Its hero is a band in the
@@ -179,7 +183,7 @@ h1#_top,
 }
 
 /* The sidebar's current page: an Iris bar on its left, the sunken ground (the one Starlight
-   names for inline code: ground-2, and dark-3 on dark), ink text and square corners, where
+   names for inline code: ground-2, and dark-2 on dark), ink text and square corners, where
    Starlight draws a solid accent pill. The bar comes out of the padding, so the label stays
    where the other labels are. */
 .sidebar-content a[aria-current="page"],
