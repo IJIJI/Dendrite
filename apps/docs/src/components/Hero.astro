@@ -246,11 +246,9 @@ const { source, ports } = scoresExample;
   }
 
   /* The live block's code area: taller than its five lines, into the room the band has for
-     it. The height is set on CodeMirror's scroller and not through the editor's own knob
-     (--dendrite-code-min-height, on .cm-editor): the knob does not stretch the scroller, so
-     the sideways scrollbar would float under the last line (backlog.md). */
-  .dn-hero__live :global(.cm-scroller) {
-    min-height: 16rem;
+     it. The editor's own knob, which the Minimal layout reads. */
+  .dn-hero__live {
+    --dendrite-code-min-height: 16rem;
   }
 
   /* The live block brings its own margin for prose; in the band the grid places it. */
@@ -312,8 +310,8 @@ const { source, ports } = scoresExample;
     }
 
     /* One column has no room above the block: the code area as it was. */
-    .dn-hero__live :global(.cm-scroller) {
-      min-height: 11rem;
+    .dn-hero__live {
+      --dendrite-code-min-height: 11rem;
     }
 
     .dn-hero__inner {
@@ -333,8 +331,8 @@ const { source, ports } = scoresExample;
       padding-block: 48px 32px;
     }
 
-    .dn-hero__live :global(.cm-scroller) {
-      min-height: 11rem;
+    .dn-hero__live {
+      --dendrite-code-min-height: 11rem;
     }
   }
 </style>

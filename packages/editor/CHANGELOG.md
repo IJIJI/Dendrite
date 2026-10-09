@@ -9,6 +9,14 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.6.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
+## Unreleased
+
+- **Fixed: `--dendrite-code-min-height` fills the code area.** The knob set a minimum height on
+  the editor, and CodeMirror's scroller inside it kept the height of the code. With code shorter
+  than the minimum and a line wider than the editor, the sideways scrollbar sat under the last
+  line, with empty canvas below it. The scroller now takes the editor's height, so the scrollbar
+  is at the foot of the box. This is the Minimal layout, the one that reads the knob.
+
 ## 0.6.0
 
 - **No change in the package.** The peer range moves to core `^0.6.0`, and what core changed

@@ -183,9 +183,15 @@
     height: auto;
   }
 
-  /* A host asks for a taller code area that still grows with its content (the landing) */
+  /* A host asks for a taller code area that still grows with its content (the landing). The
+     scroller takes the height the editor has: its own `height: 100%` has no definite height
+     to read here, so without this a sideways scrollbar sits under the last line of code. */
   .dendrite-minimal-layout .dendrite-canvas .cm-editor {
     min-height: var(--dendrite-code-min-height, 0);
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas .cm-scroller {
+    flex-grow: 1;
   }
 
   .dendrite-minimal-layout > .dendrite-code + .dendrite-pane {
