@@ -739,7 +739,10 @@
     color: var(--dendrite-accent-text);
   }
 
+  /* A <code>, which a browser draws in its own monospace: the row's font. Said first, because
+     `font` also resets the numerals that follow it. */
   .dendrite-output-value {
+    font: inherit;
     font-variant-numeric: tabular-nums;
     text-align: right;
     overflow-wrap: anywhere;

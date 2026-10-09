@@ -18,6 +18,10 @@ of core needs a release here too, even if nothing in this package changed.
   theme does not change. A host that wants the old look sets `--dendrite-panel`, `--dendrite-bg`,
   `--dendrite-well` and `--dendrite-hover` to the old values; a host that already sets them sees
   no change.
+- **Fixed: an output's value is drawn in the editor's mono.** The value is a `<code>` and the
+  stylesheet gave it no font, so a browser drew it in its own `monospace`, beside a name in
+  `--dendrite-mono`. It takes its row's font now. A host whose page styles `code` saw that
+  style instead, and still does where its rule is not in a cascade layer.
 - **Fixed: `--dendrite-code-min-height` fills the code area.** The knob set a minimum height on
   the editor, and CodeMirror's scroller inside it kept the height of the code. With code shorter
   than the minimum and a line wider than the editor, the sideways scrollbar sat under the last
