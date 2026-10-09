@@ -9,7 +9,7 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.6.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
-## Unreleased
+## 0.6.1
 
 - **The dark theme sits one step down the brand's ramp. Every host's default look changes.**
   The panels go from `#201e1d` to `#141312`, the code area from `#2c2a29` to `#201e1d`, the wells

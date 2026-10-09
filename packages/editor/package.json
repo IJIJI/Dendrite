@@ -1,6 +1,6 @@
 {
   "name": "@dendrite-lang/editor",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Dendrite editor: framework-free session, CodeMirror adapter, document model and stores; React compound components under ./react.",
   "keywords": [
     "dendrite",
