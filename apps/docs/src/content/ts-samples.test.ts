@@ -30,10 +30,11 @@ import { describe, expect, it } from "vitest";
 //
 // The page is the single source: nothing is copied into a test that could drift from it, and a
 // reader sees no scaffolding. `runs` is opt-in PER FENCE, not per page, because a page's fences
-// are one script for the typechecker and not always for a runtime: Embedding core shows
-// `instance.setInput("limit", 35)` as a contrast, on an instance with no such input, where it
-// throws. Only core-only fences can run: there is no DOM here and no socket, so the editor and
-// link pages stay typecheck-only, and a name a `runs` fence uses must be a real value in the
+// are one script for the typechecker and not always for a runtime: a page may show a call that
+// throws by design, as a contrast. (Embedding core did so until 2026-10-09 without meaning to:
+// it set an input its instance did not have, and being untagged is what kept that unseen.)
+// Only core-only fences can run: there is no DOM here and no socket, so the editor and link
+// pages stay typecheck-only, and a name a `runs` fence uses must be a real value in the
 // prelude (see its header).
 //
 // Two ceilings, named so they are not rediscovered. A `runs` fence cannot use top-level
@@ -348,7 +349,7 @@ describe("the TypeScript samples that run", () => {
     // A claim is a COMMENT, so a rule that stops matching is silent. Counted by where they sit
     // on a page, since a `continues=` chain puts Installation's claim in two scripts.
     const places = new Set(runs.flatMap((run) => run.claims.map((claim) => claim.where)));
-    expect([...places].sort()).toHaveLength(4);
+    expect([...places].sort()).toHaveLength(6);
   });
 
   it.for(runs.map((run) => [run.unit.label, run] as const))("%s", ([label, run]) => {
