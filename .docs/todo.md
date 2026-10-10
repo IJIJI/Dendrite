@@ -6,44 +6,21 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## After 0.6.0
+## The order after 0.6.1
 
-0.6.0 is on npm since 2026-10-08, and its group of items is in `done.md` ("0.6.0 on npm").
-What follows is the order the maintainer gave that day. "Possibly" is the maintainer's word for
-the last two.
+`@dendrite-lang/editor` 0.6.1 is on npm since 2026-10-10 (`done.md`, "Editor 0.6.1 on npm");
+core and link are at 0.6.0. What follows is the order the maintainer gave on 2026-10-08.
+"Possibly" is the maintainer's word for the last two.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
-| 0.6.1 | The editor's styling, then a docs pass. The editor alone is released. | below |
-| After 0.6.1 | Two symbols that want `?`: `??` and `c ? a : b` | below |
+| Next | Two symbols that want `?`: `??` and `c ? a : b` | below |
 | 0.7, possibly | Union types, `A \| B` | `backlog.md`, "Language — union types" |
 | 0.8, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
 
----
-
-## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
-
-**When:** the release after 0.6.0 (the maintainer, 2026-10-08).
-
-**Both parts are built** (2026-10-09). `done.md` has them: "Editor — its styling, to fit the
-site's new look" for part 1, and "Docs — the docs pass of 0.6.1" for part 2. Nothing is
-released. Open: what the maintainer finds while reading, which does not hold the release, and
-the release.
-
-### Open from the docs pass
-
-**What the maintainer finds while reading.** "Docs — review the rest of the site after Learn",
-below, is where those observations collect. Two have entries of their own, below: "Docs —
-*How a program runs* gets simpler" and "Core — two styles for setting an input".
-
-### The release
-
-0.6.1 releases the editor alone. Its number then parts from core's and link's, which stay at
-0.6.0; the editor's peer range `^0.6.0` allows it, and the publish workflow stages only the
-versions npm lacks (`release-plan.md`, "Every later release"). The editor's changelog holds
-three lines under "Unreleased": the dark surfaces, which change every host's default look, the
-code-height fix, and an output value's font. After the record, the canvas takes tokens 1.3
-(`backlog.md`, "Brand canvas").
+Beside that order, with no release named for them: the three entries at the foot of this file.
+Two came from the maintainer while 0.6.1 was built (*How a program runs* gets simpler; two
+styles for setting an input), and the third is where a reading of the site collects.
 
 ---
 

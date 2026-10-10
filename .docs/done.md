@@ -5,6 +5,40 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Editor 0.6.1 on npm — DONE 2026-10-10
+
+`@dendrite-lang/editor` at **0.6.1**, two days after 0.6.0, and the first release of one
+package alone: core and link stay at 0.6.0, and the editor's peer range is still `^0.6.0`. A
+patch, with one line a host can see: the dark theme sits one step down the brand's ramp. Two
+fixes beside it: an output's value in the editor's mono, and `--dendrite-code-min-height`
+filling the code area. What was built, and why, is in the two entries below (part 1 and
+part 2).
+
+**The runbook** (`release-plan.md`, "Every later release") held. PR #26 showed 23 of 23
+commits. One tag, `@dendrite-lang/editor@0.6.1`, and one GitHub release on it ("Dendrite editor
+0.6.1 - Restyled the editor") started one `Stage release` run: 34 seconds, green, with core
+0.6.0 and link 0.6.0 skipped as already on npm and the editor staged. One approval.
+
+**Checked after approval, from outside the repo:** `latest` is 0.6.1 on the editor and 0.6.0
+on core and link; the version has an attestation; `npm audit signatures` verified every
+signature; and a clean `npm install` of core 0.6.0 and the editor 0.6.1 ran a check of 15
+lines, all passing: the versions and the peer range, the five surfaces in both themes read
+from the shipped `style.css`, the scroller rule, the output value's font with its numerals
+after it, an import that colours an op, the React entry, and no test file in the tarball. The
+check was written before approval and run both ways: 15 of 15 on the tarball of the release
+tree, and 9 of 15 failing on 0.6.0 from npm. One of its lines passed on 0.6.0 at first, an
+order test that is true when the thing it orders is missing; it was tightened before it was
+trusted.
+
+**The site** deployed with the PR's merge: the live stylesheet has the panel on dark-0, the
+TypeScript frame on the editor's canvas, the chip on dark-2 and the output value's font;
+*Embedding core* shows its new sample; the playground serves its own icon.
+
+**Left by the run, in the backlog:** two notices of GitHub's, about the actions' Node version
+and about `ubuntu-latest` ("CI — the workflows' actions and runner are about to move").
+
+---
+
 ## Docs — the docs pass of 0.6.1 (part 2): the site with the restyled editor, and two known faults — DONE 2026-10-09
 
 Part 2 of 0.6.1, the same day as part 1 (the entry below). Its scope was three things, decided

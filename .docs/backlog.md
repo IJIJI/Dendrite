@@ -914,6 +914,24 @@ split pays once the layouts land and the file passes ~1200 lines.
 
 ---
 
+## CI — the workflows' actions and runner are about to move
+
+**What:** two notices on the `Stage release` run of 2026-10-10, and they hold for all seven
+workflows in `.github/workflows/`:
+
+- "Node.js 20 is deprecated": `actions/checkout@v4`, `actions/setup-node@v4` and
+  `actions/cache@v4` target Node 20 and are forced onto Node 24.
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026."
+
+**Why deferred:** every run is green. Found while the release of the editor's 0.6.1 was
+checked, which is not the commit for it.
+
+**What it requires:** the next major of the three actions where one exists (in the workflows
+and in `.github/actions/setup`), and a look at the first runs after 2026-10-19: Pages, and the
+publish workflow's `npm install --global npm@^11.15.0`, are the two that lean on the image.
+
+---
+
 ## Editor — the top bar in the site's shape
 
 **What:** the playground's `Editor.TopBar` and the site's nav are two shapes. Measured on

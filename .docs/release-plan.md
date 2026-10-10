@@ -257,6 +257,27 @@ import alone: it is what caught nothing this time and would catch a build that p
   one. The workflow reads its address from Pages now, so a re-run is all a new domain needs,
   and its last step fails when the deployed page cannot find its stylesheet.
 
+## What the seventh release taught
+
+**0.6.1 of the editor, 2026-10-10: the first release of one package alone. The runbook held,
+and four things are worth keeping.**
+
+- **One package alone needs nothing special.** The version and the changelog of that package,
+  one tag, and the release on that tag. The workflow stages what npm lacks and skips the rest
+  with a notice, so core and link need no thought, and there is no "core first" to approve.
+  `yarn install --immutable` after the bump shows that the lockfile does not change.
+- **The tag goes on `main` without leaving `dev`.** After the merge: `git fetch origin`, read
+  `git log -1 --oneline origin/main` to see the merge, then
+  `git tag -a "@dendrite-lang/editor@0.6.1" -m "@dendrite-lang/editor 0.6.1" origin/main` and
+  push the tag. No checkout, so no chance of a merge commit reaching `dev`.
+- **A release of looks is checked by reading what ships.** No call shows a colour, so the check
+  reads `style.css` from the installed package: the pairs of each surface, and the two rules
+  of the fixes. It is the same idea as the guard in the repo (`src/style.test.ts`), run on the
+  tarball.
+- **A check line that cannot fail is found by the run on the old version.** Fifteen lines, and
+  on 0.6.0 one that should have failed passed: "set after the font" was true with no font at
+  all. Running both ways is what shows it, line by line, not only as a count.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the
