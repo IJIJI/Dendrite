@@ -240,6 +240,23 @@ with a program that exercises each feature of the release, which is a better che
 import alone: it is what caught nothing this time and would catch a build that packs the wrong
 `dist`.
 
+## What the sixth release taught
+
+**0.6.0, 2026-10-08: the runbook held, and three things are worth keeping.**
+
+- **Write the after-approval check before approval, and run it both ways.** `yarn workspace
+  <name> pack --out <absolute path>` makes the tarballs npm will serve; installed in a clean
+  folder they ran the check before a version existed (47 of 47). The same file on the previous
+  version from npm failed 40 of 47, which is what shows the check can fail. After approval it
+  is then one command, and a red line means the release, not the check.
+- **A hotfix on `main` does not disturb the PR's count.** The Pages fix went to `main` as a
+  cherry-pick of a commit `dev` already held (PR #24). The release PR still showed every commit
+  of `origin/main..dev`, 23 of 23, and the two copies merged with no conflict, because the
+  files were identical on both branches.
+- **A change in Settings → Pages does not rebuild the site.** Run "Deploy site" by hand after
+  one. The workflow reads its address from Pages now, so a re-run is all a new domain needs,
+  and its last step fails when the deployed page cannot find its stylesheet.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the

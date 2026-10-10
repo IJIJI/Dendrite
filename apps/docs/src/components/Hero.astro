@@ -117,7 +117,9 @@ const { source, ports } = scoresExample;
     opacity: 0.8;
   }
 
-  /* The fade the copy sits on: transparent at 30%, the band's own colour at 95%. */
+  /* The fade to the band's foot: transparent at 30%, the band's own colour at 95%. The copy
+     starts above it since the row went to the top; the field is drawn a fifth darker (above)
+     for the text that sits on it. */
   .dn-hero__bg::after {
     content: "";
     position: absolute;
@@ -157,15 +159,18 @@ const { source, ports } = scoresExample;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 48px;
-    /* The row is as tall as the taller block and sits at the foot of the band; in it the two
-       blocks start level, so the headline's top is the live block's top. */
-    align-content: end;
+    /* The row is as tall as the taller block and starts at the top of the band; in it the two
+       blocks start level, so the headline's top is the live block's top. At the top and not
+       at the foot, where the design has it: the live block is client-only, so its cell has no
+       height until it loads. A row at the foot grew upward when it did, and the copy jumped
+       53px. From the top the row grows downward, and nothing above it moves. */
+    align-content: start;
     align-items: start;
     max-width: 1280px;
-    /* The design frame's height (1440 x 600) where the window has it: the copy stays in the
-       band's lower part, where the fade is. A shorter window gets a shorter hero, down to
-       what the blocks need, so the pillars stay on screen: 9rem is kept for them, which is
-       their cells with three lines of text. */
+    /* The design frame's height (1440 x 600) where the window has it; what the row leaves of
+       it is under the row. A shorter window gets a shorter hero, down to what the blocks
+       need, so the pillars stay on screen: 9rem is kept for them, which is their cells with
+       three lines of text. */
     min-height: min(600px, calc(100dvh - var(--sl-nav-height) - 9rem));
     margin: 0 auto;
     padding: 96px 48px 64px;
@@ -240,12 +245,10 @@ const { source, ports } = scoresExample;
     outline-offset: 2px;
   }
 
-  /* The live block's code area: taller than its five lines, into the room the band has above
-     it. The height is set on CodeMirror's scroller and not through the editor's own knob
-     (--dendrite-code-min-height, on .cm-editor): the knob does not stretch the scroller, so
-     the sideways scrollbar would float under the last line (backlog.md). */
-  .dn-hero__live :global(.cm-scroller) {
-    min-height: 16rem;
+  /* The live block's code area: taller than its five lines, into the room the band has for
+     it. The editor's own knob, which the Minimal layout reads. */
+  .dn-hero__live {
+    --dendrite-code-min-height: 16rem;
   }
 
   /* The live block brings its own margin for prose; in the band the grid places it. */
@@ -307,8 +310,8 @@ const { source, ports } = scoresExample;
     }
 
     /* One column has no room above the block: the code area as it was. */
-    .dn-hero__live :global(.cm-scroller) {
-      min-height: 11rem;
+    .dn-hero__live {
+      --dendrite-code-min-height: 11rem;
     }
 
     .dn-hero__inner {
@@ -328,8 +331,8 @@ const { source, ports } = scoresExample;
       padding-block: 48px 32px;
     }
 
-    .dn-hero__live :global(.cm-scroller) {
-      min-height: 11rem;
+    .dn-hero__live {
+      --dendrite-code-min-height: 11rem;
     }
   }
 </style>

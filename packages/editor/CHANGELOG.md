@@ -9,6 +9,25 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. This package declares `@dendrite-lang/core` as a peer at `^0.6.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
 
+## 0.6.1
+
+- **The dark theme sits one step down the brand's ramp. Every host's default look changes.**
+  The panels go from `#201e1d` to `#141312`, the code area from `#2c2a29` to `#201e1d`, the wells
+  from `#3a3735` to `#2c2a29` and the hover from `#4a4644` to `#3a3735`. The top bar keeps
+  `#141312`, so in dark it is the panels' colour, with its 1px rule between the two. The light
+  theme does not change. A host that wants the old look sets `--dendrite-panel`, `--dendrite-bg`,
+  `--dendrite-well` and `--dendrite-hover` to the old values; a host that already sets them sees
+  no change.
+- **Fixed: an output's value is drawn in the editor's mono.** The value is a `<code>` and the
+  stylesheet gave it no font, so a browser drew it in its own `monospace`, beside a name in
+  `--dendrite-mono`. It takes its row's font now. A host whose page styles `code` saw that
+  style instead, and still does where its rule is not in a cascade layer.
+- **Fixed: `--dendrite-code-min-height` fills the code area.** The knob set a minimum height on
+  the editor, and CodeMirror's scroller inside it kept the height of the code. With code shorter
+  than the minimum and a line wider than the editor, the sideways scrollbar sat under the last
+  line, with empty canvas below it. The scroller now takes the editor's height, so the scrollbar
+  is at the foot of the box. This is the Minimal layout, the one that reads the knob.
+
 ## 0.6.0
 
 - **No change in the package.** The peer range moves to core `^0.6.0`, and what core changed

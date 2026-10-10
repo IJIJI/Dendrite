@@ -5,7 +5,340 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
-## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-09
+## Docs — the docs pass of 0.6.1 (part 2): the site with the restyled editor, and two known faults — DONE 2026-10-09
+
+Part 2 of 0.6.1, the same day as part 1 (the entry below). Its scope was three things, decided
+on 2026-10-08: the site with the restyled editor in it, the two known docs faults, and what
+the maintainer finds while reading. The first two are done here. The third goes on, in
+`todo.md`. Seven commits:
+
+| # | Commit | What it did |
+| --- | --- | --- |
+| 1 | `2cb5109` `fix(editor): an output's value is drawn in the editor's mono` | `font: inherit` on `.dendrite-output-value`. The one fault of the pass that is in the package. |
+| 2 | `10300aa` `fix(docs): the site's code size stays out of an editor block` | The site's rules for `code` and `pre` leave out `.not-content`. Every sample and frame is 14px. |
+| 3 | `5550da1` `fix(docs): a diagnostic's severity is the editor's status tag` | The heading of an entry wears `dendrite-tag`; 19 lines of `.severity` go. |
+| 4 | `aadff79` `fix(docs): the nav's rules are the brand's border in light` | The search field's border and the divider beside it read `--sl-color-hairline`. |
+| 5 | `cbececd` `docs: Embedding core's two kinds of input run, with their results` | A `setProgram` fence gives the program an input; the contrast is tagged `runs`. |
+| 6 | `71c897f` `fix(docs): a continues= chain is assembled from its root` | `ancestors()` returns the chain root first, with a test of three made-up pages. |
+| 7 | `25e6017` `docs: the inline code chip sits on dark-2` | `--sl-color-bg-inline-code` in the dark block. |
+
+**How the pass was run.** On the built site (`docs-preview`) and on the playground, at
+1440 x 900, by computed styles and pictures: the landing; *Examples* (Minimal and Compact) in
+both themes; *Types in practice*; *Arithmetic*; *Every diagnostic*; the playground in both
+themes. No source file changed until the findings were decided.
+
+**The five findings.** All five were taken (the maintainer, 2026-10-09). Rows 1, 2, 4 and 5
+are older than this release. Row 3 is new: part 1 caused it.
+
+| # | Finding | Measured |
+| --- | --- | --- |
+| 1 | An output value was a `<code>` with no font, so a browser drew it in its own `monospace`. | Playground: `monospace` 13px beside a name in IBM Plex Mono 13px. |
+| 2 | The site's `.sl-markdown-content code { font-size: 0.9em }` is in no cascade layer and did not leave out `.not-content`, so inside a block it beat the editor's layered sizes. | A type tag 12.6px or 11.7px, where the editor says 11px. |
+| 3 | In dark an inline code chip (dark-3) was a step lighter than an editor well, which part 1 moved to dark-2. | `rgb(58, 55, 53)` against `rgb(44, 42, 41)`. |
+| 4 | *Every diagnostic* had two tags for one word: Starlight's pink badge in the heading, the brand's status tag in the sample under it. | Two fills, two fonts, one upper case. |
+| 5 | In light the search field's border was Starlight's gray-5 (ground-3), not the brand's border. | `rgb(217, 214, 213)` against `rgb(207, 204, 203)`. |
+
+**Row 2 was larger than its row.** The rule sized every `<code>` in a block, which is all
+static Dendrite samples and all TypeScript frames too. That was found by measuring every page
+before and after the change (30 pages at 1440 px, each loaded in an iframe of that width from
+one page, the old build's numbers kept in `localStorage` across the rebuild):
+
+| | Before | After |
+| --- | --- | --- |
+| A static Dendrite sample, 121 of them | 12.6px | 14px, the live editor's size |
+| A TypeScript frame, 32 of them | 12.96px | 14px, what Expressive Code asks for (`.875rem`) |
+| A type tag | 12.6px or 11.7px | 11px |
+| An output value | 11.7px | 13px |
+| Static samples that scroll sideways | 0 | 0 |
+| TypeScript frames that scroll sideways | 4 | 8 |
+
+So a static sample had been a tenth smaller than a live one on the same page, against what
+`style.css` and `DenCode.astro` both say. The narrow alternative (only the tag and the value)
+was offered and not taken: the maintainer looked at the result ("Docs look fine now") and
+committed it. The eight
+frames are open in `todo.md`. Two side effects, both right: a static sample's `pre` lost the
+2px corners it had inside its square block, and a TypeScript frame's corners are Expressive
+Code's own 1px.
+
+**Row 3, from a mock.** One picture of *Types in practice* with the same paragraphs twice, the
+chip on dark-3 and on dark-2, and the sidebar's current page under each, because that reads
+the same variable. The maintainer chose dark-2. The chip is fainter on the dark-0 page, and
+it is the level the tokens give a sunken ground. A first mock of two whole-page pictures showed
+no difference to the eye: at this size the two greys want to stand side by side in ONE picture.
+
+**Row 4.** The heading's word is lower case now, as the editor's pane prints it. The "as if"
+block's edge reads `--dendrite-warning`, as a `warns` fence does. Its label keeps Starlight's
+orange for its TEXT, on purpose: as 11px text on the light ground the editor's warning colour
+has a contrast of 2.3 to 1. That colour is made for an edge and a dot.
+
+**Row 5.** The cause is a rule that names a step of Starlight's grey ramp where it means "the
+border": gray-5 is the border in dark and a step light in light. `--sl-color-hairline` is the
+border in both. The divider beside the search field had the same fault and went with it. The
+hover's border had to be said again in `Header.astro`: that sheet is in no cascade layer, so
+the new border would have held Starlight's layered hover down. Three more rules of the kind
+are open in `todo.md`.
+
+**Looked at and found in order.** The three items carried from part 1 are closed. Light, in
+Compact and Full: Compact has no ground of its own, its panes are on the page's ground and its
+code is the white well; Full has the bar on ground-2 over a rule. Type and controls: where the
+site and the editor draw the same thing, the values agree (but row 5); the editor's smaller
+type is density, which is shape, and the backlog's. Hover and border in dark: `--dendrite-hover`
+has one use, the pressed state of an icon button, which has no border, so no element holds
+both; and a well (dark-2) is no longer the border's colour, as it was at dark-3. The theme
+picker wins over the system both ways. The landing's block is its 1px rule and its code area
+on the band.
+
+**Fault A: *Embedding core* showed a call that throws.** The page continues Installation, whose
+instance has one input, the host's `temperature`; `instance.setInput("limit", 35)` threw. The
+fault was found on 2026-09-21 by running the samples, and the fence was left untagged, which
+kept the suite green and the page wrong. Three ways were
+weighed: a `setProgram` fence under "Four commands" that brings a `limit` input (taken);
+Installation declaring `limit` from the start (the first sample a host reads grows by a
+concept); the contrast losing its second line (it then shows one kind of input). The page now
+runs whole, and its two new results are claims the test checks. Proof that they are checked: a
+`// false` changed to `// true` on purpose failed with "the page says true, the code gives
+false". `outputs: []` has to be written in a program's ports.
+
+**Fault B: a `continues=` chain was assembled in the wrong order.** `assemble()` pushed each
+page as it walked up, so C on B on A came out B, A, C. Latent: every chain on the site is two
+pages. The walk is its own function now, `ancestors(unit, pages)`, which takes the page map so
+a test needs no fixture page. Proof: with the old order put back on purpose, only the new case
+failed and the eleven others passed, which is the fault being latent, seen.
+
+**The long lines, the day after (2026-10-10).** At 14px a frame is 718 px wide, its padding
+takes about 64 px and a character is 8.4 px, so 77 characters is the widest line that surely
+fits; the 79 of the pass was an estimate. Thirteen lines on seven pages were over it and were
+rewrapped by hand: an import broken over lines, an object literal opened, a trailing comment
+moved to its own line, two sketches. Two things the scan taught. A claim is a LINE rule, so
+the prose after `// 10` went to a comment line of its own and the claim stayed whole. And the
+first scan read only fences that name a language: the last frame that still scrolled was the
+tree diagram on the core package page, in a fence that names none. Proof: on all 30 pages, of
+121 static samples and 33 frames, none scrolls sideways. Prettier does not hold this width,
+because it ignores `apps/docs/src/content/`: a sample with a longer line scrolls again, and
+nothing says so.
+
+**The other rules on a grey step, the day after (2026-10-10).** Row 5's cause had three more
+cases, and they went the same way: the rule between two entries of *Every diagnostic*, and
+every line of the chain figure (a step's box, an arrow and its head, a substep's dashed box)
+read `--sl-color-hairline` now. The figure's lines were gray-4, the border in light and dark-4
+in dark; the dashed box and the entries' rule were gray-5, the border in dark and ground-3 in
+light. Measured on *The chain* and on *Every diagnostic*: each equals the rule under the nav,
+in both themes. The dashed box might have been meant lighter than a solid one; its dash says
+that it is the lesser box, and the site has one border colour. No rule the site owns names a
+step of the ramp for a border any more.
+
+**Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
+(`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
+things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*
+gets simpler, and the two styles for setting an input.
+
+**Traps of the Browser pane**, each nearly reported as a fault of the site:
+
+- **A hidden pane's clock stands still.** `document.timeline` does not advance, so a
+  transition never ends. After a theme switch IN the page, a property with a transition (a
+  field's border, an icon button's colour) reads as the OLD theme's value. Reload on the theme
+  (`localStorage["starlight-theme"]`), or finish the animations first:
+  `document.getAnimations().forEach((a) => a.finish())`.
+- **After a navigation or a reload, set the viewport again before a picture**, or the picture
+  is the top-left corner unscaled. A picture may time out; take it again, and go on by numbers
+  when it keeps failing.
+- **The console keeps old lines across navigations.** Three "404" lines came from a crawl that
+  had followed the GitHub link as a local path. `performance.getEntriesByType("resource")`
+  with `responseStatus === 404` says what THIS page failed to load.
+
+---
+
+## Editor — its styling, to fit the site's new look (0.6.1, part 1) — DONE 2026-10-09
+
+The docs site took the brand sheet's look on 2026-10-06 (the entries below: the grounds, the
+type, the top bar, the controls). `@dendrite-lang/editor` did not, on purpose: it is a
+published package, and a change to its stylesheet ships in a release. Part 1 of 0.6.1 closed
+the difference that showed most, the dark surfaces, and three things beside it. Six commits,
+none released yet: the release follows part 2 (`todo.md`).
+
+| # | Commit | What it did | Proof |
+| --- | --- | --- | --- |
+| 1 | `b09c272` `fix(docs): the landing's copy keeps its place when the editor loads` | `Hero.astro`: the row of copy and block starts at the top of the band | The copy's top is 96, 96, 48 and 64 px before and after the load, at 1440 x 900, 1920 x 1080, 1280 x 720 and 800 x 900 |
+| 2 | `80aafba` `fix(editor): the code area fills its minimum height` | `flex-grow: 1` on the Minimal layout's `.cm-scroller`; the hero's three scroller rules became the knob | Editor and scroller the same height; the landing's block 386 and 316 px, as before; a long line typed in puts the scrollbar at the foot of the box |
+| 3 | `ab074d1` `feat(editor): the dark surfaces sit one step down` | Four dark values in `style.css` and in the `--dn-editor-*` mirror (tokens 1.3); a guard test | Computed colours on *Examples* and on the playground, both themes; light unchanged |
+| 4 | `12e5d8a` `docs: the site's code frame sits on dark-1` | Expressive Code's frame reads `--dendrite-bg` | A frame's code and the editor's canvas compute one colour, on two pages, in both themes |
+| 5 | `d7c293e` `feat(playground): a favicon of its own` | The brand's reversed avatar as favicon and touch icon; a row in `brand/render.ts` | The two apps' icons differ; the other rendered PNGs kept their bytes |
+| 6 | The notes | This entry | |
+
+**Values, not shapes** (the maintainer, 2026-10-09). Colours, levels, rules and sizes that
+exist; the names of the `--dendrite-*` variables stay, they are the theming API. A new shape
+(another top bar, another button) is possible, and only after thorough consideration: it needs
+a frame from Claude Design first. So all of part 1 went without Claude Design. The decisions by
+eye were made on a mock in the REAL page: injected CSS, no source change, a doc page and the
+playground, both themes. That shows real markup and real content, which a frame in the canvas
+does not. Claude Design comes AFTERWARDS, to take the result back (`backlog.md`, "Brand
+canvas" and "Brand — take the hero's corrections back").
+
+**The dark surfaces: one step down, everywhere.** The editor sat one step above the site, for
+the reason its stylesheet gave (dark-0 under a full screen of near-white text reads harsh). The
+site's page went to dark-0 on 2026-10-06 over the same worry, so a block on a doc page was a
+dark-1 card with a dark-2 code area, and the playground as a whole was a step lighter than the
+docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
+disagreed. Three options were on the mock, as a switch and eight pictures:
+
+- **A. Leave the values.** No release needed for this item.
+- **B. One step down:** panel dark-0, code dark-1, well dark-2, hover dark-3. **Chosen.**
+- **C. Override `--dendrite-*` in the docs' stylesheet only.** The playground stays as it was.
+
+| Surface | Variable | Before | Now |
+| --- | --- | --- | --- |
+| Top bar | `--dendrite-bar` | dark-0 `#141312` | the same |
+| Panel, which is the block | `--dendrite-panel` | dark-1 `#201e1d` | dark-0 `#141312` |
+| Code area | `--dendrite-bg` | dark-2 `#2c2a29` | dark-1 `#201e1d` |
+| Well | `--dendrite-well` | dark-3 `#3a3735` | dark-2 `#2c2a29` |
+| Hover | `--dendrite-hover` | dark-4 `#4a4644` | dark-3 `#3a3735` |
+
+So §20 is the rule and §25 is the section to redraw. In dark the bar and the panel are one
+colour now, parted by the bar's 1px rule, which is how the site parts its nav. **The bar in
+light keeps ground-2** (the maintainer): it does not take the site's ground.
+
+**The guard** (`packages/editor/src/style.test.ts`). The palette lives in four places: the
+canvas, the sheet, the tokens file and the editor's stylesheet (hex literals, no `--dn-*`
+token, because it ships alone). Nothing compared the last two. The test holds that
+`--dendrite-bar`, `-panel`, `-bg`, `-well` and `-hover` equal `--dn-editor-bar`, `-page`,
+`-canvas`, `-well` and `-hover`, in light and in dark. It was written first and run on the old
+values, where it passed: the mirror agreed. With `style.css` changed and the tokens not, four
+of its five cases failed. A guard that has not failed proves nothing.
+
+**The top bar against the site's nav.** Measured, and in dark their colours agree already. What
+differs is shape, which this release leaves alone; the numbers are in the backlog ("Editor —
+the top bar in the site's shape").
+
+**The code-height fix.** `--dendrite-code-min-height` set a minimum height on `.cm-editor`, and
+CodeMirror's scroller inside did not stretch: its `height: 100%` has no definite height to
+read. With code shorter than the minimum and a line wider than the editor, the sideways
+scrollbar sat under the last line with empty canvas below it (8 px at 11rem, 80 px at 16rem).
+CodeMirror's editor is a flex column already, so one declaration does it. The rule is Minimal's
+only: Compact was measured on *Examples*, side by side and stacked, and its editor and scroller
+are the same height there. The landing had set the height on `.cm-scroller` itself, CodeMirror's
+own element (Inappropriate Intimacy); it reads the knob now.
+
+**The site's code frame.** A fence in another language is Expressive Code's frame, and
+Starlight gives its code `--sl-color-gray-6` in dark: dark-2 here, a step above the canvas once
+the editor moved. `.expressive-code` now sets `--ec-frm-edBg` and `--ec-frm-trmBg` to
+`var(--dendrite-bg)`. An unlayered rule is enough: Expressive Code's sheet is in
+`@layer starlight.components`. `--sl-color-gray-7` has the same value in both themes and was
+not used: two values that must agree, where the editor's variable is one. A third variable,
+`--ec-frm-edActTabBg`, colours the tab of a frame with a title. No page has such a frame, so it
+is not set, and the comment beside the rule names it.
+
+**The playground's favicon.** Both apps had icon A, an identical file. The playground wears the
+brand's reversed avatar now (an Iris field, a white D and fork), which the brand's own rule
+asks for under 24 px. Its touch icon had been a hand copy of the docs' file; it has a row in
+`brand/render.ts`. The script renders every row, and the three other PNGs came out with the
+same bytes (checked against copies made before the run), so a new row does not dirty the rest.
+
+**The landing's copy jumped when the editor loaded** (reported by the maintainer, 2026-10-09).
+The live block is client-only, so its cell has no height until it loads. The row sat at the
+foot of the band (`align-content: end`), so when the block appeared the row grew UPWARD and the
+copy went with it: 53 px at 1440 x 900 and 1920 x 1080 (203 to 150 px), nothing at 1280 x 720
+(the copy is the taller block there) or on one column. **Decided: the row at the top**, the
+maintainer's own proposal, chosen from pictures. One value. The copy is at 96 px before and
+after, 54 px higher than it ended before. Weighed against it: the copy anchored at the foot
+(`align-self: end`: no jump, the nearest to sheet §24's "lower 55%", but the headline's top no
+longer level with the block's), and a reserved height for the block (no jump and no change, at
+the price of two numbers, 386 and 316 px, that follow the example's size). The choice moves the
+copy further from §24, which the backlog's entry for Claude Design records.
+
+**On one column the pillars still move, and that stays.** Under 961 px the band has no minimum
+height, so the block's arrival pushes the pillars down 316 px (800 x 900: 494 to 810; 390 x
+844: 506 to 822). On two columns the band's minimum height holds the row and they do not move.
+A reserve of 316 px on the block's cell would stop it. **The maintainer: no reserve.**
+
+**Left open, and where each is:**
+
+| What | Where |
+| --- | --- |
+| Light in Compact and Full; type and controls; hover and border one colour in dark | `todo.md`, part 2 |
+| The top bar's shape | `backlog.md`, "Editor — the top bar in the site's shape" |
+| The canvas and the sheet: tokens 1.3, the hero's row, the playground's icon | `backlog.md`, the two "Brand" entries for Claude Design |
+| `@types/node` in the editor package | `backlog.md` |
+
+**Traps**, from the second handoff (the chat that restyled the site) and from building this:
+
+- **Cascade layers.** The editor's sheet is in `@layer dendrite`; the docs order the layers
+  `starlight, dendrite` (`apps/docs/src/styles/layers.css`). An unlayered docs rule wins.
+- **Two `color-scheme` lines in `dendrite.css` must stay.** They make a block follow the
+  site's theme picker; the editor's `:root { color-scheme: light dark }` beat Starlight's
+  before that fix.
+- **The landing's hero forces `color-scheme: dark`**, so its block is the dark editor in both
+  site themes. The landing stays dark by decision, and its theme picker is hidden.
+- **The docs reuse editor classes:** `.dendrite-tag` for the sample tags, and the red and
+  amber edges target `.dendrite-minimal-layout` and `.dendrite-compact-layout`. A renamed
+  class or a changed border breaks them silently.
+- **A docs build while the dev server runs leaves the dev server stale.** Seen twice in two
+  forms: 504 on `@codemirror_*` modules with no live block, and the landing without its three
+  pillars, its content store (`apps/docs/.astro/data-store.json`) holding no `pillars` field.
+  The remedy that is certain: stop the dev server, delete `apps/docs/.astro`, start it again.
+  It is a Gates rule in `CLAUDE.md` now. A commit that changes no docs file needs no docs
+  build: the running dev server shows an editor stylesheet change by itself, and commit 3 was
+  measured there.
+- **Headless Chrome with a temp profile per run filled the C: drive** (33 profiles, 1.6 GB).
+  Use the Browser pane.
+- **A built trial costs a round.** A light landing was built, disliked and reverted; a
+  picture got a one-word answer.
+- **"Before the load" can be measured after it:** hide the children of the block's cell
+  (`display: none`) and read the layout. The island's own element is `display: contents`, so
+  positioning it does nothing.
+
+**Rejected, not to be reopened:** a line-wrap option for the editor, and a light landing.
+
+---
+
+## 0.6.0 on npm — DONE 2026-10-08
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.6.0**, three
+days after 0.5.0. A minor because it breaks, in five lines that each touch an edge case: the
+comparison ops are in `logic`; `Divide` by zero and `Average`, `Max` and `Min` of an empty list
+give `null`; a result that is `NaN` or an infinity is `null`; a mixed list literal refuses a
+function; a list that holds a function does not fit `any`. The editor and the link changed
+nothing of their own and released as the peer range demands.
+
+**The group it closed** (grouped 2026-10-05, each row with its own entry below):
+
+| # | Item | Outcome |
+| --- | --- | --- |
+| 1 | The stdlib per segment | Done: one file per segment, `createStdlib({ segments })` |
+| 2 | A math batch | Done: seven ops, and with them `null` for "no answer" |
+| 3 | A mixed list literal refuses a function | Done, with the guard fixed in `isCompatible` |
+| 4 | `AnalysisContext` leaves the public surface | Out: it stays public (the maintainer) |
+| 5 | Strings as lists | Moved, to 0.8 possibly, behind union types |
+
+**The runbook** (`release-plan.md`, "Every later release") held. PR #25 showed 23 of 23
+commits. One GitHub release on core's tag started one `Stage release` run (1m00s, green), and
+the three versions were approved core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.6.0 on each package, an
+attestation is on all three, the peer ranges are `^0.6.0`, and a clean `npm install` of the
+three ran a check of 47 lines, one per thing the release changed, all passing: the versions,
+`logic` alone running `1 >= 2` and failing to lex `-14`, each math op's disputed rule,
+`Divide(1, 0)` and `Max([])` as `null`, a host op's `NaN` as `null`, `["a", x => x]` as
+`function_in_mixed_list`, a runtime and an instance on `Default(Max($states), 0)`, the editor
+colouring `Round` as an op, and the link's fingerprint holding `Clamp`. The live site followed:
+twelve ops on the arithmetic page, `/stdlib/comparison/` a 404 as decided, and the version note
+at 0.6.0.
+
+**What was new in how it was checked:** the check program was written BEFORE approval and run
+twice. On tarballs of the release tree (`yarn pack`) it passed 47 of 47. On 0.5.0 from npm it
+failed 40 of 47. A check that has never failed proves nothing, and one that is first run on the
+published version cannot tell a fault in the release from a fault in itself.
+
+**The custom domain, the same day.** `dendrite-lang.org` was pointed at Pages while this release
+was being built, and the site broke with no commit: it answered 200 for its HTML and 404 for
+every file the HTML asked for, because the build had `/Dendrite/` written in three places and a
+custom domain serves at the root. A change in Settings → Pages does not rebuild the site. The
+deploy workflow now asks Pages for its origin and base path (`actions/configure-pages`), names
+no address, and fails when the deployed page cannot find its stylesheet. It went to `main` as a
+cherry-picked hotfix (PR #24), ahead of the release.
+
+---
+
+## Core — a mixed list literal refuses a function, and a list of functions is not `any` — DONE 2026-10-08
 
 The last item of the 0.6.0 group, in one commit. It was "a list literal with mixed items hides a
 function behind `any`", found on 2026-10-02 while probing `++`: `["a", x => x]` analysed clean,

@@ -50,6 +50,22 @@ identically.
 
 And `dispose(){:ts}`, which unregisters the program from the runtime.
 
+A saved program can carry
+[declarations of its own](../../how-it-works/persistence/#a-program-carries-its-own-declarations),
+and `setProgram{:ts}` takes them with it. This program brings an input the runtime does not declare:
+
+```ts runs
+instance.setProgram(
+  serialiseSource("output alert = $temperature > $limit", {
+    inputs: [{ name: "limit", type: Type.number, default: 25 }],
+    outputs: [],
+  }),
+);
+```
+
+The instance now has an input of its own beside the runtime's, and that difference is the next
+section.
+
 ## Two kinds of input, two places to set them
 
 This is the thing hosts most often get wrong, so it is worth stating flatly.
@@ -58,9 +74,12 @@ This is the thing hosts most often get wrong, so it is worth stating flatly.
   every program on the runtime sees the new value.
 - A **program-level** input belongs to one instance. Set it with `instance.setInput(name, value){:ts}`.
 
-```ts
+```ts runs
 runtime.updateInputs({ temperature: 30 }); // your state, every program
-instance.setInput("limit", 35);            // this program's own input
+instance.outputs.get().outputs?.get("alert"); // true: 30 is over 25
+
+instance.setInput("limit", 35); // this program's own input
+instance.outputs.get().outputs?.get("alert"); // false
 ```
 
 Calling `instance.setInput{:ts}` with a global name throws, because a value with two owners would have
@@ -121,12 +140,19 @@ a reason, and the lower ones are there when you need less.
 The lower two take a compiled program directly:
 
 ```ts runs
-import { createProgramRunner, type PortLayer, run } from "@dendrite-lang/core";
+import {
+  createProgramRunner,
+  type PortLayer,
+  run,
+} from "@dendrite-lang/core";
 
 const layer: PortLayer = {
   id: "sample",
   policy: Policy.user,
-  ports: { inputs: [{ name: "n", type: Type.number, default: 0 }], outputs: [] },
+  ports: {
+    inputs: [{ name: "n", type: Type.number, default: 0 }],
+    outputs: [],
+  },
 };
 
 const composed = env.forProgram([], [layer]);
@@ -139,7 +165,8 @@ const { descriptor } = composed.environment;
 run(program, descriptor, { n: 4 }).get("doubled"); // 8
 
 const runner = createProgramRunner(program, descriptor);
-runner.run({ n: 5 }).get("doubled"); // 10, and only what `n` reaches recomputes next time
+runner.run({ n: 5 }).get("doubled"); // 10
+// The next time, only what `n` reaches recomputes.
 ```
 
 They are deliberately separate rather than one object with options. Each is the smallest thing that

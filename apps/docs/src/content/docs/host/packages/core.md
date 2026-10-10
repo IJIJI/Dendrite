@@ -44,9 +44,11 @@ exported: extend a language through its `register*` methods instead.
 ```
 createStdlib()             a Language: types, ops, evaluators, symbols
   └ createEnvironment()    that language with its pipeline
-      ├ forProgram()       a pipeline bound to a composed descriptor: parse, analyse, run, load
+      ├ forProgram()       a pipeline bound to a composed descriptor:
+      │                    parse, analyse, run, load
       └ createRuntime()    many programs, global layers, shared input values
-          └ createInstance()   one program, its own layers, five observables, four commands
+          └ createInstance()   one program, its own layers,
+                               five observables, four commands
 ```
 
 Two rules keep that stack honest:

@@ -690,6 +690,14 @@ Downloads, not in git) still holds 1.0, so the next export would regress the she
 12 and 20), re-export, re-copy into `brand/` keeping the README's licence line, and diff the
 export against the patched sheet before replacing it.
 
+**And tokens 1.3 (2026-10-09):** the editor's dark surfaces went one step down the ramp (page
+dark-0, canvas dark-1, well dark-2, hover dark-3), shipped in editor 0.6.1. The sheet's §25 and
+its editor cards still draw 1.1, so the canvas takes 1.3 in the same round. `--dn-dark-4` has
+one reader left, the docs site's `--sl-color-gray-4`. The same day the playground took the
+reversed avatar as its favicon and touch icon, where the sheet's icon section and
+`brand/CHANGES.md` ("Icons wiring") name icon A for every favicon; `brand/README.md` says
+which app wears which.
+
 ---
 
 ## Brand — take the hero's corrections back to the Claude Design source
@@ -730,6 +738,12 @@ maintainer then changed three things the canvas should take as well: the landing
 and the pillars fill the window, the copy has 24 and 32px between its parts with buttons of
 12/20 padding at 16px, and the live block's code area is 16rem tall beside the copy.
 
+**Two decisions of 2026-10-09 the canvas should take as well** (`done.md`, 0.6.1 part 1). The row
+of copy and block starts at the TOP of the band, where the design has the copy in the lower
+55%: the block has no height until it loads, and a row at the foot made the copy jump 53 px.
+And the editor's dark surfaces sit one step down (panel dark-0, code dark-1), so §20 is the
+rule and §25 is the section to redraw.
+
 **Why deferred:** the source is edited in Claude Design, not in this repo.
 
 **What it requires:** apply 1 to 4 to the canvas's `hero.html` (or change `hero.ts` to insert
@@ -768,24 +782,6 @@ small laptop, reads worse than `item => item > $threshold`, and still scrolls on
 
 If it comes back: a `wrap` option on `CodeOptions` (CodeMirror's `EditorView.lineWrapping`),
 passed through `Editor.Canvas` and the layouts' `code` prop.
-
----
-
-## Editor — `--dendrite-code-min-height` leaves the sideways scrollbar floating
-
-**What:** the knob sets `min-height` on `.cm-editor` (`packages/editor/style.css`, Minimal
-layout). CodeMirror's scroller inside it does not stretch, because its `height: 100%` has no
-definite height to resolve against. When the code is shorter than the minimum and one line is
-wider than the editor, the sideways scrollbar sits under the last line with empty canvas below
-it. At 11rem over five lines the gap was 8px and nobody saw it; at 16rem it was 80px.
-
-**Why deferred (2026-10-06):** found while the landing's live block grew, in a round that left
-the editor alone. The landing sets `min-height` on `.cm-scroller` itself for now
-(`apps/docs/src/components/Hero.astro`).
-
-**What it requires:** let the scroller fill the editor (`flex-grow: 1` on `.cm-scroller` in the
-Minimal and Compact layouts, or the minimum on the scroller), a look at both layouts with a
-long line, and then the landing goes back to the knob.
 
 ---
 
@@ -893,47 +889,6 @@ most, and whether the presets need any config at all beyond defaults.
 
 ---
 
-## Docs — *Embedding core* shows a call that throws
-
-**What:** the page's "Two kinds of input" sample reads:
-
-```ts
-runtime.updateInputs({ temperature: 30 }); // your state, every program
-instance.setInput("limit", 35);            // this program's own input
-```
-
-The instance it continues from (Installation's) declares **no program-level input**, so
-`setInput("limit", 35)` throws `'limit' is not a program-level input of instance …` for anyone
-who copies it. As a two-line contrast it reads fine; as code it does not run.
-
-**Why deferred:** found 2026-09-21 by running the samples (`ts-samples.test.ts`'s `runs` tag).
-The fence is left UNTAGGED on purpose, which is what keeps the suite green, and the page was not
-changed because rewording it belongs with the site review (`todo.md`), not with a test change.
-
-**What it requires:** either the instance gains a `limit` input on that page (a program-level
-layer in the sample, which also teaches what one is), or the sample names an input the chain
-really has. Then the fence is tagged `runs`, and the page's whole script executes.
-
----
-
-## Docs — a `continues=` chain deeper than one page is assembled in the wrong order
-
-**What:** `assemble()` in `apps/docs/src/content/ts-samples.test.ts` walks a `continues=` chain
-from the page to its parent to its grandparent, and PUSHES each one's fences as it goes, so a
-three-page chain comes out as prelude, parent, grandparent, page: the grandparent's code after
-the parent's that depends on it.
-
-**Why deferred:** latent, not live. Every chain on the site is one page deep (Embedding core and
-the two package pages each continue Installation), so nothing is misordered today. Noticed
-2026-09-21 while adding the `runs` filter, and deliberately left alone: a behaviour change to the
-typecheck has no place in a commit about running samples.
-
-**What it requires:** insert each ancestor's fences in FRONT of what has been collected (or
-collect the chain first and reverse it), plus a test with a three-page chain, which needs either
-a fixture or a third page that genuinely continues a second.
-
----
-
 ## Docs — the remark highlighting plugin as a package
 
 **What:** `@dendrite-lang/remark-den`: the ```den fence and `{:den}` inline plugin in
@@ -956,6 +911,44 @@ split pays once the layouts land and the file passes ~1200 lines.
 
 **What it requires:** a CSS entry in `tsup.config.ts`, the `./style.css` export pointing at
 `dist/`, the `@layer dendrite` wrapper kept around the bundle.
+
+---
+
+## Editor — the top bar in the site's shape
+
+**What:** the playground's `Editor.TopBar` and the site's nav are two shapes. Measured on
+2026-10-09 in dark, where their colours agree (both dark-0 over a 1px rule of dark-3):
+
+| | The site's nav | The playground's bar |
+| --- | --- | --- |
+| Height | 64 px | 44 px |
+| Wordmark | 40 px | 28 px |
+| Text | 16 px Archivo | 13 px Archivo |
+
+In light the colours differ too, and by decision: the bar keeps ground-2, the nav is on ground.
+Going from the docs to the playground changes the chrome until this is taken.
+
+**Why deferred (2026-10-09):** 0.6.1 changes values, not shapes (the maintainer). A new shape
+wants thorough consideration, and a frame from Claude Design first.
+
+**What it requires:** the frame; then the bar's height, its wordmark and its text size in
+`packages/editor/style.css`, and a look at what a taller bar costs the Full layout on a short
+window.
+
+---
+
+## Editor — `@types/node` is not declared in the package
+
+**What:** `packages/editor/vitest.config.ts` and `src/style.test.ts` import `node:url` and
+`node:fs`. The package has no `@types/node` of its own: the types reach it because core, the
+playground and the docs declare the package and Yarn hoists it. The rule for bins (`CLAUDE.md`,
+Workspaces) is that every workspace declares what it uses.
+
+**Why deferred:** found on 2026-10-09 while the surface guard was written, in a commit about
+colours. Typecheck passes today.
+
+**What it requires:** `@types/node` in the editor's `devDependencies`, at the version the other
+workspaces have, and a `yarn install` for the lockfile.
 
 ---
 
@@ -1185,6 +1178,29 @@ file outside core's analyser reads it (checked that day, every package and app).
 
 One asymmetry to remember: adding an export later is no break, and removing one is. Each release
 it stays public is a release in which a host may come to import it.
+
+---
+
+## Core — `instance.setProgram` trusts a saved program's ports
+
+**What:** `setProgram(saved)` writes `saved.ports` into the instance's persisted layer and
+THEN recompiles (`runtime/instance.ts`). Ports that are not ports, for example an object with
+`inputs` and no `outputs`, make `composeLayers` throw `layer.ports.outputs is not iterable`, a
+raw `TypeError` out of a command that is documented to report through the observables. The
+layer is already replaced, so the instance stays broken: the next `setProgram`, with a sound
+program, throws the same error. Probed on 2026-10-09.
+
+**Who can reach it:** a caller that defeats the types (plain JavaScript, a cast, a blob read
+from storage and handed over unchecked). TypeScript refuses it, `env.load` answers
+`malformed_program`, and the link checks an incoming program with `isSavedProgram` before it
+reaches the instance (`packages/link/src/protocol.ts`).
+
+**Why deferred:** found in passing, while the *Embedding core* sample was probed for the docs
+pass of 0.6.1. Not a docs matter, and no typed host can do it.
+
+**What it requires:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, a
+`malformed_program` diagnostic where it fails (the instance keeps its program, stale), and a
+test that a refused program leaves the next one working.
 
 ---
 

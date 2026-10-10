@@ -17,16 +17,19 @@
 
     /* Surfaces: bar (top bar) < page level (panel) < raised (bg); sunken (well); pressed /
        selected (hover).
-       Dark sits one step up the brand ramp (dark-1 page, dark-2 raised): dark-0 under a full
-       screen of near-white text reads harsh; hover is the next step, derived. */
-    --dendrite-bg: light-dark(#ffffff, #2c2a29);
-    --dendrite-panel: light-dark(#f3f2f2, #201e1d);
-    --dendrite-well: light-dark(#e6e4e3, #3a3735);
-    --dendrite-hover: light-dark(#d9d6d5, #4a4644);
-    --dendrite-bar: light-dark(
-      #e6e4e3,
-      #141312
-    ); /* the top bar: one step off the panel, away from the canvas */
+       Dark is the brand ramp from its first step, as the brand sheet's §20 has it and as the
+       docs site is: dark-0 page, dark-1 raised, dark-2 sunken, dark-3 hover. Until 0.6.1 it
+       sat one step up, for fear that dark-0 under a full screen of near-white text reads
+       harsh; the site went to dark-0 on 2026-10-06, and the editor follows it.
+       The top bar is one step off the panel, away from the canvas. In dark that step does not
+       exist, so the bar is the panel's dark-0, with its 1px rule between the two.
+       The brand's tokens hold the same values as --dn-editor-*; src/style.test.ts keeps the
+       two files in step. */
+    --dendrite-bg: light-dark(#ffffff, #201e1d);
+    --dendrite-panel: light-dark(#f3f2f2, #141312);
+    --dendrite-well: light-dark(#e6e4e3, #2c2a29);
+    --dendrite-hover: light-dark(#d9d6d5, #3a3735);
+    --dendrite-bar: light-dark(#e6e4e3, #141312);
 
     /* Ink: text, secondary text, and ink-3 for placeholders / disabled only - never information */
     --dendrite-text: light-dark(#201e1d, #f3f2f2);
@@ -183,9 +186,15 @@
     height: auto;
   }
 
-  /* A host asks for a taller code area that still grows with its content (the landing) */
+  /* A host asks for a taller code area that still grows with its content (the landing). The
+     scroller takes the height the editor has: its own `height: 100%` has no definite height
+     to read here, so without this a sideways scrollbar sits under the last line of code. */
   .dendrite-minimal-layout .dendrite-canvas .cm-editor {
     min-height: var(--dendrite-code-min-height, 0);
+  }
+
+  .dendrite-minimal-layout .dendrite-canvas .cm-scroller {
+    flex-grow: 1;
   }
 
   .dendrite-minimal-layout > .dendrite-code + .dendrite-pane {
@@ -730,7 +739,10 @@
     color: var(--dendrite-accent-text);
   }
 
+  /* A <code>, which a browser draws in its own monospace: the row's font. Said first, because
+     `font` also resets the numerals that follow it. */
   .dendrite-output-value {
+    font: inherit;
     font-variant-numeric: tabular-nums;
     text-align: right;
     overflow-wrap: anywhere;

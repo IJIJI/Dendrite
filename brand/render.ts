@@ -22,6 +22,8 @@ const chrome = process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application
 /** [source SVG, width, height, output PNG], paths from the repository root. */
 const renders: [source: string, width: number, height: number, out: string][] = [
   ["brand/assets/icons/dendrite-icon-a-square-512.svg", 180, 180, "apps/docs/public/apple-touch-icon.png"],
+  // The playground wears the reversed avatar, so its tab is not the docs' tab.
+  ["brand/assets/icons/dendrite-avatar-square.svg", 180, 180, "apps/playground/public/apple-touch-icon.png"],
   ["brand/assets/icons/dendrite-avatar-square.svg", 512, 512, "brand/assets/icons/dendrite-avatar-square.png"],
   ["brand/assets/dendrite-og-aurora.svg", 1200, 630, "apps/docs/public/og.png"],
 ];

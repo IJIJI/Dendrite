@@ -6,24 +6,11 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 
 ---
 
-## The 0.6.0 group
-
-The stdlib release, grouped on 2026-10-05. The rows are in the order of the work, and every
-status is the maintainer's word.
-
-| # | Item | Entry | Status |
-| --- | --- | --- | --- |
-| 1 | The stdlib per segment | `done.md` | **done** 2026-10-08 |
-| 2 | A math batch, seven ops, and `null` for "no answer" | `done.md` | **done** 2026-10-08 |
-| 3 | A mixed list literal refuses a function | `done.md` | **done** 2026-10-09 |
-| 4 | `AnalysisContext` leaves the public surface | `backlog.md` | **out** 2026-10-08: it stays public |
-| 5 | Strings as lists | `backlog.md` | **moved** 2026-10-08, to 0.8 (possibly) |
-| 6 | The release | `release-plan.md` | **next**: every other row is closed |
-
 ## After 0.6.0
 
-The order the maintainer gave on 2026-10-08. "Possibly" is the maintainer's word for the last
-two.
+0.6.0 is on npm since 2026-10-08, and its group of items is in `done.md` ("0.6.0 on npm").
+What follows is the order the maintainer gave that day. "Possibly" is the maintainer's word for
+the last two.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
@@ -36,66 +23,27 @@ two.
 
 ## 0.6.1 — the editor's styling, to fit the site's new look, then a docs pass
 
-**When:** the release after 0.6.0 (the maintainer, 2026-10-08). Two parts, in this order: the
-editor first, the docs pass afterwards. Part 1 was the backlog entry "Editor — its styling, to
-fit the site's new look", moved here whole. It needs a plan, and the plan starts with a
-decision: item 1 below is the brand's before it is the stylesheet's.
+**When:** the release after 0.6.0 (the maintainer, 2026-10-08).
 
-### Part 1: the editor's styling
+**Both parts are built** (2026-10-09). `done.md` has them: "Editor — its styling, to fit the
+site's new look" for part 1, and "Docs — the docs pass of 0.6.1" for part 2. Nothing is
+released. Open: what the maintainer finds while reading, which does not hold the release, and
+the release.
 
-**What:** the docs site took the brand sheet's look on 2026-10-06 (`done.md`: the grounds, the
-type, the top bar, the controls). `@dendrite-lang/editor` did not: `packages/editor/style.css`
-and the playground wear the look they were built with. Where the two differ now:
+### Open from the docs pass
 
-1. **The dark surfaces are a step above the site's.** The editor has bar dark-0, page level
-   dark-1 and canvas dark-2, for the reason its stylesheet gives (dark-0 under near-white text
-   reads harsh). The site's page is dark-0 now. A block on a doc page is therefore a dark-1
-   card with a dark-2 code area, and the playground as a whole is a step lighter than the
-   docs. Sheet §20 (a dark-0 page, dark-1 wells) and sheet §25 (the editor's three levels)
-   disagree here, so this is a brand decision before it is a stylesheet change.
-2. **In light, a block's panel is the page's colour.** Both are ground, so a block is marked
-   by its 1px border and its white code area alone. That is the sheet's white well, and it
-   suits the Minimal layout. The Compact layout and its panes were not looked at on the new
-   ground.
-3. **The playground's top bar is not the site's.** The site has the wordmark, section links
-   and a small search on the page's ground, over a 1px rule; the playground has
-   `Editor.TopBar` on `--dendrite-bar`. Going from one to the other changes the chrome. Not
-   compared in detail.
-4. **Type and controls were not compared**: the site's display face, its button and field
-   shapes, and its sidebar item against the editor's bar items, panes and fields.
+**What the maintainer finds while reading.** "Docs — review the rest of the site after Learn",
+below, is where those observations collect. Two have entries of their own, below: "Docs —
+*How a program runs* gets simpler" and "Core — two styles for setting an input".
 
-**Why it waited (2026-10-06):** the restyle changed the site and left the editor alone on
-purpose, and the editor is a published package: a change to its stylesheet ships in a release.
-That release is 0.6.1.
+### The release
 
-**What it requires:** the playground beside a doc page, in both themes and in the three
-layouts; the decision of item 1; then the `--dendrite-*` values in `packages/editor/style.css`
-(the properties stay, they are the theming API), the "Theming" table of the editor's README,
-`--dn-editor-*` in `brand/dendrite-tokens.css`, and a release. A fifth difference, a block
-that ignored the site's theme picker, was a defect and was fixed on 2026-10-07 (`done.md`).
-Neighbours, all in `backlog.md`, to take or to leave when this is planned: the code-height
-entry ("`--dendrite-code-min-height` leaves the sideways scrollbar floating"), "try cooler
-background colours", "tune the highlight colours" and "the stylesheet per group".
-
-### Part 2: a docs pass, afterwards
-
-**Scope, decided 2026-10-08 (the maintainer):** three things.
-
-- **The site with the restyled editor in it.** Every page that mounts a block or shows a
-  static one wears the editor's stylesheet: the Learn samples, the stdlib reference, *Every
-  diagnostic*, the landing's live block. Each in both themes, and in the three layouts where
-  a page uses them.
-- **The two known docs faults**, both in `backlog.md`: *Embedding core* shows a call that
-  throws, and a `continues=` chain deeper than one page is assembled in the wrong order.
-- **What the maintainer finds** while reading. "Docs — review the rest of the site after
-  Learn", below, is where those observations collect.
-
-Not in it: "show what every fence produces", sent to the backlog the same day.
-
-**Also decided:** 0.6.1 releases the editor alone. Its number then parts from core's and
-link's, which stay at 0.6.0; the editor's peer range `^0.6.0` allows it, and the publish
-workflow stages only the versions npm lacks (`release-plan.md`). **Left for the plan:** item 1
-of part 1, the dark surfaces ("we'll decide once we get to it").
+0.6.1 releases the editor alone. Its number then parts from core's and link's, which stay at
+0.6.0; the editor's peer range `^0.6.0` allows it, and the publish workflow stages only the
+versions npm lacks (`release-plan.md`, "Every later release"). The editor's changelog holds
+three lines under "Unreleased": the dark surfaces, which change every host's default look, the
+code-height fix, and an output value's font. After the record, the canvas takes tokens 1.3
+(`backlog.md`, "Brand canvas").
 
 ---
 
@@ -137,6 +85,66 @@ room below `OR`).
 
 **No consumer but the wish:** `If` and `Default` work. Estimate: a plan, then about three commits
 (one per symbol, one for the docs).
+
+---
+
+## Core — two styles for setting an input: the runtime's and an instance's
+
+**What:** asked by the maintainer on 2026-10-09, while the *Embedding core* sample was planned:
+look at the difference in style between setting a global input and setting a program input.
+The page shows the two side by side:
+
+```ts
+runtime.updateInputs({ temperature: 30 }); // your state, every program
+instance.setInput("limit", 35);            // this program's own input
+```
+
+**How they differ today** (`runtime/runtime.ts`, `runtime/instance.ts`):
+
+| | A global input | A program-level input |
+| --- | --- | --- |
+| Call | `runtime.updateInputs(changes)` | `instance.setInput(name, value)` |
+| Shape | One record of several names | One name and one value a call |
+| Returns | The outputs, per program | Nothing: it reports through the observables |
+| A value that does not fit | Throws, and the batch changes nothing | Is refused: `value_does_not_fit` on `diagnostics` |
+| The other kind's name | Not probed | Throws |
+
+A runtime's program handle has a third: `setInput(name, value)`, which returns the outputs.
+*Embedding core* gives the reason for two of the rows: a command of an instance returns nothing
+and cannot throw for a value because a pane, or a client across a network, calls it.
+
+**When:** not placed by the maintainer.
+
+**What it requires:** first the question itself, which is not decided: whether the difference
+is wanted, or whether an instance wants a batch (`setInputs`), or the two want one verb. Then a
+plan: a change here is core's public API, the link's protocol carries `setInput` as a command,
+and the docs name both calls on several pages.
+
+---
+
+## Docs — *How a program runs* gets simpler, and the complexity stays on *The chain*
+
+**What:** asked by the maintainer on 2026-10-09: simplify the Learn page *How a program runs*,
+and keep the complexity on *The chain* (How it works).
+
+**The two pages today.** Both draw `<Chain>` and both walk the same steps:
+
+| | *How a program runs* (Learn) | *The chain* (How it works) |
+| --- | --- | --- |
+| File | `learn/how-a-program-runs.mdx` | `how-it-works/the-chain.mdx` |
+| Size | 100 lines, 850 words | 210 lines, 1409 words |
+| Sections | Lex, Parse, Compose, Analyse, Evaluate, "What each step may not do", "That is Learn" | Lex, Parse, Desugar, Compose, Analyse, Prune, Evaluate, "Why it is separate artefacts and not one pass" |
+
+So the Learn page is 60 % of the reference page's length and has the same outline: a reader
+of Learn meets the chain twice.
+
+**When:** in the docs pass of 0.6.1 or straight after it; not placed by the maintainer.
+
+**What it requires:** a plan first, with the maintainer, because it is a page's content and
+not a fix. The questions for it: what a Learn reader needs from the page (a first reading, not
+decided: one picture and a few sentences a step, each step linking to its section of *The
+chain*); whether "What each step may not do" moves to *The chain*; and which other pages link
+to this page's anchors (`content.test.ts` checks every internal link).
 
 ---
 

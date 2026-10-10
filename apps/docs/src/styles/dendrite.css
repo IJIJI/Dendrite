@@ -61,8 +61,8 @@
   --sl-color-gray-2: #a8a4a2; /* dark-ink-2: body text */
   --sl-color-gray-3: #7d7977; /* dark-ink-3: muted */
   --sl-color-gray-4: #4a4644; /* dark-4 */
-  --sl-color-gray-5: #3a3735; /* dark-3: hairline-light, inline code */
-  --sl-color-gray-6: #2c2a29; /* dark-2 */
+  --sl-color-gray-5: #3a3735; /* dark-3: hairline-light */
+  --sl-color-gray-6: #2c2a29; /* dark-2: inline code */
   --sl-color-gray-7: #201e1d; /* dark-1: raised */
   --sl-color-black: #141312; /* dark-0: the page */
   --sl-color-accent: #7c83f5; /* periwinkle */
@@ -73,6 +73,10 @@
   --sl-color-hairline: var(--sl-color-gray-5); /* dark-border */
   --sl-color-hairline-light: var(--sl-color-gray-5);
   --sl-color-hairline-shade: var(--sl-color-gray-5);
+  /* Inline code, and the sidebar's current page with it: the sunken ground, which on dark is
+     dark-2, the level of an editor well. Starlight has it a step lighter here, on gray-5. In
+     light its gray-6 is ground-2 already. */
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
 }
 
 /* The landing page (and the 404, the other page with a hero). Its hero is a band in the
@@ -179,7 +183,7 @@ h1#_top,
 }
 
 /* The sidebar's current page: an Iris bar on its left, the sunken ground (the one Starlight
-   names for inline code: ground-2, and dark-3 on dark), ink text and square corners, where
+   names for inline code: ground-2, and dark-2 on dark), ink text and square corners, where
    Starlight draws a solid accent pill. The bar comes out of the padding, so the label stays
    where the other labels are. */
 .sidebar-content a[aria-current="page"],
@@ -265,22 +269,35 @@ starlight-toc a[aria-current="true"] {
   --sl-border-radius: 0;
 }
 
+/* Dendrite blocks - a ```den fence, DenCode, the reference's examples - are the editor's own
+   static Source markup and wear its stylesheet (customCss loads it); `not-content` keeps
+   Starlight's prose rules off them. Only the inline form is styled here, and the site's own
+   rules for `code` and `pre` leave a block out the same way: they are in no cascade layer, so
+   inside one they would beat the editor's stylesheet. They did until 2026-10-09, and a static
+   sample was drawn at 12.6px beside a live one at 14px. */
+
 .sl-link-button,
-.sl-markdown-content code,
-.sl-markdown-content pre {
+.sl-markdown-content :is(code, pre):not(:where(.not-content *)) {
   border-radius: 2px;
 }
 
-.sl-markdown-content code {
+.sl-markdown-content code:not(:where(.not-content *)) {
   font-size: 0.9em;
 }
 
-/* Dendrite blocks - a ```den fence, DenCode, the reference's examples - are the editor's own
-   static Source markup and wear its stylesheet (customCss loads it); `not-content` keeps
-   Starlight's prose rules off them. Only the inline form is styled here. */
-
 .op .signature code {
   font-size: 0.85em;
+}
+
+/* A fence in another language (```ts, ```sh) is Expressive Code's frame, and its code sits on
+   the editor's canvas: a TypeScript block and a Dendrite block on one page are one surface,
+   in both themes. Starlight gives the frame gray-6 in dark, which is dark-2 here, a step
+   above the canvas since the editor's dark surfaces went down one (editor 0.6.1). The two
+   variables are an editor frame's code and a terminal frame's. A frame with a title has a
+   third for its tab, --ec-frm-edActTabBg: no page has such a frame, so it is not set. */
+.expressive-code {
+  --ec-frm-edBg: var(--dendrite-bg);
+  --ec-frm-trmBg: var(--dendrite-bg);
 }
 
 /* An inline snippet nothing highlights - a package name, a path, a version range - takes the
