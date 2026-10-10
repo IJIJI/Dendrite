@@ -29,7 +29,7 @@ output result  = status
 | `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.6.0** (2026-10-08). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
-| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `dendrite-lang.org/` |
+| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09 (`docs-plan.md`); thirty pages in Learn, the stdlib reference, How it works and Host developers, and a stub for Contribute; deployed at the root `dendrite-lang.org/` |
 
 ---
 

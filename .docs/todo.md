@@ -134,3 +134,44 @@ dashes, the chain) already landed with the samples step, so these pages start fr
 
 **When:** next, alongside the inline TypeScript colouring: the user reads, and the
 observations collect here until there is a section's worth to plan.
+
+---
+
+## Before 1.0.0 — what has no release named yet
+
+Asked for by the maintainer on 2026-10-10: the todos that have no clear time, and that must
+be done before a 1.0.0. The repo has no written definition of 1.0, so one rule sorts them:
+**after 1.0.0, a change that breaks a program, a host's code or a saved file needs a 2.0.0.**
+What only ADDS can come after. The list is being talked through; each row says where it stands.
+
+**Agreed, the maintainer, 2026-10-10:**
+
+| What | Why before 1.0.0 | Where it is written |
+| --- | --- | --- |
+| **A review of the stdlib's names** | A rename or a move is a break, as the comparison ops' move to `logic` was in 0.6.0 | Here. With it: `Flatten`, which cannot type its output (`backlog.md`) |
+| **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | `backlog.md`: "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
+| **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists"; possibly 0.8 in the order above |
+| **A call to a name that is no op says so** | Today it is `undeclared_binding_reference`. A kind of its own changes what a host matches on | `backlog.md`, "Core — a call to a name that is no op" |
+| **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
+| **What is public in the editor** | Hosts use its CSS variables and classes already (the docs site does). To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`" |
+| **Beacon uses the API first** | The rule of `editor-plan.md`: publish after the first real consumer | `backlog.md`: "Subtyping — Beacon-side representation", "Op-declared context-input dependencies" |
+| **The visual (Rete) half of the editor** | The project's stated target; a gate by decision, not by the rule | `backlog.md`, "Editor — the visual (Rete) half" |
+
+**These have a release, so they are not rows here:** the next one holds `??`, `c ? a : b`, a
+lazy `If` decided with them, and `AnalysisContext` leaving the public surface (the order at the
+top of this file).
+
+**Still being talked through** (each with the question that is open):
+
+| What | The open question |
+| --- | --- |
+| **Union types** | As a type a host or an author may WRITE, they only add. As what a mixed list or an `If` INFERS, they turn a warning of today into an error. Which half, and when |
+| **A struct type that names itself** | Refusing it is a break for a host that declares one, so the refusal wants to be before 1.0.0. Struct literals and struct types in code only add, and can follow |
+| **A `null` through arithmetic** | Keep the rule of 0.6.0 for good (a `null` lasts one step), or let it reach the output as in SQL. The second changes results |
+| **A value of the wrong type that crosses an `any`** | Today `Add("abc", 1)` is a text in a number output. Refuse it, or read it as the empty value, as a `null` is read |
+| **`instance.setProgram` trusts its ports** | A fix, not a break. Whether it rides with the next release |
+| **`Grammar`'s shape, and the flags on `OpInput`** | Say that the keys and the three booleans are API as they are, or change them first |
+| **A `NaN` inside a list a host op returns** | A known ceiling. Whether it is a gate at all |
+
+**Kept in mind, and may wait for 2.0.0:** versions of the documentation site
+(`docs-plan.md` has "none before 1.0").
