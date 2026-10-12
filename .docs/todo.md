@@ -175,7 +175,8 @@ What only ADDS can come after. The list is being talked through; each row says w
 | **`instance.setProgram` checks its ports** | 1.0 promises that a command reports and never throws. Ports that are no ports throw a raw `TypeError` today and leave the instance broken | `backlog.md`, "Core — `instance.setProgram` trusts a saved program's ports" |
 | **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
 | **What is public, in the editor and in core's extension API** | Hosts use the editor's CSS variables and classes already. In core: say that `language.grammar`'s maps are internal, and that the keys of `registerNud` and the three booleans of `OpInput` are the API as they are. Then the `Grammar` refactors of the backlog can come after 1.0.0, and the one that renames the keys is dropped. To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`", "Parser — `Grammar` is a data bag" |
-| **"No value": a single op hands it on, a list op skips it** (option B; the maintainer, 2026-10-12: "Ok B it is") | It changes results: `1 / 0 + 1` is `1` today and becomes `null`, `Average([1, null])` goes from `0.5` to `1`, `Max([-4, null])` from `0` to `-4`. Decided with it: no implicit casting and no switch for a host, `+` never joins text, and **an error is no option** ("especially since we have no way of logging or displaying them"; a run error also stops every output). What is still open of it is in the table below | Below, and `backlog.md`: "a `null` that goes through arithmetic", "What boundary validation left" |
+| **"No value": a single op hands it on, a list op skips it, EVERYWHERE** (option B; the maintainer, 2026-10-12: "Ok B it is", then "Agreed, everywhere": every op that names a type for an input, so `Upper(null)`, `Length(null)`, `Not(null)` and a comparison give `null` too; `IsSet`, `??`, `==` and an input that converts are the places that take no value) | It changes results: `1 / 0 + 1` is `1` today and becomes `null`, `Average([1, null])` goes from `0.5` to `1`, `Max([-4, null])` from `0` to `-4`. Decided with it: no implicit casting and no switch for a host, `+` never joins text, and **an error is no option** ("especially since we have no way of logging or displaying them"; a run error also stops every output). What is still open of it is in the table below | Below, and `backlog.md`: "a `null` that goes through arithmetic", "What boundary validation left" |
+| **The promise leaves out a program that compiles with `implicit_any_cast`** (the maintainer, 2026-10-12: "that is fine, we are pre 1.0, and we warned") | It lets an inferred union, or any stricter check, refuse such a program after 1.0.0 with no 2.0.0. **The docs update is part of the plan** (the maintainer): the sentence where the docs state what 1.x keeps, and in the warning's own text | Here. The plan of option B carries the docs: the pages on `null` and on types, the reference, *Every diagnostic*, the changelog's breaking lines |
 | **Beacon uses the API first** | The rule of `editor-plan.md`: publish after the first real consumer | `backlog.md`: "Subtyping — Beacon-side representation", "Op-declared context-input dependencies" |
 | **The visual (Rete) half of the editor** | The project's stated target; a gate by decision, not by the rule. It starts soon after 0.7.0 (the order at the top) | `backlog.md`, "Editor — the visual (Rete) half" |
 
@@ -189,17 +190,21 @@ named types stay nominal, a type's own text form (`toText`, opt-in), and the fie
 for struct inputs. Two small things are decisions and not work: a struct prints as its JSON
 (say that this is the form), and a field read on a value that is no struct (below).
 
-**Still being talked through** (each with the question that is open, and what was probed on
-2026-10-10):
+**Still to decide** (relisted on 2026-10-12, each with its options):
 
-| What | The open question |
-| --- | --- |
-| **What a union may break, and the promise** | Proposed by the maintainer: an inferred union may refuse a program after 1.0.0, because that program warns today. Probed: each case tried that an inferred union would refuse has `implicit_any_cast` now (`If($c, 1, "a") + 1`, `Upper(If(…))`, `Average([1, "a"])`, the same `If` in an output a host declared `number`), and each clean one stays legal (`Length([1, "a"])`, `Equals(If(…), 1)`, a plain `output o = If(…)`). It holds if the promise SAYS so before 1.0.0: a program that compiles with `implicit_any_cast` is not covered. Then union types are no gate, except that strings as lists wants a union one may write |
-| **Option B: what is still open** | **How far it reaches:** every op with a typed input (`Upper(null)`, `Length(null)`, `Not(null)` and `If(null, …)` all give `null`), or number ops and comparisons only. **Core or stdlib:** proposed, the rule in the evaluator and the three aggregates' skip in the stdlib. **The guard's form:** in `resolveInputs`, or as a wrapper put on an evaluator when it is registered; a type test only where a value crossed an `any`; primitives and lists of them only. **`And`, `Or` and `If` with one side missing.** **When:** with 0.7.0 or after it; a lazy `If` changes the same function |
-| **A list literal with a `null` in it** | `[1, null]` is typed `any[]`, so `Average([1, null])` warns `implicit_any_cast`, though a `null` fits every type |
-| **A call to a name that is no op** | `Lenght($scores)` and a misspelt binding `socres` give one kind and one sentence: "'…' is not declared as a binding or scoped variable". Proposed: keep the kind, say "no op and no binding has that name" for a call, and name the nearest op or binding. That only adds, so it is no gate, and it can ride with 0.7.0. A kind of its own would be a break |
-| **A `NaN` inside a list a host op returns** | A known ceiling. Proposed: no gate |
-| **One 1.0.0 for all three packages, or each on its own** | Since 0.6.1 the editor has its own number, and Rete is an editor matter, so core could reach 1.0.0 first |
+| Decision | The options | Wanted by |
+| --- | --- | --- |
+| **When option B is built** | In 0.7.0 with `??`. Or as the release after it, so that 0.7.0 brings `??` first and a program can be made ready (`x ?? 0` means the same under both rules). Or with union types | The plan of 0.7.0 |
+| **`If`, `And` and `Or` with no value** | The plain rule: `If(null, a, b)` and `false && null` are `null`. Or a lazy `&&` and `\|\|`, where a `false` on the left ends it, so `false && null` is `false`. It is one question with the lazy `If` of 0.7.0 | The plan of 0.7.0 |
+| **A call to a name that is no op** | Keep the kind, say "no op and no binding has that name", name the nearest one: it only adds, in 0.7.0. Or a kind of its own, which is a break. Or leave it | The plan of 0.7.0 |
+| **Where the rule lives** | Proposed: the rule in the evaluator (`resolveInputs`, or a wrapper put on an evaluator when it is registered), the skip of `Average`, `Max` and `Min` in the stdlib with one helper. Or all of it in the ops. Or a flag in core for the skip | The plan of B |
+| **The conversions with no value** | `ToString(null)` stays `""`, as a template prints it. `ToBool(null)` is `false` today: keep, or `null`. `ToNumber(null)` is `null` already | The plan of B |
+| **A field read that finds nothing** | `$v.name` on a `5` throws today, on a `null` it is `null`. With "an error is no option": give `null`. Or keep the throw for a value that is no struct | The plan of B |
+| **A list literal with a `null` in it** | `[1, null]` is typed `any[]`, so `Average([1, null])` warns. A `null` item leaves the list's type alone (`number[]`). Or wait for union types | The plan of B |
+| **A struct prints as its JSON** | Say that this is the form, in the docs. Or change it before 1.0.0 | Before 1.0.0 |
+| **A `NaN` inside a list a host op returns** | No gate: a known ceiling. Or walk every list an op returns | Before 1.0.0 |
+| **Two styles for setting an input** | Keep both. Or add a batch call to an instance, which only adds. Or one verb for both, which is a break and touches the link | Before 1.0.0 |
+| **One 1.0.0 for all three packages, or each on its own** | One day for all three, so core waits for Rete. Or each when it is ready: core and link first, the editor after Rete | Before 1.0.0 |
 
 **What was probed for option B** (2026-10-12, all on core 0.6.0):
 
@@ -225,6 +230,10 @@ for struct inputs. Two small things are decisions and not work: a struct prints 
   does not fit, a field that is not there, an `any`, or a host that pushes one. **Corrected:**
   an earlier version of this note said that every unset input is `null`; that was true only of
   the probes, which declared `default: null`.
+- **What an inferred union would refuse, and whether it warns today.** Each case tried has
+  `implicit_any_cast` now: `If($c, 1, "a") + 1`, `Upper(If(…))`, `Average([1, "a"])`, the same
+  `If` in an output a host declared `number`. Each clean one stays legal: `Length([1, "a"])`,
+  `Equals(If(…), 1)`, a plain `output o = If(…)`.
 - **What an error would do.** A run error stops EVERY output: the instance keeps the last
   values and marks them stale (`runtime/instance.ts`).
 
