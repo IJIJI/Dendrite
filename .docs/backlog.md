@@ -232,7 +232,11 @@ first, or with this one.
 
 ---
 
-## Language — `+` on text
+## Language — `+` on text — REJECTED 2026-10-12
+
+**Rejected by the maintainer:** "Lets keep `++` for text joining." `+` is for numbers, `++` and
+a template are for text, and a second way to join adds a question (`1 + "1"`) and no ability.
+The entry as it stood:
 
 **What:** `"Hello, " + name`, by teaching `Add` strings, as most languages overload `+`.
 
@@ -970,6 +974,31 @@ workspaces have, and a `yarn install` for the lockfile.
 
 ---
 
+## Editor and playground — memory use, a stress test, and performance
+
+**What:** on 2026-10-12 the playground page crashed in the maintainer's browser, out of memory.
+What was open, for how long and with what program is not recorded, and it was not reproduced.
+
+**Why deferred:** reported in the middle of the talk about types, and nothing is known yet
+beyond the crash. No measurement of memory or of time exists for the editor, the playground or
+a long session.
+
+**What it requires:**
+
+- **Reproduce it.** The page, the browser, how long it was open, and what was in it. A heap
+  snapshot before and after an hour of editing says whether memory grows or was large at once.
+- **A stress test** that a script can run: a long program, a long session of edits, a large
+  list on an input, many instances on one runtime, and the theme and layout switched many times.
+- **The suspects, none checked:** a program is compiled on every edit, and what holds the old
+  ones (the evaluator's caches are WeakMaps keyed by node, so a held program holds its cache);
+  listeners an instance or a session does not release; the undo history; the document written
+  to the URL and to localStorage on each change; CodeMirror views that are replaced and not
+  destroyed.
+- **Then a budget**, and what the measurement says to change. Speed belongs here too: no
+  number exists for a compile or an evaluation per keystroke.
+
+---
+
 ## Editor — usable on mobile
 
 **What:** the editor on a phone: the panes under the code instead of beside it, touch-sized
@@ -1219,6 +1248,38 @@ pass of 0.6.1. Not a docs matter, and no typed host can do it.
 **What it requires:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, a
 `malformed_program` diagnostic where it fails (the instance keeps its program, stale), and a
 test that a refused program leaves the next one working.
+
+---
+
+## Core — run-time tracking: what happened while a program ran
+
+**What:** asked by the maintainer on 2026-10-12. A run gives values, or it throws ONE
+`EvalError` (seven kinds, `evaluator/types.ts`), and that one error stops every output: the
+instance keeps the last good values and marks them stale. Nothing records an event that does
+not stop the run. `ToNumber(If(false, 1, "a")) + 1` is `1` with no word anywhere: not at
+compile time (`ToNumber` takes `any`, so there is no warning), and not at run time. The events
+worth a record: an op that gave no value (`ToNumber("a")`, a division by zero, `Find` with no
+match), a value of the wrong type that an op read as no value, a cast that did not fit, an
+input that holds nothing.
+
+**Why deferred:** it wants the rule for "no value" first (`todo.md`, "Before 1.0.0"): once a
+`null` reaches the output instead of turning into a zero, the output itself says that something
+is missing, and the record only has to say WHERE. It also has costs that nothing has measured.
+
+**What it requires:**
+
+- **A place on the outputs:** `{ outputs, error, stale }` gains the notes of the run, each with
+  a kind, the op, the place in the source, and the outputs it reached. The Diagnostics pane
+  gets a part for them; a host may log them.
+- **The cache keeps them.** Evaluation is pull-based and a cached node does not run again, so
+  a note has to stay with the cached value it explains, or it is gone on the next run.
+- **The link carries them**, as it carries diagnostics.
+- **A cost per op call**, to measure, and a way to keep a normal absence (an input not set
+  yet) from filling the list.
+- **A smaller first step:** "why is this `null`?" for one output, on demand: evaluate once with
+  a trace and show the op where the value was lost. No channel, no cost while nobody asks.
+- **A neighbour:** one error stops every output today. Outputs that fail one by one are the
+  entry "Core — what an instance hands a host when a program fails".
 
 ---
 

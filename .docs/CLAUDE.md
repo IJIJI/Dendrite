@@ -99,6 +99,10 @@ sentences with one idea each, active voice, one word for one thing, a verb rathe
 phrasal verbs, no semicolons. Keep a hedge: "may fail" stays "may fail". End a long answer with a
 short recap. The site's documentation prose keeps its own voice.
 
+**A comparison with other languages always includes C++ and Java** (the maintainer,
+2026-10-12), and others where they show something those two do not: PHP, Rust, Go, SQL, a
+spreadsheet.
+
 **Docs prose uses no dash where an em dash would go** (an aside, an introduction, a trailing
 thought): a comma, a colon or parentheses instead, rewritten by hand, which is most places. A
 dash that reads naturally may stay. Code and tables are exempt.

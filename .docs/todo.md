@@ -139,6 +139,24 @@ observations collect here until there is a section's worth to plan.
 
 ---
 
+## Editor — the boolean input's checkbox, better looking
+
+**What:** asked by the maintainer on 2026-10-12. A boolean input is the browser's own checkbox
+(`BooleanField` in `packages/editor/src/react/blocks/panes/Inputs.tsx`), and the stylesheet gives
+it one declaration, `accent-color: var(--dendrite-accent)`. Every other control of the pane is
+drawn by the editor: 2px corners, the border colour, the raised ground. The checkbox is the
+system's size and shape, so it differs from one browser and one platform to the next.
+
+**When:** not placed by the maintainer.
+
+**What it requires:** a look first, as the surfaces had: what the brand sheet draws for a
+checkbox or a switch, and a mock in the real page, light and dark, in the Minimal strip and in
+a pane's row. Then values only if the sheet has it (`appearance: none`, the field's border and
+ground, a mark in the accent), and a frame from Claude Design if it wants a new shape. It ships
+in a release of the editor.
+
+---
+
 ## Before 1.0.0 — what has no release named yet
 
 Asked for by the maintainer on 2026-10-10: the todos that have no clear time, and that must
@@ -157,6 +175,7 @@ What only ADDS can come after. The list is being talked through; each row says w
 | **`instance.setProgram` checks its ports** | 1.0 promises that a command reports and never throws. Ports that are no ports throw a raw `TypeError` today and leave the instance broken | `backlog.md`, "Core — `instance.setProgram` trusts a saved program's ports" |
 | **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
 | **What is public, in the editor and in core's extension API** | Hosts use the editor's CSS variables and classes already. In core: say that `language.grammar`'s maps are internal, and that the keys of `registerNud` and the three booleans of `OpInput` are the API as they are. Then the `Grammar` refactors of the backlog can come after 1.0.0, and the one that renames the keys is dropped. To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`", "Parser — `Grammar` is a data bag" |
+| **"No value": a single op hands it on, a list op skips it** (option B; the maintainer, 2026-10-12: "Ok B it is") | It changes results: `1 / 0 + 1` is `1` today and becomes `null`, `Average([1, null])` goes from `0.5` to `1`, `Max([-4, null])` from `0` to `-4`. Decided with it: no implicit casting and no switch for a host, `+` never joins text, and **an error is no option** ("especially since we have no way of logging or displaying them"; a run error also stops every output). What is still open of it is in the table below | Below, and `backlog.md`: "a `null` that goes through arithmetic", "What boundary validation left" |
 | **Beacon uses the API first** | The rule of `editor-plan.md`: publish after the first real consumer | `backlog.md`: "Subtyping — Beacon-side representation", "Op-declared context-input dependencies" |
 | **The visual (Rete) half of the editor** | The project's stated target; a gate by decision, not by the rule. It starts soon after 0.7.0 (the order at the top) | `backlog.md`, "Editor — the visual (Rete) half" |
 
@@ -176,11 +195,38 @@ for struct inputs. Two small things are decisions and not work: a struct prints 
 | What | The open question |
 | --- | --- |
 | **What a union may break, and the promise** | Proposed by the maintainer: an inferred union may refuse a program after 1.0.0, because that program warns today. Probed: each case tried that an inferred union would refuse has `implicit_any_cast` now (`If($c, 1, "a") + 1`, `Upper(If(…))`, `Average([1, "a"])`, the same `If` in an output a host declared `number`), and each clean one stays legal (`Length([1, "a"])`, `Equals(If(…), 1)`, a plain `output o = If(…)`). It holds if the promise SAYS so before 1.0.0: a program that compiles with `implicit_any_cast` is not covered. Then union types are no gate, except that strings as lists wants a union one may write |
-| **A `null` through arithmetic** | Today is JavaScript's rule and a blank spreadsheet cell's: `null + 1` is `1`, `null > -1` is `true`, `null == 0` is `false`. But a `null` here is also a FAILED computation, and no language compared treats that as zero: JavaScript gives `Infinity` for `1 / 0`, a spreadsheet `#DIV/0!` everywhere after it, SQL `NULL`. Each one with aggregates skips a missing value, where `Average([null, 4])` is `2` and `Max([null, -4])` is `0`, a number that is not in the list. The choice: keep the rule for good; or number ops hand a `null` on, aggregates skip it, and `??` says "use 0". Known hard part of the second: `>=` is `Not(LessThan(…))`, so a comparison with a `null` has to be `null` and not `false`, or `null >= 5` comes out `true` |
-| **A value of the wrong type that crosses an `any`** | Written directly it is refused: `Add("abc", 1)` is `op_input_type_mismatch`. Through an `any` it runs. Probed: `Add($v, 1)` with `"5"` is the TEXT `"051"`, with `[2]` the text `"021"`; `Average(["2", 4])` is `12`; `Map([1, "a"], x => x + 1)` is `[2, "0a1"]`; `If("no", 1, 2)` is `1`; `LessThan([1], 5)` is `true`; `$v.name` on `5` THROWS, where on `null` it is `null`. And it is uneven: `Multiply("3", 2)` is `6` and `Max(["10", 9])` is `10`, so a numeric text is a number to some ops and not to `Add`. Already sound: `Subtract("abc", 1)` is `null`, `Length(5)` is `0`, `Upper(5)` is `"5"`. The choice: refuse with an error, or one rule that an op reads what is not of its type as no value |
+| **Option B: what is still open** | **How far it reaches:** every op with a typed input (`Upper(null)`, `Length(null)`, `Not(null)` and `If(null, …)` all give `null`), or number ops and comparisons only. **Core or stdlib:** proposed, the rule in the evaluator and the three aggregates' skip in the stdlib. **The guard's form:** in `resolveInputs`, or as a wrapper put on an evaluator when it is registered; a type test only where a value crossed an `any`; primitives and lists of them only. **`And`, `Or` and `If` with one side missing.** **When:** with 0.7.0 or after it; a lazy `If` changes the same function |
+| **A list literal with a `null` in it** | `[1, null]` is typed `any[]`, so `Average([1, null])` warns `implicit_any_cast`, though a `null` fits every type |
 | **A call to a name that is no op** | `Lenght($scores)` and a misspelt binding `socres` give one kind and one sentence: "'…' is not declared as a binding or scoped variable". Proposed: keep the kind, say "no op and no binding has that name" for a call, and name the nearest op or binding. That only adds, so it is no gate, and it can ride with 0.7.0. A kind of its own would be a break |
 | **A `NaN` inside a list a host op returns** | A known ceiling. Proposed: no gate |
 | **One 1.0.0 for all three packages, or each on its own** | Since 0.6.1 the editor has its own number, and Rete is an editor matter, so core could reach 1.0.0 first |
+
+**What was probed for option B** (2026-10-12, all on core 0.6.0):
+
+- **`null` today.** `$n + 1` is `1`. `$n >= 0` and `$n <= 0` are `true` while `$n == 0` is
+  `false`. `Not($b)` is `true` while `$b == false` is `false`. A list that IS `null` has no
+  average while `Average([null])` is `0`. `Max([null, -4])` is `0`. `ToNumber(null)` is `null`,
+  so a conversion op hands a `null` on and arithmetic does not.
+- **A wrong type through an `any`.** There is a rule for lists (`toList`) and for text
+  (`Convert.toString`, so `Upper(5)` is `"5"`), and none for numbers, booleans, comparisons and
+  a field read: there JavaScript decides. `Add` is `reduce((a, b) => a + b, 0)`, which is where
+  `"0a1"` comes from; `Average(["2", 4])` is `12`; `If("no", 1, 2)` is `1`.
+- **Where the guards are.** The stdlib holds about thirty of its own (`toList` 14 times,
+  `Convert.toString` 8, `Number(` 5, `Boolean` 3), and the ops that have none are the faults.
+  The evaluator's `resolveInputs` already loops over an op's inputs to convert one declared `~`.
+- **Which ops would receive no value, by what they declare already.** An input typed `any`
+  takes whatever comes: `IsSet`, `Default`, `Equals`, `NotEquals`, the branches of `If`, the
+  three conversions, `Includes`' value, `Reduce`'s initial. Beside them: an optional input, and
+  `Join`'s converting one. Every other input of the 46 ops names a type. So no new flag is
+  needed to say which ops are the exceptions.
+- **How common "no value" is.** An input with no declared default starts as its TYPE's
+  default: `0`, `""`, `false`, `[]`, and `null` only for `any` and for a type that has none
+  (`language.ts`, `runtime/seed.ts`). So a `null` comes from an op with no answer, a cast that
+  does not fit, a field that is not there, an `any`, or a host that pushes one. **Corrected:**
+  an earlier version of this note said that every unset input is `null`; that was true only of
+  the probes, which declared `default: null`.
+- **What an error would do.** A run error stops EVERY output: the instance keeps the last
+  values and marks them stale (`runtime/instance.ts`).
 
 **Kept in mind, and may wait for 2.0.0:** versions of the documentation site
 (`docs-plan.md` has "none before 1.0").
