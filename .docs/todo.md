@@ -15,7 +15,8 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 | Release | Holds | Entry |
 | --- | --- | --- |
 | 0.7.0, next | `??` and `c ? a : b`, a lazy `If`, `AnalysisContext` out of the public surface, a better sentence for a call to a name that is no op. A minor for all three packages, because removing an export breaks | below |
-| The release after 0.7.0 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
+| 0.7.1 | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | `backlog.md`, "Core — a saved program that is not well formed" |
+| The minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
 | Later, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
@@ -27,7 +28,7 @@ of this file is what must be done before a 1.0.0.
 
 ---
 
-## 0.7.0 — `??`, `c ? a : b`, a lazy `If`, and three small things
+## 0.7.0 — `??`, `c ? a : b`, a lazy `If`, and two small things
 
 **This is the next work, and it starts with a plan** (the maintainer, 2026-10-12: "0.7.0 will
 be done in a next chat"). A minor for core, the editor and the link together: one of its items
@@ -39,10 +40,10 @@ removes an export, and a minor of core forces a release of both others.
 | --- | --- | --- |
 | `??`, sugar over `Default` | Yes, and not `\|\|` (below) | Its tier in the ladder |
 | `c ? a : b`, sugar over `If` | Yes | Its tier, whether it chains, a `:` inside the first branch, and how a symbol with a hand-written led reaches the lexer |
-| A lazy `If` | Yes, in this release, so that `c ? a : b` never ships eager | The means: an op that looks at its inputs itself. `If`, `Default`, `And` and `Or` use it to skip work. **Results do not change in 0.7.0**: the three-valued `And` and `Or`, and every other change of "no value", come with the release after (the last section of this file) |
+| A lazy `If` | Yes, in this release, so that `c ? a : b` never ships eager | The means: an op that looks at its inputs itself. `If`, `Default`, `And` and `Or` use it to skip work. **Results do not change in 0.7.0**: the three-valued `And` and `Or`, and every other change of "no value", come with the minor after 0.7 (the last section of this file) |
 | `AnalysisContext` leaves the public surface | Yes ("it should be removed, probably in the next release") | Export the result and diagnostic types by name (`backlog.md`, "Core — `AnalysisContext` is public") |
 | A call to a name that is no op | Keep the kind `undeclared_binding_reference`; say "no op and no binding has that name"; name the nearest op or binding | The helper for "nearest" (`backlog.md`, "Core — a call to a name that is no op") |
-| `instance.setProgram` checks its ports | Agreed for before 1.0.0; proposed to ride here, not confirmed | Ask the maintainer (`backlog.md`, "Core — a saved program that is not well formed") |
+| A saved program that is not well formed | **Not in 0.7.0: it is 0.7.1** (the maintainer, 2026-10-12) | Nothing here (`backlog.md`, "Core — a saved program that is not well formed") |
 
 The docs are part of the plan, as for every release: the operators page, the reference of
 `Default` and `If`, *Every diagnostic*, the changelogs with the breaking line for
@@ -194,7 +195,7 @@ What only ADDS can come after. The list is being talked through; each row says w
 | **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | `backlog.md`: "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
 | **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists" |
 | **A struct type may not reach itself through a function field** | Refusing it later refuses a type a host declared. `Tree { children: Tree[] }` stays legal | `backlog.md`, "Core — a struct type that names itself" |
-| **`instance.setProgram` checks its ports** | 1.0 promises that a command reports and never throws. Ports that are no ports throw a raw `TypeError` today and leave the instance broken | `backlog.md`, "Core — a saved program that is not well formed" |
+| **A saved program that is not well formed is reported, never thrown: in 0.7.1** (the maintainer, 2026-10-12) | 1.0 promises that a command reports and does not throw. Probed: seven kinds of bad program give a raw `TypeError` from `setProgram`, `setLayer`, `createInstance` or `load`, and three of them leave the instance broken for good. The whole check exists, in the link (`isSavedProgram`); a program from storage goes past it | `backlog.md`, "Core — a saved program that is not well formed" |
 | **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
 | **What is public, in the editor and in core's extension API** | Hosts use the editor's CSS variables and classes already. In core: say that `language.grammar`'s maps are internal, and that the keys of `registerNud` and the three booleans of `OpInput` are the API as they are. Then the `Grammar` refactors of the backlog can come after 1.0.0, and the one that renames the keys is dropped. To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`", "Parser — `Grammar` is a data bag" |
 | **"No value": a single op hands it on, a list op skips it, EVERYWHERE** (option B; the maintainer, 2026-10-12: "Ok B it is", then "Agreed, everywhere": every op that names a type for an input, so `Upper(null)`, `Length(null)`, `Not(null)` and a comparison give `null` too; `IsSet`, `??`, `==` and an input that converts are the places that take no value) | It changes results: `1 / 0 + 1` is `1` today and becomes `null`, `Average([1, null])` goes from `0.5` to `1`, `Max([-4, null])` from `0` to `-4`. Decided with it: no implicit casting and no switch for a host, `+` never joins text, and **an error is no option** ("especially since we have no way of logging or displaying them"; a run error also stops every output). What is still open of it is in the table below | Below, and `backlog.md`: "a `null` that goes through arithmetic", "What boundary validation left" |

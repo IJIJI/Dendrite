@@ -1285,9 +1285,15 @@ that arrives from storage goes past it.
 written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
 `SavedProgram`.
 
-**Why deferred:** found in passing, while the *Embedding core* sample was probed for the docs
-pass of 0.6.1. Agreed for before 1.0.0 on 2026-10-10; whether it rides with 0.7.0, and in which
-size, is with the maintainer.
+**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
+0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
+the *Embedding core* sample was probed for the docs pass of 0.6.1.
+
+**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
+instance already reports `unsupported_version` that way: a diagnostic, and the old program
+keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
+would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
+range has to say so.
 
 **What it requires, in two sizes:**
 
