@@ -1013,7 +1013,11 @@ a long session.
   to the URL and to localStorage on each change; CodeMirror views that are replaced and not
   destroyed.
 - **Then a budget**, and what the measurement says to change. Speed belongs here too: no
-  number exists for a compile or an evaluation per keystroke.
+  number exists for a compile or an evaluation per keystroke. The first numbers for evaluation
+  alone, taken on 2026-10-12 for another question (core 0.6.0, one machine, a list of a million
+  numbers, no cache): `Map($l, x => x + 1)` 528 ms, `Filter($l, x => x > 0)` 506 ms, so about
+  half a microsecond for each item that runs a lambda; `Concat($l, $l)` 32 ms; `Average($l)`
+  8 ms. With 10,000 items `Map` is 5 ms.
 
 ---
 
