@@ -1250,26 +1250,55 @@ it stays public is a release in which a host may come to import it.
 
 ---
 
-## Core — `instance.setProgram` trusts a saved program's ports
+## Core — a saved program that is not well formed (it began as "`setProgram` trusts its ports")
 
-**What:** `setProgram(saved)` writes `saved.ports` into the instance's persisted layer and
-THEN recompiles (`runtime/instance.ts`). Ports that are not ports, for example an object with
-`inputs` and no `outputs`, make `composeLayers` throw `layer.ports.outputs is not iterable`, a
-raw `TypeError` out of a command that is documented to report through the observables. The
-layer is already replaced, so the instance stays broken: the next `setProgram`, with a sound
-program, throws the same error. Probed on 2026-10-09.
+**What:** a saved program is data from outside: a host reads it from a file or a database and
+hands it over. Core checks part of it, and what it does not check comes out as a raw
+`TypeError`, from commands that are documented to report through the observables. Probed on
+2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
 
-**Who can reach it:** a caller that defeats the types (plain JavaScript, a cast, a blob read
-from storage and handed over unchecked). TypeScript refuses it, `env.load` answers
-`malformed_program`, and the link checks an incoming program with `isSavedProgram` before it
-reaches the instance (`packages/link/src/protocol.ts`).
+| Handed to `setProgram` | The call | A sound program next |
+| --- | --- | --- |
+| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
+| Ports where `inputs` is a text | `TypeError` | **Throws again** |
+| An input with no name | `TypeError` | **Throws again** |
+| An input whose type is a text | `malformed_program`, stale | Works |
+| Ports that are `null` | `malformed_program`, stale | Works |
+| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
+| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
+| A version from the future | `unsupported_version`, stale | Works |
+
+`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
+no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
+source and for the form.
+
+**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
+persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
+is already replaced, so every later recompile throws too.
+
+**The cause under all of it:** the whole check exists, and it is in the wrong package.
+`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
+the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
+that arrives from storage goes past it.
+
+**Who can reach it:** any host that loads what it saved, when the file is damaged or was
+written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
+`SavedProgram`.
 
 **Why deferred:** found in passing, while the *Embedding core* sample was probed for the docs
-pass of 0.6.1. Not a docs matter, and no typed host can do it.
+pass of 0.6.1. Agreed for before 1.0.0 on 2026-10-10; whether it rides with 0.7.0, and in which
+size, is with the maintainer.
 
-**What it requires:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, a
-`malformed_program` diagnostic where it fails (the instance keeps its program, stale), and a
-test that a refused program leaves the next one working.
+**What it requires, in two sizes:**
+
+- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
+  `malformed_program` where it fails. It ends the three cases that break an instance. The four
+  other raw errors stay.
+- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
+  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
+  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
+  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
+  the table, and one that a refused program leaves the next one working.
 
 ---
 

@@ -161,7 +161,8 @@ in both themes. The dashed box might have been meant lighter than a solid one; i
 that it is the lesser box, and the site has one border colour. No rule the site owns names a
 step of the ramp for a border any more.
 
-**Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
+**Found in passing, and filed:** a saved program that is not well formed (it began as
+"`setProgram` trusts its ports")
 (`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
 things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*
 gets simpler, and the two styles for setting an input.
