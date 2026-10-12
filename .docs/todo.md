@@ -14,7 +14,7 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
-| 0.7.0, next | `??` and `c ? a : b`, a lazy `If` decided with them, `AnalysisContext` out of the public surface. A minor for all three packages, because removing an export breaks | below |
+| 0.7.0, next | `??` and `c ? a : b`, a lazy `If`, `AnalysisContext` out of the public surface, a better sentence for a call to a name that is no op. A minor for all three packages, because removing an export breaks | below |
 | The release after 0.7.0 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
@@ -27,7 +27,28 @@ of this file is what must be done before a 1.0.0.
 
 ---
 
-## After 0.6.1 — two symbols that want `?`: `??` and `c ? a : b`
+## 0.7.0 — `??`, `c ? a : b`, a lazy `If`, and three small things
+
+**This is the next work, and it starts with a plan** (the maintainer, 2026-10-12: "0.7.0 will
+be done in a next chat"). A minor for core, the editor and the link together: one of its items
+removes an export, and a minor of core forces a release of both others.
+
+**What it holds, as decided between 2026-10-10 and 2026-10-12:**
+
+| Item | Decided | Left for the plan |
+| --- | --- | --- |
+| `??`, sugar over `Default` | Yes, and not `\|\|` (below) | Its tier in the ladder |
+| `c ? a : b`, sugar over `If` | Yes | Its tier, whether it chains, a `:` inside the first branch, and how a symbol with a hand-written led reaches the lexer |
+| A lazy `If` | Yes, in this release, so that `c ? a : b` never ships eager | The means: an op that looks at its inputs itself. `If`, `Default`, `And` and `Or` use it to skip work. **Results do not change in 0.7.0**: the three-valued `And` and `Or`, and every other change of "no value", come with the release after (the last section of this file) |
+| `AnalysisContext` leaves the public surface | Yes ("it should be removed, probably in the next release") | Export the result and diagnostic types by name (`backlog.md`, "Core — `AnalysisContext` is public") |
+| A call to a name that is no op | Keep the kind `undeclared_binding_reference`; say "no op and no binding has that name"; name the nearest op or binding | The helper for "nearest" (`backlog.md`, "Core — a call to a name that is no op") |
+| `instance.setProgram` checks its ports | Agreed for before 1.0.0; proposed to ride here, not confirmed | Ask the maintainer (`backlog.md`, "Core — `instance.setProgram` trusts a saved program's ports") |
+
+The docs are part of the plan, as for every release: the operators page, the reference of
+`Default` and `If`, *Every diagnostic*, the changelogs with the breaking line for
+`AnalysisContext`.
+
+**The entry as it stood before those decisions**, kept for its probes:
 
 **When:** after 0.6.1, as ONE plan for both. The maintainer placed it first after 0.6.0 on
 2026-10-05, and named 0.6.1 for the editor on 2026-10-08, which comes before it by its number.
