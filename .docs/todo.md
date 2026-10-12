@@ -9,18 +9,20 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 ## The order after 0.6.1
 
 `@dendrite-lang/editor` 0.6.1 is on npm since 2026-10-10 (`done.md`, "Editor 0.6.1 on npm");
-core and link are at 0.6.0. What follows is the order the maintainer gave on 2026-10-08.
-"Possibly" is the maintainer's word for the last two.
+core and link are at 0.6.0. What follows is the order the maintainer gave on 2026-10-08, as
+changed on 2026-10-10. "Possibly" is the maintainer's word.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
-| Next | Two symbols that want `?`: `??` and `c ? a : b` | below |
-| 0.7, possibly | Union types, `A \| B` | `backlog.md`, "Language — union types" |
-| 0.8, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
+| 0.7.0, next | `??` and `c ? a : b`, a lazy `If` decided with them, `AnalysisContext` out of the public surface. A minor for all three packages, because removing an export breaks | below |
+| Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
+| After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
+| Later, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
 
-Beside that order, with no release named for them: the three entries at the foot of this file.
-Two came from the maintainer while 0.6.1 was built (*How a program runs* gets simpler; two
-styles for setting an input), and the third is where a reading of the site collects.
+Beside that order, with no release named for them: the three entries after the next one. Two
+came from the maintainer while 0.6.1 was built (*How a program runs* gets simpler; two styles
+for setting an input), and the third is where a reading of the site collects. The last section
+of this file is what must be done before a 1.0.0.
 
 ---
 
@@ -150,28 +152,35 @@ What only ADDS can come after. The list is being talked through; each row says w
 | --- | --- | --- |
 | **A review of the stdlib's names** | A rename or a move is a break, as the comparison ops' move to `logic` was in 0.6.0 | Here. With it: `Flatten`, which cannot type its output (`backlog.md`) |
 | **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | `backlog.md`: "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
-| **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists"; possibly 0.8 in the order above |
-| **A call to a name that is no op says so** | Today it is `undeclared_binding_reference`. A kind of its own changes what a host matches on | `backlog.md`, "Core — a call to a name that is no op" |
+| **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists" |
+| **A struct type may not reach itself through a function field** | Refusing it later refuses a type a host declared. `Tree { children: Tree[] }` stays legal | `backlog.md`, "Core — a struct type that names itself" |
+| **`instance.setProgram` checks its ports** | 1.0 promises that a command reports and never throws. Ports that are no ports throw a raw `TypeError` today and leave the instance broken | `backlog.md`, "Core — `instance.setProgram` trusts a saved program's ports" |
 | **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
-| **What is public in the editor** | Hosts use its CSS variables and classes already (the docs site does). To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`" |
+| **What is public, in the editor and in core's extension API** | Hosts use the editor's CSS variables and classes already. In core: say that `language.grammar`'s maps are internal, and that the keys of `registerNud` and the three booleans of `OpInput` are the API as they are. Then the `Grammar` refactors of the backlog can come after 1.0.0, and the one that renames the keys is dropped. To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`", "Parser — `Grammar` is a data bag" |
 | **Beacon uses the API first** | The rule of `editor-plan.md`: publish after the first real consumer | `backlog.md`: "Subtyping — Beacon-side representation", "Op-declared context-input dependencies" |
-| **The visual (Rete) half of the editor** | The project's stated target; a gate by decision, not by the rule | `backlog.md`, "Editor — the visual (Rete) half" |
+| **The visual (Rete) half of the editor** | The project's stated target; a gate by decision, not by the rule. It starts soon after 0.7.0 (the order at the top) | `backlog.md`, "Editor — the visual (Rete) half" |
 
-**These have a release, so they are not rows here:** the next one holds `??`, `c ? a : b`, a
-lazy `If` decided with them, and `AnalysisContext` leaving the public surface (the order at the
-top of this file).
+**These have a release, so they are not rows here:** 0.7.0 holds `??`, `c ? a : b`, a lazy
+`If` decided with them, and `AnalysisContext` leaving the public surface.
 
-**Still being talked through** (each with the question that is open):
+**Structs: what waits until after 1.0.0** (each only adds): struct literals (`{ a: 1 }`; the
+brace counting they bring to a template hole touches only programs that are errors today),
+struct types declared in a program and `extends` there, how a literal fits a named type while
+named types stay nominal, a type's own text form (`toText`, opt-in), and the field-wise widget
+for struct inputs. Two small things are decisions and not work: a struct prints as its JSON
+(say that this is the form), and a field read on a value that is no struct (below).
+
+**Still being talked through** (each with the question that is open, and what was probed on
+2026-10-10):
 
 | What | The open question |
 | --- | --- |
-| **Union types** | As a type a host or an author may WRITE, they only add. As what a mixed list or an `If` INFERS, they turn a warning of today into an error. Which half, and when |
-| **A struct type that names itself** | Refusing it is a break for a host that declares one, so the refusal wants to be before 1.0.0. Struct literals and struct types in code only add, and can follow |
-| **A `null` through arithmetic** | Keep the rule of 0.6.0 for good (a `null` lasts one step), or let it reach the output as in SQL. The second changes results |
-| **A value of the wrong type that crosses an `any`** | Today `Add("abc", 1)` is a text in a number output. Refuse it, or read it as the empty value, as a `null` is read |
-| **`instance.setProgram` trusts its ports** | A fix, not a break. Whether it rides with the next release |
-| **`Grammar`'s shape, and the flags on `OpInput`** | Say that the keys and the three booleans are API as they are, or change them first |
-| **A `NaN` inside a list a host op returns** | A known ceiling. Whether it is a gate at all |
+| **What a union may break, and the promise** | Proposed by the maintainer: an inferred union may refuse a program after 1.0.0, because that program warns today. Probed: each case tried that an inferred union would refuse has `implicit_any_cast` now (`If($c, 1, "a") + 1`, `Upper(If(…))`, `Average([1, "a"])`, the same `If` in an output a host declared `number`), and each clean one stays legal (`Length([1, "a"])`, `Equals(If(…), 1)`, a plain `output o = If(…)`). It holds if the promise SAYS so before 1.0.0: a program that compiles with `implicit_any_cast` is not covered. Then union types are no gate, except that strings as lists wants a union one may write |
+| **A `null` through arithmetic** | Today is JavaScript's rule and a blank spreadsheet cell's: `null + 1` is `1`, `null > -1` is `true`, `null == 0` is `false`. But a `null` here is also a FAILED computation, and no language compared treats that as zero: JavaScript gives `Infinity` for `1 / 0`, a spreadsheet `#DIV/0!` everywhere after it, SQL `NULL`. Each one with aggregates skips a missing value, where `Average([null, 4])` is `2` and `Max([null, -4])` is `0`, a number that is not in the list. The choice: keep the rule for good; or number ops hand a `null` on, aggregates skip it, and `??` says "use 0". Known hard part of the second: `>=` is `Not(LessThan(…))`, so a comparison with a `null` has to be `null` and not `false`, or `null >= 5` comes out `true` |
+| **A value of the wrong type that crosses an `any`** | Written directly it is refused: `Add("abc", 1)` is `op_input_type_mismatch`. Through an `any` it runs. Probed: `Add($v, 1)` with `"5"` is the TEXT `"051"`, with `[2]` the text `"021"`; `Average(["2", 4])` is `12`; `Map([1, "a"], x => x + 1)` is `[2, "0a1"]`; `If("no", 1, 2)` is `1`; `LessThan([1], 5)` is `true`; `$v.name` on `5` THROWS, where on `null` it is `null`. And it is uneven: `Multiply("3", 2)` is `6` and `Max(["10", 9])` is `10`, so a numeric text is a number to some ops and not to `Add`. Already sound: `Subtract("abc", 1)` is `null`, `Length(5)` is `0`, `Upper(5)` is `"5"`. The choice: refuse with an error, or one rule that an op reads what is not of its type as no value |
+| **A call to a name that is no op** | `Lenght($scores)` and a misspelt binding `socres` give one kind and one sentence: "'…' is not declared as a binding or scoped variable". Proposed: keep the kind, say "no op and no binding has that name" for a call, and name the nearest op or binding. That only adds, so it is no gate, and it can ride with 0.7.0. A kind of its own would be a break |
+| **A `NaN` inside a list a host op returns** | A known ceiling. Proposed: no gate |
+| **One 1.0.0 for all three packages, or each on its own** | Since 0.6.1 the editor has its own number, and Rete is an editor matter, so core could reach 1.0.0 first |
 
 **Kept in mind, and may wait for 2.0.0:** versions of the documentation site
 (`docs-plan.md` has "none before 1.0").
