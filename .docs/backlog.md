@@ -298,6 +298,24 @@ own text form" below is the other direction (`toText`); design the two together.
 
 ---
 
+## Language — a `null` item in a list literal: reassess before 1.0.0
+
+**What:** decided on 2026-10-12 for the plan of option B: a `null` item leaves a list
+literal's type alone, so `[1, null]` is `number[]`, where it is `any[]` today (a list with a
+`null` in it counts as a mixed list, and `Average([1, null])` warns `implicit_any_cast`). The
+maintainer asked for a note to look at it again before 1.0.0.
+
+**Why it wants a second look:** the rule rests on "a `null` fits every type". With union types
+the honest type is `(number | null)[]`, and "explicit nullability" (the end of this file) would
+make that visible to the checker. If that is ever wanted, `number[]` for `[1, null]` is the
+looser answer, and tightening it after 1.0.0 is a break that no warning announces.
+
+**What it requires:** the question, once union types are planned: is `null` a member of every
+type for good, or of a type that says so. The first keeps this rule. The second changes it,
+and has to come before 1.0.0 or be covered by a warning first.
+
+---
+
 ## Language — union types, `A | B` (possibly 0.7)
 
 **What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
@@ -1259,8 +1277,9 @@ instance keeps the last good values and marks them stale. Nothing records an eve
 not stop the run. `ToNumber(If(false, 1, "a")) + 1` is `1` with no word anywhere: not at
 compile time (`ToNumber` takes `any`, so there is no warning), and not at run time. The events
 worth a record: an op that gave no value (`ToNumber("a")`, a division by zero, `Find` with no
-match), a value of the wrong type that an op read as no value, a cast that did not fit, an
-input that holds nothing.
+match), a value of the wrong type that an op read as no value, a cast that did not fit, a field
+read that found nothing (it gives `null` once option B is built, and the checker warns where
+the value is `any`), an input that holds nothing.
 
 **Why deferred:** it wants the rule for "no value" first (`todo.md`, "Before 1.0.0"): once a
 `null` reaches the output instead of turning into a zero, the output itself says that something
