@@ -377,6 +377,16 @@ type would print, so the docs would not change.
 **Level 2, refused for good:** `lazy T` as a kind of `Type` allowed on op inputs only. No value
 ever has it, so it is the flag's one bit at the type system's price.
 
+**The native form, kept for level 3** (the maintainer's question, 2026-10-13): a zero-argument
+lambda is the thunk the language already has, and `Force(f)` is `f()`. Weighed for 0.7.0 as the
+wrap the analyser would insert around a lazy input, and not taken: the same `lazy: true` is
+still needed (a `() -> any` type as the signal makes `If(c, f, g)` with a zero-argument `f`
+ambiguous, and accepting a `T` where `() -> T` is expected is an implicit coercion), it moves
+laziness into the analyser and a lambda node into the `CoreProgram` (`inferOutput` and the
+graph editor would unwrap it), an application is not memoised, and it costs nine times the
+`Thunk` (124 ns against 14 for two inputs, measured: a closure application copies the local
+scope). If level 3 comes, the lambda is its value and the `Thunk` its internal form.
+
 ---
 
 ## Language — union types, `A | B` (possibly 0.7)
