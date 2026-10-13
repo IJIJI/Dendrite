@@ -70,7 +70,29 @@ what was probed for it. Every probe ran on core 0.6.0 and was deleted afterwards
 
 **The commits the plan holds**, in order: (1) the ladder in twenties, `symbolsOf` and the guard, `??` and `? :` in `control.ts`, the lexer and parser tests, the editor's two lines; (2) `Thunk`, `lazy` on the input, the typed `op`, the four ops, the three tests; (3) the nearest-name helper and the four sentences; (4) `AnalysisContext` out, the readme; (5) the docs: the operators page (two rows, a paragraph on precedence and the two bracket cases), `If`'s description ("Only the branch taken is evaluated"), the reference's `lazy` mark and its legend line, *Extending the language* (a lazy input on a host's op, with the `Guard` sample), *Every diagnostic* (the new sentences), the three changelogs, the backlog entry on `If` closed to `done.md`.
 
-**Open for tweaking**: nothing named yet. The maintainer reads the base and says go, or names a change.
+**Decided on 2026-10-14: the go, and what the plan's reviews changed.** The maintainer gave
+the go for 0.7.0 as it stands above, with the gaps the repo showed folded in. The plan itself
+(revision 7, after seven review passes and three independent reviews from other chats) is the
+chat's working document; what it changed in the base, each row with its reason:
+
+| What | Decided | Why |
+| --- | --- | --- |
+| Seven more readers of `grammar.symbols` | Move to `symbolsOf` in commit 1: the four examples in `packages/core/examples/3-(code)/` (typechecked, `tsconfig` includes them), `parser.test.ts` (three lines), `stdlib/index.test.ts` | The handoff listed `language.ts`, `index.ts` and the editor's `tokens.ts` only |
+| The backtick | The set the lexer owns holds it, beside the token kinds, the structural punctuation and the two arrows | The template nud is keyed on it (`string.ts`), so `symbolsOf` would list it as a symbol. The lexer reads it before the operators, as it reads `"` |
+| `registerEvaluator` with a definition as `op` | Stores `{ ...def, op: name }`, so the map keeps `op: string` | `extendLanguage`, `validateDescriptor` (`orphan_evaluator`) and the link read `op` as a string; one normalisation at the door instead of a branch in each |
+| The type-level file | `language/lazy.test-d.ts`: `tsconfig` includes `src/**/*`, vitest runs `*.test.ts` only, so `yarn typecheck` reads it and nothing runs it. `Record<never, never>`, not `{}` (`no-empty-object-type` is in the lint set) | It exercises `registerOp`, `registerEvaluator` and the lazy keys, not the class |
+| An optional lazy input | Typed `Thunk \| undefined` | An absent optional input has no key in `node.inputs`, so the evaluator sees `undefined` |
+| The callee that is no op: the pre-check | "Declared nowhere": not a lambda parameter, not in `declarationIndex`, not an op | A forward reference and a failed binding fall through to the `ref` path, which reports them as today; an `ast`-form app whose callee names an op would otherwise be told to mean its own name |
+| A reference to a cycle member | The `ref` case returns the error node for a failed binding before the undeclared report. A fix in the changelog | A cycle member is failed but never analysed, so today it gets `undeclared_binding_reference` as a second error. The outputs do not change: reachability drops them first |
+| The two undeclared sentences | One helper, `reportUndeclared`, with the noun phrase as a parameter | Duplicate Code |
+| `nearest` | Its own `analyser/nearest.ts` and test; distance at most two, at most one for a name of four letters or fewer; ties by order, ops before bindings before locals for a call | `analyser.ts` is 1286 lines; `m` must not hint `n`; the sentence must not flip between runs |
+| The reference's signature | Assembled per input in `apps/docs/src/components/ops.ts`, with a test, as `diagnostics.ts` sits beside its component | In one `sourceHtml` string, `any` after `lazy` is not a type position and loses its colour |
+| `?` in `separator?` | Becomes a symbol token, coloured as one | It was an unknown character, printed plain; the editor test that asserts so flips in commit 1 |
+| The 0.7.0 record in `done.md` | Written after the release, dated, as every release record is | Commit 5 closes the three backlog entries only (`If` evaluates both branches, `AnalysisContext` is public, a call to a name that is no op) |
+| *Extending the language* | One sentence: read a thunk during the call | A thunk kept for later reads a traversal that is gone; the same trust as a host op returning no `NaN` |
+
+**0.7.1 was decided the same day**: the fix at the door, and a layer of a bad shape refused
+inside `composeLayers` (`backlog.md`, "Core — a saved program that is not well formed").
 
 **The entry as it stood before those decisions**, kept for its probes:
 

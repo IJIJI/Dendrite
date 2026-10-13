@@ -1372,6 +1372,33 @@ keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle
 would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
 range has to say so.
 
+**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
+three things the plan settled with it:
+
+- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
+  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
+  every door composes, so the kind is the same at both levels and each level keeps its channel:
+  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
+  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
+  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
+  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
+  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
+  global and a program layer? The kind should be, the channel should not.
+- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
+  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
+  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
+  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
+  through `export *`, and a patch removes nothing.
+- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
+  host layer with `ports: null` is read in five places before and after compose, so a guard
+  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
+  reported, a layer built in code throws); one test pins it.
+
+Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
+page prints every compose sample's declarations through `declarationsOf`, which maps over
+`ports.inputs` and would break the build on a bad shape; and the link's one test file is
+`link.test.ts`. The release record is written after the release, as every record is.
+
 **What it requires, in two sizes:**
 
 - **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
