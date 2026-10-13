@@ -327,6 +327,9 @@ keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `pre
 `FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
 cast goes, and the four lazy ops do not change again.
 
+**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
+is in `todo.md`, "The order after 0.6.1".
+
 **Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
 `number` is true only once the evaluator guarantees an input's declared type at the door, which
 is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`

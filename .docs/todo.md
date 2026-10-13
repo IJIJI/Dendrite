@@ -16,7 +16,8 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 | --- | --- | --- |
 | 0.7.0, next | `??` and `c ? a : b`, a lazy `If`, `AnalysisContext` out of the public surface, a better sentence for a call to a name that is no op. A minor for all three packages, because removing an export breaks | below |
 | 0.7.1 | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | `backlog.md`, "Core — a saved program that is not well formed" |
-| The minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
+| 0.8.0, the minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
+| 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true | `backlog.md`, "Core — a typed evaluator derived from the op's declaration" |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
 | Later, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
