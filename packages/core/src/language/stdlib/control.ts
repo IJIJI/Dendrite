@@ -1,8 +1,10 @@
+import { operationNode } from "../infra/nodes";
 import { den } from "../infra/serialise";
-import { type Language } from "../language";
+import { BP, type Language } from "../language";
 import { Type, isAny, typesEqual } from "../infra/types";
 
-//? The control segment: choosing between values, and falling back when there is none.
+//? The control segment: choosing between values, and falling back when there is none, and
+// the two symbols that spell those: `c ? a : b` over If, `a ?? b` over Default.
 export function installControl(lang: Language): void {
   lang.registerOp({
     name: "If",
@@ -59,6 +61,36 @@ export function installControl(lang: Language): void {
     inferOutput: (inputTypes) => {
       const v = inputTypes["value"];
       return v && !isAny(v) ? v : (inputTypes["fallback"] ?? Type.any);
+    },
+  });
+
+  // -------------------------------------------------------------------------
+  // Symbols - surface sugar over the ops above.
+  // -------------------------------------------------------------------------
+
+  // `a ?? b` is Default(a, b). Below `||` and above `? :`, as C#, PHP and JS have it: so
+  // `$x ?? 0 > 5` reads `$x ?? (0 > 5)`, and a default before arithmetic takes brackets,
+  // `($x ?? 0) + 1`.
+  lang.registerInfix("??", BP.COALESCE, (l, r) =>
+    operationNode("Default", { value: l, fallback: r }),
+  );
+
+  // `c ? a : b` is If(c, a, b), with C's grammar. The then branch reads at power 0 and ends at
+  // the colon, which is no operator, so a lambda body, a named argument `f(x: 1)` and a typed
+  // parameter `(x: number) => x` inside it all read. The else branch reads just below `?`, so
+  // `a ? b : c ? d : e` chains to the right, and a lambda there needs brackets, as in C:
+  // `c ? a : (x => x)`. A led with two operands to read, so it is written out.
+  lang.registerLed("?", {
+    bp: BP.CONDITIONAL,
+    parse: (p, left, token) => {
+      const then = p.parseExpr(0);
+      p.expect("punct", ":");
+      const otherwise = p.parseExpr(BP.CONDITIONAL - 1);
+      return operationNode(
+        "If",
+        { condition: left, then, else: otherwise },
+        { source: token.source },
+      );
     },
   });
 }

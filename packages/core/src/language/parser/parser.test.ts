@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { symbolsOf } from "./grammar";
 import { tokenise } from "./lexer";
 import { parse as parseProgram, parseExpression } from "./parser";
 import { createStdlib } from "../stdlib";
@@ -21,12 +22,12 @@ function withInput(_name: string, type = "number"): Language {
 }
 
 function parse(src: string, lang: Language = CORE) {
-  const { tokens } = tokenise(src, [...lang.grammar.symbols]);
+  const { tokens } = tokenise(src, [...symbolsOf(lang.grammar)]);
   return parseExpression(tokens, lang.descriptor, lang.grammar);
 }
 
 function program(src: string, lang: Language = CORE) {
-  const { tokens } = tokenise(src, [...lang.grammar.symbols]);
+  const { tokens } = tokenise(src, [...symbolsOf(lang.grammar)]);
   return parseProgram(tokens, lang.descriptor, lang.grammar);
 }
 
@@ -796,8 +797,39 @@ describe("a handler in the wrong map is refused at registration, not ignored", (
   it("an infix or prefix operator must be a symbol, because a word lexes as an identifier", () => {
     const lang = createLanguage();
     expect(() => lang.registerInfix("as", BP.ADD, (l) => l)).toThrow(/use registerWordLed/);
-    expect(() => lang.registerPrefix("not", BP.PREFIX, (o) => o)).toThrow(/use registerWordLed/);
+    expect(() => lang.registerPrefix("not", BP.PREFIX, (o) => o)).toThrow(/is a word/);
     expect(() => lang.registerInfix("++", BP.ADD, (l) => l)).not.toThrow();
+  });
+
+  it("the same guard sits under a bare led and nud, and a token kind passes it", () => {
+    const lang = createLanguage();
+    const led = { bp: BP.ADD, parse: (_p: unknown, left: ASTNode) => left };
+    const nud = (_p: unknown, t: { value: string }): ASTNode => ({ kind: "ref", name: t.value });
+    expect(() => lang.registerLed("as", led)).toThrow(/is a word.*use registerWordLed/);
+    expect(() => lang.registerNud("not", nud)).toThrow(/is a word/);
+    expect(() => lang.registerNud("ident", nud)).not.toThrow();
+  });
+});
+
+// ─── The symbols the lexer learns from the grammar ────────────────────────────
+
+describe("symbolsOf: the lexer's symbols, derived from the grammar's handler keys", () => {
+  it("is every nud and led key the lexer does not own, for the stdlib", () => {
+    const expected = ["!", "!=", "*", "+", "++", "-", "/", "<", "<=", "==", ">", ">=", "&&"];
+    expected.push("||", "?", "??");
+    expect([...symbolsOf(CORE.grammar)].sort()).toEqual(expected.sort());
+  });
+
+  it("a bare language has none: its handlers sit on token kinds, punctuation and the arrows", () => {
+    expect([...symbolsOf(createLanguage().grammar)]).toEqual([]);
+  });
+
+  it("a handler on a token kind or on the backtick adds no symbol", () => {
+    const lang = createLanguage();
+    const nud = (_p: unknown, t: { value: string }): ASTNode => ({ kind: "ref", name: t.value });
+    lang.registerNud("ident", nud);
+    lang.registerNud("`", nud);
+    expect([...symbolsOf(lang.grammar)]).toEqual([]);
   });
 });
 
@@ -847,9 +879,92 @@ describe("a template is a Join over its parts", () => {
 
   it("an empty hole is a syntax error, and an unterminated template is the lexer's", () => {
     expect(parse("`{}`").errors[0]).toMatchObject({ kind: "unexpected_token" });
-    const { tokens, errors } = tokenise("`abc", [...CORE.grammar.symbols]);
+    const { tokens, errors } = tokenise("`abc", [...symbolsOf(CORE.grammar)]);
     expect(errors.map((e) => e.kind)).toEqual(["unterminated_string"]);
     // What the parser then sees still parses to the end without throwing.
     expect(() => parseExpression(tokens, CORE.descriptor, CORE.grammar)).not.toThrow();
+  });
+});
+
+// ─── ?? and ? : ──────────────────────────────────────────────────────────────
+
+describe("?? is Default, ? : is If", () => {
+  const r = (name: string) => ({ kind: "ref", name });
+  const If = (condition: object, then: object, otherwise: object) => ({
+    kind: "operation",
+    op: "If",
+    inputs: { condition, then, else: otherwise },
+  });
+
+  it("a ?? b is Default(a, b)", () => {
+    expect(parse("a ?? b").node).toMatchObject({
+      kind: "operation",
+      op: "Default",
+      inputs: { value: r("a"), fallback: r("b") },
+    });
+  });
+
+  it("?? sits below || and above ? :", () => {
+    // a ?? (b || c)
+    expect(parse("a ?? b || c").node).toMatchObject({
+      op: "Default",
+      inputs: { value: r("a"), fallback: { op: "Or" } },
+    });
+    // (a ?? b) ? c : d
+    expect(parse("a ?? b ? c : d").node).toMatchObject(If({ op: "Default" }, r("c"), r("d")));
+    // c ? a : (b ?? d)
+    expect(parse("c ? a : b ?? d").node).toMatchObject(If(r("c"), r("a"), { op: "Default" }));
+  });
+
+  it("c ? a : b is If(c, a, b), and || binds inside the condition", () => {
+    expect(parse("a || b ? c : d").node).toMatchObject(If({ op: "Or" }, r("c"), r("d")));
+  });
+
+  it("chains to the right", () => {
+    expect(parse("a ? b : c ? d : e").node).toMatchObject(
+      If(r("a"), r("b"), If(r("c"), r("d"), r("e"))),
+    );
+  });
+
+  it("the then branch reads to the colon: a lambda, a typed parameter, a named argument", () => {
+    expect(parse("c ? x => x : y").node).toMatchObject(If(r("c"), { kind: "lambda" }, r("y")));
+    expect(parse("c ? (x: number) => x : y").node).toMatchObject(
+      If(r("c"), { kind: "lambda", params: [{ name: "x", type: Type.number }] }, r("y")),
+    );
+    expect(parse("c ? f(x: 1) : b").node).toMatchObject(
+      If(r("c"), { kind: "app", named: { x: { value: 1 } } }, r("b")),
+    );
+  });
+
+  it("a lambda in the else branch needs brackets, as in C", () => {
+    expect(parse("c ? a : x => x").errors[0]).toMatchObject({
+      kind: "syntax_error",
+      message: expect.stringMatching(/lambda parameter must be a name/),
+    });
+    expect(parse("c ? a : (x => x)").node).toMatchObject(If(r("c"), r("a"), { kind: "lambda" }));
+  });
+
+  it("sits inside a call, a lambda body and an annotated binding", () => {
+    expect(parse("f(c ? a : b)").node).toMatchObject({
+      kind: "app",
+      positional: [If(r("c"), r("a"), r("b"))],
+    });
+    expect(parse("x => c ? a : b").node).toMatchObject({
+      kind: "lambda",
+      body: If(r("c"), r("a"), r("b")),
+    });
+    const p = program("let r: number = c ? 1 : 2");
+    expect(p.ok && p.program.bindings.get("r")).toMatchObject(
+      If(r("c"), { value: 1 }, { value: 2 }),
+    );
+  });
+
+  it("carries the ? token's source", () => {
+    expect(parse("c ? a : b").node.source).toEqual({
+      kind: "code",
+      line: 1,
+      column: 3,
+      length: 1,
+    });
   });
 });

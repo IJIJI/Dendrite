@@ -206,7 +206,7 @@ See `architecture.md` for the layering DAG and full design.
   batteries (ops, evaluators and their symbols, one file per segment), and
   `createStdlib({ segments })` takes some of them; `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
-  `grammar.symbols`.
+  `symbolsOf(grammar)`.
 
 ### Analyser
 - `analyse` is a **pass pipeline**: `buildReferenceGraph` → `topoSort` (cycle detection) →

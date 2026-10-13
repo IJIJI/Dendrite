@@ -7,6 +7,7 @@
  */
 
 import { readFileSync } from "fs";
+import { symbolsOf } from "../../src/language/parser/grammar";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createStdlib } from "../../src/language/stdlib";
@@ -40,7 +41,7 @@ const env = composed.environment;
 
 // --- source → CoreProgram ---------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
-const { tokens } = tokenise(source, [...lang.grammar.symbols]);
+const { tokens } = tokenise(source, [...symbolsOf(lang.grammar)]);
 
 const loc = (s?: SourceRef): string =>
   s ? (s.kind === "code" ? `${s.line}:${s.column}` : s.nodeId) : "?";

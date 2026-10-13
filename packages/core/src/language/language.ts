@@ -20,14 +20,17 @@ import {
   registerPrefix,
   registerStatement,
   type StatementFn,
+  symbolsOf,
 } from "./parser/grammar";
 import { installCoreGrammar } from "./parser/core-grammar";
 import { tokenise } from "./parser/lexer";
 import { parse } from "./parser/parser";
 import { type ParseResult } from "./parser/types";
 
-// Re-export the binding-power tiers: registering operators is part of the Language API.
+// Re-export the binding-power tiers and the symbol query: registering operators, and
+// tokenising with them, is part of the Language API.
 export { BP } from "./parser/precedence";
+export { symbolsOf } from "./parser/grammar";
 
 //? Language: the assembly that bundles the infra LanguageDescriptor (semantics) with a
 // parser-layer Grammar (syntax) behind one register API. Defining a language is one
@@ -132,14 +135,14 @@ export function extendLanguage(extension: Language, base: Language): Language {
 }
 
 //? parseSource: source → RawProgram in one call (lex + parse, no analysis). Derives the
-// lexer's operator vocabulary from the language's grammar (single-sourced - adding an
-// operator needs no lexer edit) and merges lexer + parser diagnostics.
+// lexer's symbols from the language's grammar (single-sourced - adding an operator needs no
+// lexer edit) and merges lexer + parser diagnostics.
 export function parseSource(source: string, language: Language): ParseResult {
   const {
     tokens,
     errors: lexErrors,
     warnings: lexWarnings,
-  } = tokenise(source, [...language.grammar.symbols]);
+  } = tokenise(source, [...symbolsOf(language.grammar)]);
   const result = parse(tokens, language.descriptor, language.grammar);
   const warnings = [...lexWarnings, ...result.warnings];
   if (lexErrors.length > 0 || !result.ok) {

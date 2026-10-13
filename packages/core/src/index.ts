@@ -25,6 +25,7 @@ export {
   extendLanguage,
   parseSource,
   BP,
+  symbolsOf,
   type Language,
 } from "./language/language";
 

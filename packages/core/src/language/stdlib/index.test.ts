@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createEnvironment } from "../environment";
-import { createLanguage, type Language } from "../language";
+import { createLanguage, type Language, symbolsOf } from "../language";
 import { createStdlib, type StdlibSegment } from "./index";
 
 //? createStdlib({ segments }): a host takes part of the library. What is pinned here is the
@@ -23,7 +23,7 @@ const ALL: StdlibSegment[] = [
 const names = (lang: Language) => ({
   ops: [...lang.descriptor.ops.keys()],
   evaluators: [...lang.descriptor.evaluators.keys()],
-  symbols: [...lang.grammar.symbols].sort(),
+  symbols: [...symbolsOf(lang.grammar)].sort(),
 });
 
 // `output r` on a library of these segments: the stage that refused it, the kind of every

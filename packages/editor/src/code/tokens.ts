@@ -1,7 +1,7 @@
-import { type Language, type Token, tokenise } from "@dendrite-lang/core";
+import { type Language, type Token, symbolsOf, tokenise } from "@dendrite-lang/core";
 
 //? Token classification for highlighting - driven by the language's OWN lexer, so the
-// symbol vocabulary (grammar.symbols), statement keywords (grammar.statements) and
+// symbol vocabulary (symbolsOf(grammar)), statement keywords (grammar.statements) and
 // word operators (grammar.wordLeds)
 // and op names (descriptor.ops) can never drift from what actually parses.
 // Framework-free: returns plain styled ranges; cm.ts maps them onto CodeMirror.
@@ -85,7 +85,8 @@ function typePositions(tokens: readonly Token[], isType: (name: string) => boole
 
 export function styledRanges(source: string, language: Language): StyledRange[] {
   const starts = lineStartOffsets(source);
-  const lexed = tokenise(source, [...language.grammar.symbols]);
+  const symbols = symbolsOf(language.grammar);
+  const lexed = tokenise(source, [...symbols]);
   const tokens = lexed.tokens.filter(
     (token) => token.kind !== "eof" && token.source.kind === "code",
   );
@@ -131,9 +132,7 @@ export function styledRanges(source: string, language: Language): StyledRange[] 
             ? "input"
             : token.value === "`"
               ? "string"
-              : language.grammar.symbols.has(token.value) ||
-                  token.value === "=>" ||
-                  token.value === "->"
+              : symbols.has(token.value) || token.value === "=>" || token.value === "->"
                 ? "symbol"
                 : "punct";
     }

@@ -8,6 +8,7 @@
  */
 
 import { readFileSync } from "fs";
+import { symbolsOf } from "../../src/language/parser/grammar";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { createStdlib } from "../../src/language/stdlib";
@@ -28,7 +29,7 @@ const {
   tokens,
   errors: lexErrors,
   warnings: lexWarnings,
-} = tokenise(source, [...lang.grammar.symbols]);
+} = tokenise(source, [...symbolsOf(lang.grammar)]);
 const result = parse(tokens, lang.descriptor, lang.grammar);
 
 // --- Render an ASTNode back to readable, source-like text -------------------
