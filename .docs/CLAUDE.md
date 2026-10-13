@@ -228,6 +228,11 @@ See `architecture.md` for the layering DAG and full design.
 - Arrays/functions are structural — never "register" them.
 - `bodyScope ?? nodeCache` for inline-node caching (bodyScope when inside a lambda body).
 - Raw `ASTNode`s carry no inferred `type` — the analyser produces typed `CNode`s.
+- **The reference marks an input on its name** for how the op receives it, one mark at most:
+  `nodes...` variadic, `separator?` optional, `parts~` converts (NOT "inferred": an inferred
+  input, a lambda typed from the list, has no mark). **A lazy input is marked on its type**,
+  `then: lazy any`, so it combines with a name mark: `nodes...: lazy boolean` (decided
+  2026-10-13).
 - **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
   `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
   READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts

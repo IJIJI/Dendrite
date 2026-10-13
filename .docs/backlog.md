@@ -316,6 +316,66 @@ and has to come before 1.0.0 or be covered by a warning first.
 
 ---
 
+## Core — a typed evaluator derived from the op's declaration (the strict keys)
+
+**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
+`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
+because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
+declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
+`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
+keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
+`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
+cast goes, and the four lazy ops do not change again.
+
+**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
+`number` is true only once the evaluator guarantees an input's declared type at the door, which
+is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
+can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
+widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
+comes after option B.
+
+**What it requires:** (a) `Type.number` and the other constants typed as their literals, and
+`Type.array` / `Type.fn` keeping the element's type: additive. (b) A mapping from a `Type`
+literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
+`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
+array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
+`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
+(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
+`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
+anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
+API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
+lazy slice verified by a probe.
+
+---
+
+## Language — thunks as values, and a lazy lambda parameter
+
+**What:** 0.7.0 builds a `Thunk` (a class with a `.value` getter) that an op's evaluator
+receives for an input declared `lazy: true`. Three levels were compared on 2026-10-13, and the
+flag is level 1. This entry marks the door to level 3: a thunk as a value of the language,
+`let later = lazy expensive`, passed to a function or an op, forced with a `Force` op or a `!`
+form, typed `lazy T` as a fourth kind of `Type`. A lazy lambda parameter (`(x: lazy number)`,
+Scala's by-name) is the same door: `f(expensive)` evaluates its argument even when `f` ignores
+it.
+
+**Why deferred:** no consumer. A `let` is already computed only when an output pulls it, and
+once per cycle, which is call-by-need at the binding level; an op's input is lazy where an op
+declares it; a function's argument is the one eager place left, and nothing a program can
+observe changes with it (no side effects, and after option B no run errors), only time.
+
+**What it requires:** the type kind in every switch over a type (`typeToString`, `typesEqual`,
+`isCompatible`, `elementOf`, the port serialiser, the type grammar, the reference's printer,
+the editor's colouring), a `Force` op or `!`, a rule that an output forces (a thunk is not
+JSON, so it cannot leave through a port or a link), rules for `==` and `IsSet` on a thunk,
+whether a thunk may be `any` (a function may not), a node in the graph editor. The base is its
+first step: the `Thunk` class is its run-time value, and `lazy any` is already the name its
+type would print, so the docs would not change.
+
+**Level 2, refused for good:** `lazy T` as a kind of `Type` allowed on op inputs only. No value
+ever has it, so it is the flag's one bit at the type system's price.
+
+---
+
 ## Language — union types, `A | B` (possibly 0.7)
 
 **What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
@@ -521,6 +581,10 @@ propagation does not cover (an expensive branch, or a read that must throw).
 
 **A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
 (`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
+
+**Closes with 0.7.0** (decided 2026-10-13, `todo.md` "0.7.0", "Decided on 2026-10-13"): a lazy
+input, declared on the input and handed over as a `Thunk`. This entry moves to `done.md` when
+it ships.
 
 ---
 
