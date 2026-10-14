@@ -46,8 +46,9 @@ decision postponed, a follow-up a fix turns up. Nothing is kept only in a conver
 - **`handoff.md`** - a moment, not the project: written at the end of a chat for the next
   one, and replaced each time. It gives the next chat its getting-started steps in order,
   where things stand, the next work, what was decided beyond the plan, and the habits that
-  held. A handoff is also sent in the chat: the getting-started steps, and the questions
-  the next chat needs the maintainer to answer, batched (the maintainer, 2026-10-14).
+  held. A handoff is also sent in the chat: the questions the next chat needs the
+  maintainer to answer, batched, and a text in a code block that the maintainer pastes into
+  the new chat to start it (the maintainer, 2026-10-14: always).
 
 A finished todo moves to `done.md`; a backlog item picked up next moves to `todo.md`. When a
 `TODO` comment is answered, delete the comment along with closing its entry.
