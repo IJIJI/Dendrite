@@ -24,9 +24,9 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.6.0** (2026-10-08). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.6.1** (2026-10-10; released alone, so its number has parted from core's and link's). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
-| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.6.0** (2026-10-08). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.7.1** (2026-10-14). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.7.0** (2026-10-14; not in 0.7.1, whose core its peer range admits). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.7.1** (2026-10-14). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
 | `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09 (`docs-plan.md`); thirty pages in Learn, the stdlib reference, How it works and Host developers, and a stub for Contribute; deployed at the root `dendrite-lang.org/` |
@@ -35,14 +35,19 @@ output result  = status
 
 ## Work tracking
 
-Three files in `.docs/`, and every deferred item goes in one of them **the moment it is
-deferred**: a `TODO` left in code, an option offered and not taken, a "later" in an answer, a
+Four files in `.docs/`, and every deferred item goes in one of the first three **the moment it
+is deferred**: a `TODO` left in code, an option offered and not taken, a "later" in an answer, a
 decision postponed, a follow-up a fix turns up. Nothing is kept only in a conversation.
 
 - **`todo.md`** - the near future: what is being worked on, and what comes straight after.
 - **`backlog.md`** - postponed to some later point in time, each entry with why and what it
   would take. Code `TODO` comments are listed in its "Code-TODO roundup".
 - **`done.md`** - finished entries, kept for reasoning nothing else records.
+- **`handoff.md`** - a moment, not the project: written at the end of a chat for the next
+  one, and replaced each time. It gives the next chat its getting-started steps in order,
+  where things stand, the next work, what was decided beyond the plan, and the habits that
+  held. A handoff is also sent in the chat: the getting-started steps, and the questions
+  the next chat needs the maintainer to answer, batched (the maintainer, 2026-10-14).
 
 A finished todo moves to `done.md`; a backlog item picked up next moves to `todo.md`. When a
 `TODO` comment is answered, delete the comment along with closing its entry.
