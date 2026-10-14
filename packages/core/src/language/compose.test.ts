@@ -47,6 +47,26 @@ describe("composeLayers", () => {
     expect(provenance.outputs.get("tally")).toEqual({ layerId: "host", level: "global" });
   });
 
+  it("a layer whose ports are not a Ports record is malformed_ports, and the other layers compose", () => {
+    const bad: PortLayer = {
+      id: "wire",
+      ports: { inputs: "x" } as unknown as Ports,
+      policy: Policy.user,
+    };
+    const doc = layer("document", { inputs: [{ name: "threshold", type: Type.number }] });
+    const result = composeLayers(createStdlib().descriptor, [], [bad, doc]);
+    expect(problemsOf(result)).toEqual([
+      {
+        kind: "malformed_ports",
+        layerId: "wire",
+        where: "ports",
+        message: "Ports of layer 'wire' are not a Ports record",
+      },
+    ]);
+    // Alone, the sound layer composes: the bad one contributed the problem and nothing else.
+    expect(composeLayers(createStdlib().descriptor, [], [doc]).ok).toBe(true);
+  });
+
   it("keeps ops and evaluators by reference and leaves the vocabulary alone", () => {
     const lang = createStdlib();
     const before = lang.descriptor.types.size;

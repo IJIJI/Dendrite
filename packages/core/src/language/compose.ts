@@ -1,7 +1,7 @@
 import { validateDescriptor } from "./analyser/analyser";
 import { type AnalysisError } from "./analyser/types";
 import { isIdentifier } from "./infra/identifier";
-import { type PortLayer } from "./infra/ports";
+import { isPorts, type PortLayer } from "./infra/ports";
 import {
   type InputDefinition,
   type LanguageDescriptor,
@@ -24,6 +24,7 @@ export interface PortOrigin {
 
 export interface PortProblem {
   kind:
+    | "malformed_ports"
     | "invalid_name"
     | "duplicate_name"
     | "shadowed_name"
@@ -106,6 +107,18 @@ export function composeLayers(
       if (seenLayerIds.has(layer.id)) throw new Error(`Duplicate layer id '${layer.id}'`);
       seenLayerIds.add(layer.id);
       const at: PortOrigin = { layerId: layer.id, level };
+      // A layer's ports are data from outside (a saved program's, a `setLayer` over a wire), so
+      // a shape that is not ports is this layer's problem, reported as any other, and nothing
+      // in the layer is read. Every door composes, so every door reports it its own way.
+      if (!isPorts(layer.ports)) {
+        problems.push({
+          kind: "malformed_ports",
+          layerId: layer.id,
+          where: "ports",
+          message: `Ports of layer '${layer.id}' are not a Ports record`,
+        });
+        continue;
+      }
       for (const t of layer.ports.types ?? []) place(types, at, t.name, { ...t });
       for (const i of layer.ports.inputs) place(inputs, at, i.name, i);
       for (const o of layer.ports.outputs) place(outputs, at, o.name, o);

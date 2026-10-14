@@ -6,7 +6,7 @@ import { type Observable, createSubject } from "../infra/observable";
 import { EMPTY_PORTS, flattenPorts, type PortLayer, type Ports, Policy } from "../infra/ports";
 import { type InputDefinition, type LanguageDescriptor } from "../infra/registry";
 import { misfit, valueFits } from "../infra/fits";
-import { type SavedProgram } from "../infra/serialise";
+import { isSavedProgram, type SavedProgram } from "../infra/serialise";
 import { type ProgramHandle, type Runtime } from "./runtime";
 import { defaultValueFor } from "./seed";
 
@@ -179,8 +179,12 @@ class Instance implements ProgramInstance {
   ) {
     this.id = options.id ?? `instance-${++instances}`;
     this.saved = options.program;
+    // A program from outside is checked by shape before its ports become the document layer:
+    // a damaged one gets an empty layer, and the first compile reports it through `load`. The
+    // `layers` option is the host's own code, as a runtime's layers are, and is taken as given.
+    const own = isSavedProgram(options.program) ? options.program.ports : undefined;
     this.layers = options.layers ?? [
-      { id: "document", ports: options.program.ports ?? EMPTY_PORTS, policy: Policy.user },
+      { id: "document", ports: own ?? EMPTY_PORTS, policy: Policy.user },
     ];
     if (this.layers.filter((layer) => layer.policy.persisted).length > 1) {
       throw new Error(
@@ -266,15 +270,16 @@ class Instance implements ProgramInstance {
 
   setProgram(saved: SavedProgram): void {
     const persisted = this.persistedLayer();
-    if (saved.ports && !persisted) {
+    // Checked by shape first: a damaged program must neither be read for its ports nor replace
+    // the layer's. `load` reports it on the recompile, and the old program keeps running, stale.
+    const ports = isSavedProgram(saved) ? saved.ports : undefined;
+    if (ports && !persisted) {
       throw new Error(
         `Instance '${this.id}' has no persisted layer, so a program's own ports have nowhere to go`,
       );
     }
-    if (saved.ports && persisted) {
-      this.layers = this.layers.map((layer) =>
-        layer === persisted ? { ...layer, ports: saved.ports as Ports } : layer,
-      );
+    if (ports && persisted) {
+      this.layers = this.layers.map((layer) => (layer === persisted ? { ...layer, ports } : layer));
     }
     this.saved = saved;
     this.recompile();

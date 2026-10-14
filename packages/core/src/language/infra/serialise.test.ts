@@ -11,6 +11,7 @@ import {
   assertSavedPorts,
   den,
   deserialise,
+  isSavedProgram,
   migrate,
   SAVED_PROGRAM_VERSION,
   type SavedAstProgram,
@@ -176,6 +177,43 @@ describe("ports on a saved program", () => {
     ).toThrow(/ports is not a Ports/);
     expect(() => assertSavedPorts(serialiseSource("x"))).not.toThrow();
     expect(() => assertSavedPorts(serialiseSource("x", PORTS))).not.toThrow();
+  });
+});
+
+describe("isSavedProgram - the trust boundary for a program from outside", () => {
+  const code = serialiseSource("output out = 1");
+  const ast = serialiseAst({ bindings: new Map(), outputs: new Map() });
+
+  it("accepts the three forms, with or without ports", () => {
+    expect(isSavedProgram(code)).toBe(true);
+    expect(isSavedProgram(ast)).toBe(true);
+    expect(isSavedProgram({ version: 1, form: "rete", graph: {} })).toBe(true);
+    expect(isSavedProgram(serialiseSource("output out = 1", EMPTY_PORTS))).toBe(true);
+  });
+
+  it("refuses what is no record, no numeric version, or no form of the three", () => {
+    expect(isSavedProgram(null)).toBe(false);
+    expect(isSavedProgram("output out = 1")).toBe(false);
+    expect(isSavedProgram([])).toBe(false);
+    expect(isSavedProgram({ ...code, version: "1" })).toBe(false);
+    expect(isSavedProgram({ ...code, form: "yaml" })).toBe(false);
+    expect(isSavedProgram({ version: 1 })).toBe(false);
+  });
+
+  it("refuses a code form without a string source, and an ast form without record bindings and outputs", () => {
+    expect(isSavedProgram({ ...code, source: 5 })).toBe(false);
+    expect(isSavedProgram({ version: 1, form: "code" })).toBe(false);
+    expect(isSavedProgram({ ...ast, bindings: [] })).toBe(false);
+    expect(isSavedProgram({ version: 1, form: "ast", bindings: {} })).toBe(false);
+    // The nodes inside are deserialise's to check: a bogus node passes here and fails there.
+    expect(isSavedProgram({ ...ast, bindings: { a: { kind: "bogus" } } })).toBe(true);
+  });
+
+  it("refuses ports that are not a Ports record, and takes absent ports", () => {
+    expect(isSavedProgram({ ...code, ports: null })).toBe(false);
+    expect(isSavedProgram({ ...code, ports: { inputs: "x", outputs: [] } })).toBe(false);
+    expect(isSavedProgram({ ...code, ports: { inputs: [] } })).toBe(false);
+    expect(isSavedProgram({ ...code, ports: undefined })).toBe(true);
   });
 });
 

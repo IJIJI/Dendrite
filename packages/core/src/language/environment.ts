@@ -4,7 +4,7 @@ import { composeLayers, type PortProblem, type Provenance } from "./compose";
 import { type PortLayer } from "./infra/ports";
 import { type CoreProgram, type RawProgram } from "./infra/program";
 import { type LanguageDescriptor, type Vocabulary } from "./infra/registry";
-import { assertSavedPorts, deserialise, migrate, type SavedProgram } from "./infra/serialise";
+import { deserialise, isSavedProgram, migrate, type SavedProgram } from "./infra/serialise";
 import { type Language, parseSource } from "./language";
 import { type ParseError, type ParseResult, type ParseWarning } from "./parser/types";
 import { createInstance, type InstanceOptions, type ProgramInstance } from "./runtime/instance";
@@ -146,16 +146,24 @@ function pipelineFor(language: Language, descriptor: LanguageDescriptor): Pipeli
   }
 
   function load(saved: SavedProgram): LoadResult {
+    // The trust boundary: a program from a file, a database or a wire is checked by shape
+    // before anything reads it, so a damaged one is a diagnostic and never a throw. A form
+    // nobody knows is its own kind; every other fault in the shape is one.
+    if (!isSavedProgram(saved)) {
+      const form = (saved as unknown as { form?: unknown } | null)?.form;
+      const unknownForm = typeof form === "string" && !["code", "ast", "rete"].includes(form);
+      return loadFailure(
+        unknownForm ? "unsupported_form" : "malformed_program",
+        unknownForm
+          ? `SavedProgram form '${form}' is not one this build reads`
+          : "The saved program is not a SavedProgram: its shape, or its ports, did not survive",
+      );
+    }
     let migrated: SavedProgram;
     try {
       migrated = migrate(saved);
     } catch (e) {
       return loadFailure("unsupported_version", e);
-    }
-    try {
-      assertSavedPorts(migrated);
-    } catch (e) {
-      return loadFailure("malformed_program", e);
     }
 
     switch (migrated.form) {

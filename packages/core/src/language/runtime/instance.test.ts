@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { createEnvironment } from "../environment";
 import { type PortLayer, type Ports, Policy } from "../infra/ports";
-import { serialiseAst, serialiseSource } from "../infra/serialise";
+import { type SavedProgram, serialiseAst, serialiseSource } from "../infra/serialise";
 import { Type } from "../infra/types";
 import { type Language } from "../language";
 import { createStdlib } from "../stdlib";
@@ -55,6 +55,89 @@ const record = (instance: ProgramInstance): Snapshot[] => {
   instance.snapshot.subscribe((s) => seen.push(s));
   return seen;
 };
+
+describe("a program or a layer that is not well formed is reported, never thrown", () => {
+  // The probe table of 2026-10-12 (todo.md, "0.7.1"), one row each: what a host hands over
+  // when a file is damaged or was written by another version. Every row used to be a raw
+  // TypeError from a command that is documented to report, and three broke the instance.
+  const bad = (patch: Record<string, unknown>): SavedProgram =>
+    ({ ...serialiseSource(SOURCE, DOC), ...patch }) as unknown as SavedProgram;
+  const rows: [string, SavedProgram, string][] = [
+    ["ports with no outputs", bad({ ports: { inputs: [] } }), "malformed_program"],
+    [
+      "ports whose inputs is a text",
+      bad({ ports: { inputs: "x", outputs: [] } }),
+      "malformed_program",
+    ],
+    [
+      "an input with no name",
+      bad({ ports: { inputs: [{ type: Type.number }], outputs: [] } }),
+      "malformed_program",
+    ],
+    [
+      "an input whose type is a text",
+      bad({ ports: { inputs: [{ name: "p", type: "number" }], outputs: [] } }),
+      "malformed_program",
+    ],
+    ["ports that are null", bad({ ports: null }), "malformed_program"],
+    ["a source that is a number", bad({ source: 5 }), "malformed_program"],
+    ["a form nobody knows", bad({ form: "yaml" }), "unsupported_form"],
+    ["a version from the future", bad({ version: 99 }), "unsupported_version"],
+    ["a program that is null", null as unknown as SavedProgram, "malformed_program"],
+  ];
+
+  for (const [label, program, kind] of rows) {
+    it(`setProgram: ${label} is ${kind}, the old program keeps running, the next sound one works`, () => {
+      const { instance } = setup();
+      const before = outputsOf(instance);
+      expect(() => instance.setProgram(program)).not.toThrow();
+      expect(instance.diagnostics.get()).toContainEqual(
+        expect.objectContaining({ severity: "error", stage: "load", kind }),
+      );
+      expect(instance.outputs.get()).toMatchObject({ stale: true });
+      expect(outputsOf(instance)).toBe(before);
+      instance.setProgram(serialiseSource(SOURCE, DOC));
+      expect(kinds(instance)).not.toContain(kind);
+      expect(instance.outputs.get().stale).toBe(false);
+      expect(outputsOf(instance)).toBe(before);
+    });
+
+    it(`createInstance: ${label} starts in the failed state, with the diagnostic`, () => {
+      const { instance } = setup({ program });
+      expect(kinds(instance)).toContain(kind);
+      expect(instance.outputs.get()).toEqual({ outputs: null, error: null, stale: false });
+      instance.setProgram(serialiseSource(SOURCE, DOC));
+      expect(kinds(instance)).not.toContain(kind);
+      expect(outputsOf(instance)).toBe(0);
+    });
+  }
+
+  it("setLayer with ports of a bad shape is refused as malformed_ports, and nothing moves", () => {
+    const { instance } = setup();
+    const layers = instance.ports.get().layers;
+    expect(() => instance.setLayer("document", { inputs: "x" } as unknown as Ports)).not.toThrow();
+    expect(instance.diagnostics.get()).toContainEqual(
+      expect.objectContaining({
+        stage: "compose",
+        kind: "malformed_ports",
+        layerId: "document",
+        refused: true,
+      }),
+    );
+    expect(instance.ports.get().layers).toBe(layers);
+    expect(instance.outputs.get().stale).toBe(false);
+    instance.setLayer("document", DOC);
+    expect(kinds(instance)).not.toContain("malformed_ports");
+  });
+
+  it("the layers option is the host's own code: a layer with ports that are null throws", () => {
+    // Pinned so that the line stays a decision: data is reported, a layer built in code throws,
+    // as a runtime's own layers do.
+    expect(() =>
+      setup({ layers: [{ id: "doc", ports: null as unknown as Ports, policy: Policy.user }] }),
+    ).toThrow();
+  });
+});
 
 describe("diagnostics of a program that runs anyway", () => {
   // The analyser keeps going after an error and prunes what failed, so a program can run

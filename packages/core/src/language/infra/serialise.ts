@@ -202,12 +202,32 @@ function assertTypeRecord(value: unknown, path: string): void {
 
 /**
  * Guard the optional `ports` of a saved program of any form (throws descriptively). Part of
- * deserialise for the ast form; loaders of the other forms call it before trusting `ports`.
+ * deserialise for the ast form.
+ * @deprecated `isSavedProgram` checks the same without throwing, and `load` asks it instead.
+ * This stays exported until a minor removes it.
  */
 export function assertSavedPorts(saved: SavedProgram): void {
   if (saved.ports !== undefined && !isPorts(saved.ports)) {
     throw new Error("Malformed SavedProgram: ports is not a Ports record");
   }
+}
+
+const FORMS: ReadonlySet<unknown> = new Set<SavedProgram["form"]>(["code", "ast", "rete"]);
+
+/**
+ * Is `value` a saved program, by shape: a record with a numeric `version` and a `form` of the
+ * three; a string `source` for the code form; record `bindings` and `outputs` for the ast form
+ * (the nodes are `deserialise`'s to check); and `ports` absent or a Ports record. The trust
+ * boundary for a program from a file, a database or a wire: `load` and an instance ask it
+ * before anything reads the program, so a damaged one is a diagnostic and never a throw.
+ */
+export function isSavedProgram(value: unknown): value is SavedProgram {
+  if (!isRecord(value) || typeof value["version"] !== "number") return false;
+  const form = value["form"];
+  if (!FORMS.has(form)) return false;
+  if (form === "code" && typeof value["source"] !== "string") return false;
+  if (form === "ast" && !(isRecord(value["bindings"]) && isRecord(value["outputs"]))) return false;
+  return value["ports"] === undefined || isPorts(value["ports"]);
 }
 
 /**
