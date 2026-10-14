@@ -173,7 +173,9 @@ j. **Me, a commit:** the Installation page loses its "not on npm yet" callout, t
 The runbook. Only the packages whose version changed are part of a release.
 
 1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
-   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three.
+   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three. A new peer range
+   is in `yarn.lock` too: run `yarn install` after the bump and commit the lockfile, or the
+   `--immutable` install in CI fails (0.7.0).
 2. Merge `dev` into `main`, through a PR. Before merging, check that the PR's commit count equals
    `git log --oneline origin/main..dev | wc -l`: a push to `dev` after the PR opened is not in it
    (0.4.0 merged 16 of 21 that way). If a merge was reverted by mistake, do not merge `dev`
