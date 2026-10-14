@@ -1708,7 +1708,7 @@ describe("binding annotations: a stated type is checked, and then it is the type
     expect(kinds(lambda)).toEqual(["unknown_type", "output_depends_on_failed_binding"]);
     expect(lambda.errors[0]).toMatchObject({
       name: "nubmer",
-      message: "Type 'nubmer' is not registered",
+      message: "No type exists by the name 'nubmer'. Did you mean 'number'?",
     });
   });
 
@@ -2005,5 +2005,43 @@ describe("a name nothing declares names the nearest one", () => {
   it("a reference to a cycle member is not a second error", () => {
     const kinds = errorsOf("let a = b\nlet b = a\nlet c = a + 1\noutput r = c").map(([k]) => k);
     expect(kinds).toEqual(["binding_cycle", "binding_cycle"]);
+  });
+
+  // The same hint on the other names a program can get wrong.
+  const warningsOf = (source: string, ports: Ports = { inputs: [], outputs: [] }) => {
+    const lang = createStdlib();
+    const parsed = parseSource(source, lang);
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
+    return analyse(parsed.program, withPorts(lang, ports)).warnings.map((w) => [w.kind, w.message]);
+  };
+
+  it("a type written in the program names the nearest registered type", () => {
+    const ports: Ports = { inputs: [{ name: "x", type: Type.any }], outputs: [] };
+    expect(errorsOf("output r = $x as strng", ports)).toContainEqual([
+      "unknown_type",
+      "No type exists by the name 'strng'. Did you mean 'string'?",
+    ]);
+  });
+
+  it("an argument named for an input the op lacks names the nearest input", () => {
+    expect(warningsOf("output r = If(true, thn: 1, else: 2)")).toContainEqual([
+      "unknown_op_input_key",
+      "Op 'If' has no input 'thn'. Did you mean 'then'?",
+    ]);
+  });
+
+  it("an argument named for a parameter the function lacks names the nearest parameter", () => {
+    expect(errorsOf("let f = item => item\noutput r = f(itm: 1)")).toContainEqual([
+      "app_argument_mismatch",
+      "No parameter exists by the name 'itm'. Did you mean 'item'?",
+    ]);
+  });
+
+  it("an output nobody declared names the nearest declared output", () => {
+    const ports: Ports = { inputs: [], outputs: [{ name: "result", type: Type.number }] };
+    expect(warningsOf("output reslt = 1", ports)).toContainEqual([
+      "unknown_program_output",
+      "No output exists by the name 'reslt', so it is dropped. Did you mean 'result'?",
+    ]);
   });
 });

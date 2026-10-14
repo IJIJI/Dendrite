@@ -278,7 +278,10 @@ function resolveAppArgs(
         `Named argument '${argName}' cannot be resolved - the callee's parameter names are unknown`,
       );
     } else if (idx === -1) {
-      fail(argName, `Unknown parameter name '${argName}'`);
+      fail(
+        argName,
+        `No parameter exists by the name '${argName}'.${hint(argName, calleeType.paramNames)}`,
+      );
     } else if (slots[idx] !== undefined) {
       fail(argName, `Parameter '${argName}' is bound by both a positional and a named argument`);
     } else {
@@ -413,7 +416,12 @@ function validateInputs(
       ctx.warnings.push({
         kind: "unknown_op_input_key",
         name: key,
-        message: `Input key '${key}' is not declared by op '${opDef.name}'`,
+        message:
+          `Op '${opDef.name}' has no input '${key}'.` +
+          hint(
+            key,
+            opDef.inputs.map((i) => i.name),
+          ),
         source: argSource ?? nodeSource,
       });
     }
@@ -840,7 +848,7 @@ function reportUnknownTypes(t: Type, ctx: AnalysisContext, source: SourceRef | u
     ctx.errors.push({
       kind: "unknown_type",
       name,
-      message: `Type '${name}' is not registered`,
+      message: `No type exists by the name '${name}'.${hint(name, ctx.descriptor.types.keys())}`,
       source,
     });
     reported = true;
@@ -1224,7 +1232,9 @@ function validateOutputs(
         ctx.warnings.push({
           kind: "unknown_program_output",
           name,
-          message: `Output '${name}' is not in the descriptor and depends on a failed binding`,
+          message:
+            `No output exists by the name '${name}', and it depends on a binding that failed.` +
+            hint(name, descriptor.outputs.keys()),
           source: rawNode.source,
         });
       }
@@ -1265,7 +1275,9 @@ function validateOutputs(
       ctx.warnings.push({
         kind: "unknown_program_output",
         name,
-        message: `Output '${name}' is not declared in the descriptor`,
+        message:
+          `No output exists by the name '${name}', so it is dropped.` +
+          hint(name, descriptor.outputs.keys()),
         source: rawNode.source,
       });
       outputMap.set(name, cnode); // included; caller is warned

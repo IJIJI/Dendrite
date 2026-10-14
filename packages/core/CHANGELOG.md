@@ -35,9 +35,12 @@ at `^0.7.0`, so a minor release here is always accompanied by a release of both.
   `Default` its fallback only for a null, `And` stops at the first false and `Or` at the first
   true. No value changes.
 - **A name nothing declares names the nearest one.** "No binding exists by the name 'totl'.
-  Did you mean 'total'?", and the same hint on an unknown input (`$scor`) and an unknown struct
-  field. A call to a name that is no op says so: "No operation or binding exists by the name
-  'Lenght'. Did you mean 'Length'?" (the kind stays `undeclared_binding_reference`).
+  Did you mean 'total'?", and the same hint on an unknown input (`$scor`), an unknown struct
+  field, a type written in a program (`$x as strng`), an argument named for an input or a
+  parameter that does not exist (`If(thn: 1, …)`, `f(itm: 1)`), and an output nobody declared.
+  A call to a name that is no op says so: "No operation or binding exists by the name 'Lenght'.
+  Did you mean 'Length'?" (the kind stays `undeclared_binding_reference`). The sentences of
+  those eight diagnostics are reworded to carry the hint.
 - **Fixed: a run error in a branch not taken no longer stops every output.** `If(c, a, Boom())`
   ran `Boom()` whether or not `c` held.
 - **Fixed: a reference to a binding in a cycle got a second error**, `undeclared_binding_reference`,

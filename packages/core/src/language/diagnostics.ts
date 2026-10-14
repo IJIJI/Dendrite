@@ -275,7 +275,8 @@ export const diagnostics = {
   unknown_type: {
     stage: "analyse",
     severity: "error",
-    message: "A type written in the program is one the language does not have.",
+    message:
+      "A type written in the program is one the language does not have. The nearest name is suggested.",
     triggeredBy:
       "A typo in an annotation - `let rows: nubmer[] = …`, `(n: nubmer) => …` - or a struct type the host never registered. Every name inside a list or a function type is checked.",
     example: den`
@@ -451,7 +452,8 @@ export const diagnostics = {
   app_argument_mismatch: {
     stage: "analyse",
     severity: "error",
-    message: "The arguments do not line up with the function's parameters.",
+    message:
+      "The arguments do not line up with the function's parameters. For a name no parameter has, the nearest is suggested.",
     example: withPorts(
       den`
       let f = x => x
@@ -488,7 +490,8 @@ export const diagnostics = {
   unknown_program_output: {
     stage: "analyse",
     severity: "warning",
-    message: "The program declares an output nobody asked for. It is dropped.",
+    message:
+      "The program declares an output nobody asked for. It is dropped, and the nearest declared name is suggested.",
     example: withPorts(
       den`
       output nobodyWants = 1
@@ -532,7 +535,8 @@ export const diagnostics = {
   unknown_op_input_key: {
     stage: "analyse",
     severity: "warning",
-    message: "An argument named for an input the op does not have. It is ignored.",
+    message:
+      "An argument named for an input the op does not have. It is ignored, and the nearest input is suggested.",
     example: withPorts(
       den`
       output x = If(condition: true, then: 1, else: 2, nope: 3)
