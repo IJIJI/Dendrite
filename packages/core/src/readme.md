@@ -56,10 +56,11 @@ src/language/
     types.ts        - structured Type union + constructors, typeToString, type predicates
     registry.ts     - LanguageDescriptor, descriptor types, isCompatible, FnValue
     program.ts      - RawProgram, CoreProgram
+    thunk.ts        - Thunk: how an input declared lazy reaches an op
   parser/
     lexer.ts        - tokenise()
     parser.ts       - grammar-agnostic Pratt kernel (Parser, parse, parseExpression)
-    grammar.ts      - registration API (registerNud/Led/Statement, registerInfix/Prefix)
+    grammar.ts      - registration API (registerNud/Led/Statement, registerInfix/Prefix), symbolsOf
     core-grammar.ts - Dendrite's core grammar (installCoreGrammar)
     precedence.ts   - the BP binding-power ladder (shared convention)
     types.ts        - parse error / warning / result types

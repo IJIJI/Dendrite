@@ -60,6 +60,14 @@ carry it on a parameter, `(t~: string) => Upper(t){:den}`
 ([Naming a function](../learn/writing/lambdas-and-lists/#naming-a-function)). The shape still
 has to match: `Join(5){:den}` is a type error.
 
+An input typed `lazy`, as in `then: lazy any`, is evaluated only when the op reads it, or
+never. `If{:den}` reads the branch it takes, `Default{:den}` its fallback only for a null, and
+`And{:den}` and `Or{:den}` stop at the first value that decides them, so the rest may be anything,
+including something that could not be computed. The mark sits on the type and not on the name,
+because it says how the op receives the value, not what the value is; it combines with a name's
+mark, `nodes...: lazy boolean`. A host declares it with `lazy: true{:ts}`
+([Extending the language](../host/extending-the-language/#an-input-the-op-may-not-need)).
+
 ## `any{:den}` in a signature
 
 An input typed `any{:den}` accepts any data value. `Length(list: any[]){:den}` takes a list of
@@ -115,7 +123,8 @@ these pages up, and what fills this table.
 <SegmentsTable />
 
 An application need not take all of them. One that never touches a list can leave the list ops
-out, and a program on it that calls `Filter{:den}` is told the name is not declared. A symbol
+out, and a program on it that calls `Filter{:den}` is told no operation or binding exists by
+that name, with the nearest one suggested. A symbol
 goes with its segment, so an application without arithmetic has no `+{:den}` either. If you are
 reading this inside somebody's product, the editor's own lists say which ops it has, and what
 it added. Choosing the segments is one line for whoever built the application, and

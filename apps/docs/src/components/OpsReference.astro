@@ -12,9 +12,10 @@ import {
   type SavedProgram,
   typeToString,
 } from "@dendrite-lang/core";
-import { DOCUMENT_VERSION, documentUrl, sourceHtml } from "@dendrite-lang/editor";
+import { DOCUMENT_VERSION, documentUrl } from "@dendrite-lang/editor";
 
 import DenCode from "./DenCode.astro";
+import { signature } from "./ops";
 
 interface Props {
   category: string;
@@ -32,27 +33,6 @@ const pipeline = composed.environment;
 
 const ops = [...env.language.descriptor.ops.values()].filter((op) => op.category === category);
 if (ops.length === 0) throw new Error(`no stdlib ops in category '${category}'`);
-
-// The signature, written the way Dendrite writes a function type, and coloured by the editor's
-// own highlighter: the op, its parameter names, their types, all as the code editor shows them.
-const signature = (op: OpDefinition): string => {
-  const inputs = op.inputs
-    .map((input) => {
-      // `nodes...` swallows every argument; `separator?` may be left out (`required: false`);
-      // `parts~` converts what it is given (`convert: true`). One mark at most: the language
-      // refuses the flag on a variadic or an optional input when it composes.
-      const mark = input.variadic
-        ? "..."
-        : input.required === false
-          ? "?"
-          : input.convert
-            ? "~"
-            : "";
-      return `${input.name}${mark}: ${typeToString(input.type)}`;
-    })
-    .join(", ");
-  return sourceHtml(`${op.name}(${inputs}) -> ${typeToString(op.output)}`, env.language);
-};
 
 // One sentence per converting input, generated so it cannot disagree with the flag: what the
 // leaf becomes, and that the op itself does it. The leaf is the innermost type of a list.
@@ -101,7 +81,7 @@ const examples = await Promise.all(
     <section class="op">
       <h2 id={op.name}>{op.name}</h2>
       <p class="signature">
-        <code class="den" set:html={signature(op)} />
+        <code class="den" set:html={signature(op, env.language)} />
       </p>
       <p>{op.description}</p>
       {converts(op).map((sentence) => (

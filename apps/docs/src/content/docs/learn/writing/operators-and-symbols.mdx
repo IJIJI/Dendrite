@@ -45,6 +45,8 @@ pluses, because `Add{:den}` is variadic and takes as many as you give it.
 
 | Symbols | Meaning | The op beneath |
 | --- | --- | --- |
+| `c ? a : b{:den}` | a when c holds, else b | `If{:den}` |
+| `??{:den}` | the left side, or the right when it is null | `Default{:den}` |
 | `\|\|{:den}` | or, variadic | `Or{:den}` |
 | `&&{:den}` | and, variadic | `And{:den}` |
 | `=={:den}` `!={:den}` | equality | `Equals{:den}`, `NotEquals{:den}` |
@@ -57,8 +59,8 @@ pluses, because `Add{:den}` is variadic and takes as many as you give it.
 | `-{:den}` | negate, prefix | `Negate{:den}` |
 
 Multiplication binds tighter than addition, addition tighter than comparison, comparison tighter
-than `&&{:den}`, and `&&{:den}` tighter than `||{:den}`: the ordering you already expect. Brackets
-override it:
+than `&&{:den}`, `&&{:den}` tighter than `||{:den}`, `||{:den}` tighter than `??{:den}`, and
+`??{:den}` tighter than `? :{:den}`: the ordering you already expect. Brackets override it:
 
 ```den
 output plain    = 2 + 3 * 4
@@ -66,6 +68,15 @@ output bracketed = (2 + 3) * 4
 ```
 
 `plain{:den}` is 14 and `bracketed{:den}` is 20.
+
+Two places where that order wants brackets. `$x ?? 0 + 1{:den}` is `$x ?? (0 + 1){:den}`, so a
+default before arithmetic is written `($x ?? 0) + 1{:den}`, as in C# and JavaScript. And the
+conditional reads to the right, `a ? b : c ? d : e{:den}` is `a ? b : (c ? d : e){:den}`, while a
+lambda in its else branch needs brackets, `c ? a : (x => x){:den}`, because `=>{:den}` binds
+loosest of all. Only the branch taken is evaluated: `c ? a : b{:den}` is `If(c, a, b){:den}`, and
+`If{:den}` reads one branch, so the other may be something that could not be computed. A function
+in a branch is refused for now, because the branches are `any{:den}` to the checker and a
+function is never `any{:den}`; union types will type them from each other.
 
 ## Try it
 

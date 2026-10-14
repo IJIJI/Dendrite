@@ -6,8 +6,16 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.6.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.7.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## 0.7.0
+
+- **No change a host sees.** The peer range moves to core `^0.7.0`, and the highlighter reads
+  the lexer's symbols through `symbolsOf(grammar)`, which replaced `grammar.symbols` in core.
+- **With core 0.7.0: `?` and `??` colour as symbols**, as the conditional and `??` arrive. The
+  `?` mark on an optional input in a signature (`separator?`) takes that colour too; it was
+  an unknown character before, printed plain.
 
 ## 0.6.1
 

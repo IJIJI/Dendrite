@@ -5,6 +5,82 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+**Closed by 0.7.0 on 2026-10-14** (the release itself gets its record when it is on npm): the
+three entries below are the backlog entries as they stood, kept for their reasoning. `If`
+reads one branch through a lazy input, `AnalysisContext` left the public surface, and a call
+to a name that is no op says so and names the nearest one.
+
+## Language — `If` evaluates both branches, so it cannot guard a read — DONE 2026-10-14 (0.7.0)
+
+**What:** `If(IsSet(found), found.name, "none")` evaluates `found.name` whether or not `found`
+is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no laziness.
+
+**Why deferred:** found 2026-09-22 by the second review of the types plan. Milestone N.2 of that
+plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
+remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
+propagation does not cover (an expensive branch, or a read that must throw).
+
+**A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
+(`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
+
+**Closes with 0.7.0** (decided 2026-10-13, `todo.md` "0.7.0", "Decided on 2026-10-13"): a lazy
+input, declared on the input and handed over as a `Thunk`. This entry moves to `done.md` when
+it ships.
+
+---
+
+## Core — `AnalysisContext` is public, and should not be — DONE 2026-10-14 (0.7.0)
+
+**What:** `packages/core/src/index.ts` re-exports everything in `analyser/types.ts`, which
+includes `AnalysisContext` - the analyser's working state (the scope, the failed bindings, the
+declaration index). No host builds one or reads one; it is in the published `.d.ts` by accident,
+and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`, 2026-09-18) is
+technically a breaking change for nobody.
+
+**What it requires:** export the result and diagnostic types by name instead of `export *`, and
+leave `AnalysisContext` internal, at a minor release. The release it was first tied to, the one
+with the operator-naming aliases, was 0.4.0, which renamed outright and went without it.
+
+**Decided 2026-10-08: it stays public for now** (the maintainer), so it is not in 0.6.0. No
+file outside core's analyser reads it (checked that day, every package and app).
+
+**Who might want it one day,** weighed for that decision:
+
+| A future need | Does it need this type public? |
+| --- | --- |
+| A language service asks which names are in scope | No: it needs that answer, from a query API |
+| A host writes its own analysis pass or lint rule | Yes, a context type. No such extension point exists, and one would get a narrower type by design |
+| `inferOutput` gets more to read | No: it would take a narrow argument |
+| The Rete adapter wants types per node | No: the `CoreProgram` carries them |
+
+One asymmetry to remember: adding an export later is no break, and removing one is. Each release
+it stays public is a release in which a host may come to import it.
+
+---
+
+## Core — a call to a name that is no op is reported as an undeclared binding — DONE 2026-10-14 (0.7.0)
+
+**What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
+`undeclared_binding_reference`: "'Length' is not declared as a binding or scoped variable". The
+parser builds an op node only when the name is a registered op (`buildCall` in
+`parser/core-grammar.ts`) and reads every other call as the application of a binding, so the
+analyser never sees an op to miss. `unknown_op` is reached only by an op node that came from
+elsewhere: a program stored in `ast` form, or a graph. The message is true and it does not
+help: the author meant an op. The output is dropped and `compile` stays `ok: true`, as for any
+optional output that fails.
+
+**Why deferred:** found 2026-10-07 by the tests of `createStdlib({ segments })`, which make it
+easier to meet: a host leaves a segment out, and an author writes from the full reference. It
+is as old as calls are, and no host takes part of the library yet.
+
+**What it requires:** where the analyser reports an undeclared name in the callee position of
+an application, say that no op and no binding has that name. Decide whether that is a wording
+of `undeclared_binding_reference` or a kind of its own (*Every diagnostic* is generated from
+the registry, so a new kind needs its sample). Naming the nearest op (`Lenght` → `Length`) is a
+further step with a helper of its own. A changelog line.
+
+---
+
 ## Editor 0.6.1 on npm — DONE 2026-10-10
 
 `@dendrite-lang/editor` at **0.6.1**, two days after 0.6.0, and the first release of one

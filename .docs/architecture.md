@@ -12,11 +12,12 @@ infra/      — leaf types & semantics (no deps on the rest)
   observable.ts Observable / Subject / createSubject — the reactive primitive
   program.ts    RawProgram, CoreProgram
   serialise.ts  SavedProgram (+ the ports it declares), serialise / deserialise / migrate
+  thunk.ts      Thunk - how an input declared lazy reaches an op's evaluator
   ↑
 parser/     — syntax (a grammar-agnostic Pratt kernel + a registered grammar)
   lexer.ts        tokenise()
   parser.ts       Parser kernel: parse(), parseExpression()
-  grammar.ts      registration API: registerNud/Led/Statement, registerInfix/Prefix
+  grammar.ts      registration API: registerNud/Led/Statement, registerInfix/Prefix; symbolsOf
   core-grammar.ts installCoreGrammar() — Dendrite's always-present syntax
   precedence.ts   the BP binding-power ladder (shared convention)
   ↑

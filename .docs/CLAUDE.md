@@ -152,7 +152,8 @@ packages/core/src/language/
   infra/      types.ts (Type union + constructors), nodes.ts (ASTNode/CNode, node constructors),
               registry.ts (Vocabulary + LanguageDescriptor, isCompatible, FnValue),
               ports.ts (Ports, PortLayer, Policy), identifier.ts, observable.ts,
-              program.ts (Raw/CoreProgram), serialise.ts (SavedProgram + its ports)
+              program.ts (Raw/CoreProgram), serialise.ts (SavedProgram + its ports),
+              thunk.ts (Thunk: how an input declared lazy reaches an op)
   parser/     lexer.ts, parser.ts (Pratt kernel), grammar.ts (registration API),
               core-grammar.ts (installCoreGrammar), precedence.ts (BP ladder), types.ts
   analyser/   analyser.ts (analyse: pass pipeline), types.ts
