@@ -80,17 +80,11 @@ B"). What the plan has to settle is the mechanism and the order:
 minor; the stdlib names review stays in "Before 1.0.0". The next chat plans, probes and builds
 in one, as this chat did for 0.7, with the plan file approved first.
 
-**Suggestions, mine, not decided; weigh each in the plan:**
-
-| Suggestion | Why | Where it would go |
-| --- | --- | --- |
-| Remove `assertSavedPorts` in 0.8.0 | 0.7.1 deprecated it "until a minor removes it", and 0.8.0 is that minor; a breaking line costs one sentence there and a release of its own later | Core's changelog, `serialise.ts`, `index.ts` |
-| Rewrite the "`null`, both ways" convention in `CLAUDE.md` as part of commit 0 | It states today's rule (a null is read as the empty value), which option B replaces; a stale rule in the rules file misleads the next reader | `CLAUDE.md`, "Conventions", and *The type system* page, which says the same |
-| Re-read every sample on the site and in the ops' examples for a result that moves | `content.test.ts` loads every sample but checks that it loads, not its value; a sample that showed `0` for a division by zero shows `null` now and its prose beside it lies | A probe that runs every sample before and after, and the docs pass of the release |
-| Decide how the editor shows a `null` output | Under option B a null output is ordinary, and the outputs pane prints a value's JSON; `null` beside a number reads as a fault unless the pane says it is "no value" | The editor's outputs pane, a small editor change in the same release |
-| Measure the rule's cost before writing it | One check per declared input per op call on the hot path; the lazy input cost 5 % measured, and this is more calls than that | The first probe of the plan, as the 0.7 plan measured the thunk |
-| Name the host's "no `NaN`" mark for what it promises, and decide its default in the plan's first page | It is public API on `EvaluatorDefinition`, so its name outlives the release; "`finite`" says the promise, "`pure`" and "`trusted`" do not | `registry.ts`, *Extending the language* |
-| Keep `If(null, a, b)` reading no branch | Decided as `null`; the lazy input makes it free, and it is the one case where a null condition must not evaluate a side | `stdlib/control.ts`, with a test beside the lazy ones |
+**Seven suggestions of mine** are parked in `todo.md`, "0.8.1 and 0.8.2 — further items",
+each with what it touches, the patch it would ride, and what cannot wait for a patch. Three
+are bound to 0.8.0's plan by their nature (the cost is measured before the rule is written,
+the `NaN` mark's name is public API, the removal of `assertSavedPorts` is a break): the plan
+settles those, and the table says what is left.
 
 **After it:** 0.8.1, the strict keys (the evaluator typed from the op's declaration, the 35
 casts gone), a patch that only adds; then the visual (Rete) half with a plan of its own; union

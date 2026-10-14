@@ -18,6 +18,7 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 | 0.7.1 | **On npm since 2026-10-14** (`done.md`, "0.7.1 on npm") | done |
 | 0.8.0, next | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
 | 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true | `backlog.md`, "Core — a typed evaluator derived from the op's declaration" |
+| 0.8.2 | **What the editor and the docs need after "no value"**: how a `null` output is shown, the samples re-read, and the rest of the list below. A patch of the editor, possibly the docs alone | Below, "0.8.1 and 0.8.2" |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
 | Later, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
@@ -26,6 +27,26 @@ Beside that order, with no release named for them: the three entries after the n
 came from the maintainer while 0.6.1 was built (*How a program runs* gets simpler; two styles
 for setting an input), and the third is where a reading of the site collects. The last section
 of this file is what must be done before a 1.0.0.
+
+---
+
+## 0.8.1 and 0.8.2 — further items, each to discuss for its need and its options
+
+Seven suggestions from the handoff of 2026-10-14, parked here by the maintainer ("add them all
+to a 0.8.2/1, depending on what it touches, as a further discuss the need and options"). None
+is decided. Each row says what it touches, which patch it would ride, and the one thing that
+cannot wait: three are bound to 0.8.0's plan by their nature, and the row says what is left
+for the patch.
+
+| Suggestion | Touches | Release | The need and the options to discuss |
+| --- | --- | --- | --- |
+| **Remove `assertSavedPorts`** | Core's public surface (`serialise.ts`, `index.ts`) | A minor, not a patch: 0.8.0's plan decides, else the next minor | 0.7.1 deprecated it "until a minor removes it". Need: one fewer export with two ways to say one thing. Options: 0.8.0 (one breaking line more on a release that has many), or 0.9.0 (a release of its own for one line) |
+| **Rewrite the "`null`, both ways" convention** | `CLAUDE.md` "Conventions", *The type system* page | 0.8.0's commit 0 for the rules file; 0.8.2 for any page the release's docs pass misses | It states the rule option B replaces. Need: a rules file that is true. Options: rewrite in place, or a dated line that says what changed and when |
+| **Run every sample on the site before and after** | `apps/docs` (the samples, `content.test.ts`), the ops' examples | 0.8.0's docs pass runs it once; 0.8.2 if a value test is wanted for good | `content.test.ts` checks that a sample loads, not what it gives. Need: prose beside a moved result must not lie. Options: a one-off probe for the release, or a test that pins each sample's outputs so a later change shows |
+| **How the editor shows a `null` output** | The editor's outputs pane | 0.8.2 (an editor patch) | Under option B a null output is ordinary, and the pane prints JSON, so `null` beside a number reads as a fault. Options: print "no value" in a muted style, print `null` as the language writes it, or leave it, with the docs saying what it means |
+| **Measure the rule's cost** | `evaluator.ts`, the probe | 0.8.0's first probe; nothing is left for a patch unless the number is bad | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
+| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | 0.8.0's plan, first page: it is public API | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
+| **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | 0.8.0 (decided as `null`); 0.8.1 pins it with a test if 0.8.0 did not | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
 
 ---
 
