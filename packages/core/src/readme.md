@@ -66,7 +66,7 @@ src/language/
   analyser/
     analyser.ts     - analyse() : RawProgram → CoreProgram (passes: ref graph, topo sort,
                       bindings, outputs, prune, unused)
-    types.ts        - AnalysisError / Warning / Result, AnalysisContext
+    types.ts        - AnalysisError / Warning / Result
   evaluator/
     evaluator.ts    - evaluate, evaluateProgram, EvalContext, memoise
     types.ts        - EvalState, EvalError

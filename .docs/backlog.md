@@ -251,6 +251,31 @@ variadic branch of `validateInputs` analyses all items before it checks them, th
 
 ---
 
+## Core — the nearest-name hint on the other name diagnostics
+
+**What:** 0.7.0 appends "Did you mean 'x'?" to four diagnostics (`analyser/nearest.ts`): a
+call to a name that is no op, a plain reference, an unknown input, an unknown struct field.
+Six more diagnostics name something that could be near a declared name, and say nothing:
+
+| Diagnostic | The name | The candidates |
+| --- | --- | --- |
+| `unknown_type` | A type written in a program, `(n: nubmer) => n`, `$x as strng` | The registered types |
+| `unknown_op_input_key` (a warning) | A named argument the op lacks, `If(thn: 1, …)` | The op's inputs |
+| `app_argument_mismatch` | A named argument a lambda lacks, `f(y: 1)` for `x => …` | The lambda's parameters |
+| `unknown_program_output` (a warning) | `output reslt = …` where the host declares `result` | The declared outputs |
+| `unknown_port_type` | A declaration's type, at compose time | The registered types |
+| `unknown_op` | An op node from an `ast` program or a graph, naming no op | The ops |
+
+**Why deferred:** asked by the maintainer on 2026-10-14, as commit 3 of 0.7.0 landed; the four
+were the decision of 2026-10-13, and the rest were not weighed. Each is one `hint(...)` call
+over a list its site already holds, so the cost is a line and a test apiece.
+
+**What it requires:** the call at each site, the sentence given a full stop before the hint
+(the hint appends to one), one test per sentence, and the *Every diagnostic* page read in the
+build, since it prints the sentences by running the samples.
+
+---
+
 ## Core — a call to a name that is no op is reported as an undeclared binding
 
 **What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is

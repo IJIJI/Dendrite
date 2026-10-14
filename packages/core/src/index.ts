@@ -44,7 +44,15 @@ export { createStdlib, extendStdlib, type StdlibSegment } from "./language/stdli
 
 // ── analysis ─────────────────────────────────────────────────────────────────
 export { analyse, getOutputType, validateDescriptor } from "./language/analyser/analyser";
-export * from "./language/analyser/types"; // AnalysisResult / Error / Warning (+ kinds), AnalysisContext
+// By name, so the analyser's working state (AnalysisContext) stays internal.
+export {
+  type AnalysisResult,
+  type AnalysisError,
+  type AnalysisWarning,
+  type AnalysisErrorKind,
+  type AnalysisWarningKind,
+  type ErrorSubject,
+} from "./language/analyser/types";
 
 // ── evaluation ───────────────────────────────────────────────────────────────
 export {
