@@ -86,7 +86,9 @@ is a good one to open a PR, and hand over its title and a one-paragraph descript
 (the maintainer, 2026-10-14: always), but do not open it. When a release follows, walk the
 maintainer through the runbook (`release-plan.md`, "Every later release") step by step, write
 the after-approval check before approval, and hand over the release title and text in the
-shape of the previous releases (the runbook's step 4).
+shape of the previous releases (the runbook's step 4). Every text to be pasted somewhere
+else (a PR title, its description, a release title, its text, a commit message) goes in a
+code block of its own, so it copies in one go (the maintainer, 2026-10-14).
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
 deploy runs from. `dev` has a GitHub ruleset forbidding merge commits, so never `git merge` into
