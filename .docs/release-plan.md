@@ -175,7 +175,9 @@ The runbook. Only the packages whose version changed are part of a release.
 1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
    peer on core `^0.1.0`, so a **minor** bump of core means a release of all three. A new peer range
    is in `yarn.lock` too: run `yarn install` after the bump and commit the lockfile, or the
-   `--immutable` install in CI fails (0.7.0).
+   `--immutable` install in CI fails (0.7.0). The version note on *Installation*
+   (`apps/docs/src/content/docs/host/installation.md`: `:::note[<version>]` and the peer range
+   in it) moves with core's version; 0.7.0 shipped with it at 0.6.0.
 2. Merge `dev` into `main`, through a PR. Before merging, check that the PR's commit count equals
    `git log --oneline origin/main..dev | wc -l`: a push to `dev` after the PR opened is not in it
    (0.4.0 merged 16 of 21 that way). If a merge was reverted by mistake, do not merge `dev`
@@ -187,6 +189,16 @@ The runbook. Only the packages whose version changed are part of a release.
 4. **One GitHub release per batch**, on core's tag if core is in it, otherwise on the tag of one
    changed package. The title and body name every package and version in the batch. Publishing the
    release starts `Stage release`.
+   - **The text follows the shape of the previous releases, every time.** Read the last one
+     first, `gh release view "<tag>" --json name,body`, and keep its parts in its order: the
+     title `Dendrite <version> - <what it brings>` (`Dendrite editor <version> - …` for one
+     package alone); one lead sentence; a `> [!IMPORTANT]` callout naming each breaking change
+     with what a host does about it, or what changes for every host; "Packages in this
+     release", a table of package, version, tag and what changed, with a line for a package
+     released only because its peer range demands it; the `npm install` block; "What is new",
+     one bold-led bullet per changelog line, the documentation last; the three changelog
+     links; "Versioning"; "Links". The PR that precedes it is the same lead sentence as a
+     paragraph, with the breaking lines and the commit count (0.7.0).
    - **One release per batch is a hard rule, not a preference.** Two releases in one batch would
      start two workflow runs; the second would try to stage versions the first had already staged,
      which npm refuses, so it fails.
@@ -279,6 +291,22 @@ and four things are worth keeping.**
 - **A check line that cannot fail is found by the run on the old version.** Fifteen lines, and
   on 0.6.0 one that should have failed passed: "set after the font" was true with no font at
   all. Running both ways is what shows it, line by line, not only as a count.
+
+## What the eighth release taught
+
+**0.7.0, 2026-10-14: the runbook held, with three things to keep.**
+
+- **A peer-range bump is in the lockfile.** The editor's and the link's `^0.7.0` changed two
+  lines of `yarn.lock`, which CI's `yarn install --immutable` refused to write. 0.6.1's
+  "the lockfile does not change" was true of a version alone. `yarn install` after the bump,
+  and the lockfile in the release PR (it was the 23rd commit here).
+- **The version note on *Installation* is part of the bump.** It said 0.6.0 for an afternoon
+  after 0.7.0 was live. Step 1 names the file now.
+- **The packages' `exports` map hides `package.json`**, so the after-approval check reads the
+  installed files by path, not through `require`. The check was 19 lines, written before
+  approval, 19 of 19 on the tarballs and 17 of 19 failing on 0.6.x, where the two that pass
+  are the two that should: the branch taken still evaluates, and the fingerprint's op count
+  is the same, which is what "no new op" means.
 
 ## If something fails
 

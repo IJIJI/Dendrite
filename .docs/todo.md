@@ -14,8 +14,8 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 
 | Release | Holds | Entry |
 | --- | --- | --- |
-| 0.7.0, next | `??` and `c ? a : b`, a lazy `If`, `AnalysisContext` out of the public surface, a better sentence for a call to a name that is no op. A minor for all three packages, because removing an export breaks | below |
-| 0.7.1 | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | `backlog.md`, "Core — a saved program that is not well formed" |
+| 0.7.0 | **On npm since 2026-10-14** (`done.md`, "0.7.0 on npm") | done |
+| 0.7.1, next | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | below |
 | 0.8.0, the minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
 | 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true | `backlog.md`, "Core — a typed evaluator derived from the op's declaration" |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
@@ -29,109 +29,133 @@ of this file is what must be done before a 1.0.0.
 
 ---
 
-## 0.7.0 — `??`, `c ? a : b`, a lazy `If`, and two small things
+## 0.7.1 — a saved program or layer that is not well formed
 
-**This is the next work, and it starts with a plan** (the maintainer, 2026-10-12: "0.7.0 will
-be done in a next chat"). A minor for core, the editor and the link together: one of its items
-removes an export, and a minor of core forces a release of both others.
+**This is the next work.** A patch for core and the link, straight after 0.7.0 (on npm since
+2026-10-14). The entry as it stood in the backlog, with its probe table and the decisions of
+2026-10-14, then the plan.
 
-**What it holds, as decided between 2026-10-10 and 2026-10-12:**
+### The entry
 
-| Item | Decided | Left for the plan |
+**What:** a saved program is data from outside: a host reads it from a file or a database and
+hands it over. Core checks part of it, and what it does not check comes out as a raw
+`TypeError`, from commands that are documented to report through the observables. Probed on
+2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
+
+| Handed to `setProgram` | The call | A sound program next |
 | --- | --- | --- |
-| `??`, sugar over `Default` | Yes, and not `\|\|` (below) | **Decided 2026-10-13**, below: the tier |
-| `c ? a : b`, sugar over `If` | Yes | **Decided 2026-10-13**, below: C's grammar, the tier, the chain, how a symbol reaches the lexer |
-| A lazy `If` | Yes, in this release, so that `c ? a : b` never ships eager | **Decided 2026-10-13**, below: a lazy input, declared on the input, handed over as a `Thunk`. `If`, `Default`, `And` and `Or` use it to skip work. **Results do not change in 0.7.0**, with one stated exception (below): the three-valued `And` and `Or`, and every other change of "no value", come with the minor after 0.7 (the last section of this file) |
-| `AnalysisContext` leaves the public surface | Yes ("it should be removed, probably in the next release") | **Confirmed 2026-10-13**: export the result and diagnostic types by name (`backlog.md`, "Core — `AnalysisContext` is public") |
-| A call to a name that is no op | Keep the kind `undeclared_binding_reference`; name the nearest op or binding | **Decided 2026-10-13**, below: the sentence, and the same help for a plain reference, an input and a field |
-| A saved program that is not well formed | **Not in 0.7.0: it is 0.7.1** (the maintainer, 2026-10-12) | Nothing here (`backlog.md`, "Core — a saved program that is not well formed") |
+| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
+| Ports where `inputs` is a text | `TypeError` | **Throws again** |
+| An input with no name | `TypeError` | **Throws again** |
+| An input whose type is a text | `malformed_program`, stale | Works |
+| Ports that are `null` | `malformed_program`, stale | Works |
+| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
+| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
+| A version from the future | `unsupported_version`, stale | Works |
 
-The docs are part of the plan, as for every release: the operators page, the reference of
-`Default` and `If`, *Every diagnostic*, the changelogs with the breaking line for
-`AnalysisContext`.
+`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
+no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
+source and for the form.
 
-### Decided on 2026-10-13: the base of the plan
+**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
+persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
+is already replaced, so every later recompile throws too.
 
-**Status: locked as the starting point. Tweaking continues, and the plan needs a full
-go-ahead from the maintainer before any code is written** (the maintainer, 2026-10-13: "Lock
-this in as a base, and lets keep tweaking it"). Each row below is a decision of that day, with
-what was probed for it. Every probe ran on core 0.6.0 and was deleted afterwards.
+**The cause under all of it:** the whole check exists, and it is in the wrong package.
+`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
+the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
+that arrives from storage goes past it.
 
-| Decision | What was decided | Probed, measured, or compared |
-| --- | --- | --- |
-| **The tier of `??`** (1A) | `BP.COALESCE`, below `\|\|` and above `? :`, as C#, PHP and JS have it. So `$x ?? 0 > 5` is `$x ?? (0 > 5)`, and a default before arithmetic takes brackets: `($x ?? 0) + 1`. Swift and Kotlin put it above comparison; C++ and Java have no `??` (`value_or`, `Optional.orElse`) | The docs show the brackets |
-| **`c ? a : b` follows C's grammar** | `logical-OR ? expression : conditional-expression`: the then branch reads at power 0 and ends at `:` (which is no operator, so a lambda body, a named argument `f(x: 1)` and a typed parameter `(x: number) => x` inside it all read), the else branch reads just below `?`, so `a ? b : c ? d : e` chains to the right. One consequence, stated in the docs: `c ? a : x => x` needs brackets, `c ? a : (x => x)`; Java and JS take it bare, C has no lambda. PHP 8 refuses the chain without brackets and that is not copied | Probed: a function in a branch is refused today, `op_input_type_mismatch` ("a function is never `any`" and the branches are `any`), so `If`, `?:` and `??` take no function until the union-types work types the branches from each other. A docs line, not 0.7.0's work |
-| **The ladder in twenties** (2B, "make sure there is enough space") | `ARROW` 20, `CONDITIONAL` 40, `COALESCE` 60, `OR` 80, `AND` 100, `EQUALITY` 120, `COMPARE` 140, `ADD` 160, `MULTIPLY` 180, `PREFIX` 200, `CAST` 220, `MEMBER` 240, `CALL` 260. A breaking line in the changelog for a host that wrote a raw number | Checked: no package or page reads a `BP` number, only the names |
-| **The lexer learns its symbols from the grammar's maps** (3D, with the guard) | `grammar.symbols` goes. `symbolsOf(grammar)` derives the symbols from the keys of `nuds` and `leds` when `parseSource` and the editor tokenise, skipping what the lexer owns (the five token kinds, the structural punctuation, the two arrows, exported as one set from `lexer.ts`). `registerLed` and `registerNud` refuse a word that is none of those at registration ("'as' is a word; use registerWordLed"), which `registerInfix` says today and `registerLed("as", …)` did not. `registerInfix` and `registerPrefix` lose their own `symbols.add`. The ternary is then `lang.registerLed("?", { bp: BP.CONDITIONAL, parse })` from `control.ts`, beside `registerInfix("??", …)`. The editor's `tokens.ts` changes two lines (the call at 88 and the `has` at 134); `mergeGrammar` and `createGrammar` lose one line each | Compared: a new `registerOperator(token, led)` (Crockford's `symbol()` with the led; keeps the trap for `registerLed`), a stored set filled at registration (B': the same rule at write time, one file, keeps derived state), a separate `registerSymbol` (two calls, one forgettable), maximal-munch lexing as Haskell and Swift do (`$x>-1` lexes as `>-`: refused). The recompute per tokenise is about twenty keys through a set: not a cost |
-| **The lazy op: X-derived** (after C3, X, X-merged and `evaluateLazy` were compared and probed) | `lazy?: true` on `OpInput`, beside `convert`, `required` and `variadic`: the same config as every input. `resolveInputs` hands a lazy input over as a `Thunk` (a variadic one as a `Thunk[]`), a class of five lines with a `.value` getter that evaluates the memoised node, converting a `~` input inside. `registerOp` returns its definition with its literal types kept; `EvaluatorDefinition.op` takes the definition as well as the name, and the evaluator's inputs are then typed by the lazy keys of that definition (`then: Thunk`, `nodes: Thunk[]`, every strict key `unknown` as today); the string form `op: "Add"` is unchanged. `OpDefinition.inputs` becomes `readonly`. The pass that reads every op's result refuses a returned `Thunk`. `If`, `Default`, `And` and `Or` are declared so and written `condition ? then.value : e.value` and `nodes.every((n) => n.value)`. The reference prints `then: lazy any` (the mark on the type, `CLAUDE.md` "Conventions"). No `force`, no mark in the name, no new diagnostic: a name cannot be wrong when the flag sits on the input. Three tests: a type-level test file that holds each line of the typing (including that an op by name keeps `unknown` inputs, a hole found by a probe and closed with a default on the type parameter), a throwing branch not taken per lazy op, and the `?:` and `??` sugar in the parser tests. **The one visible change of 0.7.0**: a run error in a branch not taken no longer stops every output; said as a fix in the changelog | Measured: a thunk made and forced is 12 ns against 1.3 ns for a value; a whole `If` run is 888 ns today (399 ns for a plain output, about 360 ns per `+ 1` in a branch), so two thunks add about 5 % and a skipped branch repays them at once. Probed with tsc: every mistake an author can make under `force`, under a cast and under a plain-function thunk compiles clean, so compile-time safety exists only where the declaration is in source the compiler reads; under X-derived three of five mistakes fail to compile and none is silent. Getters on the inputs object (`inputs.then` evaluating on read) were measured and refused: destructuring reads every getter at once, so the op turns eager silently, and every stdlib op destructures; the generic forms cost 475 to 1673 ns, and only a hand-written class per op reaches the thunk's 15 ns |
-| **Where a lazy type is NOT** | Not a kind of `Type` (`lazy T` beside `T[]`): no value ever has it, a program cannot write it, a port cannot carry it, and every switch over a type would read it for one bit the flag carries (`backlog.md`, "Language — thunks as values"). Not a lazy lambda parameter: no consumer (same entry) | The three levels compared: the flag (1), a derived type on op inputs only (2: the cost of 3 with the power of 1, never the right stop), thunks as values (3: the course's language, open for a consumer) |
-| **The callee that is no op** (5, option B) | The kind stays. The sentence: "No operation or binding exists by the name 'Lenght'. Did you mean 'Length'?" for a call, "No binding exists by the name 'totl'. Did you mean 'total'?" for a plain reference, and the same "Did you mean" appended for an input (`unknown_program_input`) and a field (`unknown_field`). One helper: the nearest name by edit distance, at most two edits, over the ops and the bindings in scope for a call, the bindings and the lambda parameters for a reference, the declared inputs, the struct's fields. The `app` case checks an undeclared callee before analysing it | |
-| **`AnalysisContext` out** (6) | `export *` of the analyser's types becomes named exports of the result, error and warning types and the two kinds. The readme line. The breaking line in core's changelog. The peer ranges of the editor and the link move to `^0.7.0` | Checked: no file outside core's analyser reads it |
+**Who can reach it:** any host that loads what it saved, when the file is damaged or was
+written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
+`SavedProgram`.
 
-**The commits the plan holds**, in order: (1) the ladder in twenties, `symbolsOf` and the guard, `??` and `? :` in `control.ts`, the lexer and parser tests, the editor's two lines; (2) `Thunk`, `lazy` on the input, the typed `op`, the four ops, the three tests; (3) the nearest-name helper and the four sentences; (4) `AnalysisContext` out, the readme; (5) the docs: the operators page (two rows, a paragraph on precedence and the two bracket cases), `If`'s description ("Only the branch taken is evaluated"), the reference's `lazy` mark and its legend line, *Extending the language* (a lazy input on a host's op, with the `Guard` sample), *Every diagnostic* (the new sentences), the three changelogs, the backlog entry on `If` closed to `done.md`.
+**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
+0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
+the *Embedding core* sample was probed for the docs pass of 0.6.1.
 
-**Decided on 2026-10-14: the go, and what the plan's reviews changed.** The maintainer gave
-the go for 0.7.0 as it stands above, with the gaps the repo showed folded in. The plan itself
-(revision 7, after seven review passes and three independent reviews from other chats) is the
-chat's working document; what it changed in the base, each row with its reason:
+**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
+instance already reports `unsupported_version` that way: a diagnostic, and the old program
+keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
+would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
+range has to say so.
 
-| What | Decided | Why |
-| --- | --- | --- |
-| Seven more readers of `grammar.symbols` | Move to `symbolsOf` in commit 1: the four examples in `packages/core/examples/3-(code)/` (typechecked, `tsconfig` includes them), `parser.test.ts` (three lines), `stdlib/index.test.ts` | The handoff listed `language.ts`, `index.ts` and the editor's `tokens.ts` only |
-| The backtick | The set the lexer owns holds it, beside the token kinds, the structural punctuation and the two arrows | The template nud is keyed on it (`string.ts`), so `symbolsOf` would list it as a symbol. The lexer reads it before the operators, as it reads `"` |
-| `registerEvaluator` with a definition as `op` | Stores `{ ...def, op: name }`, so the map keeps `op: string` | `extendLanguage`, `validateDescriptor` (`orphan_evaluator`) and the link read `op` as a string; one normalisation at the door instead of a branch in each |
-| The type-level file | `language/lazy.test-d.ts`: `tsconfig` includes `src/**/*`, vitest runs `*.test.ts` only, so `yarn typecheck` reads it and nothing runs it. `Record<never, never>`, not `{}` (`no-empty-object-type` is in the lint set) | It exercises `registerOp`, `registerEvaluator` and the lazy keys, not the class |
-| An optional lazy input | Typed `Thunk \| undefined` | An absent optional input has no key in `node.inputs`, so the evaluator sees `undefined` |
-| The callee that is no op: the pre-check | "Declared nowhere": not a lambda parameter, not in `declarationIndex`, not an op | A forward reference and a failed binding fall through to the `ref` path, which reports them as today; an `ast`-form app whose callee names an op would otherwise be told to mean its own name |
-| A reference to a cycle member | The `ref` case returns the error node for a failed binding before the undeclared report. A fix in the changelog | A cycle member is failed but never analysed, so today it gets `undeclared_binding_reference` as a second error. The outputs do not change: reachability drops them first |
-| The two undeclared sentences | One helper, `reportUndeclared`, with the noun phrase as a parameter | Duplicate Code |
-| `nearest` | Its own `analyser/nearest.ts` and test; distance at most two, at most one for a name of four letters or fewer; ties by order, ops before bindings before locals for a call | `analyser.ts` is 1286 lines; `m` must not hint `n`; the sentence must not flip between runs |
-| The reference's signature | Assembled per input in `apps/docs/src/components/ops.ts`, with a test, as `diagnostics.ts` sits beside its component | In one `sourceHtml` string, `any` after `lazy` is not a type position and loses its colour |
-| `?` in `separator?` | Becomes a symbol token, coloured as one | It was an unknown character, printed plain; the editor test that asserts so flips in commit 1 |
-| The 0.7.0 record in `done.md` | Written after the release, dated, as every release record is | Commit 5 closes the three backlog entries only (`If` evaluates both branches, `AnalysisContext` is public, a call to a name that is no op) |
-| *Extending the language* | One sentence: read a thunk during the call | A thunk kept for later reads a traversal that is gone; the same trust as a host op returning no `NaN` |
+**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
+three things the plan settled with it:
 
-**0.7.1 was decided the same day**: the fix at the door, and a layer of a bad shape refused
-inside `composeLayers` (`backlog.md`, "Core — a saved program that is not well formed").
+- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
+  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
+  every door composes, so the kind is the same at both levels and each level keeps its channel:
+  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
+  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
+  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
+  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
+  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
+  global and a program layer? The kind should be, the channel should not.
+- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
+  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
+  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
+  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
+  through `export *`, and a patch removes nothing.
+- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
+  host layer with `ports: null` is read in five places before and after compose, so a guard
+  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
+  reported, a layer built in code throws); one test pins it.
 
-**The entry as it stood before those decisions**, kept for its probes:
+Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
+page prints every compose sample's declarations through `declarationsOf`, which maps over
+`ports.inputs` and would break the build on a bad shape; and the link's one test file is
+`link.test.ts`. The release record is written after the release, as every record is.
 
-**When:** after 0.6.1, as ONE plan for both. The maintainer placed it first after 0.6.0 on
-2026-10-05, and named 0.6.1 for the editor on 2026-10-08, which comes before it by its number.
-Asked on 2026-10-05, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
+**What it requires, in two sizes:**
 
-**Why one plan:** three ideas want `?`: these two, and the optional lambda parameter
-(`backlog.md`). The first one built fixes what the lexer does with `?`, `??` and `?:`, so the plan
-settles all three spellings, even if it builds two.
+- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
+  `malformed_program` where it fails. It ends the three cases that break an instance. The four
+  other raw errors stay.
+- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
+  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
+  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
+  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
+  the table, and one that a refused program leaves the next one working.
 
-**`??` for `Default`, not `||`** (probed 2026-10-05). `||` is taken: it is sugar over `Or`, `Or`
-takes booleans, and `null || 5` is `op_input_type_mismatch` today. A symbol becomes its op while
-the parser reads, before any type is known, so `||` cannot choose between `Or` and `Default` by
-type. The other way is an `Or` that accepts `any` and decides at runtime, and then the reference
-prints a signature that is not honest, which is what keeps `+` from text (`backlog.md`). `Default`
-tests for `null`, not for false, and that is what other languages spell `??`.
-`registerInfix("??", …)` is plain sugar, as `++` is over `Join`, and a registered symbol reaches
-the lexer through `grammar.symbols`. **To decide:** its tier in the ladder (`precedence.ts` has
-room below `OR`).
+### The plan (from the approved plan of 0.7.0 and 0.7.1, revision 7)
 
-**`condition ? a : b` for `If`.** Sugar over `If(condition, a, b)`, so it inherits what `If` does:
+Three commits, each with its gates green before its handover, the docs build for the last.
 
-- **Both branches are evaluated** ("`If` evaluates both branches", `backlog.md`). A reader of `?:`
-  expects the opposite more than a reader of `If(…)` does. Decide whether the symbol waits for a
-  lazy `If`, or ships with the fact said in the docs.
-- **Its type** is the branches' type when they agree, and `any` when they differ (`If`'s
-  `inferOutput`).
-- **The registration has no route today.** `registerInfix` builds a symbol with two operands. A
-  conditional needs a led that reads two more, and `registerLed` does not add its key to
-  `grammar.symbols`, so the lexer still answers `unknown_character` for `?` (probed). It should
-  not go in the core grammar either, which names no stdlib op. The smallest fix is a way to
-  register a symbol with a hand-written led.
-- **To decide:** its tier (between `ARROW` and `OR`), whether `a ? b : c ? d : e` chains, and
-  that a `:` inside the first branch still reads (a lambda's annotation,
-  `c ? (x: number) => x : y`).
+**Commit B: core.**
 
-**No consumer but the wish:** `If` and `Default` work. Estimate: a plan, then about three commits
-(one per symbol, one for the docs).
+| File | Change |
+| --- | --- |
+| `compose.ts` | `PortProblem.kind` gains `"malformed_ports"`. In `walk`, before reading `layer.ports`: `isPorts` fails → a problem with the layer's id, `where: "ports"`, and the layer is skipped |
+| `diagnostics.ts` | `malformed_ports`: stage `compose`, with `triggeredBy` and no sample (the docs page prints every compose sample's declarations through `declarationsOf`, which maps over `ports.inputs` and would break the build on a bad shape) |
+| `infra/serialise.ts` | `isSavedProgram(value: unknown): value is SavedProgram`: a record, a numeric `version`, a `form` of the three, a `code` form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the nodes stay `deserialise`'s), `ports` absent or `isPorts`. Exported from `index.ts`. `assertSavedPorts` stays, marked `@deprecated` for `isSavedProgram` |
+| `environment.ts`, `load` | `!isSavedProgram(saved)` → `unsupported_form` when `form` is a string none of the three names, else `malformed_program`; then `migrate` (`unsupported_version`) and the switch as today; `assertSavedPorts` no longer called |
+| `runtime/instance.ts` | The constructor takes the document layer's ports from the program only when `isSavedProgram` holds (`EMPTY_PORTS` otherwise); `recompile` → `load` publishes the diagnostic. `setProgram`: `isSavedProgram` first, and the two `saved.ports` reads behind it. `setLayer`: no change, the compose problem carries the layer's id. The `layers` option is host code, as `createRuntime`'s layers are: a bad one there throws, and one test pins the line |
+
+Tests: `runtime/instance.test.ts`, one per row of the probe table on the call the row names,
+plus `setLayer` with `inputs: "x"`, `createInstance` with a bad first program, a sound program
+after a refused one, and a host layer with `ports: null` throwing. `runtime/runtime.test.ts`:
+`runtime.setLayer` with a bad shape returns one `malformed_ports`, `createRuntime` with one
+throws its report. `environment.test.ts`: `load` per bad shape. `compose.test.ts`: the kind with
+its `layerId`, the other layers still composing. `infra/serialise.test.ts`: `isSavedProgram` per
+shape. `packages/link/src/link.test.ts`: unchanged in outcome.
+
+**Commit C: link, docs, changelogs, versions.**
+
+| Where | What |
+| --- | --- |
+| `packages/link/src/protocol.ts`, `package.json` | Its own `isSavedProgram` deleted, core's imported; `0.7.1`, peer `^0.7.1` |
+| `packages/core/package.json` | `0.7.1` |
+| `host/embedding-core.md` | A damaged file is reported on `diagnostics` (`malformed_program`, `unsupported_form`), a layer of a bad shape that arrives as data as `malformed_ports`; a layer a host builds in code (`createRuntime`'s `layers`, `createInstance`'s `layers` option) throws, as any compose problem there |
+| `host/packages/core.md` | `isSavedProgram` among the named exports |
+| `how-it-works/diagnostics.mdx` | Generated: `malformed_ports` with its `triggeredBy` |
+| The two changelogs | Core 0.7.1: the eight raw errors become diagnostics, `malformed_ports`, `isSavedProgram` exported. Link 0.7.1: core's guard, peer `^0.7.1` |
+| The notes | Nothing moves; the record "0.7.1 on npm" is written after the release, and this entry goes to `done.md` with it |
+
+Then the release, per the runbook: `yarn install` after the peer bump (the lockfile), the
+version note on *Installation* at 0.7.1, the PR, the tags, one release in the shape of the
+previous ones, two approvals core first, the check from outside the repo. The editor's peer
+`^0.7.0` admits 0.7.1: no editor release.
 
 ---
 

@@ -101,6 +101,34 @@ describe("load - ports guard", () => {
   });
 });
 
+describe("load - a program that is not well formed", () => {
+  // The shape is checked before anything reads the program, so each of these is a result.
+  const env = makeEnv();
+  const loadKind = (value: unknown): string => {
+    const result = env.load(value as SavedProgram);
+    if (result.ok || result.stage !== "load") throw new Error("expected a load failure");
+    return result.errors[0].kind;
+  };
+
+  it("a source that is a number, a null, and a record that is no program are malformed_program", () => {
+    expect(loadKind({ ...serialiseSource("output out = 1"), source: 5 })).toBe("malformed_program");
+    expect(loadKind(null)).toBe("malformed_program");
+    expect(loadKind({ version: "1", form: "code", source: "output out = 1" })).toBe(
+      "malformed_program",
+    );
+    expect(loadKind({ version: 1, form: "ast", bindings: [], outputs: {} })).toBe(
+      "malformed_program",
+    );
+  });
+
+  it("a form nobody knows is unsupported_form, a version from the future unsupported_version", () => {
+    expect(loadKind({ version: 1, form: "yaml", source: "" })).toBe("unsupported_form");
+    expect(loadKind({ ...serialiseSource("output out = 1"), version: 99 })).toBe(
+      "unsupported_version",
+    );
+  });
+});
+
 describe("forProgram", () => {
   const DOC: PortLayer = {
     id: "doc",

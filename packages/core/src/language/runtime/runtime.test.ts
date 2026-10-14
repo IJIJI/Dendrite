@@ -387,6 +387,20 @@ describe("runtime - global layers", () => {
     );
   });
 
+  it("refuses ports of a bad shape as malformed_ports; createRuntime throws its report", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    const before = rt.layers;
+    const problems = rt.setLayer("host", { inputs: "x" } as unknown as Ports);
+    expect(problems.map((p) => [p.kind, p.layerId, p.where])).toEqual([
+      ["malformed_ports", "host", "ports"],
+    ]);
+    expect(rt.layers).toBe(before);
+    // A global layer is the host's code, so the runtime's own door fails fast, as for any
+    // compose problem, with the kind in the report.
+    expect(() => runtimeFor(lang, null as unknown as Ports)).toThrow(/not a Ports record/);
+  });
+
   it("applies a change, prunes dropped values and notifies listeners last", () => {
     const lang = makeLang();
     const rt = runtimeFor(lang);

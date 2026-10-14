@@ -7,7 +7,24 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.7.0`, so a minor release here is always accompanied by a release of both.
+(at `^0.7.0` and `^0.7.1`), so a minor release here is always accompanied by a release of both.
+
+## 0.7.1
+
+- **Fixed: a saved program that is not well formed is reported, never thrown.** A program from a
+  file, a database or a wire is checked by shape before anything reads it: `load`,
+  `setProgram` and `createInstance` answer `malformed_program` (or `unsupported_form` for a form
+  this build does not know) on the diagnostics, and an instance keeps its previous program
+  running, stale. Eight shapes threw a raw `TypeError` before, from commands documented to
+  report, and three of them left an instance broken for every later program.
+- **New compose problem, `malformed_ports`:** a layer whose ports are not a Ports record is
+  refused inside `composeLayers`, with the layer's id, so every door reports it its own way:
+  an instance's `setLayer` publishes it refused, a runtime's `setLayer` returns it, and
+  `createRuntime` and the `layers` option of `createInstance`, which are a host's own code,
+  throw the report as for any compose problem.
+- **`isSavedProgram` is exported**, the guard above, for a host that wants to ask before handing
+  a blob over; the link uses it for a program that arrives over a channel. `assertSavedPorts`
+  is deprecated in its favour and stays until a minor removes it.
 
 ## 0.7.0
 

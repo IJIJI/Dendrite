@@ -5,6 +5,158 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.7.0 on npm — DONE 2026-10-14
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.7.0**, six days
+after 0.6.0. A minor because it breaks, in four lines a host can meet and none a program can:
+the `BP` tiers in twenties, `grammar.symbols` replaced by `symbolsOf(grammar)`, `AnalysisContext`
+out of the public surface, `OpDefinition.inputs` read-only. What it brings: `??` over `Default`
+and `c ? a : b` over `If` with C's grammar; a lazy op input, handed over as a `Thunk` and typed
+from the definition when `registerEvaluator` is given it, on which `If`, `Default`, `And` and
+`Or` evaluate only what they read; and "Did you mean" on eight diagnostics, with a call to a
+name that is no op saying so. The editor and the link changed nothing of their own and
+released as the peer range demands. The plan was `agreed-on-both-build-splendid-scone.md`
+(the maintainer's plan folder), revision 7 after seven review passes and three independent
+reviews; its decisions of 2026-10-13 and 14 are in `todo.md`, "0.7.0", kept below.
+
+**The commits, in order:** the notes (the go and what the reviews changed); the ladder,
+`symbolsOf`, `??` and `? :`; the lazy input; the nearest name; `AnalysisContext` out; the docs,
+changelogs and versions; four more hints, decided during the work; the lockfile. Each with its
+four gates green, the docs build for the two that touched the site.
+
+**Decided during the work, beyond the plan:** four more diagnostics got the hint (a written
+type, a named argument for an op or a function, an output nobody declared), because a reader
+meeting "Did you mean" on a binding and nothing on a type two lines later meets an
+inconsistency; the two that wait (`unknown_port_type`, `unknown_op`) are a backlog entry with
+their consumer, the Rete half. A transposition counts as one edit and a single letter gets no
+hint, both found by the helper's own tests (`nmae` must find `name`, `m` must not find `n`).
+The `hasFields` flag of `resolveField` was kept as it was: a struct declared with an empty
+`fields` record is still a struct.
+
+**The runbook** (`release-plan.md`, "Every later release") held, with the eighth release's
+lessons added there. PR #27 showed 23 of 23 commits. Three tags on `origin/main`, one GitHub
+release on core's tag in the shape of the previous ones (a rule now, step 4), one `Stage
+release` run of 1m04s, green, three approvals core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.7.0 on each package, an
+attestation is on all three, the peer ranges are `^0.7.0`, and a clean `npm install` of the
+three ran a check of 19 lines, written before approval, all passing: the versions and peers,
+the ladder, `symbolsOf` with the sixteen symbols, both symbols parsed and placed, the branch
+not taken on each of the four ops and the branch taken still evaluated, the typed evaluator,
+`Thunk` and the returned thunk's `host_error`, four hint sentences, the cycle member's one
+error, `AnalysisContext` absent from the published types, the editor's two colours, the link's
+fingerprint at 46 ops. On the tarballs it was 19 of 19; on 0.6.x from npm 17 of 19 failed, each
+line read, and the two that passed should. The live site followed: `??` on the operators page,
+`then: lazy any` with `any` in the type colour on the control reference, "Did you mean
+'number'?" on the diagnostics page, the host page's new section. The version note on
+*Installation* still said 0.6.0: fixed in the commit that holds this record.
+
+## 0.7.0 — the todo entry as it stood, with its decisions — DONE 2026-10-14
+
+**This is the next work, and it starts with a plan** (the maintainer, 2026-10-12: "0.7.0 will
+be done in a next chat"). A minor for core, the editor and the link together: one of its items
+removes an export, and a minor of core forces a release of both others.
+
+**What it holds, as decided between 2026-10-10 and 2026-10-12:**
+
+| Item | Decided | Left for the plan |
+| --- | --- | --- |
+| `??`, sugar over `Default` | Yes, and not `\|\|` (below) | **Decided 2026-10-13**, below: the tier |
+| `c ? a : b`, sugar over `If` | Yes | **Decided 2026-10-13**, below: C's grammar, the tier, the chain, how a symbol reaches the lexer |
+| A lazy `If` | Yes, in this release, so that `c ? a : b` never ships eager | **Decided 2026-10-13**, below: a lazy input, declared on the input, handed over as a `Thunk`. `If`, `Default`, `And` and `Or` use it to skip work. **Results do not change in 0.7.0**, with one stated exception (below): the three-valued `And` and `Or`, and every other change of "no value", come with the minor after 0.7 (the last section of this file) |
+| `AnalysisContext` leaves the public surface | Yes ("it should be removed, probably in the next release") | **Confirmed 2026-10-13**: export the result and diagnostic types by name (`backlog.md`, "Core — `AnalysisContext` is public") |
+| A call to a name that is no op | Keep the kind `undeclared_binding_reference`; name the nearest op or binding | **Decided 2026-10-13**, below: the sentence, and the same help for a plain reference, an input and a field |
+| A saved program that is not well formed | **Not in 0.7.0: it is 0.7.1** (the maintainer, 2026-10-12) | Nothing here (`backlog.md`, "Core — a saved program that is not well formed") |
+
+The docs are part of the plan, as for every release: the operators page, the reference of
+`Default` and `If`, *Every diagnostic*, the changelogs with the breaking line for
+`AnalysisContext`.
+
+### Decided on 2026-10-13: the base of the plan
+
+**Status: locked as the starting point. Tweaking continues, and the plan needs a full
+go-ahead from the maintainer before any code is written** (the maintainer, 2026-10-13: "Lock
+this in as a base, and lets keep tweaking it"). Each row below is a decision of that day, with
+what was probed for it. Every probe ran on core 0.6.0 and was deleted afterwards.
+
+| Decision | What was decided | Probed, measured, or compared |
+| --- | --- | --- |
+| **The tier of `??`** (1A) | `BP.COALESCE`, below `\|\|` and above `? :`, as C#, PHP and JS have it. So `$x ?? 0 > 5` is `$x ?? (0 > 5)`, and a default before arithmetic takes brackets: `($x ?? 0) + 1`. Swift and Kotlin put it above comparison; C++ and Java have no `??` (`value_or`, `Optional.orElse`) | The docs show the brackets |
+| **`c ? a : b` follows C's grammar** | `logical-OR ? expression : conditional-expression`: the then branch reads at power 0 and ends at `:` (which is no operator, so a lambda body, a named argument `f(x: 1)` and a typed parameter `(x: number) => x` inside it all read), the else branch reads just below `?`, so `a ? b : c ? d : e` chains to the right. One consequence, stated in the docs: `c ? a : x => x` needs brackets, `c ? a : (x => x)`; Java and JS take it bare, C has no lambda. PHP 8 refuses the chain without brackets and that is not copied | Probed: a function in a branch is refused today, `op_input_type_mismatch` ("a function is never `any`" and the branches are `any`), so `If`, `?:` and `??` take no function until the union-types work types the branches from each other. A docs line, not 0.7.0's work |
+| **The ladder in twenties** (2B, "make sure there is enough space") | `ARROW` 20, `CONDITIONAL` 40, `COALESCE` 60, `OR` 80, `AND` 100, `EQUALITY` 120, `COMPARE` 140, `ADD` 160, `MULTIPLY` 180, `PREFIX` 200, `CAST` 220, `MEMBER` 240, `CALL` 260. A breaking line in the changelog for a host that wrote a raw number | Checked: no package or page reads a `BP` number, only the names |
+| **The lexer learns its symbols from the grammar's maps** (3D, with the guard) | `grammar.symbols` goes. `symbolsOf(grammar)` derives the symbols from the keys of `nuds` and `leds` when `parseSource` and the editor tokenise, skipping what the lexer owns (the five token kinds, the structural punctuation, the two arrows, exported as one set from `lexer.ts`). `registerLed` and `registerNud` refuse a word that is none of those at registration ("'as' is a word; use registerWordLed"), which `registerInfix` says today and `registerLed("as", …)` did not. `registerInfix` and `registerPrefix` lose their own `symbols.add`. The ternary is then `lang.registerLed("?", { bp: BP.CONDITIONAL, parse })` from `control.ts`, beside `registerInfix("??", …)`. The editor's `tokens.ts` changes two lines (the call at 88 and the `has` at 134); `mergeGrammar` and `createGrammar` lose one line each | Compared: a new `registerOperator(token, led)` (Crockford's `symbol()` with the led; keeps the trap for `registerLed`), a stored set filled at registration (B': the same rule at write time, one file, keeps derived state), a separate `registerSymbol` (two calls, one forgettable), maximal-munch lexing as Haskell and Swift do (`$x>-1` lexes as `>-`: refused). The recompute per tokenise is about twenty keys through a set: not a cost |
+| **The lazy op: X-derived** (after C3, X, X-merged and `evaluateLazy` were compared and probed) | `lazy?: true` on `OpInput`, beside `convert`, `required` and `variadic`: the same config as every input. `resolveInputs` hands a lazy input over as a `Thunk` (a variadic one as a `Thunk[]`), a class of five lines with a `.value` getter that evaluates the memoised node, converting a `~` input inside. `registerOp` returns its definition with its literal types kept; `EvaluatorDefinition.op` takes the definition as well as the name, and the evaluator's inputs are then typed by the lazy keys of that definition (`then: Thunk`, `nodes: Thunk[]`, every strict key `unknown` as today); the string form `op: "Add"` is unchanged. `OpDefinition.inputs` becomes `readonly`. The pass that reads every op's result refuses a returned `Thunk`. `If`, `Default`, `And` and `Or` are declared so and written `condition ? then.value : e.value` and `nodes.every((n) => n.value)`. The reference prints `then: lazy any` (the mark on the type, `CLAUDE.md` "Conventions"). No `force`, no mark in the name, no new diagnostic: a name cannot be wrong when the flag sits on the input. Three tests: a type-level test file that holds each line of the typing (including that an op by name keeps `unknown` inputs, a hole found by a probe and closed with a default on the type parameter), a throwing branch not taken per lazy op, and the `?:` and `??` sugar in the parser tests. **The one visible change of 0.7.0**: a run error in a branch not taken no longer stops every output; said as a fix in the changelog | Measured: a thunk made and forced is 12 ns against 1.3 ns for a value; a whole `If` run is 888 ns today (399 ns for a plain output, about 360 ns per `+ 1` in a branch), so two thunks add about 5 % and a skipped branch repays them at once. Probed with tsc: every mistake an author can make under `force`, under a cast and under a plain-function thunk compiles clean, so compile-time safety exists only where the declaration is in source the compiler reads; under X-derived three of five mistakes fail to compile and none is silent. Getters on the inputs object (`inputs.then` evaluating on read) were measured and refused: destructuring reads every getter at once, so the op turns eager silently, and every stdlib op destructures; the generic forms cost 475 to 1673 ns, and only a hand-written class per op reaches the thunk's 15 ns |
+| **Where a lazy type is NOT** | Not a kind of `Type` (`lazy T` beside `T[]`): no value ever has it, a program cannot write it, a port cannot carry it, and every switch over a type would read it for one bit the flag carries (`backlog.md`, "Language — thunks as values"). Not a lazy lambda parameter: no consumer (same entry) | The three levels compared: the flag (1), a derived type on op inputs only (2: the cost of 3 with the power of 1, never the right stop), thunks as values (3: the course's language, open for a consumer) |
+| **The callee that is no op** (5, option B) | The kind stays. The sentence: "No operation or binding exists by the name 'Lenght'. Did you mean 'Length'?" for a call, "No binding exists by the name 'totl'. Did you mean 'total'?" for a plain reference, and the same "Did you mean" appended for an input (`unknown_program_input`) and a field (`unknown_field`). One helper: the nearest name by edit distance, at most two edits, over the ops and the bindings in scope for a call, the bindings and the lambda parameters for a reference, the declared inputs, the struct's fields. The `app` case checks an undeclared callee before analysing it | |
+| **`AnalysisContext` out** (6) | `export *` of the analyser's types becomes named exports of the result, error and warning types and the two kinds. The readme line. The breaking line in core's changelog. The peer ranges of the editor and the link move to `^0.7.0` | Checked: no file outside core's analyser reads it |
+
+**The commits the plan holds**, in order: (1) the ladder in twenties, `symbolsOf` and the guard, `??` and `? :` in `control.ts`, the lexer and parser tests, the editor's two lines; (2) `Thunk`, `lazy` on the input, the typed `op`, the four ops, the three tests; (3) the nearest-name helper and the four sentences; (4) `AnalysisContext` out, the readme; (5) the docs: the operators page (two rows, a paragraph on precedence and the two bracket cases), `If`'s description ("Only the branch taken is evaluated"), the reference's `lazy` mark and its legend line, *Extending the language* (a lazy input on a host's op, with the `Guard` sample), *Every diagnostic* (the new sentences), the three changelogs, the backlog entry on `If` closed to `done.md`.
+
+**Decided on 2026-10-14: the go, and what the plan's reviews changed.** The maintainer gave
+the go for 0.7.0 as it stands above, with the gaps the repo showed folded in. The plan itself
+(revision 7, after seven review passes and three independent reviews from other chats) is the
+chat's working document; what it changed in the base, each row with its reason:
+
+| What | Decided | Why |
+| --- | --- | --- |
+| Seven more readers of `grammar.symbols` | Move to `symbolsOf` in commit 1: the four examples in `packages/core/examples/3-(code)/` (typechecked, `tsconfig` includes them), `parser.test.ts` (three lines), `stdlib/index.test.ts` | The handoff listed `language.ts`, `index.ts` and the editor's `tokens.ts` only |
+| The backtick | The set the lexer owns holds it, beside the token kinds, the structural punctuation and the two arrows | The template nud is keyed on it (`string.ts`), so `symbolsOf` would list it as a symbol. The lexer reads it before the operators, as it reads `"` |
+| `registerEvaluator` with a definition as `op` | Stores `{ ...def, op: name }`, so the map keeps `op: string` | `extendLanguage`, `validateDescriptor` (`orphan_evaluator`) and the link read `op` as a string; one normalisation at the door instead of a branch in each |
+| The type-level file | `language/lazy.test-d.ts`: `tsconfig` includes `src/**/*`, vitest runs `*.test.ts` only, so `yarn typecheck` reads it and nothing runs it. `Record<never, never>`, not `{}` (`no-empty-object-type` is in the lint set) | It exercises `registerOp`, `registerEvaluator` and the lazy keys, not the class |
+| An optional lazy input | Typed `Thunk \| undefined` | An absent optional input has no key in `node.inputs`, so the evaluator sees `undefined` |
+| The callee that is no op: the pre-check | "Declared nowhere": not a lambda parameter, not in `declarationIndex`, not an op | A forward reference and a failed binding fall through to the `ref` path, which reports them as today; an `ast`-form app whose callee names an op would otherwise be told to mean its own name |
+| A reference to a cycle member | The `ref` case returns the error node for a failed binding before the undeclared report. A fix in the changelog | A cycle member is failed but never analysed, so today it gets `undeclared_binding_reference` as a second error. The outputs do not change: reachability drops them first |
+| The two undeclared sentences | One helper, `reportUndeclared`, with the noun phrase as a parameter | Duplicate Code |
+| `nearest` | Its own `analyser/nearest.ts` and test; distance at most two, at most one for a name of four letters or fewer; ties by order, ops before bindings before locals for a call | `analyser.ts` is 1286 lines; `m` must not hint `n`; the sentence must not flip between runs |
+| The reference's signature | Assembled per input in `apps/docs/src/components/ops.ts`, with a test, as `diagnostics.ts` sits beside its component | In one `sourceHtml` string, `any` after `lazy` is not a type position and loses its colour |
+| `?` in `separator?` | Becomes a symbol token, coloured as one | It was an unknown character, printed plain; the editor test that asserts so flips in commit 1 |
+| The 0.7.0 record in `done.md` | Written after the release, dated, as every release record is | Commit 5 closes the three backlog entries only (`If` evaluates both branches, `AnalysisContext` is public, a call to a name that is no op) |
+| *Extending the language* | One sentence: read a thunk during the call | A thunk kept for later reads a traversal that is gone; the same trust as a host op returning no `NaN` |
+
+**0.7.1 was decided the same day**: the fix at the door, and a layer of a bad shape refused
+inside `composeLayers` (`backlog.md`, "Core — a saved program that is not well formed").
+
+**The entry as it stood before those decisions**, kept for its probes:
+
+**When:** after 0.6.1, as ONE plan for both. The maintainer placed it first after 0.6.0 on
+2026-10-05, and named 0.6.1 for the editor on 2026-10-08, which comes before it by its number.
+Asked on 2026-10-05, as "`||` as sugar on `Default`" and "an inline if, `condition ? true : false`".
+
+**Why one plan:** three ideas want `?`: these two, and the optional lambda parameter
+(`backlog.md`). The first one built fixes what the lexer does with `?`, `??` and `?:`, so the plan
+settles all three spellings, even if it builds two.
+
+**`??` for `Default`, not `||`** (probed 2026-10-05). `||` is taken: it is sugar over `Or`, `Or`
+takes booleans, and `null || 5` is `op_input_type_mismatch` today. A symbol becomes its op while
+the parser reads, before any type is known, so `||` cannot choose between `Or` and `Default` by
+type. The other way is an `Or` that accepts `any` and decides at runtime, and then the reference
+prints a signature that is not honest, which is what keeps `+` from text (`backlog.md`). `Default`
+tests for `null`, not for false, and that is what other languages spell `??`.
+`registerInfix("??", …)` is plain sugar, as `++` is over `Join`, and a registered symbol reaches
+the lexer through `grammar.symbols`. **To decide:** its tier in the ladder (`precedence.ts` has
+room below `OR`).
+
+**`condition ? a : b` for `If`.** Sugar over `If(condition, a, b)`, so it inherits what `If` does:
+
+- **Both branches are evaluated** ("`If` evaluates both branches", `backlog.md`). A reader of `?:`
+  expects the opposite more than a reader of `If(…)` does. Decide whether the symbol waits for a
+  lazy `If`, or ships with the fact said in the docs.
+- **Its type** is the branches' type when they agree, and `any` when they differ (`If`'s
+  `inferOutput`).
+- **The registration has no route today.** `registerInfix` builds a symbol with two operands. A
+  conditional needs a led that reads two more, and `registerLed` does not add its key to
+  `grammar.symbols`, so the lexer still answers `unknown_character` for `?` (probed). It should
+  not go in the core grammar either, which names no stdlib op. The smallest fix is a way to
+  register a symbol with a hand-written led.
+- **To decide:** its tier (between `ARROW` and `OR`), whether `a ? b : c ? d : e` chains, and
+  that a `:` inside the first branch still reads (a lambda's annotation,
+  `c ? (x: number) => x : y`).
+
+**No consumer but the wish:** `If` and `Default` work. Estimate: a plan, then about three commits
+(one per symbol, one for the docs).
+
+---
+
 **Closed by 0.7.0 on 2026-10-14** (the release itself gets its record when it is on npm): the
 three entries below are the backlog entries as they stood, kept for their reasoning. `If`
 reads one branch through a lazy input, `AnalysisContext` left the public surface, and a call

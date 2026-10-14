@@ -169,6 +169,14 @@ export const diagnostics = {
   },
 
   // ── compose: composing the declarations a program is checked against ─────────
+  malformed_ports: {
+    stage: "compose",
+    severity: "error",
+    message:
+      "A layer's ports are not a Ports record: the shape did not survive, so nothing in that layer is read.",
+    triggeredBy:
+      "Handing `setLayer` ports whose `inputs` is a text, or a layer built by hand without `outputs`. A program's own ports are refused earlier, as `malformed_program`. No sample: the page prints a compose sample's declarations, and a bad shape has none.",
+  },
   invalid_name: {
     stage: "compose",
     severity: "error",
