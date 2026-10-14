@@ -4,6 +4,7 @@ import {
   type EvalErrorKind,
   type EvalResult,
   isPorts,
+  isSavedProgram,
   type Language,
   type Observable,
   type Ports,
@@ -129,8 +130,9 @@ export const decodeOutputs = (wire: WireOutputs): EvalResult => ({
 
 // ── guards: the trust boundary ───────────────────────────────────────────────
 // Structural, not schemas: enough that a message cannot make either end throw on a shape
-// it never expected. Core's own loaders judge the rest - a malformed program becomes a
-// `load` diagnostic, a bad port name a `ports` one.
+// it never expected. A program is judged by core's own `isSavedProgram` (the same guard
+// `load` and an instance use, since 0.7.1), and core's loaders judge the rest - a bad port
+// name is a `compose` diagnostic.
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -143,13 +145,6 @@ const isStringArray = (value: unknown): value is string[] =>
 
 const isFingerprint = (value: unknown): value is Fingerprint =>
   isRecord(value) && isStringArray(value["ops"]) && isStringArray(value["types"]);
-
-const isSavedProgram = (value: unknown): value is SavedProgram =>
-  isRecord(value) &&
-  typeof value["version"] === "number" &&
-  (value["form"] === "code" || value["form"] === "ast" || value["form"] === "rete") &&
-  (value["form"] !== "code" || typeof value["source"] === "string") &&
-  (value["ports"] === undefined || isPorts(value["ports"]));
 
 const isAttachedLayer = (value: unknown): value is AttachedLayer =>
   isRecord(value) &&

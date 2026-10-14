@@ -121,6 +121,15 @@ The broken program is reported and **not** run. The previous program keeps runni
 stay available with `stale: true{:ts}`. The moment a program compiles again, the flag clears. Decide what
 stale means for your application (keep acting, pause, grey out), but you will not be handed blanks.
 
+The same holds for a program that is not a program: a file that was damaged, truncated or written
+by another version. `setProgram{:ts}`, `createInstance{:ts}` and `load{:ts}` check its shape before
+anything reads it, and report `malformed_program{:den}` (or `unsupported_form{:den}` for a form this
+build does not know) on `diagnostics{:ts}`, with the previous program still running. Ports of a
+bad shape handed to `setLayer{:ts}` are refused the same way, as `malformed_ports{:den}`. The one
+place that still throws is a layer you build in code, the `layers{:ts}` option here or a runtime's
+own layers, because that is your code and not data: it fails at once, as any compose problem
+there does, and `isSavedProgram{:ts}` is exported for a host that wants to ask first.
+
 An error the analyser found in a binding no output reads does not stop anything at all: it is
 reported, the binding is pruned, and the outputs run. Only a lost `required{:ts}` output fails a program
 outright.

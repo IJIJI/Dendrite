@@ -7,7 +7,14 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.7.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.7.1`: a minor release of core needs a release here too, even if nothing in this package changed.
+
+## 0.7.1
+
+- **A program over the wire is judged by core's own guard.** The protocol's `isSavedProgram` is
+  core's now (exported in 0.7.1), one check stricter: an `ast` form must carry record
+  `bindings` and `outputs`. No message that passed before is refused, and no test changed its
+  outcome. The peer range moves to core `^0.7.1`, which is what makes the import safe.
 
 ## 0.7.0
 
