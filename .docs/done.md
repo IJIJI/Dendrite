@@ -5,6 +5,52 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.7.0 on npm — DONE 2026-10-14
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.7.0**, six days
+after 0.6.0. A minor because it breaks, in four lines a host can meet and none a program can:
+the `BP` tiers in twenties, `grammar.symbols` replaced by `symbolsOf(grammar)`, `AnalysisContext`
+out of the public surface, `OpDefinition.inputs` read-only. What it brings: `??` over `Default`
+and `c ? a : b` over `If` with C's grammar; a lazy op input, handed over as a `Thunk` and typed
+from the definition when `registerEvaluator` is given it, on which `If`, `Default`, `And` and
+`Or` evaluate only what they read; and "Did you mean" on eight diagnostics, with a call to a
+name that is no op saying so. The editor and the link changed nothing of their own and
+released as the peer range demands. The plan was `agreed-on-both-build-splendid-scone.md`
+(the maintainer's plan folder), revision 7 after seven review passes and three independent
+reviews; its decisions of 2026-10-13 and 14 are in `todo.md`, "0.7.0", kept below.
+
+**The commits, in order:** the notes (the go and what the reviews changed); the ladder,
+`symbolsOf`, `??` and `? :`; the lazy input; the nearest name; `AnalysisContext` out; the docs,
+changelogs and versions; four more hints, decided during the work; the lockfile. Each with its
+four gates green, the docs build for the two that touched the site.
+
+**Decided during the work, beyond the plan:** four more diagnostics got the hint (a written
+type, a named argument for an op or a function, an output nobody declared), because a reader
+meeting "Did you mean" on a binding and nothing on a type two lines later meets an
+inconsistency; the two that wait (`unknown_port_type`, `unknown_op`) are a backlog entry with
+their consumer, the Rete half. A transposition counts as one edit and a single letter gets no
+hint, both found by the helper's own tests (`nmae` must find `name`, `m` must not find `n`).
+The `hasFields` flag of `resolveField` was kept as it was: a struct declared with an empty
+`fields` record is still a struct.
+
+**The runbook** (`release-plan.md`, "Every later release") held, with the eighth release's
+lessons added there. PR #27 showed 23 of 23 commits. Three tags on `origin/main`, one GitHub
+release on core's tag in the shape of the previous ones (a rule now, step 4), one `Stage
+release` run of 1m04s, green, three approvals core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.7.0 on each package, an
+attestation is on all three, the peer ranges are `^0.7.0`, and a clean `npm install` of the
+three ran a check of 19 lines, written before approval, all passing: the versions and peers,
+the ladder, `symbolsOf` with the sixteen symbols, both symbols parsed and placed, the branch
+not taken on each of the four ops and the branch taken still evaluated, the typed evaluator,
+`Thunk` and the returned thunk's `host_error`, four hint sentences, the cycle member's one
+error, `AnalysisContext` absent from the published types, the editor's two colours, the link's
+fingerprint at 46 ops. On the tarballs it was 19 of 19; on 0.6.x from npm 17 of 19 failed, each
+line read, and the two that passed should. The live site followed: `??` on the operators page,
+`then: lazy any` with `any` in the type colour on the control reference, "Did you mean
+'number'?" on the diagnostics page, the host page's new section. The version note on
+*Installation* still said 0.6.0: fixed in the commit that holds this record.
+
 **Closed by 0.7.0 on 2026-10-14** (the release itself gets its record when it is on npm): the
 three entries below are the backlog entries as they stood, kept for their reasoning. `If`
 reads one branch through a lazy input, `AnalysisContext` left the public surface, and a call
