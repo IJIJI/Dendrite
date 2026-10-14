@@ -82,7 +82,11 @@ Never stack new work on uncommitted changes: read `git status` before each miles
 each commit's work, and if the tree is not clean, the previous handover is the first thing to ask
 about. Every handover gives the full `git add`, with every file of the table, and the `git commit`,
 as two blocks, whatever the index already holds. PRs are the maintainer's too: say when a point
-is a good one to open a PR, but do not write its title or body, or open it, unless asked.
+is a good one to open a PR, and hand over its title and a one-paragraph description with it
+(the maintainer, 2026-10-14: always), but do not open it. When a release follows, walk the
+maintainer through the runbook (`release-plan.md`, "Every later release") step by step, write
+the after-approval check before approval, and hand over the release title and text in the
+shape of the previous releases (the runbook's step 4).
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
 deploy runs from. `dev` has a GitHub ruleset forbidding merge commits, so never `git merge` into
