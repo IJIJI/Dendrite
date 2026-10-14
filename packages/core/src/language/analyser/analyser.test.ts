@@ -1933,3 +1933,77 @@ describe("convert: an op input that accepts any leaf and converts it", () => {
     expect(validateDescriptor(ok.unchecked)).toEqual([]);
   });
 });
+
+// ─── The nearest name ─────────────────────────────────────────────────────────
+
+describe("a name nothing declares names the nearest one", () => {
+  const errorsOf = (source: string, ports: Ports = { inputs: [], outputs: [] }) => {
+    const lang = createStdlib();
+    const parsed = parseSource(source, lang);
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
+    return analyse(parsed.program, withPorts(lang, ports)).errors.map((e) => [e.kind, e.message]);
+  };
+
+  it("a call to a name that is no op names the nearest op", () => {
+    expect(errorsOf("output r = Lenght([1])")).toContainEqual([
+      "undeclared_binding_reference",
+      "No operation or binding exists by the name 'Lenght'. Did you mean 'Length'?",
+    ]);
+    expect(errorsOf("output r = length([1])")).toContainEqual([
+      "undeclared_binding_reference",
+      "No operation or binding exists by the name 'length'. Did you mean 'Length'?",
+    ]);
+  });
+
+  it("a plain reference names the nearest binding or lambda parameter", () => {
+    expect(errorsOf("let total = 1\noutput r = totl")).toContainEqual([
+      "undeclared_binding_reference",
+      "No binding exists by the name 'totl'. Did you mean 'total'?",
+    ]);
+    expect(errorsOf("output r = Map([1], item => itm)")).toContainEqual([
+      "undeclared_binding_reference",
+      "No binding exists by the name 'itm'. Did you mean 'item'?",
+    ]);
+  });
+
+  it("says nothing more when no name is near", () => {
+    expect(errorsOf("output r = zzzzzz")).toContainEqual([
+      "undeclared_binding_reference",
+      "No binding exists by the name 'zzzzzz'.",
+    ]);
+  });
+
+  it("an unknown input names the nearest declared input", () => {
+    const ports: Ports = { inputs: [{ name: "score", type: Type.number }], outputs: [] };
+    expect(errorsOf("output r = $scor", ports)).toContainEqual([
+      "unknown_program_input",
+      "No input exists by the name 'scor'. Did you mean 'score'?",
+    ]);
+  });
+
+  it("an unknown field names the nearest field, through the extends chain", () => {
+    const ports: Ports = {
+      types: [
+        { name: "Thing", fields: { name: Type.string } },
+        { name: "Bus", extends: "Thing", fields: { id: Type.number } },
+      ],
+      inputs: [{ name: "bus", type: Type.name("Bus") }],
+      outputs: [],
+    };
+    expect(errorsOf("output r = $bus.nmae", ports)).toContainEqual([
+      "unknown_field",
+      "Type 'Bus' has no field 'nmae'. Did you mean 'name'?",
+    ]);
+  });
+
+  it("a forward-referenced callee is still a forward reference, and nothing else", () => {
+    const kinds = errorsOf("output r = f(1)\nlet f = x => x").map(([kind]) => kind);
+    expect(kinds).toContain("forward_reference");
+    expect(kinds).not.toContain("undeclared_binding_reference");
+  });
+
+  it("a reference to a cycle member is not a second error", () => {
+    const kinds = errorsOf("let a = b\nlet b = a\nlet c = a + 1\noutput r = c").map(([k]) => k);
+    expect(kinds).toEqual(["binding_cycle", "binding_cycle"]);
+  });
+});

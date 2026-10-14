@@ -15,6 +15,7 @@ import {
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor, type OpDefinition } from "../infra/registry";
 import { Type, isAny, isAnyOrNull, typeToString, typesEqual } from "../infra/types";
+import { hint } from "./nearest";
 import {
   AnalysisContext,
   AnalysisError,
@@ -203,6 +204,24 @@ function checkCompat(
 
 function errorNode(type?: Type, source?: SourceRef): CErrorNode {
   return { kind: "error", type, source, dependsOn: new Set() };
+}
+
+// A name nothing declares, read as a value or called: one sentence shape, with the nearest
+// of the candidates the reader could have meant, in the caller's order of preference.
+function reportUndeclared(
+  ctx: AnalysisContext,
+  name: string,
+  source: SourceRef | undefined,
+  what: "binding" | "operation or binding",
+  candidates: Iterable<string>,
+): CErrorNode {
+  ctx.errors.push({
+    kind: "undeclared_binding_reference",
+    name,
+    message: `No ${what} exists by the name '${name}'.${hint(name, candidates)}`,
+    source,
+  });
+  return errorNode(undefined, source);
 }
 
 // Contextual typing: when an inline lambda flows into a function-typed slot, fill its
@@ -407,14 +426,16 @@ function validateInputs(
 // wins → an override shadows the inherited field). `hasFields` reports whether ANY type in
 // the chain declares fields - i.e. the value is a struct, so a miss is a real error rather
 // than the permissive fallback. The `seen` set guards malformed extends cycles.
+// On a miss, `fields` lists every name the chain declares, for the diagnostic's hint.
 function resolveField(
   typeName: string,
   field: string,
   descriptor: LanguageDescriptor,
-): { type: Type | undefined; hasFields: boolean } {
+): { type: Type | undefined; hasFields: boolean; fields: string[] } {
   let current: string | undefined = typeName;
   const seen = new Set<string>();
   let hasFields = false;
+  const fields: string[] = [];
   while (current && !seen.has(current)) {
     seen.add(current);
     const def = descriptor.types.get(current);
@@ -422,11 +443,12 @@ function resolveField(
     if (def.fields) {
       hasFields = true;
       const t = def.fields[field];
-      if (t) return { type: t, hasFields: true };
+      if (t) return { type: t, hasFields, fields };
+      fields.push(...Object.keys(def.fields));
     }
     current = def.extends;
   }
-  return { type: undefined, hasFields };
+  return { type: undefined, hasFields, fields };
 }
 
 function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
@@ -451,7 +473,9 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         ctx.errors.push({
           kind: "unknown_program_input",
           name: node.name,
-          message: `Context input '${node.name}' is not declared in the descriptor`,
+          message:
+            `No input exists by the name '${node.name}'.` +
+            hint(node.name, ctx.descriptor.inputs.keys()),
           source: node.source,
         });
         return errorNode(undefined, node.source);
@@ -499,13 +523,13 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
         return { ...node, type, dependsOn: binding.dependsOn };
       }
 
-      ctx.errors.push({
-        kind: "undeclared_binding_reference",
-        name: node.name,
-        message: `'${node.name}' is not declared as a binding or scoped variable`,
-        source: node.source,
-      });
-      return errorNode(undefined, node.source);
+      // A binding that failed before it was analysed (a cycle member) is not undeclared: the
+      // cascade suppression above covers only what was analysed, so it is repeated here.
+      if (ctx.failedBindings.has(node.name)) return errorNode(undefined, node.source);
+      return reportUndeclared(ctx, node.name, node.source, "binding", [
+        ...ctx.declarationIndex.keys(),
+        ...ctx.localBindings.keys(),
+      ]);
     }
 
     case "array": {
@@ -566,7 +590,9 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
             ctx.errors.push({
               kind: "unknown_field",
               name: node.field,
-              message: `Type '${typeToString(structType)}' has no field '${node.field}'`,
+              message:
+                `Type '${typeToString(structType)}' has no field '${node.field}'.` +
+                hint(node.field, resolved.fields),
               source: node.source,
             });
             return errorNode(undefined, node.source);
@@ -712,6 +738,25 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
     }
 
     case "app": {
+      // A callee that is a name declared nowhere was most likely meant as an op: the parser
+      // builds an op node only for a registered op, so `Lenght([1])` arrives as an application
+      // of the reference `Lenght`. Said as such, with the nearest op, binding or parameter. A
+      // name that IS declared somewhere - a forward reference, a failed binding, an `ast`-form
+      // app that names an op - takes the ref path below and is reported as it is today.
+      const c = node.callee;
+      if (
+        c.kind === "ref" &&
+        !ctx.localBindings.has(c.name) &&
+        !ctx.declarationIndex.has(c.name) &&
+        !ctx.descriptor.ops.has(c.name)
+      ) {
+        reportUndeclared(ctx, c.name, c.source, "operation or binding", [
+          ...ctx.descriptor.ops.keys(),
+          ...ctx.declarationIndex.keys(),
+          ...ctx.localBindings.keys(),
+        ]);
+        return errorNode(undefined, node.source);
+      }
       const callee = analyseNode(node.callee, ctx);
       if (callee.kind === "error") return errorNode(undefined, node.source);
 

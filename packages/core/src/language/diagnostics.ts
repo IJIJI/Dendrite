@@ -300,7 +300,8 @@ export const diagnostics = {
   undeclared_binding_reference: {
     stage: "analyse",
     severity: "error",
-    message: "A name that is not a binding, an input, or a lambda parameter.",
+    message:
+      "A name that is not a binding, an input, or a lambda parameter, nor an op when it is called. The nearest name is suggested.",
     example: withPorts(
       den`
       output x = nope
