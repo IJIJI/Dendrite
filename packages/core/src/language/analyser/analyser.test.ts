@@ -1884,6 +1884,21 @@ describe("convert: an op input that accepts any leaf and converts it", () => {
     });
   });
 
+  it("lazy carries no rule of its own: accepted beside variadic and convert, on any type", () => {
+    const lang = testLang(createStdlib());
+    lang.registerOp({
+      name: "Host",
+      inputs: [
+        { name: "a", type: Type.boolean, variadic: true, lazy: true },
+        { name: "b", type: Type.number, convert: true, lazy: true },
+        { name: "c", type: Type.fn([], Type.any), lazy: true },
+      ],
+      output: Type.string,
+    });
+    lang.registerEvaluator({ op: "Host", evaluate: () => "" });
+    expect(validateDescriptor(lang.unchecked)).toEqual([]);
+  });
+
   it("is refused when the language composes, for each rule it can break", () => {
     const cases: [string, Parameters<Language["registerOp"]>[0]["inputs"][0]][] = [
       ["struct", { name: "a", type: Type.name("Bus"), convert: true }],

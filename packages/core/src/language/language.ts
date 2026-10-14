@@ -39,10 +39,11 @@ export { symbolsOf } from "./parser/grammar";
 export interface Language {
   descriptor: Vocabulary;
   grammar: Grammar;
-  // Semantics → descriptor.
+  // Semantics → descriptor. registerOp hands the definition back with its literal types kept,
+  // so `registerEvaluator({ op: If, … })` types the lazy inputs from it (EvaluatorDefinition).
   registerType(name: string, config?: Omit<TypeDefinition, "name">): void;
-  registerOp(def: OpDefinition): void;
-  registerEvaluator(def: EvaluatorDefinition): void;
+  registerOp<const D extends OpDefinition>(def: D): D;
+  registerEvaluator<const D extends OpDefinition | string>(def: EvaluatorDefinition<D>): void;
   // Syntax → grammar. Full handlers, with operator sugar on top.
   registerNud(key: string, nud: Nud): void;
   registerLed(key: string, led: Led): void;
@@ -76,8 +77,16 @@ export function createLanguage(): Language {
     registerType(name, config) {
       types.set(name, { name, ...config });
     },
-    registerOp: (def) => ops.set(def.name, def),
-    registerEvaluator: (def) => evaluators.set(def.op, def),
+    registerOp: (def) => {
+      ops.set(def.name, def);
+      return def;
+    },
+    registerEvaluator: (def) => {
+      // The definition as `op` types the lazy keys at the call site; the map keeps the name,
+      // so every reader of `op` (extendLanguage, validateDescriptor, the link) sees a string.
+      const name = typeof def.op === "string" ? def.op : def.op.name;
+      evaluators.set(name, { ...def, op: name });
+    },
 
     registerNud: (key, nud) => registerNud(grammar, key, nud),
     registerLed: (key, led) => registerLed(grammar, key, led),

@@ -948,6 +948,26 @@ against the new ground; then update `--dendrite-*` in `packages/editor/style.css
 
 ---
 
+## Editor — `styledRanges` could read the lexer's own constants
+
+**What:** the highlighter in `packages/editor/src/code/tokens.ts` classifies punctuation with
+literals of its own: the two arrows `=>` and `->` are written out as the symbols the lexer
+owns, `$` and the backtick are named by hand, and `TYPE_PUNCT` lists the punctuation a type is
+written with. Since 0.7.0 the lexer states the same facts once, in `parser/lexer.ts`:
+`CORE_OPERATORS`, `STRUCTURAL_PUNCT`, and `LEXER_OWNED` over both. The editor could read those
+instead of repeating them, so a new core operator would colour itself.
+
+**Why deferred:** asked by the maintainer on 2026-10-14, as commit 1 of 0.7.0 landed, and not
+taken into it: the constants are module exports of `lexer.ts` and not part of core's public
+surface, and what core makes public is a decision for before 1.0.0 (`todo.md`, "Before
+1.0.0", the row "What is public"). Three literals in one function is the whole cost today.
+
+**What it requires:** decide which of the three constants become public (`LEXER_OWNED` alone
+does not say which of its members is an arrow); export them from `index.ts`; replace the
+literals in `styledRanges` and the `TYPE_PUNCT` overlap; a line in the editor's changelog.
+
+---
+
 ## Editor — tune the highlight colours
 
 **What:** The editor's highlight colours were chosen by formula, not by eye: the active line

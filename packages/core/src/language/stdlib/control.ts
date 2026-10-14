@@ -6,21 +6,21 @@ import { Type, isAny, typesEqual } from "../infra/types";
 //? The control segment: choosing between values, and falling back when there is none, and
 // the two symbols that spell those: `c ? a : b` over If, `a ?? b` over Default.
 export function installControl(lang: Language): void {
-  lang.registerOp({
+  const If = lang.registerOp({
     name: "If",
     inputs: [
       { name: "condition", type: Type.boolean },
-      { name: "then", type: Type.any },
-      { name: "else", type: Type.any },
+      { name: "then", type: Type.any, lazy: true },
+      { name: "else", type: Type.any, lazy: true },
     ],
     output: Type.any,
     category: "control",
-    description: "Picks then or else by condition. Both branches are evaluated.",
+    description: "Picks then or else by condition. Only the branch taken is evaluated.",
     examples: [den`output label = If(72 >= 60, "Pass", "Fail")`],
   });
   lang.registerEvaluator({
-    op: "If",
-    evaluate: ({ condition, then, else: otherwise }) => (condition ? then : otherwise),
+    op: If,
+    evaluate: ({ condition, then, else: otherwise }) => (condition ? then.value : otherwise.value),
     // Output type = branch type when both branches match (and aren't any), else any.
     inferOutput: (inputTypes) => {
       const t = inputTypes["then"],
@@ -43,11 +43,11 @@ export function installControl(lang: Language): void {
     // Always boolean - no inferOutput needed
   });
 
-  lang.registerOp({
+  const Default = lang.registerOp({
     name: "Default",
     inputs: [
       { name: "value", type: Type.any },
-      { name: "fallback", type: Type.any },
+      { name: "fallback", type: Type.any, lazy: true },
     ],
     output: Type.any,
     category: "control",
@@ -55,8 +55,9 @@ export function installControl(lang: Language): void {
     examples: [den`output first = Default(Find([1, 2, 3], item => item > 5), 0)`],
   });
   lang.registerEvaluator({
-    op: "Default",
-    evaluate: ({ value, fallback }) => (value !== null && value !== undefined ? value : fallback),
+    op: Default,
+    evaluate: ({ value, fallback }) =>
+      value !== null && value !== undefined ? value : fallback.value,
     // Output type = value's type when known, else fallback's type
     inferOutput: (inputTypes) => {
       const v = inputTypes["value"];
