@@ -7,7 +7,44 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-at `^0.6.0`, so a minor release here is always accompanied by a release of both.
+at `^0.7.0`, so a minor release here is always accompanied by a release of both.
+
+## 0.7.0
+
+- **Breaking: the `BP` tiers are renumbered**, twenty apart (`ARROW` 20 to `CALL` 260), with
+  two new tiers between `ARROW` and `OR`: `CONDITIONAL` 40 and `COALESCE` 60. A host that
+  registered a symbol with a raw number sits somewhere else on the ladder now; one that used
+  the names sees no change.
+- **Breaking: `grammar.symbols` is gone.** The lexer's symbols are derived from the grammar's
+  handler keys by `symbolsOf(grammar)`, exported beside `BP`, so a led registered by hand (the
+  conditional's `?`) reaches the lexer with no second list to keep. `registerNud` and
+  `registerLed` refuse a key that is a word, as `registerInfix` did.
+- **Breaking: `AnalysisContext` is no longer exported.** It is the analyser's working state.
+  The result and diagnostic types are exported by name, as before.
+- **Breaking, for the type only: `OpDefinition.inputs` is `readonly`.**
+- **`??` and `c ? a : b`.** `a ?? b` is `Default(a, b)`, below `||` and above `? :`, as C#, PHP
+  and JS have it. `c ? a : b` is `If(c, a, b)`, with C's grammar: the then branch ends at the
+  colon, the else branch chains to the right (`a ? b : c ? d : e`), and a lambda in the else
+  branch needs brackets.
+- **A lazy op input.** `lazy: true` on an `OpInput` hands the input to the evaluator
+  unevaluated, as a `Thunk` (exported) with a `.value` getter, a variadic one as a `Thunk[]`.
+  `registerOp` returns its definition, and `registerEvaluator({ op: If, … })` types the lazy
+  keys from it, so `then.value` compiles and `condition.value` does not; `op: "If"` by name is
+  unchanged, with every input `unknown`. The reference prints a lazy input as `then: lazy any`.
+- **`If`, `Default`, `And` and `Or` evaluate only what they read.** `If` reads the branch taken,
+  `Default` its fallback only for a null, `And` stops at the first false and `Or` at the first
+  true. No value changes.
+- **A name nothing declares names the nearest one.** "No binding exists by the name 'totl'.
+  Did you mean 'total'?", and the same hint on an unknown input (`$scor`), an unknown struct
+  field, a type written in a program (`$x as strng`), an argument named for an input or a
+  parameter that does not exist (`If(thn: 1, …)`, `f(itm: 1)`), and an output nobody declared.
+  A call to a name that is no op says so: "No operation or binding exists by the name 'Lenght'.
+  Did you mean 'Length'?" (the kind stays `undeclared_binding_reference`). The sentences of
+  those eight diagnostics are reworded to carry the hint.
+- **Fixed: a run error in a branch not taken no longer stops every output.** `If(c, a, Boom())`
+  ran `Boom()` whether or not `c` held.
+- **Fixed: a reference to a binding in a cycle got a second error**, `undeclared_binding_reference`,
+  beside the member's own `binding_cycle`.
 
 ## 0.6.0
 

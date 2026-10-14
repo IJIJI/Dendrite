@@ -1,24 +1,26 @@
+import { operationNode } from "../infra/nodes";
 import { den } from "../infra/serialise";
-import { type Language } from "../language";
+import { BP, type Language } from "../language";
 import { Type, isAny, typesEqual } from "../infra/types";
 
-//? The control segment: choosing between values, and falling back when there is none.
+//? The control segment: choosing between values, and falling back when there is none, and
+// the two symbols that spell those: `c ? a : b` over If, `a ?? b` over Default.
 export function installControl(lang: Language): void {
-  lang.registerOp({
+  const If = lang.registerOp({
     name: "If",
     inputs: [
       { name: "condition", type: Type.boolean },
-      { name: "then", type: Type.any },
-      { name: "else", type: Type.any },
+      { name: "then", type: Type.any, lazy: true },
+      { name: "else", type: Type.any, lazy: true },
     ],
     output: Type.any,
     category: "control",
-    description: "Picks then or else by condition. Both branches are evaluated.",
+    description: "Picks then or else by condition. Only the branch taken is evaluated.",
     examples: [den`output label = If(72 >= 60, "Pass", "Fail")`],
   });
   lang.registerEvaluator({
-    op: "If",
-    evaluate: ({ condition, then, else: otherwise }) => (condition ? then : otherwise),
+    op: If,
+    evaluate: ({ condition, then, else: otherwise }) => (condition ? then.value : otherwise.value),
     // Output type = branch type when both branches match (and aren't any), else any.
     inferOutput: (inputTypes) => {
       const t = inputTypes["then"],
@@ -41,11 +43,11 @@ export function installControl(lang: Language): void {
     // Always boolean - no inferOutput needed
   });
 
-  lang.registerOp({
+  const Default = lang.registerOp({
     name: "Default",
     inputs: [
       { name: "value", type: Type.any },
-      { name: "fallback", type: Type.any },
+      { name: "fallback", type: Type.any, lazy: true },
     ],
     output: Type.any,
     category: "control",
@@ -53,12 +55,43 @@ export function installControl(lang: Language): void {
     examples: [den`output first = Default(Find([1, 2, 3], item => item > 5), 0)`],
   });
   lang.registerEvaluator({
-    op: "Default",
-    evaluate: ({ value, fallback }) => (value !== null && value !== undefined ? value : fallback),
+    op: Default,
+    evaluate: ({ value, fallback }) =>
+      value !== null && value !== undefined ? value : fallback.value,
     // Output type = value's type when known, else fallback's type
     inferOutput: (inputTypes) => {
       const v = inputTypes["value"];
       return v && !isAny(v) ? v : (inputTypes["fallback"] ?? Type.any);
+    },
+  });
+
+  // -------------------------------------------------------------------------
+  // Symbols - surface sugar over the ops above.
+  // -------------------------------------------------------------------------
+
+  // `a ?? b` is Default(a, b). Below `||` and above `? :`, as C#, PHP and JS have it: so
+  // `$x ?? 0 > 5` reads `$x ?? (0 > 5)`, and a default before arithmetic takes brackets,
+  // `($x ?? 0) + 1`.
+  lang.registerInfix("??", BP.COALESCE, (l, r) =>
+    operationNode("Default", { value: l, fallback: r }),
+  );
+
+  // `c ? a : b` is If(c, a, b), with C's grammar. The then branch reads at power 0 and ends at
+  // the colon, which is no operator, so a lambda body, a named argument `f(x: 1)` and a typed
+  // parameter `(x: number) => x` inside it all read. The else branch reads just below `?`, so
+  // `a ? b : c ? d : e` chains to the right, and a lambda there needs brackets, as in C:
+  // `c ? a : (x => x)`. A led with two operands to read, so it is written out.
+  lang.registerLed("?", {
+    bp: BP.CONDITIONAL,
+    parse: (p, left, token) => {
+      const then = p.parseExpr(0);
+      p.expect("punct", ":");
+      const otherwise = p.parseExpr(BP.CONDITIONAL - 1);
+      return operationNode(
+        "If",
+        { condition: left, then, else: otherwise },
+        { source: token.source },
+      );
     },
   });
 }

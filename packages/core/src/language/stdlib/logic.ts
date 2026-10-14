@@ -13,28 +13,26 @@ export function installLogic(lang: Language): void {
   // Combining booleans
   // -------------------------------------------------------------------------
 
-  lang.registerOp({
+  // Both read their nodes lazily, so they stop at the first node that decides them.
+  const And = lang.registerOp({
     name: "And",
-    inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
+    inputs: [{ name: "nodes", type: Type.boolean, variadic: true, lazy: true }],
     output: Type.boolean,
     category: "logic",
     description: "True when every node is true.",
     examples: [den`output ok = And(true, 1 > 0)`],
   });
-  lang.registerEvaluator({
-    op: "And",
-    evaluate: ({ nodes }) => (nodes as boolean[]).every(Boolean),
-  });
+  lang.registerEvaluator({ op: And, evaluate: ({ nodes }) => nodes.every((n) => n.value) });
 
-  lang.registerOp({
+  const Or = lang.registerOp({
     name: "Or",
-    inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
+    inputs: [{ name: "nodes", type: Type.boolean, variadic: true, lazy: true }],
     output: Type.boolean,
     category: "logic",
     description: "True when any node is true.",
     examples: [den`output ok = Or(false, 1 > 0)`],
   });
-  lang.registerEvaluator({ op: "Or", evaluate: ({ nodes }) => (nodes as boolean[]).some(Boolean) });
+  lang.registerEvaluator({ op: Or, evaluate: ({ nodes }) => nodes.some((n) => n.value) });
 
   lang.registerOp({
     name: "Not",

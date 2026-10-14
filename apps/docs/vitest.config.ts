@@ -11,6 +11,9 @@ export default defineConfig({
       "@dendrite-lang/core": fileURLToPath(
         new URL("../../packages/core/src/index.ts", import.meta.url),
       ),
+      "@dendrite-lang/editor": fileURLToPath(
+        new URL("../../packages/editor/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {

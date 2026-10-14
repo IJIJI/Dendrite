@@ -5,6 +5,116 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+**Closed by 0.7.0 on 2026-10-14** (the release itself gets its record when it is on npm): the
+three entries below are the backlog entries as they stood, kept for their reasoning. `If`
+reads one branch through a lazy input, `AnalysisContext` left the public surface, and a call
+to a name that is no op says so and names the nearest one.
+
+## Language — `If` evaluates both branches, so it cannot guard a read — DONE 2026-10-14 (0.7.0)
+
+**What:** `If(IsSet(found), found.name, "none")` evaluates `found.name` whether or not `found`
+is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no laziness.
+
+**Why deferred:** found 2026-09-22 by the second review of the types plan. Milestone N.2 of that
+plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
+remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
+propagation does not cover (an expensive branch, or a read that must throw).
+
+**A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
+(`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
+
+**Closes with 0.7.0** (decided 2026-10-13, `todo.md` "0.7.0", "Decided on 2026-10-13"): a lazy
+input, declared on the input and handed over as a `Thunk`. This entry moves to `done.md` when
+it ships.
+
+---
+
+## Core — `AnalysisContext` is public, and should not be — DONE 2026-10-14 (0.7.0)
+
+**What:** `packages/core/src/index.ts` re-exports everything in `analyser/types.ts`, which
+includes `AnalysisContext` - the analyser's working state (the scope, the failed bindings, the
+declaration index). No host builds one or reads one; it is in the published `.d.ts` by accident,
+and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`, 2026-09-18) is
+technically a breaking change for nobody.
+
+**What it requires:** export the result and diagnostic types by name instead of `export *`, and
+leave `AnalysisContext` internal, at a minor release. The release it was first tied to, the one
+with the operator-naming aliases, was 0.4.0, which renamed outright and went without it.
+
+**Decided 2026-10-08: it stays public for now** (the maintainer), so it is not in 0.6.0. No
+file outside core's analyser reads it (checked that day, every package and app).
+
+**Who might want it one day,** weighed for that decision:
+
+| A future need | Does it need this type public? |
+| --- | --- |
+| A language service asks which names are in scope | No: it needs that answer, from a query API |
+| A host writes its own analysis pass or lint rule | Yes, a context type. No such extension point exists, and one would get a narrower type by design |
+| `inferOutput` gets more to read | No: it would take a narrow argument |
+| The Rete adapter wants types per node | No: the `CoreProgram` carries them |
+
+One asymmetry to remember: adding an export later is no break, and removing one is. Each release
+it stays public is a release in which a host may come to import it.
+
+---
+
+## Core — a call to a name that is no op is reported as an undeclared binding — DONE 2026-10-14 (0.7.0)
+
+**What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
+`undeclared_binding_reference`: "'Length' is not declared as a binding or scoped variable". The
+parser builds an op node only when the name is a registered op (`buildCall` in
+`parser/core-grammar.ts`) and reads every other call as the application of a binding, so the
+analyser never sees an op to miss. `unknown_op` is reached only by an op node that came from
+elsewhere: a program stored in `ast` form, or a graph. The message is true and it does not
+help: the author meant an op. The output is dropped and `compile` stays `ok: true`, as for any
+optional output that fails.
+
+**Why deferred:** found 2026-10-07 by the tests of `createStdlib({ segments })`, which make it
+easier to meet: a host leaves a segment out, and an author writes from the full reference. It
+is as old as calls are, and no host takes part of the library yet.
+
+**What it requires:** where the analyser reports an undeclared name in the callee position of
+an application, say that no op and no binding has that name. Decide whether that is a wording
+of `undeclared_binding_reference` or a kind of its own (*Every diagnostic* is generated from
+the registry, so a new kind needs its sample). Naming the nearest op (`Lenght` → `Length`) is a
+further step with a helper of its own. A changelog line.
+
+---
+
+## Editor 0.6.1 on npm — DONE 2026-10-10
+
+`@dendrite-lang/editor` at **0.6.1**, two days after 0.6.0, and the first release of one
+package alone: core and link stay at 0.6.0, and the editor's peer range is still `^0.6.0`. A
+patch, with one line a host can see: the dark theme sits one step down the brand's ramp. Two
+fixes beside it: an output's value in the editor's mono, and `--dendrite-code-min-height`
+filling the code area. What was built, and why, is in the two entries below (part 1 and
+part 2).
+
+**The runbook** (`release-plan.md`, "Every later release") held. PR #26 showed 23 of 23
+commits. One tag, `@dendrite-lang/editor@0.6.1`, and one GitHub release on it ("Dendrite editor
+0.6.1 - Restyled the editor") started one `Stage release` run: 34 seconds, green, with core
+0.6.0 and link 0.6.0 skipped as already on npm and the editor staged. One approval.
+
+**Checked after approval, from outside the repo:** `latest` is 0.6.1 on the editor and 0.6.0
+on core and link; the version has an attestation; `npm audit signatures` verified every
+signature; and a clean `npm install` of core 0.6.0 and the editor 0.6.1 ran a check of 15
+lines, all passing: the versions and the peer range, the five surfaces in both themes read
+from the shipped `style.css`, the scroller rule, the output value's font with its numerals
+after it, an import that colours an op, the React entry, and no test file in the tarball. The
+check was written before approval and run both ways: 15 of 15 on the tarball of the release
+tree, and 9 of 15 failing on 0.6.0 from npm. One of its lines passed on 0.6.0 at first, an
+order test that is true when the thing it orders is missing; it was tightened before it was
+trusted.
+
+**The site** deployed with the PR's merge: the live stylesheet has the panel on dark-0, the
+TypeScript frame on the editor's canvas, the chip on dark-2 and the output value's font;
+*Embedding core* shows its new sample; the playground serves its own icon.
+
+**Left by the run, in the backlog:** two notices of GitHub's, about the actions' Node version
+and about `ubuntu-latest` ("CI — the workflows' actions and runner are about to move").
+
+---
+
 ## Docs — the docs pass of 0.6.1 (part 2): the site with the restyled editor, and two known faults — DONE 2026-10-09
 
 Part 2 of 0.6.1, the same day as part 1 (the entry below). Its scope was three things, decided
@@ -127,7 +237,8 @@ in both themes. The dashed box might have been meant lighter than a solid one; i
 that it is the lesser box, and the site has one border colour. No rule the site owns names a
 step of the ramp for a border any more.
 
-**Found in passing, and filed:** `instance.setProgram` trusts a saved program's ports
+**Found in passing, and filed:** a saved program that is not well formed (it began as
+"`setProgram` trusts its ports")
 (`backlog.md`); the editor package has no `@types/node` of its own (`backlog.md`); and two
 things the maintainer asked for while this was planned, in `todo.md`: *How a program runs*
 gets simpler, and the two styles for setting an input.

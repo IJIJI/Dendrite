@@ -20,14 +20,17 @@ import {
   registerPrefix,
   registerStatement,
   type StatementFn,
+  symbolsOf,
 } from "./parser/grammar";
 import { installCoreGrammar } from "./parser/core-grammar";
 import { tokenise } from "./parser/lexer";
 import { parse } from "./parser/parser";
 import { type ParseResult } from "./parser/types";
 
-// Re-export the binding-power tiers: registering operators is part of the Language API.
+// Re-export the binding-power tiers and the symbol query: registering operators, and
+// tokenising with them, is part of the Language API.
 export { BP } from "./parser/precedence";
+export { symbolsOf } from "./parser/grammar";
 
 //? Language: the assembly that bundles the infra LanguageDescriptor (semantics) with a
 // parser-layer Grammar (syntax) behind one register API. Defining a language is one
@@ -36,10 +39,11 @@ export { BP } from "./parser/precedence";
 export interface Language {
   descriptor: Vocabulary;
   grammar: Grammar;
-  // Semantics → descriptor.
+  // Semantics → descriptor. registerOp hands the definition back with its literal types kept,
+  // so `registerEvaluator({ op: If, … })` types the lazy inputs from it (EvaluatorDefinition).
   registerType(name: string, config?: Omit<TypeDefinition, "name">): void;
-  registerOp(def: OpDefinition): void;
-  registerEvaluator(def: EvaluatorDefinition): void;
+  registerOp<const D extends OpDefinition>(def: D): D;
+  registerEvaluator<const D extends OpDefinition | string>(def: EvaluatorDefinition<D>): void;
   // Syntax → grammar. Full handlers, with operator sugar on top.
   registerNud(key: string, nud: Nud): void;
   registerLed(key: string, led: Led): void;
@@ -73,8 +77,16 @@ export function createLanguage(): Language {
     registerType(name, config) {
       types.set(name, { name, ...config });
     },
-    registerOp: (def) => ops.set(def.name, def),
-    registerEvaluator: (def) => evaluators.set(def.op, def),
+    registerOp: (def) => {
+      ops.set(def.name, def);
+      return def;
+    },
+    registerEvaluator: (def) => {
+      // The definition as `op` types the lazy keys at the call site; the map keeps the name,
+      // so every reader of `op` (extendLanguage, validateDescriptor, the link) sees a string.
+      const name = typeof def.op === "string" ? def.op : def.op.name;
+      evaluators.set(name, { ...def, op: name });
+    },
 
     registerNud: (key, nud) => registerNud(grammar, key, nud),
     registerLed: (key, led) => registerLed(grammar, key, led),
@@ -132,14 +144,14 @@ export function extendLanguage(extension: Language, base: Language): Language {
 }
 
 //? parseSource: source → RawProgram in one call (lex + parse, no analysis). Derives the
-// lexer's operator vocabulary from the language's grammar (single-sourced - adding an
-// operator needs no lexer edit) and merges lexer + parser diagnostics.
+// lexer's symbols from the language's grammar (single-sourced - adding an operator needs no
+// lexer edit) and merges lexer + parser diagnostics.
 export function parseSource(source: string, language: Language): ParseResult {
   const {
     tokens,
     errors: lexErrors,
     warnings: lexWarnings,
-  } = tokenise(source, [...language.grammar.symbols]);
+  } = tokenise(source, [...symbolsOf(language.grammar)]);
   const result = parse(tokens, language.descriptor, language.grammar);
   const warnings = [...lexWarnings, ...result.warnings];
   if (lexErrors.length > 0 || !result.ok) {

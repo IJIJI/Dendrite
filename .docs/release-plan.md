@@ -173,7 +173,9 @@ j. **Me, a commit:** the Installation page loses its "not on npm yet" callout, t
 The runbook. Only the packages whose version changed are part of a release.
 
 1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
-   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three.
+   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three. A new peer range
+   is in `yarn.lock` too: run `yarn install` after the bump and commit the lockfile, or the
+   `--immutable` install in CI fails (0.7.0).
 2. Merge `dev` into `main`, through a PR. Before merging, check that the PR's commit count equals
    `git log --oneline origin/main..dev | wc -l`: a push to `dev` after the PR opened is not in it
    (0.4.0 merged 16 of 21 that way). If a merge was reverted by mistake, do not merge `dev`
@@ -256,6 +258,27 @@ import alone: it is what caught nothing this time and would catch a build that p
 - **A change in Settings → Pages does not rebuild the site.** Run "Deploy site" by hand after
   one. The workflow reads its address from Pages now, so a re-run is all a new domain needs,
   and its last step fails when the deployed page cannot find its stylesheet.
+
+## What the seventh release taught
+
+**0.6.1 of the editor, 2026-10-10: the first release of one package alone. The runbook held,
+and four things are worth keeping.**
+
+- **One package alone needs nothing special.** The version and the changelog of that package,
+  one tag, and the release on that tag. The workflow stages what npm lacks and skips the rest
+  with a notice, so core and link need no thought, and there is no "core first" to approve.
+  `yarn install --immutable` after the bump shows that the lockfile does not change.
+- **The tag goes on `main` without leaving `dev`.** After the merge: `git fetch origin`, read
+  `git log -1 --oneline origin/main` to see the merge, then
+  `git tag -a "@dendrite-lang/editor@0.6.1" -m "@dendrite-lang/editor 0.6.1" origin/main` and
+  push the tag. No checkout, so no chance of a merge commit reaching `dev`.
+- **A release of looks is checked by reading what ships.** No call shows a colour, so the check
+  reads `style.css` from the installed package: the pairs of each surface, and the two rules
+  of the fixes. It is the same idea as the guard in the repo (`src/style.test.ts`), run on the
+  tarball.
+- **A check line that cannot fail is found by the run on the old version.** Fifteen lines, and
+  on 0.6.0 one that should have failed passed: "set after the font" was true with no font at
+  all. Running both ways is what shows it, line by line, not only as a count.
 
 ## If something fails
 

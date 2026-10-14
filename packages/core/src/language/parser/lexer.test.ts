@@ -151,6 +151,11 @@ describe("operators", () => {
     expect(values("2**3", ["**"])).toEqual(["2", "**", "3"]);
   });
 
+  it("?? wins over ?, as >= over >: longest match", () => {
+    expect(values("a ?? b", ["?", "??"])).toEqual(["a", "??", "b"]);
+    expect(values("c ? a : b", ["?", "??"])).toEqual(["c", "?", "a", ":", "b"]);
+  });
+
   it("=-3 is = then -3, not the operator =-", () => {
     // = is structural, - is an operator; =- is in neither set, so it splits.
     expect(values("=-3", OPS)).toEqual(["=", "-", "3"]);

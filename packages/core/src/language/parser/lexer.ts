@@ -58,6 +58,29 @@ const STRUCTURAL_PUNCT = new Set("()[],.=:$~");
 // `=>` is the lambda arrow; `->` is the function-type arrow (type annotations).
 const CORE_OPERATORS = ["=>", "->"];
 
+// What the lexer reads with no symbol list handed to it, which is what a grammar's handler
+// keys can name without being symbols: the token kinds (a handler on `ident` or `number`),
+// the structural punctuation, the core operators, and the backtick, which opens a template
+// before the operators are tried, as a quote opens a string. `symbolsOf` (grammar.ts) skips
+// these when it derives the lexer's symbols from a grammar, and the registration guards
+// accept a word as a key only when it is one of these.
+const TOKEN_KINDS: readonly TokenKind[] = [
+  "ident",
+  "string",
+  "number",
+  "boolean",
+  "null",
+  "punct",
+  "comment",
+  "eof",
+];
+export const LEXER_OWNED: ReadonlySet<string> = new Set([
+  ...TOKEN_KINDS,
+  ...STRUCTURAL_PUNCT,
+  ...CORE_OPERATORS,
+  "`",
+]);
+
 // Only literal values are recognised at the lexer level (see the note above TokenKind).
 // The literal words come from infra/identifier.ts (shared with port-name validation); only
 // their token kinds are lexer knowledge.

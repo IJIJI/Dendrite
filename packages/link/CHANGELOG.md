@@ -7,7 +7,14 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.6.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+`^0.7.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+
+## 0.7.0
+
+- **No change in the package.** The peer range moves to core `^0.7.0`. The fingerprint is the
+  names of the language's ops and types, and 0.7.0 adds none, so two ends on 0.6.0 and 0.7.0
+  still shake hands; what differs between them is how `If`, `Default`, `And` and `Or` evaluate,
+  which each end does for itself.
 
 ## 0.6.0
 

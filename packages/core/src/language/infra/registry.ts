@@ -2,6 +2,7 @@ import { type ZodType } from "zod";
 
 // Type-only: serialise → ports → registry is the runtime order, and this edge back is erased.
 import { type SavedProgram } from "./serialise";
+import { type Thunk } from "./thunk";
 import { type Type } from "./types";
 
 //? Definition types
@@ -50,11 +51,19 @@ export interface OpInput {
    * combination is refused when the language composes. The reference shows it as `name~`.
    */
   convert?: true;
+  /**
+   * The op receives this input unevaluated, as a `Thunk` (a variadic one as a `Thunk[]`), and
+   * reads `.value` when and if it wants it: `If` reads one branch, `And` stops at the first
+   * false. Laziness is how an op RECEIVES an input, not what a value is: no type carries it
+   * and a program cannot write it. A `convert` input converts inside the thunk. The
+   * reference shows it on the type, `then: lazy any`.
+   */
+  lazy?: true;
 }
 
 export interface OpDefinition {
   name: string;
-  inputs: OpInput[];
+  inputs: readonly OpInput[];
   output: Type; // static fallback: used when inferOutput is absent/undefined
   category?: string;
   /** One plain sentence (no markup) for a reference page and, later, editor hover. */
@@ -96,13 +105,38 @@ export interface OutputDefinition {
 export type FnValue = (...args: unknown[]) => unknown;
 
 /**
+ * The lazy inputs of an op definition, as its evaluator receives them: a `Thunk` for a lazy
+ * input, a `Thunk[]` for a lazy variadic one, `Thunk | undefined` for a lazy optional one (an
+ * absent optional input has no key). Every other input stays `unknown`. An op named by a
+ * string declares nothing here, so nothing is typed.
+ */
+export type LazyInputsOf<D> = D extends OpDefinition
+  ? {
+      [I in D["inputs"][number] as I extends { lazy: true } ? I["name"] : never]: I extends {
+        variadic: true;
+      }
+        ? Thunk[]
+        : I extends { required: false }
+          ? Thunk | undefined
+          : Thunk;
+    }
+  : Record<never, never>;
+
+/**
  * Evaluator definition for an op. Higher-order ops are ordinary ops with a
  * function-typed input — the function arrives as a resolved FnValue in `inputs`
  * and is called directly; there is no separate body/apply mechanism.
+ *
+ * `op` is the op's name, or the definition `registerOp` returned. With the definition, the
+ * lazy keys of `inputs` are typed from it, so `then.value` compiles and `condition.value`
+ * does not (`language/lazy.test-d.ts` holds each case). The language stores the name either
+ * way, so a reader of `op` always sees a string.
  */
-export interface EvaluatorDefinition {
-  op: string;
-  evaluate: (inputs: Record<string, unknown>) => unknown;
+export interface EvaluatorDefinition<D extends OpDefinition | string = string> {
+  op: D;
+  // A method signature, not a property: its parameter is checked bivariantly, which is what
+  // lets a definition typed by `D` store into the map of untyped ones (registerEvaluator).
+  evaluate(inputs: Record<string, unknown> & LazyInputsOf<D>): unknown;
   /**
    * Analysis-time output type inference. Called by the analyser after resolving
    * input types. Returns undefined to fall back to OpDefinition.output.

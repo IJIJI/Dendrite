@@ -951,3 +951,108 @@ describe("templates: text with holes, through Join", () => {
     expect(analysed.errors[0].message).toContain("'Join'");
   });
 });
+
+// ─── Lazy inputs ──────────────────────────────────────────────────────────────
+
+describe("a lazy input: the op reads it, or it is never evaluated", () => {
+  // A host op that throws, which a branch not taken must never reach, and one that counts its
+  // runs, which a thunk read twice must run once.
+  const hostLang = () => {
+    const lang = createStdlib();
+    let runs = 0;
+    lang.registerOp({ name: "Boom", inputs: [], output: Type.any });
+    lang.registerEvaluator({
+      op: "Boom",
+      evaluate: () => {
+        throw new Error("boom");
+      },
+    });
+    lang.registerOp({ name: "Count", inputs: [], output: Type.boolean });
+    lang.registerEvaluator({ op: "Count", evaluate: () => ++runs > 0 });
+    return { lang, runs: () => runs };
+  };
+  const out = (source: string, lang = createStdlib()) => runSource(source, "out", lang).value;
+
+  it("If evaluates the branch taken only, as an op and as ? :", () => {
+    const { lang } = hostLang();
+    expect(out("output out = If(true, 1, Boom())", lang)).toBe(1);
+    expect(out("output out = If(false, Boom(), 2)", lang)).toBe(2);
+    expect(out("output out = true ? 1 : Boom()", lang)).toBe(1);
+    expect(() => out("output out = If(false, 1, Boom())", lang)).toThrow(/boom/);
+  });
+
+  it("Default evaluates the fallback only when the value is null, as an op and as ??", () => {
+    const { lang } = hostLang();
+    expect(out("output out = Default(1, Boom())", lang)).toBe(1);
+    expect(out("output out = 1 ?? Boom()", lang)).toBe(1);
+    expect(() => out("output out = Default(null, Boom())", lang)).toThrow(/boom/);
+  });
+
+  it("And stops at the first false, Or at the first true, as ops and as && ||", () => {
+    const { lang, runs } = hostLang();
+    expect(out("output out = And(false, Count())", lang)).toBe(false);
+    expect(out("output out = Or(true, Count())", lang)).toBe(true);
+    expect(runs()).toBe(0);
+    expect(out("output out = And(true, Count())", lang)).toBe(true);
+    expect(runs()).toBe(1);
+    expect(out("output out = false && Boom()", lang)).toBe(false);
+    expect(out("output out = true || Boom()", lang)).toBe(true);
+  });
+
+  it("a thunk read twice evaluates once", () => {
+    const { lang, runs } = hostLang();
+    const Twice = lang.registerOp({
+      name: "Twice",
+      inputs: [{ name: "a", type: Type.boolean, lazy: true }],
+      output: Type.boolean,
+    });
+    lang.registerEvaluator({ op: Twice, evaluate: ({ a }) => a.value === a.value });
+    expect(out("output out = Twice(Count())", lang)).toBe(true);
+    expect(runs()).toBe(1);
+  });
+
+  it("a converting input declared lazy converts inside the thunk", () => {
+    const lang = createStdlib();
+    const Lazy = lang.registerOp({
+      name: "Lazy",
+      inputs: [{ name: "n", type: Type.number, convert: true, lazy: true }],
+      output: Type.number,
+    });
+    lang.registerEvaluator({ op: Lazy, evaluate: ({ n }) => n.value });
+    expect(out('output out = Lazy("12")', lang)).toBe(12);
+  });
+
+  it("a host op that returns a thunk is a host error", () => {
+    const lang = createStdlib();
+    const Leak = lang.registerOp({
+      name: "Leak",
+      inputs: [{ name: "a", type: Type.any, lazy: true }],
+      output: Type.any,
+    });
+    lang.registerEvaluator({ op: Leak, evaluate: ({ a }) => a });
+    expect(() => out("output out = Leak(1)", lang)).toThrow(/returned a Thunk/);
+  });
+
+  it("the cache under a lazy branch: a flipped condition reads the other branch, once each", () => {
+    const { lang, runs } = hostLang();
+    const descriptor = withPorts(lang, {
+      inputs: [{ name: "c", type: Type.boolean }],
+      outputs: [],
+    });
+    const parsed = parseSource("output out = $c ? Count() : false", lang);
+    if (!parsed.ok) throw new Error("parse failed");
+    const analysed = analyse(parsed.program, descriptor);
+    const node = analysed.program.outputs.get("out")!;
+    const state = createEvalState();
+    const cycle = (c: boolean) => {
+      updateInput("c", c, state);
+      return evaluate(node, analysed.program, state, new Set(["c"]), descriptor);
+    };
+    expect(cycle(true)).toBe(true);
+    expect(runs()).toBe(1); // the then branch, for the first time
+    expect(cycle(false)).toBe(false);
+    expect(runs()).toBe(1); // the else branch; the then branch is not touched
+    expect(cycle(true)).toBe(true);
+    expect(runs()).toBe(1); // the then branch again, from its cache: it depends on no input
+  });
+});

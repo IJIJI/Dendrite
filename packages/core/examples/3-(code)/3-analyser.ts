@@ -8,6 +8,7 @@
  */
 
 import { readFileSync } from "fs";
+import { symbolsOf } from "../../src/language/parser/grammar";
 import { tokenise } from "../../src/language/parser/lexer";
 import { parse } from "../../src/language/parser/parser";
 import { getOutputType } from "../../src/language/analyser/analyser";
@@ -46,7 +47,7 @@ const env = composed.environment;
 
 // --- Lex + parse ------------------------------------------------------------
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
-const { tokens } = tokenise(source, [...lang.grammar.symbols]);
+const { tokens } = tokenise(source, [...symbolsOf(lang.grammar)]);
 const parsed = parse(tokens, env.descriptor, lang.grammar);
 
 if (!parsed.ok) {

@@ -25,11 +25,11 @@ output result  = status
 | Package | Description | Status |
 |---|---|---|
 | `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.6.0** (2026-10-08). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.6.0** (2026-10-08). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.6.1** (2026-10-10; released alone, so its number has parted from core's and link's). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
 | `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.6.0** (2026-10-08). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
-| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09, content to come (`docs-plan.md`); deployed at the root `dendrite-lang.org/` |
+| `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09 (`docs-plan.md`); thirty pages in Learn, the stdlib reference, How it works and Host developers, and a stub for Contribute; deployed at the root `dendrite-lang.org/` |
 
 ---
 
@@ -99,6 +99,10 @@ sentences with one idea each, active voice, one word for one thing, a verb rathe
 phrasal verbs, no semicolons. Keep a hedge: "may fail" stays "may fail". End a long answer with a
 short recap. The site's documentation prose keeps its own voice.
 
+**A comparison with other languages always includes C++ and Java** (the maintainer,
+2026-10-12), and others where they show something those two do not: PHP, Rust, Go, SQL, a
+spreadsheet.
+
 **Docs prose uses no dash where an em dash would go** (an aside, an introduction, a trailing
 thought): a comma, a colon or parentheses instead, rewritten by hand, which is most places. A
 dash that reads naturally may stay. Code and tables are exempt.
@@ -148,7 +152,8 @@ packages/core/src/language/
   infra/      types.ts (Type union + constructors), nodes.ts (ASTNode/CNode, node constructors),
               registry.ts (Vocabulary + LanguageDescriptor, isCompatible, FnValue),
               ports.ts (Ports, PortLayer, Policy), identifier.ts, observable.ts,
-              program.ts (Raw/CoreProgram), serialise.ts (SavedProgram + its ports)
+              program.ts (Raw/CoreProgram), serialise.ts (SavedProgram + its ports),
+              thunk.ts (Thunk: how an input declared lazy reaches an op)
   parser/     lexer.ts, parser.ts (Pratt kernel), grammar.ts (registration API),
               core-grammar.ts (installCoreGrammar), precedence.ts (BP ladder), types.ts
   analyser/   analyser.ts (analyse: pass pipeline), types.ts
@@ -202,7 +207,7 @@ See `architecture.md` for the layering DAG and full design.
   batteries (ops, evaluators and their symbols, one file per segment), and
   `createStdlib({ segments })` takes some of them; `extendLanguage`/`extendStdlib` compose. Operators are sugar over ops (`registerInfix`/
   `registerPrefix`), desugaring to op nodes; the lexer's symbol vocabulary is single-sourced from
-  `grammar.symbols`.
+  `symbolsOf(grammar)`.
 
 ### Analyser
 - `analyse` is a **pass pipeline**: `buildReferenceGraph` → `topoSort` (cycle detection) →
@@ -224,6 +229,11 @@ See `architecture.md` for the layering DAG and full design.
 - Arrays/functions are structural — never "register" them.
 - `bodyScope ?? nodeCache` for inline-node caching (bodyScope when inside a lambda body).
 - Raw `ASTNode`s carry no inferred `type` — the analyser produces typed `CNode`s.
+- **The reference marks an input on its name** for how the op receives it, one mark at most:
+  `nodes...` variadic, `separator?` optional, `parts~` converts (NOT "inferred": an inferred
+  input, a lambda typed from the list, has no mark). **A lazy input is marked on its type**,
+  `then: lazy any`, so it combines with a name mark: `nodes...: lazy boolean` (decided
+  2026-10-13).
 - **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
   `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
   READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts

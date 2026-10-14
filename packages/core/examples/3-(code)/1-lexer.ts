@@ -3,18 +3,19 @@
  *
  * The lexer's operator vocabulary is single-sourced from the language's grammar:
  * the core arrows (=>, ->) are always recognised, and registered operators (+, >=,
- * &&, …) come from `lang.grammar.symbols`. Structural punctuation (parens,
+ * &&, …) come from `symbolsOf(lang.grammar)`. Structural punctuation (parens,
  * commas, the $ input sigil, …) is always recognised.
  */
 
 import { readFileSync } from "fs";
+import { symbolsOf } from "../../src/language/parser/grammar";
 import { tokenise } from "../../src/language/parser/lexer";
 import { createStdlib } from "../../src/language/stdlib";
 
 const lang = createStdlib();
 const source = readFileSync(new URL("./grade.den", import.meta.url), "utf8");
 
-const { tokens, errors, warnings } = tokenise(source, [...lang.grammar.symbols]);
+const { tokens, errors, warnings } = tokenise(source, [...symbolsOf(lang.grammar)]);
 
 console.log("=== Tokens ===");
 function loc(source: import("../../src/language/infra/nodes").SourceRef): string {

@@ -232,7 +232,11 @@ first, or with this one.
 
 ---
 
-## Language — `+` on text
+## Language — `+` on text — REJECTED 2026-10-12
+
+**Rejected by the maintainer:** "Lets keep `++` for text joining." `+` is for numbers, `++` and
+a template are for text, and a second way to join adds a question (`1 + "1"`) and no ability.
+The entry as it stood:
 
 **What:** `"Hello, " + name`, by teaching `Add` strings, as most languages overload `+`.
 
@@ -247,26 +251,26 @@ variadic branch of `validateInputs` analyses all items before it checks them, th
 
 ---
 
-## Core — a call to a name that is no op is reported as an undeclared binding
+## Core — the nearest-name hint on a port type and on an op node
 
-**What:** `Lenght([1])`, or `Length([1])` on a library without the `array` segment, is
-`undeclared_binding_reference`: "'Length' is not declared as a binding or scoped variable". The
-parser builds an op node only when the name is a registered op (`buildCall` in
-`parser/core-grammar.ts`) and reads every other call as the application of a binding, so the
-analyser never sees an op to miss. `unknown_op` is reached only by an op node that came from
-elsewhere: a program stored in `ast` form, or a graph. The message is true and it does not
-help: the author meant an op. The output is dropped and `compile` stays `ok: true`, as for any
-optional output that fails.
+**What:** 0.7.0 appends "Did you mean 'x'?" to eight diagnostics (`analyser/nearest.ts`): a
+call to a name that is no op, a plain reference, an input, a struct field, a type written in
+a program, an argument named for an input or a parameter that does not exist, and an output
+nobody declared. Two more name something that could be near a declared name, and say nothing:
 
-**Why deferred:** found 2026-10-07 by the tests of `createStdlib({ segments })`, which make it
-easier to meet: a host leaves a segment out, and an author writes from the full reference. It
-is as old as calls are, and no host takes part of the library yet.
+| Diagnostic | The name | The candidates |
+| --- | --- | --- |
+| `unknown_port_type` | A declaration's type, at compose time | The registered types |
+| `unknown_op` | An op node from an `ast` program or a graph, naming no op | The ops |
 
-**What it requires:** where the analyser reports an undeclared name in the callee position of
-an application, say that no op and no binding has that name. Decide whether that is a wording
-of `undeclared_binding_reference` or a kind of its own (*Every diagnostic* is generated from
-the registry, so a new kind needs its sample). Naming the nearest op (`Lenght` → `Length`) is a
-further step with a helper of its own. A changelog line.
+**Why deferred:** decided with the maintainer on 2026-10-14, when the other four were added to
+0.7.0 (commit 6): a port type is declared by a host in code, and an op node that names no op
+comes only from an `ast` program or a graph, which nothing produces yet. Both get their consumer
+with the visual (Rete) half, where a graph can misname an op.
+
+**What it requires:** the `hint(...)` call at each site (`validateDescriptor` for the type, the
+`operation` case of `analyseNode` for the op), the sentence given a full stop before it, one
+test each, and the *Every diagnostic* page read in the build.
 
 ---
 
@@ -291,6 +295,97 @@ pass the type's `schema` (a `Grade` of 11), and what is it when it does not; `nu
 function on `TypeDefinition` and one more case in each of those two functions. Like `schema`
 it is a function, so it cannot travel in the layer an instance persists. "A type defines its
 own text form" below is the other direction (`toText`); design the two together.
+
+---
+
+## Language — a `null` item in a list literal: reassess before 1.0.0
+
+**What:** decided on 2026-10-12 for the plan of option B: a `null` item leaves a list
+literal's type alone, so `[1, null]` is `number[]`, where it is `any[]` today (a list with a
+`null` in it counts as a mixed list, and `Average([1, null])` warns `implicit_any_cast`). The
+maintainer asked for a note to look at it again before 1.0.0.
+
+**Why it wants a second look:** the rule rests on "a `null` fits every type". With union types
+the honest type is `(number | null)[]`, and "explicit nullability" (the end of this file) would
+make that visible to the checker. If that is ever wanted, `number[]` for `[1, null]` is the
+looser answer, and tightening it after 1.0.0 is a break that no warning announces.
+
+**What it requires:** the question, once union types are planned: is `null` a member of every
+type for good, or of a type that says so. The first keeps this rule. The second changes it,
+and has to come before 1.0.0 or be covered by a warning first.
+
+---
+
+## Core — a typed evaluator derived from the op's declaration (the strict keys)
+
+**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
+`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
+because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
+declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
+`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
+keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
+`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
+cast goes, and the four lazy ops do not change again.
+
+**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
+is in `todo.md`, "The order after 0.6.1".
+
+**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
+`number` is true only once the evaluator guarantees an input's declared type at the door, which
+is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
+can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
+widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
+comes after option B.
+
+**What it requires:** (a) `Type.number` and the other constants typed as their literals, and
+`Type.array` / `Type.fn` keeping the element's type: additive. (b) A mapping from a `Type`
+literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
+`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
+array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
+`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
+(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
+`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
+anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
+API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
+lazy slice verified by a probe.
+
+---
+
+## Language — thunks as values, and a lazy lambda parameter
+
+**What:** 0.7.0 builds a `Thunk` (a class with a `.value` getter) that an op's evaluator
+receives for an input declared `lazy: true`. Three levels were compared on 2026-10-13, and the
+flag is level 1. This entry marks the door to level 3: a thunk as a value of the language,
+`let later = lazy expensive`, passed to a function or an op, forced with a `Force` op or a `!`
+form, typed `lazy T` as a fourth kind of `Type`. A lazy lambda parameter (`(x: lazy number)`,
+Scala's by-name) is the same door: `f(expensive)` evaluates its argument even when `f` ignores
+it.
+
+**Why deferred:** no consumer. A `let` is already computed only when an output pulls it, and
+once per cycle, which is call-by-need at the binding level; an op's input is lazy where an op
+declares it; a function's argument is the one eager place left, and nothing a program can
+observe changes with it (no side effects, and after option B no run errors), only time.
+
+**What it requires:** the type kind in every switch over a type (`typeToString`, `typesEqual`,
+`isCompatible`, `elementOf`, the port serialiser, the type grammar, the reference's printer,
+the editor's colouring), a `Force` op or `!`, a rule that an output forces (a thunk is not
+JSON, so it cannot leave through a port or a link), rules for `==` and `IsSet` on a thunk,
+whether a thunk may be `any` (a function may not), a node in the graph editor. The base is its
+first step: the `Thunk` class is its run-time value, and `lazy any` is already the name its
+type would print, so the docs would not change.
+
+**Level 2, refused for good:** `lazy T` as a kind of `Type` allowed on op inputs only. No value
+ever has it, so it is the flag's one bit at the type system's price.
+
+**The native form, kept for level 3** (the maintainer's question, 2026-10-13): a zero-argument
+lambda is the thunk the language already has, and `Force(f)` is `f()`. Weighed for 0.7.0 as the
+wrap the analyser would insert around a lazy input, and not taken: the same `lazy: true` is
+still needed (a `() -> any` type as the signal makes `If(c, f, g)` with a zero-argument `f`
+ambiguous, and accepting a `T` where `() -> T` is expected is an implicit coercion), it moves
+laziness into the analyser and a lambda node into the `CoreProgram` (`inferOutput` and the
+graph editor would unwrap it), an application is not memoised, and it costs nine times the
+`Thunk` (124 ns against 14 for two inputs, measured: a closure application copies the local
+scope). If level 3 comes, the lambda is its value and the `Thunk` its internal form.
 
 ---
 
@@ -484,21 +579,6 @@ a string that knows how to be a list), so an op never has to convert.
 **Why rejected:** a Dendrite value is plain JSON: it crosses the host boundary, the link, and a
 saved document unchanged. A value with behaviour would not. Conversion belongs to the op that
 needs it (the `convert` flag, `types-and-text-plan.md`), or to the author (`ToString`, `as`).
-
----
-
-## Language — `If` evaluates both branches, so it cannot guard a read
-
-**What:** `If(IsSet(found), found.name, "none")` evaluates `found.name` whether or not `found`
-is set. `If` is an ordinary op, and an op receives evaluated inputs; there is no laziness.
-
-**Why deferred:** found 2026-09-22 by the second review of the types plan. Milestone N.2 of that
-plan makes a field read on `null` give `null`, so this particular guard is no longer needed. What
-remains is the general fact: no op can short-circuit. Revisit if a case appears that `null`
-propagation does not cover (an expensive branch, or a read that must throw).
-
-**A case that is coming (2026-10-05):** the conditional expression `c ? a : b`, sugar over `If`
-(`todo.md`, after 0.6.0), inherits this, and a reader of `?:` expects only one branch to run.
 
 ---
 
@@ -849,6 +929,26 @@ against the new ground; then update `--dendrite-*` in `packages/editor/style.css
 
 ---
 
+## Editor — `styledRanges` could read the lexer's own constants
+
+**What:** the highlighter in `packages/editor/src/code/tokens.ts` classifies punctuation with
+literals of its own: the two arrows `=>` and `->` are written out as the symbols the lexer
+owns, `$` and the backtick are named by hand, and `TYPE_PUNCT` lists the punctuation a type is
+written with. Since 0.7.0 the lexer states the same facts once, in `parser/lexer.ts`:
+`CORE_OPERATORS`, `STRUCTURAL_PUNCT`, and `LEXER_OWNED` over both. The editor could read those
+instead of repeating them, so a new core operator would colour itself.
+
+**Why deferred:** asked by the maintainer on 2026-10-14, as commit 1 of 0.7.0 landed, and not
+taken into it: the constants are module exports of `lexer.ts` and not part of core's public
+surface, and what core makes public is a decision for before 1.0.0 (`todo.md`, "Before
+1.0.0", the row "What is public"). Three literals in one function is the whole cost today.
+
+**What it requires:** decide which of the three constants become public (`LEXER_OWNED` alone
+does not say which of its members is an arrow); export them from `index.ts`; replace the
+literals in `styledRanges` and the `TYPE_PUNCT` overlap; a line in the editor's changelog.
+
+---
+
 ## Editor — tune the highlight colours
 
 **What:** The editor's highlight colours were chosen by formula, not by eye: the active line
@@ -914,6 +1014,24 @@ split pays once the layouts land and the file passes ~1200 lines.
 
 ---
 
+## CI — the workflows' actions and runner are about to move
+
+**What:** two notices on the `Stage release` run of 2026-10-10, and they hold for all seven
+workflows in `.github/workflows/`:
+
+- "Node.js 20 is deprecated": `actions/checkout@v4`, `actions/setup-node@v4` and
+  `actions/cache@v4` target Node 20 and are forced onto Node 24.
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026."
+
+**Why deferred:** every run is green. Found while the release of the editor's 0.6.1 was
+checked, which is not the commit for it.
+
+**What it requires:** the next major of the three actions where one exists (in the workflows
+and in `.github/actions/setup`), and a look at the first runs after 2026-10-19: Pages, and the
+publish workflow's `npm install --global npm@^11.15.0`, are the two that lean on the image.
+
+---
+
 ## Editor — the top bar in the site's shape
 
 **What:** the playground's `Editor.TopBar` and the site's nav are two shapes. Measured on
@@ -949,6 +1067,35 @@ colours. Typecheck passes today.
 
 **What it requires:** `@types/node` in the editor's `devDependencies`, at the version the other
 workspaces have, and a `yarn install` for the lockfile.
+
+---
+
+## Editor and playground — memory use, a stress test, and performance
+
+**What:** on 2026-10-12 the playground page crashed in the maintainer's browser, out of memory.
+What was open, for how long and with what program is not recorded, and it was not reproduced.
+
+**Why deferred:** reported in the middle of the talk about types, and nothing is known yet
+beyond the crash. No measurement of memory or of time exists for the editor, the playground or
+a long session.
+
+**What it requires:**
+
+- **Reproduce it.** The page, the browser, how long it was open, and what was in it. A heap
+  snapshot before and after an hour of editing says whether memory grows or was large at once.
+- **A stress test** that a script can run: a long program, a long session of edits, a large
+  list on an input, many instances on one runtime, and the theme and layout switched many times.
+- **The suspects, none checked:** a program is compiled on every edit, and what holds the old
+  ones (the evaluator's caches are WeakMaps keyed by node, so a held program holds its cache);
+  listeners an instance or a session does not release; the undo history; the document written
+  to the URL and to localStorage on each change; CodeMirror views that are replaced and not
+  destroyed.
+- **Then a budget**, and what the measurement says to change. Speed belongs here too: no
+  number exists for a compile or an evaluation per keystroke. The first numbers for evaluation
+  alone, taken on 2026-10-12 for another question (core 0.6.0, one machine, a list of a million
+  numbers, no cache): `Map($l, x => x + 1)` 528 ms, `Filter($l, x => x > 0)` 506 ms, so about
+  half a microsecond for each item that runs a lambda; `Concat($l, $l)` 32 ms; `Average($l)`
+  8 ms. With 10,000 items `Map` is 5 ms.
 
 ---
 
@@ -1152,55 +1299,121 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
-## Core — `AnalysisContext` is public, and should not be
+## Core — a saved program that is not well formed (it began as "`setProgram` trusts its ports")
 
-**What:** `packages/core/src/index.ts` re-exports everything in `analyser/types.ts`, which
-includes `AnalysisContext` - the analyser's working state (the scope, the failed bindings, the
-declaration index). No host builds one or reads one; it is in the published `.d.ts` by accident,
-and renaming a field in it (`currentBindingIndex` → `currentDeclarationIndex`, 2026-09-18) is
-technically a breaking change for nobody.
+**What:** a saved program is data from outside: a host reads it from a file or a database and
+hands it over. Core checks part of it, and what it does not check comes out as a raw
+`TypeError`, from commands that are documented to report through the observables. Probed on
+2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
 
-**What it requires:** export the result and diagnostic types by name instead of `export *`, and
-leave `AnalysisContext` internal, at a minor release. The release it was first tied to, the one
-with the operator-naming aliases, was 0.4.0, which renamed outright and went without it.
+| Handed to `setProgram` | The call | A sound program next |
+| --- | --- | --- |
+| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
+| Ports where `inputs` is a text | `TypeError` | **Throws again** |
+| An input with no name | `TypeError` | **Throws again** |
+| An input whose type is a text | `malformed_program`, stale | Works |
+| Ports that are `null` | `malformed_program`, stale | Works |
+| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
+| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
+| A version from the future | `unsupported_version`, stale | Works |
 
-**Decided 2026-10-08: it stays public for now** (the maintainer), so it is not in 0.6.0. No
-file outside core's analyser reads it (checked that day, every package and app).
+`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
+no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
+source and for the form.
 
-**Who might want it one day,** weighed for that decision:
+**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
+persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
+is already replaced, so every later recompile throws too.
 
-| A future need | Does it need this type public? |
-| --- | --- |
-| A language service asks which names are in scope | No: it needs that answer, from a query API |
-| A host writes its own analysis pass or lint rule | Yes, a context type. No such extension point exists, and one would get a narrower type by design |
-| `inferOutput` gets more to read | No: it would take a narrow argument |
-| The Rete adapter wants types per node | No: the `CoreProgram` carries them |
+**The cause under all of it:** the whole check exists, and it is in the wrong package.
+`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
+the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
+that arrives from storage goes past it.
 
-One asymmetry to remember: adding an export later is no break, and removing one is. Each release
-it stays public is a release in which a host may come to import it.
+**Who can reach it:** any host that loads what it saved, when the file is damaged or was
+written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
+`SavedProgram`.
+
+**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
+0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
+the *Embedding core* sample was probed for the docs pass of 0.6.1.
+
+**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
+instance already reports `unsupported_version` that way: a diagnostic, and the old program
+keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
+would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
+range has to say so.
+
+**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
+three things the plan settled with it:
+
+- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
+  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
+  every door composes, so the kind is the same at both levels and each level keeps its channel:
+  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
+  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
+  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
+  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
+  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
+  global and a program layer? The kind should be, the channel should not.
+- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
+  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
+  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
+  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
+  through `export *`, and a patch removes nothing.
+- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
+  host layer with `ports: null` is read in five places before and after compose, so a guard
+  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
+  reported, a layer built in code throws); one test pins it.
+
+Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
+page prints every compose sample's declarations through `declarationsOf`, which maps over
+`ports.inputs` and would break the build on a bad shape; and the link's one test file is
+`link.test.ts`. The release record is written after the release, as every record is.
+
+**What it requires, in two sizes:**
+
+- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
+  `malformed_program` where it fails. It ends the three cases that break an instance. The four
+  other raw errors stay.
+- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
+  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
+  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
+  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
+  the table, and one that a refused program leaves the next one working.
 
 ---
 
-## Core — `instance.setProgram` trusts a saved program's ports
+## Core — run-time tracking: what happened while a program ran
 
-**What:** `setProgram(saved)` writes `saved.ports` into the instance's persisted layer and
-THEN recompiles (`runtime/instance.ts`). Ports that are not ports, for example an object with
-`inputs` and no `outputs`, make `composeLayers` throw `layer.ports.outputs is not iterable`, a
-raw `TypeError` out of a command that is documented to report through the observables. The
-layer is already replaced, so the instance stays broken: the next `setProgram`, with a sound
-program, throws the same error. Probed on 2026-10-09.
+**What:** asked by the maintainer on 2026-10-12. A run gives values, or it throws ONE
+`EvalError` (seven kinds, `evaluator/types.ts`), and that one error stops every output: the
+instance keeps the last good values and marks them stale. Nothing records an event that does
+not stop the run. `ToNumber(If(false, 1, "a")) + 1` is `1` with no word anywhere: not at
+compile time (`ToNumber` takes `any`, so there is no warning), and not at run time. The events
+worth a record: an op that gave no value (`ToNumber("a")`, a division by zero, `Find` with no
+match), a value of the wrong type that an op read as no value, a cast that did not fit, a field
+read that found nothing (it gives `null` once option B is built, and the checker warns where
+the value is `any`), an input that holds nothing.
 
-**Who can reach it:** a caller that defeats the types (plain JavaScript, a cast, a blob read
-from storage and handed over unchecked). TypeScript refuses it, `env.load` answers
-`malformed_program`, and the link checks an incoming program with `isSavedProgram` before it
-reaches the instance (`packages/link/src/protocol.ts`).
+**Why deferred:** it wants the rule for "no value" first (`todo.md`, "Before 1.0.0"): once a
+`null` reaches the output instead of turning into a zero, the output itself says that something
+is missing, and the record only has to say WHERE. It also has costs that nothing has measured.
 
-**Why deferred:** found in passing, while the *Embedding core* sample was probed for the docs
-pass of 0.6.1. Not a docs matter, and no typed host can do it.
+**What it requires:**
 
-**What it requires:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, a
-`malformed_program` diagnostic where it fails (the instance keeps its program, stale), and a
-test that a refused program leaves the next one working.
+- **A place on the outputs:** `{ outputs, error, stale }` gains the notes of the run, each with
+  a kind, the op, the place in the source, and the outputs it reached. The Diagnostics pane
+  gets a part for them; a host may log them.
+- **The cache keeps them.** Evaluation is pull-based and a cached node does not run again, so
+  a note has to stay with the cached value it explains, or it is gone on the next run.
+- **The link carries them**, as it carries diagnostics.
+- **A cost per op call**, to measure, and a way to keep a normal absence (an input not set
+  yet) from filling the list.
+- **A smaller first step:** "why is this `null`?" for one output, on demand: evaluate once with
+  a trace and show the op where the value was lost. No channel, no cost while nobody asks.
+- **A neighbour:** one error stops every output today. Outputs that fail one by one are the
+  entry "Core — what an instance hands a host when a program fails".
 
 ---
 

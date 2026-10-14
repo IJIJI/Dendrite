@@ -59,6 +59,17 @@ Two outputs reading the same binding share one computation, because they share t
 node caches. This is the difference between a binding and a macro, and it is why naming
 intermediate values costs nothing.
 
+## A lazy input is a node read on demand
+
+An op input declared lazy (`If{:den}`'s two branches, `Default{:den}`'s fallback, the nodes of
+`And{:den}` and `Or{:den}`) is not evaluated before the op runs. The op receives a thunk over the
+node and reads it when it wants it, or never, so a branch not taken is never computed, and a run
+error in it never happens. The node under the thunk is the same memoised node as anywhere else:
+read twice, it is computed once, and when the condition flips, the branch that was skipped is
+computed then and cached from then on. A converting input converts inside the thunk. The op's own
+cache entry still depends on every input it has, so a change inside the skipped branch recomputes
+the op, which then re-reads the branch it takes.
+
 ## Stale, rather than hidden
 
 When a program stops compiling, the last one that did keeps running.

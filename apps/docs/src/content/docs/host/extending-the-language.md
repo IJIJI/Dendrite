@@ -36,8 +36,9 @@ const small = createStdlib({ segments: ["logic", "control", "arithmetic"] });
 Every segment stands alone, and a symbol comes with the segment that owns its op. So a language
 without `"arithmetic"{:ts}` has no `+{:den}`, and no `-14{:den}` either, because a negative
 number is the symbol of `Negate{:den}`. One without `"string"{:ts}` has no `++{:den}` and no
-template. A program that calls an op you left out is told the name is not declared, as for any
-name it does not know. The type `StdlibSegment{:ts}` is the list of names.
+template. A program that calls an op you left out is told no operation or binding exists by that
+name, with the nearest one suggested, as for any name it does not know. The type
+`StdlibSegment{:ts}` is the list of names.
 
 ## A type with fields
 
@@ -184,6 +185,39 @@ returns one, the program gets `null{:den}` in its place. That is the language's 
 same one the library's `Divide{:den}` gives for a division by zero, and `IsSet{:den}` and
 `Default{:den}` handle it. It applies to the number an op returns, not to numbers inside a list
 or a struct it returns.
+
+### An input the op may not need
+
+An input declared `lazy: true{:ts}` reaches the evaluator unevaluated, as a `Thunk{:ts}` with a
+`.value{:ts}` getter, and is evaluated the first time the op reads it, or never. It is how the
+library's `If{:den}` reads one branch and `And{:den}` stops at the first false, and it is yours for
+an op with a fallback it may not need:
+
+```ts
+const Guard = language.registerOp({
+  name: "Guard",
+  category: "control",
+  inputs: [
+    { name: "reading", type: Type.name("Reading") },
+    { name: "fallback", type: Type.name("Reading"), lazy: true },
+  ],
+  output: Type.name("Reading"),
+  description: "The reading, or the fallback when there is none.",
+});
+
+language.registerEvaluator({
+  op: Guard,
+  evaluate: ({ reading, fallback }) => (reading === null ? fallback.value : reading),
+});
+```
+
+`registerOp{:ts}` hands the definition back, and giving it to `registerEvaluator{:ts}` as `op{:ts}` is
+what types `fallback{:ts}` as a `Thunk{:ts}`: `fallback.value{:ts}` compiles, `reading.value{:ts}` does
+not, and an op registered by its name, `op: "Guard"{:ts}`, sees every input as `unknown{:ts}` as
+before. A variadic lazy input arrives as a `Thunk[]{:ts}`, and a converting one converts inside the
+thunk. The reference prints the mark on the type, `fallback: lazy Reading`. Read a thunk during
+the call: one kept for later would read a traversal that is gone, and one returned is a
+`host_error{:den}`.
 
 ## A symbol as sugar
 
