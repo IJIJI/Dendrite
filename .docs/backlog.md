@@ -169,6 +169,34 @@ the empty string, and an entry on the generated `string` reference page, which c
 
 ---
 
+## Stdlib — is the split between `Default` and `If` needed?
+
+**What:** `Default(value, fallback)` is `If(IsSet(value), value, fallback)`: the value when it is
+not null, else the fallback. Since 0.7.0 both read their second branch lazily, so the two are
+the same in what they evaluate, and `value` is one memoised node in either spelling. The
+question, asked by the maintainer on 2026-10-14: does the library need two ops for one
+choice, or could `??` desugar to the `If` form and `Default` go?
+
+**For the split:** `Default` says what it does in its name, and a null test is the one choice
+a program makes most; the `??` symbol names it (`a ?? b` reads as "a, or b"), and the reference
+has one op with one sentence where the desugar is three nodes to read in a graph. `Default` is
+also one of the places option B names as taking no value (`todo.md`, "Before 1.0.0"), with
+`IsSet`, `==` and a converting input.
+
+**Against it:** two ops with one meaning is a name to learn and a name to keep; a graph editor
+would show either, and the `If` form is what a reader of `IsSet` already knows.
+
+**Why deferred:** a removal is a break, so it belongs to the review of the stdlib's names before
+1.0.0 (`todo.md`, "Before 1.0.0", "A review of the stdlib's names"), and option B decides what
+`??` means first, since it changes what a null is.
+
+**What it requires:** a count of `Default` across the site, the examples and the tests; the
+decision, with option B's rule in hand; if it goes, `??` desugars to `If(IsSet(a), a, b)`,
+the op is dropped at a minor with a changelog line, and the operators page says what `??` is
+sugar for.
+
+---
+
 ## Stdlib — `Clamp` with one bound
 
 **What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")

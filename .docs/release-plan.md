@@ -308,6 +308,13 @@ and four things are worth keeping.**
   are the two that should: the branch taken still evaluates, and the fingerprint's op count
   is the same, which is what "no new op" means.
 
+## What the ninth release taught
+
+**0.7.1, 2026-10-14: the runbook held.** One thing to keep: the PR's count is
+`origin/main..dev`, which holds every commit since the last merge, the notes commits between
+releases included (6 here, where the work was 4). Count before the PR, not from memory. The
+check reused the probe table's rows unchanged, 11 lines, both ways.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the

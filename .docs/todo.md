@@ -15,8 +15,8 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 | Release | Holds | Entry |
 | --- | --- | --- |
 | 0.7.0 | **On npm since 2026-10-14** (`done.md`, "0.7.0 on npm") | done |
-| 0.7.1, next | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | below |
-| 0.8.0, the minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
+| 0.7.1 | **On npm since 2026-10-14** (`done.md`, "0.7.1 on npm") | done |
+| 0.8.0, next | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
 | 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true | `backlog.md`, "Core — a typed evaluator derived from the op's declaration" |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
@@ -26,136 +26,6 @@ Beside that order, with no release named for them: the three entries after the n
 came from the maintainer while 0.6.1 was built (*How a program runs* gets simpler; two styles
 for setting an input), and the third is where a reading of the site collects. The last section
 of this file is what must be done before a 1.0.0.
-
----
-
-## 0.7.1 — a saved program or layer that is not well formed
-
-**This is the next work.** A patch for core and the link, straight after 0.7.0 (on npm since
-2026-10-14). The entry as it stood in the backlog, with its probe table and the decisions of
-2026-10-14, then the plan.
-
-### The entry
-
-**What:** a saved program is data from outside: a host reads it from a file or a database and
-hands it over. Core checks part of it, and what it does not check comes out as a raw
-`TypeError`, from commands that are documented to report through the observables. Probed on
-2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
-
-| Handed to `setProgram` | The call | A sound program next |
-| --- | --- | --- |
-| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
-| Ports where `inputs` is a text | `TypeError` | **Throws again** |
-| An input with no name | `TypeError` | **Throws again** |
-| An input whose type is a text | `malformed_program`, stale | Works |
-| Ports that are `null` | `malformed_program`, stale | Works |
-| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
-| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
-| A version from the future | `unsupported_version`, stale | Works |
-
-`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
-no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
-source and for the form.
-
-**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
-persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
-is already replaced, so every later recompile throws too.
-
-**The cause under all of it:** the whole check exists, and it is in the wrong package.
-`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
-the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
-that arrives from storage goes past it.
-
-**Who can reach it:** any host that loads what it saved, when the file is damaged or was
-written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
-`SavedProgram`.
-
-**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
-0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
-the *Embedding core* sample was probed for the docs pass of 0.6.1.
-
-**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
-instance already reports `unsupported_version` that way: a diagnostic, and the old program
-keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
-would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
-range has to say so.
-
-**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
-three things the plan settled with it:
-
-- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
-  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
-  every door composes, so the kind is the same at both levels and each level keeps its channel:
-  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
-  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
-  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
-  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
-  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
-  global and a program layer? The kind should be, the channel should not.
-- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
-  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
-  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
-  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
-  through `export *`, and a patch removes nothing.
-- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
-  host layer with `ports: null` is read in five places before and after compose, so a guard
-  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
-  reported, a layer built in code throws); one test pins it.
-
-Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
-page prints every compose sample's declarations through `declarationsOf`, which maps over
-`ports.inputs` and would break the build on a bad shape; and the link's one test file is
-`link.test.ts`. The release record is written after the release, as every record is.
-
-**What it requires, in two sizes:**
-
-- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
-  `malformed_program` where it fails. It ends the three cases that break an instance. The four
-  other raw errors stay.
-- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
-  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
-  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
-  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
-  the table, and one that a refused program leaves the next one working.
-
-### The plan (from the approved plan of 0.7.0 and 0.7.1, revision 7)
-
-Three commits, each with its gates green before its handover, the docs build for the last.
-
-**Commit B: core.**
-
-| File | Change |
-| --- | --- |
-| `compose.ts` | `PortProblem.kind` gains `"malformed_ports"`. In `walk`, before reading `layer.ports`: `isPorts` fails → a problem with the layer's id, `where: "ports"`, and the layer is skipped |
-| `diagnostics.ts` | `malformed_ports`: stage `compose`, with `triggeredBy` and no sample (the docs page prints every compose sample's declarations through `declarationsOf`, which maps over `ports.inputs` and would break the build on a bad shape) |
-| `infra/serialise.ts` | `isSavedProgram(value: unknown): value is SavedProgram`: a record, a numeric `version`, a `form` of the three, a `code` form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the nodes stay `deserialise`'s), `ports` absent or `isPorts`. Exported from `index.ts`. `assertSavedPorts` stays, marked `@deprecated` for `isSavedProgram` |
-| `environment.ts`, `load` | `!isSavedProgram(saved)` → `unsupported_form` when `form` is a string none of the three names, else `malformed_program`; then `migrate` (`unsupported_version`) and the switch as today; `assertSavedPorts` no longer called |
-| `runtime/instance.ts` | The constructor takes the document layer's ports from the program only when `isSavedProgram` holds (`EMPTY_PORTS` otherwise); `recompile` → `load` publishes the diagnostic. `setProgram`: `isSavedProgram` first, and the two `saved.ports` reads behind it. `setLayer`: no change, the compose problem carries the layer's id. The `layers` option is host code, as `createRuntime`'s layers are: a bad one there throws, and one test pins the line |
-
-Tests: `runtime/instance.test.ts`, one per row of the probe table on the call the row names,
-plus `setLayer` with `inputs: "x"`, `createInstance` with a bad first program, a sound program
-after a refused one, and a host layer with `ports: null` throwing. `runtime/runtime.test.ts`:
-`runtime.setLayer` with a bad shape returns one `malformed_ports`, `createRuntime` with one
-throws its report. `environment.test.ts`: `load` per bad shape. `compose.test.ts`: the kind with
-its `layerId`, the other layers still composing. `infra/serialise.test.ts`: `isSavedProgram` per
-shape. `packages/link/src/link.test.ts`: unchanged in outcome.
-
-**Commit C: link, docs, changelogs, versions.**
-
-| Where | What |
-| --- | --- |
-| `packages/link/src/protocol.ts`, `package.json` | Its own `isSavedProgram` deleted, core's imported; `0.7.1`, peer `^0.7.1` |
-| `packages/core/package.json` | `0.7.1` |
-| `host/embedding-core.md` | A damaged file is reported on `diagnostics` (`malformed_program`, `unsupported_form`), a layer of a bad shape that arrives as data as `malformed_ports`; a layer a host builds in code (`createRuntime`'s `layers`, `createInstance`'s `layers` option) throws, as any compose problem there |
-| `host/packages/core.md` | `isSavedProgram` among the named exports |
-| `how-it-works/diagnostics.mdx` | Generated: `malformed_ports` with its `triggeredBy` |
-| The two changelogs | Core 0.7.1: the eight raw errors become diagnostics, `malformed_ports`, `isSavedProgram` exported. Link 0.7.1: core's guard, peer `^0.7.1` |
-| The notes | Nothing moves; the record "0.7.1 on npm" is written after the release, and this entry goes to `done.md` with it |
-
-Then the release, per the runbook: `yarn install` after the peer bump (the lockfile), the
-version note on *Installation* at 0.7.1, the PR, the tags, one release in the shape of the
-previous ones, two approvals core first, the check from outside the repo. The editor's peer
-`^0.7.0` admits 0.7.1: no editor release.
 
 ---
 
