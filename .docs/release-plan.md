@@ -187,6 +187,16 @@ The runbook. Only the packages whose version changed are part of a release.
 4. **One GitHub release per batch**, on core's tag if core is in it, otherwise on the tag of one
    changed package. The title and body name every package and version in the batch. Publishing the
    release starts `Stage release`.
+   - **The text follows the shape of the previous releases, every time.** Read the last one
+     first, `gh release view "<tag>" --json name,body`, and keep its parts in its order: the
+     title `Dendrite <version> - <what it brings>` (`Dendrite editor <version> - …` for one
+     package alone); one lead sentence; a `> [!IMPORTANT]` callout naming each breaking change
+     with what a host does about it, or what changes for every host; "Packages in this
+     release", a table of package, version, tag and what changed, with a line for a package
+     released only because its peer range demands it; the `npm install` block; "What is new",
+     one bold-led bullet per changelog line, the documentation last; the three changelog
+     links; "Versioning"; "Links". The PR that precedes it is the same lead sentence as a
+     paragraph, with the breaking lines and the commit count (0.7.0).
    - **One release per batch is a hard rule, not a preference.** Two releases in one batch would
      start two workflow runs; the second would try to stage versions the first had already staged,
      which npm refuses, so it fails.
