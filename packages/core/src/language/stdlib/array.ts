@@ -33,6 +33,7 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Concat",
+    finiteCheck: false,
     evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
     // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
     inferOutput: (inputTypes) => {
@@ -54,6 +55,7 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Flatten",
+    finiteCheck: false,
     evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
   });
 

@@ -19,6 +19,9 @@ import { type Type, typeToString } from "./types";
 // never fits either, and is likewise caught earlier (unknown_type).
 export function valueFits(value: unknown, type: Type, descriptor: Vocabulary): boolean {
   if (value === null || value === undefined) return true;
+  // A number that is not finite is read as null at the door (updateInput cleans it), so it
+  // fits as a null does, on every type. A cast never meets one: both doors clean first.
+  if (typeof value === "number" && !Number.isFinite(value)) return true;
   switch (type.kind) {
     case "function":
       return false;

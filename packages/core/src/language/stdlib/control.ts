@@ -28,6 +28,7 @@ export function installControl(lang: Language): void {
   });
   lang.registerEvaluator({
     op: If,
+    finiteCheck: false,
     evaluate: ({ condition, then, else: otherwise }) => (condition ? then.value : otherwise.value),
     inferOutput: (inputTypes) => agreed(inputTypes["then"], inputTypes["else"]),
   });
@@ -59,6 +60,7 @@ export function installControl(lang: Language): void {
   });
   lang.registerEvaluator({
     op: Default,
+    finiteCheck: false,
     evaluate: ({ value, fallback }) =>
       value !== null && value !== undefined ? value : fallback.value,
     inferOutput: (inputTypes) => agreed(inputTypes["value"], inputTypes["fallback"]),

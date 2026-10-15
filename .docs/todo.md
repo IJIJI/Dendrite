@@ -42,7 +42,7 @@ taken on 2026-10-12 ("Before 1.0.0", below). What the plan settled, each with it
 | --- | --- | --- |
 | `Default` and `If` | `Default` stays the op under `??`. A desugar to `If(IsSet(a), a, b)` writes `a` into two nodes, and the analyser copies a node per visit, so `a` evaluates twice (probed: `Tick() ?? 0` calls once, the inline `If` form twice). One op call is also cheaper than a thunk, and `??` is shipped over `Default` | 1A |
 | `Default`'s output type | Aligned with `If`: the branches' type when they agree, else `any`. `$n ?? "none"` was typed `number` with the fallback unchecked: the one exception to the language's rule for types that disagree | 2A |
-| The mark on the evaluator | `finite: true`, absent by default. The promise: no number the op returns, at any depth, is a `NaN` or an infinity | 3A |
+| The mark on the evaluator | `finiteCheck: false` (renamed on 2026-10-15 from `finite: true`, which read backwards as a switch: the check is on by default, `false` turns the walk off on the op's promise that no number it returns, at any depth, is a `NaN` or an infinity) | 3A |
 | The host-push door for a `NaN` | Read as `null`, on every input, in `updateInput`, the one function every path enters the evaluation state through. A `number` input refused a `NaN` through zod before, never by decision; it reads it as `null` now. An `undefined` the same way (probed: it passed the door and stopped every output with `input_not_set`) | 4B |
 | The field read on an `any` | A new warning, `field_access_on_any`. The run-time kind `invalid_field_access` is unreachable and goes | 5a A, 5b A |
 | `assertSavedPorts` | Removed in 0.8.0, as its deprecation said | 6a A |
@@ -145,7 +145,7 @@ the run after the code lands.
 
 **The commits**, as the plan has them: 0 the notes and the samples' "before"; 1 the rule in
 the evaluator (one function, `receive`), the stdlib under it, the convention rewritten; 2 the
-`NaN` doors (`clean`, `finite`, the push door, `Convert.toNumber` finite); 3 the analyser
+`NaN` doors (`clean`, `finiteCheck: false`, the push door, `Convert.toNumber` finite); 3 the analyser
 (`[1, null]`, `field_access_on_any`, `Reduce`'s accumulator, `castsAny` without `null`, the
 missing-input placeholder `null` for every type); 4 `assertSavedPorts` out; 5 the docs with
 the "No value" box on both Host developers pages, the changelogs, the versions, the lockfile.
@@ -168,7 +168,7 @@ for the patch.
 | **Run every sample on the site before and after** | `apps/docs` (the samples, `content.test.ts`), the ops' examples | **0.8.0, once** (decided 2026-10-14, 6c): a one-off probe, run on 0.7.1 source on 2026-10-15 (35 samples, the file in the chat's scratchpad) and again before the docs pass; no pinning test | `content.test.ts` checks that a sample loads, not what it gives. Need: prose beside a moved result must not lie. Options: a one-off probe for the release, or a test that pins each sample's outputs so a later change shows |
 | **How the editor shows a `null` output** | The editor's outputs pane | 0.8.2 (an editor patch) | Under option B a null output is ordinary, and the pane prints JSON, so `null` beside a number reads as a fault. Options: print "no value" in a muted style, print `null` as the language writes it, or leave it, with the docs saying what it means |
 | **Measure the rule's cost** | `evaluator.ts`, the probe | **Settled 2026-10-14**: 3.5 ns per input, inside the loop that already runs, against about 1570 ns per op call; a host type's kind 30 to 62 ns. Nothing is left | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
-| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`**, absent by default (3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
+| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`, renamed `finiteCheck: false` on 2026-10-15** (the check is on by default, `false` turns it off; 3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
 | **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | **0.8.0**: the rule skips the op before any thunk is read, one test pins it | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
 
 ---

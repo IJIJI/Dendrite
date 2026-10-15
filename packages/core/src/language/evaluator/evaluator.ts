@@ -21,10 +21,53 @@ export function createEvalState(): EvalState {
   };
 }
 
-//? Input management: The host facing inputs, string-typed.
+//? Input management: The host facing inputs, string-typed. Every path a host has into the
+// evaluation state ends here (`run`, the runner, an entry's setInput and re-seed, the runtime's
+// global inputs), so this is the door where a pushed value is read as the language holds it.
 // TODO: Maybe an evalstate object? Or some other centralised way to manage evalstates that can be easily used by the run types?
 export function updateInput(name: string, value: unknown, state: EvalState): void {
-  state.inputs.set(name, value);
+  state.inputs.set(name, clean(value));
+}
+
+// A number as JSON would carry it: NaN and the infinities are no value, a negative zero is 0.
+const finiteOr = (n: number): number | null =>
+  Number.isFinite(n) ? (Object.is(n, -0) ? 0 : n) : null;
+
+// ponytail: a depth bound as the cycle guard, no allocation per push; a NaN below 32 levels
+// survives, and a Set replaces the bound if a host ever meets one.
+const WALK_DEPTH = 32;
+const isPlain = (value: object): boolean => {
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
+/**
+ * A value as the language holds it: an `undefined` is null, a number that is not finite is
+ * null and a negative zero is 0, at any depth of a list or a plain object, copying only what
+ * changed (by Object.is, since 0 and -0 are ===). Anything else, a class instance, a DOM node,
+ * a function, is passed as it is: a value JSON cannot carry is the host's own. Two doors call
+ * it: a host's push (updateInput, and an instance's own store) and a host op's result.
+ */
+export function clean(value: unknown, depth = WALK_DEPTH): unknown {
+  if (value === undefined) return null;
+  if (typeof value === "number") return finiteOr(value);
+  if (depth === 0 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    let copy: unknown[] | undefined;
+    for (let i = 0; i < value.length; i++) {
+      const item = clean(value[i], depth - 1);
+      if (!Object.is(item, value[i])) (copy ??= value.slice())[i] = item;
+    }
+    return copy ?? value;
+  }
+  if (!isPlain(value)) return value;
+  const record = value as Record<string, unknown>;
+  let copy: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    const item = clean(record[key], depth - 1);
+    if (!Object.is(item, record[key])) (copy ??= { ...record })[key] = item;
+  }
+  return copy ?? value;
 }
 
 //? EvalContext: the invariants of a single evaluation traversal (the program, the
@@ -231,9 +274,12 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
               `Evaluator '${node.op}' returned a Thunk; read .value before returning`,
             );
           }
-          if (typeof value !== "number") return value;
-          if (!Number.isFinite(value)) return null;
-          return Object.is(value, -0) ? 0 : value;
+          if (typeof value === "number") return finiteOr(value);
+          // A list or a struct is walked for the same, unless the evaluator promises that none
+          // is in it (`finiteCheck: false`): a host's op is the one door a NaN has left, since
+          // a host's push is cleaned at updateInput and the library's ops hand on what was
+          // read here.
+          return evaluator.finiteCheck === false ? value : clean(value);
         } catch (e) {
           if (e instanceof EvalError) throw e;
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);

@@ -82,6 +82,14 @@ describe("runtime", () => {
     expect(rt.updateInputs({ y: 2 }).get("a")?.get("out")).toBe(2); // x never landed
   });
 
+  it("updateInputs reads a NaN on a number input as null, where it was refused", () => {
+    const lang = makeLang();
+    const rt = runtimeFor(lang);
+    rt.register("a", build(lang, "output out = Add($x, 1)"), {});
+    expect(rt.updateInputs({ x: NaN }).get("a")?.get("out")).toBeNull();
+    expect(rt.updateInputs({ x: 2 }).get("a")?.get("out")).toBe(3);
+  });
+
   it("register and replace refuse a starting value that does not fit, and change nothing", () => {
     const lang = makeLang();
     const rt = runtimeFor(lang);

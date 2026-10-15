@@ -18,13 +18,20 @@ export const Convert = {
     return JSON.stringify(value);
   },
 
-  /** A value as a number: a boolean is 1 or 0, text is a plain decimal, anything else is null. */
+  /**
+   * A value as a number: a boolean is 1 or 0, text is a plain decimal, anything else is null.
+   * Text that overflows ("1e999") is no number either: the regex admits it and `Number()`
+   * makes an infinity of it, which a converting input or parameter would hand on past every
+   * check an op's result gets.
+   */
   toNumber(value: unknown): number | null {
     if (typeof value === "number") return value;
     if (typeof value === "boolean") return value ? 1 : 0;
     if (typeof value !== "string") return null;
     const text = value.trim();
-    return DECIMAL.test(text) ? Number(text) : null;
+    if (!DECIMAL.test(text)) return null;
+    const n = Number(text);
+    return Number.isFinite(n) ? n : null;
   },
 
   /** A value as a boolean: false for false, 0, "", null and an empty list, else true. */

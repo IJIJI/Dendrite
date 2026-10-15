@@ -381,8 +381,8 @@ describe("an op with no answer gives null", () => {
     expect(reading("down")).toBeNull();
     expect(reading("fine")).toBe(21.5);
     expect(reading("text")).toBe("Infinity");
-    // Not looked into: a list an op returns is the op's own business.
-    expect(reading("list")).toEqual([Infinity]);
+    // Looked into since 0.8.0: a list an op returns is walked, unless the op says `finiteCheck: false`.
+    expect(reading("list")).toEqual([null]);
   });
 });
 
@@ -1008,6 +1008,81 @@ describe("templates: text with holes, through Join", () => {
 });
 
 // ─── Lazy inputs ──────────────────────────────────────────────────────────────
+
+// The two doors a NaN has into a program are a host's: an op of the host that returns one
+// inside a list or a struct, and a value the host pushes (updateInput, tested with the
+// instance). Both are walked and read as the language holds a value, unless the evaluator
+// turns the check off (`finiteCheck: false`), which is the promise that none is in there.
+describe("the NaN doors: a host op's result is walked, unless the finite check is off", () => {
+  class Reading {
+    constructor(public n: number) {}
+  }
+  const cycle: Record<string, unknown> = { n: 1 };
+  cycle["self"] = cycle;
+  const values: Record<string, unknown> = {
+    list: [1, NaN, -0, Infinity],
+    struct: { n: NaN, m: 1 },
+    nested: [[NaN], { deep: [-Infinity] }],
+    clean: [1, 2, 3],
+    instance: new Reading(NaN),
+    cycle,
+    holder: { x: undefined },
+  };
+  const hostLang = (checked = true) => {
+    const lang = createStdlib();
+    lang.registerOp({
+      name: "Give",
+      inputs: [{ name: "which", type: Type.string }],
+      output: Type.any,
+    });
+    lang.registerEvaluator({
+      op: "Give",
+      ...(checked ? {} : { finiteCheck: false as const }),
+      evaluate: ({ which }) => values[which as string],
+    });
+    lang.registerOp({
+      name: "Twice",
+      inputs: [{ name: "n", type: Type.number, convert: true }],
+      output: Type.number,
+    });
+    lang.registerEvaluator({ op: "Twice", evaluate: ({ n }) => (n as number) * 2 });
+    return lang;
+  };
+  const give = (which: string, checked = true) =>
+    runSource(`output out = Give("${which}")`, "out", hostLang(checked)).value;
+
+  it("a NaN, an infinity and a negative zero are read at any depth", () => {
+    const list = give("list") as unknown[];
+    expect(list).toEqual([1, null, 0, null]);
+    expect(Object.is(list[2], 0)).toBe(true); // -0 was copied in as 0, not left as -0
+    expect(give("struct")).toEqual({ n: null, m: 1 });
+    expect(give("nested")).toEqual([[null], { deep: [null] }]);
+    expect(give("holder")).toEqual({ x: null });
+  });
+
+  it("a clean value is the same reference: no copy without a find", () => {
+    expect(give("clean")).toBe(values["clean"]);
+  });
+
+  it("a class instance and a cycle are passed as they are, no throw", () => {
+    expect(give("instance")).toBe(values["instance"]);
+    expect((give("instance") as Reading).n).toBeNaN();
+    expect(give("cycle")).toBe(values["cycle"]);
+  });
+
+  it("finiteCheck: false skips the walk, and the bare-number check still runs", () => {
+    expect(give("list", false)).toBe(values["list"]);
+    values["scalar"] = NaN;
+    expect(give("scalar", false)).toBeNull();
+  });
+
+  it("Convert.toNumber gives null for text that overflows, so a conversion hands no infinity on", () => {
+    expect(runSource('output out = Map(["1e999"], (n~: number) => n)').value).toEqual([null]);
+    expect(runSource('output out = Twice("1e999")', "out", hostLang()).value).toBeNull();
+    expect(runSource('output out = Twice("1e3")', "out", hostLang()).value).toBe(2000);
+    expect(runSource('output out = ToNumber("1e999")').value).toBeNull();
+  });
+});
 
 // The rule of "no value" (0.8.0, option B) is the evaluator's, in `receive`: an input that
 // names a type and is handed a null, or a value of another KIND, is no value, and the op does

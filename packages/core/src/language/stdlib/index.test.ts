@@ -104,6 +104,28 @@ describe("createStdlib({ segments })", () => {
     });
   });
 
+  // The finite check on an evaluator's result is off (`finiteCheck: false`) on the promise that
+  // no number it returns, at any depth, is a NaN or an infinity. The library's ops that hand
+  // values on say so, because what they hand on was read by the evaluator already; every other
+  // op's result is a bare number, read anyway. A new op that returns a list, a struct or `any`
+  // has to decide, and lands here.
+  it("the evaluators that hand values on turn the finite check off, and no other", () => {
+    const marked = [...createStdlib().descriptor.evaluators.values()]
+      .filter((evaluator) => evaluator.finiteCheck === false)
+      .map((evaluator) => evaluator.op)
+      .sort();
+    expect(marked).toEqual([
+      "Concat",
+      "Default",
+      "Filter",
+      "Find",
+      "Flatten",
+      "If",
+      "Map",
+      "Reduce",
+    ]);
+  });
+
   it("refuses a segment name it does not know", () => {
     expect(() => createStdlib({ segments: ["maths" as StdlibSegment] })).toThrow(
       "unknown segment 'maths'",

@@ -26,6 +26,7 @@ export function installList(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Filter",
+    finiteCheck: false,
     evaluate: ({ list, predicate }) =>
       (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
@@ -50,6 +51,7 @@ export function installList(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Map",
+    finiteCheck: false,
     evaluate: ({ list, transform }) =>
       (list as unknown[]).map((item) => (transform as FnValue)(item)),
     inferInputTypes: (inputTypes) => ({
@@ -74,6 +76,7 @@ export function installList(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Find",
+    finiteCheck: false,
     evaluate: ({ list, predicate }) =>
       (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
     inferInputTypes: (inputTypes) => ({
@@ -142,6 +145,7 @@ export function installList(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Reduce",
+    finiteCheck: false,
     evaluate: ({ list, initial, reducer }) =>
       (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
     inferInputTypes: (inputTypes) => {
