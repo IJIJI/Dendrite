@@ -30,6 +30,11 @@ separate things, none needed by the check that shipped.
   `null` (the evaluator's rule, `done.md`). **Requires:** a `valueFits` call where an `any`-typed argument meets a
   concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
   call, not per pushed value, and the cast (`as`) is the explicit way to check today.
+  **Narrowed 2026-10-14 (0.8.0, 12A):** from 0.8.0 the KIND an input names is checked at every
+  op call (a primitive by `typeof`, a list by `Array.isArray`, a struct as an object, a type
+  that extends a primitive by its root), so `Add("abc", 1)` and `GreaterThan("abc", 1)` give
+  `null`, the language's "no value". What stays here is the schema half: a host type's zod
+  rules run at the door only, never per op call.
 - **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
   and a flag without a consumer is Speculative Generality. **Requires:** a host with a frame
   rate push of a large list or struct and a number; then a policy on the layer, not a global.
@@ -276,6 +281,35 @@ thing it always did: its signature cannot be honest. With no union types the ref
 **What it requires:** about one commit, recorded when the entry was written (2026-09-20): the
 variadic branch of `validateInputs` analyses all items before it checks them, then `Add` gets
 `inferInputTypes`, `inferOutput` and an evaluator that sums or joins.
+
+---
+
+## Language — `~` on an expression, converting to the slot's type — REJECTED 2026-10-14
+
+**What:** asked by the maintainer on 2026-10-14, while 12A was decided: could a `~` in front
+of a variable, `Upper(~$a)`, convert it to the type the slot expects? Today `~` is a mark on a
+declaration only: an op input (`parts~`) or a lambda parameter (`(t~: string)`), and it says
+that the RECEIVER converts.
+
+**Possible, but not as sugar:** a symbol becomes its op while the parser reads, before any
+type is known, so `~$a` cannot pick `ToString` or `ToNumber` at parse time. It would be a node
+of its own that the analyser types from the slot it sits in (`validateInputs` knows an op
+input's expected type), and an error where no expected type exists.
+
+**Rejected, four reasons:**
+
+- The target is invisible at the write site: `Upper(~$a)` makes text and `Add(~$a, 1)` a
+  number, so moving the expression changes its meaning.
+- Three spellings exist: `ToNumber($a)` names the target, `$a as number` checks and gives
+  `null`, and `~` on a declaration lets the receiver convert. A fourth is a name to learn for
+  the same thing.
+- `~` would mean two things: on a declaration "the receiver converts", on an expression "the
+  sender asks". One symbol, two readings.
+- The docs' position is that nothing converts on its own: a program says so, where it wants
+  it, and to what.
+
+The case it would serve, an `any` input whose kind the host knows, is better served by typing
+the input.
 
 ---
 
@@ -1342,6 +1376,11 @@ the value is `any`), an input that holds nothing.
 **Why deferred:** it wants the rule for "no value" first (`todo.md`, "Before 1.0.0"): once a
 `null` reaches the output instead of turning into a zero, the output itself says that something
 is missing, and the record only has to say WHERE. It also has costs that nothing has measured.
+
+**When:** probably not before 1.0 (the maintainer, 2026-10-14). Under option B the language
+gets more opaque in one way, a `null` output says that a value was missing but not where, and
+the maintainer wants, at some point, a way to trace the values a program ran with and to log
+run-time problems; this entry is that way.
 
 **What it requires:**
 
