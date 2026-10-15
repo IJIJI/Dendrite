@@ -17,7 +17,10 @@ export const variadic =
   (l: ASTNode, r: ASTNode): ASTNode =>
     operationNode(op, { nodes: [l, r] });
 
-// A value as a list: the one rule every list op shares, so a null (or anything that is not a
-// list, reaching the op through `any`) reads as the empty list and no op throws on it. It is
-// the list counterpart of Convert.toString, and Join uses both.
-export const toList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+// The skip: the numbers in a list, with a null item, or an item of another kind that reached
+// the list through `any`, left out. Average, Max and Min read their list through it, so
+// `Average([1, null])` is 1 and `Max([-4, null])` is -4 (0.8.0, option B). The list itself is
+// a list by the time an op runs: the evaluator gives null for a null, or anything that is no
+// list, before the op is called, so this is the one guard the stdlib keeps.
+export const numbersOf = (list: unknown): number[] =>
+  (list as unknown[]).filter((item): item is number => typeof item === "number");

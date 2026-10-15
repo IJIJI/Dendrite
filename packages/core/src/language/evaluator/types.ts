@@ -4,7 +4,6 @@ export type EvalErrorKind =
   | "evaluator_not_found" // safety net - analyser bug or descriptor mismatch
   | "undefined_reference" // reference to a binding that doesn't exist in bindings or inputs
   | "input_not_set" // input node has no value in environment
-  | "invalid_field_access" // field doesn't exist on struct value
   | "host_error" // host evaluator threw
   | "error_node_reached" // error node survived pruning — analyser or pruning bug
   | "not_a_function"; // application callee did not evaluate to a callable (analyser bug)

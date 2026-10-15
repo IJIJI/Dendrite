@@ -1074,6 +1074,38 @@ describe("variadic inputs reach inferOutput", () => {
   });
 });
 
+// Default's output type is If's since 0.8.0: the type both sides agree on, else `any`. Until
+// then it took the value's type on faith and never looked at the fallback, so `$n ?? "none"`
+// was typed `number`, a lie whenever `$n` is null.
+describe("Default's output type is the type both sides agree on", () => {
+  const typeOf = (src: string, input: Ports["inputs"][number]) => {
+    const lang = testLang();
+    lang.registerInput(input);
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    expect(result.errors).toEqual([]);
+    return typeToString(getOutputType(result.program.outputs.get("x")!));
+  };
+
+  it("agreeing sides keep their type", () => {
+    expect(typeOf("output x = $n ?? 0", { name: "n", type: Type.number })).toBe("number");
+    expect(typeOf('output x = $s ?? "none"', { name: "s", type: Type.string })).toBe("string");
+  });
+
+  it("differing sides are any, where the value's type was taken on faith", () => {
+    expect(typeOf('output x = $n ?? "none"', { name: "n", type: Type.number })).toBe("any");
+    expect(typeOf("output x = null ?? 5", { name: "n", type: Type.number })).toBe("any");
+  });
+
+  it("an any value is any, where the fallback's type was taken on faith", () => {
+    expect(typeOf('output x = $a ?? "none"', { name: "a", type: Type.any })).toBe("any");
+    expect(typeOf('output x = ($a as string) ?? "none"', { name: "a", type: Type.any })).toBe(
+      "string",
+    );
+  });
+});
+
 describe("forward_reference", () => {
   it("earlier-declared binding refs later-declared → forward_reference", () => {
     const lang = testLang();

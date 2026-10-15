@@ -174,7 +174,7 @@ packages/core/src/language/
               entry.ts (one program state), seed.ts (defaultValueFor), instance.ts (createInstance)
   stdlib/     index.ts (createStdlib: installs the segments, in the reference's order), one file
               per segment (logic, control, array, arithmetic, list, conversion, string: its ops,
-              their evaluators, their symbols), shared.ts (bin, variadic, toList)
+              their evaluators, their symbols), shared.ts (bin, variadic, numbersOf)
   language.ts Language assembly: createLanguage / extendLanguage / parseSource
   compose.ts  composeLayers: vocabulary + port layers -> the descriptor a program is checked against
   environment.ts createEnvironment / forProgram: the pipeline, bound to a composed descriptor
@@ -203,6 +203,10 @@ See `architecture.md` for the layering DAG and full design.
 - **A number an op returns is a JSON number.** The evaluator, at the one place an op is called,
   gives `null` for `NaN` and the infinities and `0` for a negative zero. So an op holds no guard
   for "no answer": it computes (`a / b`), and the evaluator reads the result.
+- **No value is the evaluator's rule, not an op's.** `receive` (`evaluator.ts`) gives `null`
+  for an op handed a `null`, or a value of another kind, on an input that names a type, before
+  the op runs. The four exceptions are the marks (`any`, `?`, `~`, `lazy`). The stdlib holds no
+  null guard and no type guard (see "Conventions").
 
 ### Functions
 - **Lambda → `Type.fn`**, application via `resolveAppArgs`; **closures capture `localBindings`**.
@@ -246,7 +250,12 @@ See `architecture.md` for the layering DAG and full design.
   input, a lambda typed from the list, has no mark). **A lazy input is marked on its type**,
   `then: lazy any`, so it combines with a name mark: `nodes...: lazy boolean` (decided
   2026-10-13).
-- **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
-  `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
-  READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts
-  one step, and a program that cares tests it where it arises (`Default`, `IsSet`).
+- **`null`, one way (0.8.0, option B).** An op that has no answer GIVES `null` (`Find` with no
+  match, `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op handed a `null`,
+  or a value of another KIND, on an input that names a type GIVES `null` too and does not run:
+  the evaluator decides it (`receive` in `evaluator.ts`), before any op, so the stdlib holds no
+  guard for either. Four inputs take what comes: an `any` input (the value, `null` included),
+  an optional one (a `null` reads as absent), a converting one (its leaves go through `Convert`
+  first, then the rule), a lazy one (the op's to read). `Average`, `Max` and `Min` skip a `null`
+  item (`numbersOf`); `And` and `Or` are three-valued. So a missing value reaches the output,
+  and a program that cares tests it where it arises (`??`, `IsSet`).

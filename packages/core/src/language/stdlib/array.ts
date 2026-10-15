@@ -1,10 +1,12 @@
 import { den } from "../infra/serialise";
 import { type Language } from "../language";
 import { Type } from "../infra/types";
-import { toList } from "./shared";
+import { numbersOf } from "./shared";
 
 //? The array segment: the ops over a list as a whole - measuring it, combining lists, asking
-// what it holds. The ops that take a function over a list are the list segment.
+// what it holds. The ops that take a function over a list are the list segment. A list input
+// holds a list when an op runs: the evaluator gives null for a null, or a value of another
+// kind, before the op is called (the rule of 0.8.0), so no op here guards its list.
 export function installArray(lang: Language): void {
   lang.registerOp({
     name: "Length",
@@ -16,7 +18,7 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Length",
-    evaluate: ({ list }) => toList(list).length,
+    evaluate: ({ list }) => (list as unknown[]).length,
   });
 
   // Variadic: each argument is ONE array (the per-arg type), collected into an
@@ -31,7 +33,7 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Concat",
-    evaluate: ({ arrays }) => toList(arrays).map(toList).flat(),
+    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
     // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
     inferOutput: (inputTypes) => {
       const arrays = inputTypes["arrays"];
@@ -52,7 +54,7 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Flatten",
-    evaluate: ({ array, depth }) => toList(array).flat(depth as number),
+    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
   });
 
   lang.registerOp({
@@ -60,34 +62,36 @@ export function installArray(lang: Language): void {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The mean of the numbers in list. An empty list has none, and gives null.",
+    description:
+      "The mean of the numbers in list. A null item is skipped. An empty list has none, and gives null.",
     examples: [den`output mean = Average([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Average",
-    // Of an empty list this is 0 / 0, NaN, which the evaluator reads as null.
+    // A null item is skipped (numbersOf). Of nothing this is 0 / 0, NaN, which the evaluator
+    // reads as null.
     evaluate: ({ list }) => {
-      const numbers = toList(list) as number[];
+      const numbers = numbersOf(list);
       return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
     },
   });
 
   // Max and Min start from the infinity that every number beats, so an empty list leaves it
-  // standing and the evaluator reads it as null: nothing is the largest of nothing. Math.max
-  // and Math.min read a null item as zero, as Average's sum does. reduce (no spread) avoids
-  // call-stack limits on big lists.
+  // standing and the evaluator reads it as null: nothing is the largest of nothing. A null item
+  // is skipped, as Average skips it (numbersOf). reduce (no spread) avoids call-stack limits on
+  // big lists.
   lang.registerOp({
     name: "Max",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The largest number in list. An empty list has none, and gives null.",
+    description:
+      "The largest number in list. A null item is skipped. An empty list has none, and gives null.",
     examples: [den`output top = Max([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Max",
-    evaluate: ({ list }) =>
-      (toList(list) as number[]).reduce((largest, n) => Math.max(largest, n), -Infinity),
+    evaluate: ({ list }) => numbersOf(list).reduce((largest, n) => Math.max(largest, n), -Infinity),
   });
 
   lang.registerOp({
@@ -95,13 +99,14 @@ export function installArray(lang: Language): void {
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
     category: "array",
-    description: "The smallest number in list. An empty list has none, and gives null.",
+    description:
+      "The smallest number in list. A null item is skipped. An empty list has none, and gives null.",
     examples: [den`output low = Min([4, 8, 15])`],
   });
   lang.registerEvaluator({
     op: "Min",
     evaluate: ({ list }) =>
-      (toList(list) as number[]).reduce((smallest, n) => Math.min(smallest, n), Infinity),
+      numbersOf(list).reduce((smallest, n) => Math.min(smallest, n), Infinity),
   });
 
   lang.registerOp({
@@ -117,6 +122,6 @@ export function installArray(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Includes",
-    evaluate: ({ list, value }) => toList(list).includes(value),
+    evaluate: ({ list, value }) => (list as unknown[]).includes(value),
   });
 }

@@ -1,8 +1,24 @@
 import { operationNode } from "../infra/nodes";
 import { den } from "../infra/serialise";
 import { BP, type Language } from "../language";
+import { type Thunk } from "../infra/thunk";
 import { Type } from "../infra/types";
 import { bin, variadic } from "./shared";
+
+// The three-valued read And and Or share: the first node equal to `decider` decides (a false
+// for And, a true for Or). A node that is no boolean (a null, or a value of another kind,
+// which a lazy input hands over unread by the evaluator's rule) decides nothing, and with no
+// deciding node the answer is then no value. So `false && null` and `null && false` are both
+// false, and `true && null` is null, as SQL, R, pandas and C# have it (0.8.0, option B).
+function decide(nodes: readonly Thunk[], decider: boolean): boolean | null {
+  let missing = false;
+  for (const node of nodes) {
+    const value = node.value;
+    if (value === decider) return decider;
+    if (value !== !decider) missing = true;
+  }
+  return missing ? null : !decider;
+}
 
 //? The logic segment: the ops that combine booleans, the ops that make one by comparing, and
 // their symbols. The two groups are one segment because `>=` and `<=` are sugar over
@@ -13,26 +29,28 @@ export function installLogic(lang: Language): void {
   // Combining booleans
   // -------------------------------------------------------------------------
 
-  // Both read their nodes lazily, so they stop at the first node that decides them.
+  // Both read their nodes lazily, so they stop at the first node that decides them (`decide`).
   const And = lang.registerOp({
     name: "And",
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true, lazy: true }],
     output: Type.boolean,
     category: "logic",
-    description: "True when every node is true.",
+    description:
+      "True when every node is true, false when any node is false, and no value otherwise.",
     examples: [den`output ok = And(true, 1 > 0)`],
   });
-  lang.registerEvaluator({ op: And, evaluate: ({ nodes }) => nodes.every((n) => n.value) });
+  lang.registerEvaluator({ op: And, evaluate: ({ nodes }) => decide(nodes, false) });
 
   const Or = lang.registerOp({
     name: "Or",
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true, lazy: true }],
     output: Type.boolean,
     category: "logic",
-    description: "True when any node is true.",
+    description:
+      "True when any node is true, false when every node is false, and no value otherwise.",
     examples: [den`output ok = Or(false, 1 > 0)`],
   });
-  lang.registerEvaluator({ op: Or, evaluate: ({ nodes }) => nodes.some((n) => n.value) });
+  lang.registerEvaluator({ op: Or, evaluate: ({ nodes }) => decide(nodes, true) });
 
   lang.registerOp({
     name: "Not",

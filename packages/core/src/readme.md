@@ -78,7 +78,7 @@ src/language/
     index.ts        - createStdlib(): installs the segments, in the reference's order
     logic.ts, …     - one file per segment (logic, control, array, arithmetic, list,
                       conversion, string): its ops, their evaluators, their symbols
-    shared.ts       - the symbol builders (bin, variadic) and the list guard (toList)
+    shared.ts       - the symbol builders (bin, variadic) and the numbers skip (numbersOf)
   language.ts       - Language assembly: createLanguage / extendLanguage / parseSource
 ```
 

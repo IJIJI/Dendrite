@@ -2,14 +2,16 @@ import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { type Language } from "../language";
 import { Type, elementOf } from "../infra/types";
-import { toList } from "./shared";
 
 //? The list segment: the higher-order ops, which are how iteration is written. Each is an
 // ordinary op with a function-typed input (declared last, so its generic element type is
 // refined from the resolved `list`). The predicate/transform/reducer's element-type params are
 // filled by inferInputTypes on the evaluator; the static type on the op is used only if that
 // is absent. The function input arrives as a resolved closure, and the evaluator calls it
-// directly; inferOutput propagates concrete types through the generic list operation.
+// directly; inferOutput propagates concrete types through the generic list operation. The
+// list is a list when an op runs (the evaluator gives null for a null, or a value of another
+// kind, before the op is called), and a predicate's result is read as a boolean: a predicate
+// that gives no value does not hold, so `Filter([1, null], x => x > 0)` is `[1]`.
 export function installList(lang: Language): void {
   lang.registerOp({
     name: "Filter",
@@ -25,7 +27,7 @@ export function installList(lang: Language): void {
   lang.registerEvaluator({
     op: "Filter",
     evaluate: ({ list, predicate }) =>
-      toList(list).filter((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -48,7 +50,8 @@ export function installList(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Map",
-    evaluate: ({ list, transform }) => toList(list).map((item) => (transform as FnValue)(item)),
+    evaluate: ({ list, transform }) =>
+      (list as unknown[]).map((item) => (transform as FnValue)(item)),
     inferInputTypes: (inputTypes) => ({
       transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
     }),
@@ -72,7 +75,7 @@ export function installList(lang: Language): void {
   lang.registerEvaluator({
     op: "Find",
     evaluate: ({ list, predicate }) =>
-      toList(list).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
+      (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -93,7 +96,7 @@ export function installList(lang: Language): void {
   lang.registerEvaluator({
     op: "Every",
     evaluate: ({ list, predicate }) =>
-      toList(list).every((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).every((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -113,7 +116,7 @@ export function installList(lang: Language): void {
   lang.registerEvaluator({
     op: "Some",
     evaluate: ({ list, predicate }) =>
-      toList(list).some((item) => Boolean((predicate as FnValue)(item))),
+      (list as unknown[]).some((item) => Boolean((predicate as FnValue)(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -140,7 +143,7 @@ export function installList(lang: Language): void {
   lang.registerEvaluator({
     op: "Reduce",
     evaluate: ({ list, initial, reducer }) =>
-      toList(list).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
+      (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
     inferInputTypes: (inputTypes) => {
       const acc = inputTypes["initial"] ?? Type.any;
       return { reducer: Type.fn([acc, elementOf(inputTypes["list"])], acc) };

@@ -301,12 +301,19 @@ describe("array ops", () => {
     expect(runSource("output out = Min([])").value).toBeNull();
   });
 
-  // A null in a list of numbers reads as zero in all three, as it does in Add. Max and Min
-  // kept the null itself until 2026-10-08, when it came first in the list.
-  it("Average, Max and Min read a null item as zero", () => {
-    expect(runSource("output out = Average([null, 4])").value).toBe(2);
-    expect(runSource("output out = Max([null, -4])").value).toBe(0);
-    expect(runSource("output out = Min([null, 4])").value).toBe(0);
+  // A null item is skipped in all three (numbersOf), and so is an item of another kind that
+  // reached the list through `any`. Until 0.8.0 the three read a null item as zero.
+  it("Average, Max and Min skip a null item", () => {
+    expect(runSource("output out = Average([null, 4])").value).toBe(4);
+    expect(runSource("output out = Max([null, -4])").value).toBe(-4);
+    expect(runSource("output out = Min([null, 4])").value).toBe(4);
+    expect(runSource("output out = Average([null])").value).toBeNull();
+    expect(runSource("output out = Max([null])").value).toBeNull();
+  });
+
+  it("Average, Max and Min skip an item of another kind, by kind", () => {
+    expect(runSource('output out = Average([1, "a"])').value).toBe(1);
+    expect(runSource('output out = Max([1, "a", true])').value).toBe(1);
   });
 
   it("Includes membership", () => {
@@ -327,9 +334,9 @@ describe("an op with no answer gives null", () => {
     expect(runSource("output out = Divide(9, 2)").value).toBe(4.5);
   });
 
-  it("a null divisor reads as zero, so it is a division by zero too", () => {
+  it("a null operand is no value, on either side", () => {
     expect(runSource("output out = Divide(1, null)").value).toBeNull();
-    expect(runSource("output out = Divide(null, 2)").value).toBe(0);
+    expect(runSource("output out = Divide(null, 2)").value).toBeNull();
   });
 
   it("IsSet and Default see it", () => {
@@ -337,10 +344,11 @@ describe("an op with no answer gives null", () => {
     expect(runSource("output out = Default(Divide(1, 0), 7)").value).toBe(7);
   });
 
-  // The null is the answer of ONE op. The next number op reads it as zero, as it reads any
-  // null, so a program that cares tests it where it arises.
-  it("the next number op reads that null as zero", () => {
-    expect(runSource("output out = Divide(1, 0) + 1").value).toBe(1);
+  // The next op hands no value on, so a missing value reaches the output, and `??` is where
+  // a program that cares stops it. Until 0.8.0 the next number op read it as zero.
+  it("the next number op hands that null on, and ?? stops it", () => {
+    expect(runSource("output out = Divide(1, 0) + 1").value).toBeNull();
+    expect(runSource("output out = (Divide(1, 0) ?? 0) + 1").value).toBe(1);
   });
 
   it("a non-number that reaches a number op through any", () => {
@@ -504,17 +512,28 @@ describe("math ops", () => {
     expect(of("Pow(10, 400)")).toBeNull();
   });
 
-  it("a null reads as zero in each of them", () => {
-    expect(of("Round(null)")).toBe(0);
-    expect(of("Floor(null)")).toBe(0);
-    expect(of("Ceil(null)")).toBe(0);
-    expect(of("Abs(null)")).toBe(0);
-    expect(of("Clamp(null, 1, 5)")).toBe(1);
-    expect(of("Mod(null, 5)")).toBe(0);
-    expect(of("Pow(null, 2)")).toBe(0);
-    expect(of("Pow(2, null)")).toBe(1);
-    // A null divisor is a zero divisor.
-    expect(of("Mod(5, null)")).toBeNull();
+  it("a null is no value in each of them", () => {
+    for (const expr of [
+      "Round(null)",
+      "Floor(null)",
+      "Ceil(null)",
+      "Abs(null)",
+      "Clamp(null, 1, 5)",
+      "Clamp(3, null, 5)",
+      "Mod(null, 5)",
+      "Mod(5, null)",
+      "Pow(null, 2)",
+      "Pow(2, null)",
+      "Negate(null)",
+      "Add(1, null)",
+      "Multiply(2, null)",
+      "Subtract(null, 1)",
+      "1 / 0 + 1",
+    ]) {
+      expect(of(expr), expr).toBeNull();
+    }
+    // An optional input handed a null reads as absent: a whole number, as Round(2.5) gives.
+    expect(of("Round(2.5, null)")).toBe(3);
   });
 
   // A text can reach a number input through `any`. Each op computes NaN from it, and so has
@@ -545,10 +564,11 @@ describe("math ops", () => {
   });
 });
 
-// A list op never throws: a null, or anything that is not a list arriving through `any`, reads
-// as the empty list. `null` fits a list type directly; a `5` or an `"abc"` can only reach a list
-// input through an untyped lambda parameter, so that is how they are delivered here.
-describe("a list op reads what is not a list as []", () => {
+// A list op never throws: a null, or anything that is not a list arriving through `any`, is
+// no value for the op, which gives null and does not run (the evaluator's rule, 0.8.0). `null`
+// fits a list type directly; a `5` or an `"abc"` can only reach a list input through an untyped
+// lambda parameter, so that is how they are delivered here. Until 0.8.0 each read as [].
+describe("a list op handed what is not a list gives no value", () => {
   const viaAny = (body: string, arg: string) =>
     runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;
   const ops: [string, unknown][] = [
@@ -569,17 +589,30 @@ describe("a list op reads what is not a list as []", () => {
   ];
 
   for (const [body, empty] of ops) {
-    it(`${body}: null, 5 and "abc" all give the empty-list answer`, () => {
+    it(`${body}: [] gives the empty-list answer; null, 5 and "abc" give null`, () => {
       expect(viaAny(body, "[]")).toEqual(empty);
-      expect(viaAny(body, "null")).toEqual(empty);
-      expect(viaAny(body, "5")).toEqual(empty);
-      expect(viaAny(body, '"abc"')).toEqual(empty);
+      expect(viaAny(body, "null")).toBeNull();
+      expect(viaAny(body, "5")).toBeNull();
+      expect(viaAny(body, '"abc"')).toBeNull();
     });
   }
 
-  it("Concat guards each member, not only the whole", () => {
-    expect(runSource("output out = Concat(null, [1], null)").value).toEqual([1]);
-    expect(viaAny("Concat([0], x)", "5")).toEqual([0]);
+  it("Concat: a member that is no list is no value for the whole", () => {
+    expect(runSource("output out = Concat(null, [1], null)").value).toBeNull();
+    expect(viaAny("Concat([0], x)", "5")).toBeNull();
+    expect(runSource("output out = Concat([0], [1])").value).toEqual([0, 1]);
+  });
+
+  it("a null item stays an item: Length counts it, Map hands it to the lambda", () => {
+    expect(runSource("output out = Length([1, null])").value).toBe(2);
+    expect(runSource("output out = Map([1, null], x => x + 1)").value).toEqual([2, null]);
+    expect(runSource("output out = Includes([1, null], null)").value).toBe(true);
+  });
+
+  it("a predicate that gives no value does not hold", () => {
+    expect(runSource("output out = Filter([1, null], x => x > 0)").value).toEqual([1]);
+    expect(runSource("output out = Every([1, null], x => x > 0)").value).toBe(false);
+    expect(runSource("output out = Some([1, null], x => x < 0)").value).toBe(false);
   });
 });
 
@@ -619,9 +652,12 @@ describe("a field read on null gives null", () => {
     expect(evalWith("output out = Find($buses, b => b.id == 9).name.length", [])).toBeNull();
   });
 
-  it("a struct that lacks the field still throws invalid_field_access", () => {
-    expect(() => evalWith(src, [{ id: 9 }])).toThrow(/does not exist/);
-    expect(() => evalWith(src, [9])).toThrow(/does not exist/);
+  // Until 0.8.0 both threw `invalid_field_access`; a field read never throws now.
+  it("a struct that lacks the field, or a value that is no struct, gives null", () => {
+    expect(evalWith(src, [{ id: 9 }])).toBeNull();
+    expect(evalWith(src, [9])).toBeNull();
+    expect(evalWith(src, [[9]])).toBeNull();
+    expect(evalWith(src, [{ id: 9, name: undefined }])).toBeNull();
   });
 });
 
@@ -639,8 +675,8 @@ describe("conversion ops", () => {
     expect(value("ToString(true)")).toBe("true");
   });
 
-  it("ToString: null is the empty string, and a list is its JSON", () => {
-    expect(value("ToString(null)")).toBe("");
+  it("ToString: no value is no value, and a list is its JSON", () => {
+    expect(value("ToString(null)")).toBeNull();
     expect(value("ToString([1, 2])")).toBe("[1,2]");
   });
 
@@ -673,10 +709,16 @@ describe("conversion ops", () => {
     expect(value('Default(ToNumber("9"), 0)')).toBe(9);
   });
 
-  it("ToBool: false for false, 0, the empty string, null and an empty list", () => {
-    for (const falsy of ["false", "0", '""', "null", "[]"]) {
+  it("ToBool: false for false, 0, the empty string and an empty list", () => {
+    for (const falsy of ["false", "0", '""', "[]"]) {
       expect(value(`ToBool(${falsy})`), falsy).toBe(false);
     }
+  });
+
+  it("a conversion of no value is no value, in each of the three", () => {
+    expect(value("ToString(null)")).toBeNull();
+    expect(value("ToNumber(null)")).toBeNull();
+    expect(value("ToBool(null)")).toBeNull();
   });
 
   it('ToBool: true otherwise, the text "false" and a list holding a 0 included', () => {
@@ -747,10 +789,21 @@ describe("string ops", () => {
     expect(value('Trim("  cam 1  ")')).toBe("cam 1");
   });
 
-  it("a null text is the empty string, never a throw", () => {
-    expect(value("Upper(null)")).toBe("");
-    expect(value("Trim(null)")).toBe("");
-    expect(value('Contains(null, "a")')).toBe(false);
+  // Until 0.8.0 a null text read as the empty string; it is no value now, and never a throw.
+  it("a null text is no value, on either side", () => {
+    expect(value("Upper(null)")).toBeNull();
+    expect(value("Lower(null)")).toBeNull();
+    expect(value("Trim(null)")).toBeNull();
+    expect(value('Contains(null, "a")')).toBeNull();
+    expect(value('Contains("a", null)')).toBeNull();
+    expect(value('StartsWith(null, "a")')).toBeNull();
+    expect(value('EndsWith("a", null)')).toBeNull();
+  });
+
+  it("Join: a separator handed a null is absent, and a null list is no value", () => {
+    expect(value('Join(["a", "b"], null)')).toBe("ab");
+    expect(value('Join(null, ",")')).toBeNull();
+    expect(value('Join([1, null], ",")')).toBe("1,");
   });
 
   it("Contains, StartsWith and EndsWith, which are case sensitive", () => {
@@ -807,10 +860,11 @@ describe("as: the value when it fits, null when it does not", () => {
     expect(castOf("output out = $rows as Grade", 11)).toBeNull();
   });
 
-  it("the null is what IsSet, Default and the list ops already handle", () => {
+  it("the null is what IsSet and Default handle, and what a list op hands on", () => {
     expect(castOf("output out = IsSet($rows as number[])", 5)).toBe(false);
     expect(castOf("output out = Default($rows as number[], [0])", 5)).toEqual([0]);
-    expect(castOf("output out = Length($rows as number[])", 5)).toBe(0);
+    expect(castOf("output out = Length($rows as number[])", 5)).toBeNull();
+    expect(castOf("output out = Length($rows as number[] ?? [])", 5)).toBe(0);
   });
 
   it("a struct that lacks a field gives null, and a field read on that null is null", () => {
@@ -871,12 +925,13 @@ describe("convert: the evaluator converts a flagged input before the op runs", (
     expect(evalWith("output out = Twice($raw)", "abc").value).toBeNull();
   });
 
-  it("a wrong runtime shape passes through unchanged, and the op's own guard handles it", () => {
+  it("a wrong runtime shape is no value: the rule reads the converted value", () => {
     // `any` holding a number where a LIST was declared: not a list, so nothing to convert leaf
-    // by leaf; Join's toList then reads it as empty. The checker did warn about that: a bare
-    // any into a shape is still an implicit cast, because the shape is what it cannot see.
+    // by leaf, and the evaluator's rule then refuses it as a list that is no list. The checker
+    // did warn about that: a bare any into a shape is still an implicit cast, because the
+    // shape is what it cannot see.
     const five = evalWith("output out = Join($raw)", 5);
-    expect(five.value).toBe("");
+    expect(five.value).toBeNull();
     expect(five.casts.map((w) => w.message)).toEqual(["'$raw' is 'any' typed - 'any[]' expected"]);
     expect(evalWith("output out = Join($raw)", ["a", 1]).value).toBe("a1");
   });
@@ -954,6 +1009,119 @@ describe("templates: text with holes, through Join", () => {
 
 // ─── Lazy inputs ──────────────────────────────────────────────────────────────
 
+// The rule of "no value" (0.8.0, option B) is the evaluator's, in `receive`: an input that
+// names a type and is handed a null, or a value of another KIND, is no value, and the op does
+// not run. Shown on the stdlib's own cases and on host ops that know nothing of it.
+describe("the rule of no value: the evaluator decides, before any op", () => {
+  const of = (src: string) => runSource(`output out = ${src}`).value;
+
+  it("a comparison with no value is no value; == and != read it", () => {
+    for (const expr of ["null > -1", "null < 1", "null >= 0", "null <= 0"]) {
+      expect(of(expr), expr).toBeNull();
+    }
+    expect(of("null == 0")).toBe(false);
+    expect(of("null == null")).toBe(true);
+    expect(of("null != 0")).toBe(true);
+  });
+
+  it("Not and Xor with no value are no value", () => {
+    expect(of("Not(null)")).toBeNull();
+    expect(of("!null")).toBeNull();
+    expect(of("Xor(null, true)")).toBeNull();
+  });
+
+  it("a value of the wrong kind through any is no value too", () => {
+    const via = (body: string, arg: string) =>
+      runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;
+    expect(via("Upper(x)", "5")).toBeNull();
+    expect(via("x + 1", '"abc"')).toBeNull();
+    expect(via("x > 1", '"abc"')).toBeNull();
+    expect(via("If(x, 1, 2)", '"no"')).toBeNull();
+    expect(via("Length(x)", "5")).toBeNull();
+    expect(via("Upper(x)", '"ok"')).toBe("OK");
+  });
+
+  it("a field read on a value with no such field, or on a list, is null", () => {
+    const via = (arg: string) => runSource(`let f = x => x.name\noutput out = f(${arg})`).value;
+    expect(via("5")).toBeNull();
+    expect(via("[1, 2]")).toBeNull();
+    expect(via("null")).toBeNull();
+    expect(runSource("let f = x => x.length\noutput out = f([1, 2])").value).toBeNull();
+  });
+
+  // A host op per kind of declared type, each handed a null and a value of another kind: the
+  // host's evaluator is reached only with what it declared, and a thrown error would show.
+  const hostLang = () => {
+    const lang = createStdlib();
+    lang.registerType("Grade", { extends: "number" });
+    lang.registerType("Pair", { fields: { n: Type.number } });
+    lang.registerType("Handle", {});
+    const typed = (name: string, type: Type, required = true) => {
+      lang.registerOp({
+        name,
+        inputs: [{ name: "v", type, required }],
+        output: Type.string,
+      });
+      lang.registerEvaluator({ op: name, evaluate: ({ v }) => `got ${typeof v}` });
+    };
+    typed("OnGrade", Type.name("Grade"));
+    typed("OnPair", Type.name("Pair"));
+    typed("OnHandle", Type.name("Handle"));
+    typed("OnList", Type.array(Type.number));
+    typed("OnMaybe", Type.number, false);
+    lang.registerOp({
+      name: "TwiceB",
+      inputs: [{ name: "v", type: Type.boolean, convert: true }],
+      output: Type.string,
+    });
+    lang.registerEvaluator({ op: "TwiceB", evaluate: ({ v }) => `got ${String(v)}` });
+    lang.registerOp({
+      name: "TwiceN",
+      inputs: [{ name: "v", type: Type.number, convert: true }],
+      output: Type.string,
+    });
+    lang.registerEvaluator({ op: "TwiceN", evaluate: ({ v }) => `got ${String(v)}` });
+    return lang;
+  };
+  const host = (src: string) => runSource(`output out = ${src}`, "out", hostLang()).value;
+  const hostVia = (body: string, arg: string) =>
+    runSource(`let f = x => ${body}\noutput out = f(${arg})`, "out", hostLang()).value;
+
+  it("a type that extends a primitive is checked by its root", () => {
+    // A number is no Grade to the checker (subtyping is one way), so the cast says it is.
+    expect(host("OnGrade(5 as Grade)")).toBe("got number");
+    expect(host("OnGrade(null)")).toBeNull();
+    expect(hostVia("OnGrade(x)", '"a"')).toBeNull();
+  });
+
+  it("a struct type is an object that is no list; an opaque type is not checked", () => {
+    expect(hostVia("OnPair(x)", "5")).toBeNull();
+    expect(hostVia("OnPair(x)", "[1]")).toBeNull();
+    expect(host("OnPair(null)")).toBeNull();
+    expect(hostVia("OnHandle(x)", "5")).toBe("got number");
+    expect(hostVia("OnHandle(x)", '"a"')).toBe("got string");
+    expect(host("OnHandle(null)")).toBeNull();
+  });
+
+  it("a list input is a list; a null item inside it is the op's", () => {
+    expect(host("OnList([1, null])")).toBe("got object");
+    expect(host("OnList(null)")).toBeNull();
+    expect(hostVia("OnList(x)", "5")).toBeNull();
+  });
+
+  it("an optional input handed a null arrives as undefined, as one left out does", () => {
+    expect(host("OnMaybe(null)")).toBe("got undefined");
+    expect(host("OnMaybe()")).toBe("got undefined");
+    expect(host("OnMaybe(1)")).toBe("got number");
+  });
+
+  it("a converting input converts a null with Convert, then the rule reads the result", () => {
+    expect(host("TwiceB(null)")).toBe("got false");
+    expect(host("TwiceN(null)")).toBeNull();
+    expect(host('TwiceN("4")')).toBe("got 4");
+  });
+});
+
 describe("a lazy input: the op reads it, or it is never evaluated", () => {
   // A host op that throws, which a branch not taken must never reach, and one that counts its
   // runs, which a thunk read twice must run once.
@@ -979,6 +1147,37 @@ describe("a lazy input: the op reads it, or it is never evaluated", () => {
     expect(out("output out = If(false, Boom(), 2)", lang)).toBe(2);
     expect(out("output out = true ? 1 : Boom()", lang)).toBe(1);
     expect(() => out("output out = If(false, 1, Boom())", lang)).toThrow(/boom/);
+  });
+
+  // The evaluator's rule gives null for the op before any thunk is read, so a condition that
+  // is no value reads no branch: the one case where a null condition must evaluate no side.
+  it("If with no condition is no value, and reads neither branch", () => {
+    const { lang } = hostLang();
+    expect(out("output out = If(null, Boom(), Boom())", lang)).toBeNull();
+    expect(out("output out = null ? Boom() : Boom()", lang)).toBeNull();
+    // A text where a boolean is declared only gets there through `any`.
+    expect(out('let f = x => If(x, Boom(), Boom())\noutput out = f("no")', lang)).toBeNull();
+  });
+
+  it("And and Or are three-valued, deciding on either side", () => {
+    const { lang } = hostLang();
+    const rows: [string, boolean | null][] = [
+      ["And(null, true)", null],
+      ["And(true, null)", null],
+      ["And(false, null)", false],
+      ["And(null, false)", false],
+      ["Or(null, true)", true],
+      ["Or(true, null)", true],
+      ["Or(null, false)", null],
+      ["Or(false, null)", null],
+      ["false && Boom()", false],
+      ["true || Boom()", true],
+      ["And()", true],
+      ["Or()", false],
+    ];
+    for (const [expr, expected] of rows)
+      expect(out(`output out = ${expr}`, lang), expr).toBe(expected);
+    expect(() => out("output out = null && Boom()", lang)).toThrow(/boom/);
   });
 
   it("Default evaluates the fallback only when the value is null, as an op and as ??", () => {

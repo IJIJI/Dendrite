@@ -5,6 +5,13 @@ import { Type, isAny, typesEqual } from "../infra/types";
 
 //? The control segment: choosing between values, and falling back when there is none, and
 // the two symbols that spell those: `c ? a : b` over If, `a ?? b` over Default.
+
+// The type two branches agree on, else `any`: the language's one rule for two types that meet
+// without agreeing (a mixed list is `any[]`). If and Default share it; until 0.8.0 Default took
+// the value's type on faith and never looked at the fallback, so `$n ?? "none"` was `number`.
+const agreed = (a: Type | undefined, b: Type | undefined): Type =>
+  a && b && typesEqual(a, b) && !isAny(a) ? a : Type.any;
+
 export function installControl(lang: Language): void {
   const If = lang.registerOp({
     name: "If",
@@ -15,18 +22,14 @@ export function installControl(lang: Language): void {
     ],
     output: Type.any,
     category: "control",
-    description: "Picks then or else by condition. Only the branch taken is evaluated.",
+    description:
+      "Picks then or else by condition. Only the branch taken is evaluated. No condition is no value, and neither branch is read.",
     examples: [den`output label = If(72 >= 60, "Pass", "Fail")`],
   });
   lang.registerEvaluator({
     op: If,
     evaluate: ({ condition, then, else: otherwise }) => (condition ? then.value : otherwise.value),
-    // Output type = branch type when both branches match (and aren't any), else any.
-    inferOutput: (inputTypes) => {
-      const t = inputTypes["then"],
-        e = inputTypes["else"];
-      return t && e && typesEqual(t, e) && !isAny(t) ? t : Type.any;
-    },
+    inferOutput: (inputTypes) => agreed(inputTypes["then"], inputTypes["else"]),
   });
 
   lang.registerOp({
@@ -58,11 +61,7 @@ export function installControl(lang: Language): void {
     op: Default,
     evaluate: ({ value, fallback }) =>
       value !== null && value !== undefined ? value : fallback.value,
-    // Output type = value's type when known, else fallback's type
-    inferOutput: (inputTypes) => {
-      const v = inputTypes["value"];
-      return v && !isAny(v) ? v : (inputTypes["fallback"] ?? Type.any);
-    },
+    inferOutput: (inputTypes) => agreed(inputTypes["value"], inputTypes["fallback"]),
   });
 
   // -------------------------------------------------------------------------

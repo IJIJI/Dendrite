@@ -595,13 +595,6 @@ export const diagnostics = {
     triggeredBy:
       "Evaluating outside the runtime, with `run()` over a state whose `inputs` map lacks a name the program reads. Through a runtime or an instance every declared input is seeded first, so this one stays a safety net.",
   },
-  invalid_field_access: {
-    stage: "evaluate",
-    severity: "error",
-    message: "A field was read from a value that does not have it.",
-    triggeredBy:
-      "A host pushing a value that does not match the struct type its input was declared with. Nothing validates a pushed value against its type yet. A field of `null` is not this: it reads as `null`.",
-  },
   host_error: {
     stage: "evaluate",
     severity: "error",
