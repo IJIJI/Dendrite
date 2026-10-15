@@ -200,18 +200,6 @@ function assertTypeRecord(value: unknown, path: string): void {
   for (const [name, type] of Object.entries(value)) assertType(type, `${path}.${name}`);
 }
 
-/**
- * Guard the optional `ports` of a saved program of any form (throws descriptively). Part of
- * deserialise for the ast form.
- * @deprecated `isSavedProgram` checks the same without throwing, and `load` asks it instead.
- * This stays exported until a minor removes it.
- */
-export function assertSavedPorts(saved: SavedProgram): void {
-  if (saved.ports !== undefined && !isPorts(saved.ports)) {
-    throw new Error("Malformed SavedProgram: ports is not a Ports record");
-  }
-}
-
 const FORMS: ReadonlySet<unknown> = new Set<SavedProgram["form"]>(["code", "ast", "rete"]);
 
 /**
@@ -236,7 +224,10 @@ export function isSavedProgram(value: unknown): value is SavedProgram {
  * records convert back to Maps.
  */
 export function deserialise(saved: SavedAstProgram): RawProgram {
-  assertSavedPorts(saved);
+  // `load` has asked isSavedProgram already; a direct caller gets the same answer as a throw.
+  if (saved.ports !== undefined && !isPorts(saved.ports)) {
+    throw new Error("Malformed SavedProgram: ports is not a Ports record");
+  }
   assertNodeRecord(saved.bindings, "bindings");
   assertNodeRecord(saved.outputs, "outputs");
   if (saved.annotations !== undefined) assertTypeRecord(saved.annotations, "annotations");

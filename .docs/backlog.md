@@ -313,6 +313,33 @@ the input.
 
 ---
 
+## Language — array index access, `list[i]`
+
+**What:** asked by the maintainer on 2026-10-15, while 0.8.0 was built. A program cannot read
+one item of a list by its position: there is no `xs[0]`, no `At(xs, 0)`, no `First` or `Last`.
+What exists goes through a function (`Find(xs, item => …)`, `Reduce`) or asks about the whole
+(`Length`, `Includes`). Since 0.8.0 a field read on a list gives `null` (a list has no fields),
+so `xs.length` is no way round either: `Length(xs)` is.
+
+**Why deferred:** no consumer named yet; found while the field read was decided, not asked
+for by a program.
+
+**What it requires, two sizes:**
+
+- **An op**, `At(list, index)`: no syntax, a reference entry, an evaluator of one line, an
+  `inferOutput` that gives the list's element type. Out of range, or a negative index, is no
+  value (the rule of 0.8.0): `null`, and `??` says what stands in. Decide whether the index
+  counts from 0 (every language the comparison names: C++, Java, JavaScript, Python, Rust,
+  Go) or from 1 (a spreadsheet's `INDEX`, SQL arrays, R). `First(list)` and `Last(list)` would
+  be the two spellings worth their own op, since `At(xs, Length(xs) - 1)` reads badly.
+- **The syntax**, `xs[i]`: a led on `[` at the `MEMBER` tier, registered beside the list
+  literal's nud on the same token (`core-grammar.ts` reads `[` as a nud today, and as `[]` after
+  a type), desugaring to the op; the analyser then types it through the op's `inferOutput`,
+  and the editor colours nothing new. A slice, `xs[1:3]`, is a separate question and belongs
+  with "strings as lists".
+
+---
+
 ## Core — the nearest-name hint on a port type and on an op node
 
 **What:** 0.7.0 appends "Did you mean 'x'?" to eight diagnostics (`analyser/nearest.ts`): a
