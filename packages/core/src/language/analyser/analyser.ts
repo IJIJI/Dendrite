@@ -9,12 +9,11 @@ import {
   type ASTNode,
   type CErrorNode,
   type CNode,
-  type LiteralValue,
   type SourceRef,
 } from "../infra/nodes";
 import { RawProgram } from "../infra/program";
 import { isCompatible, type LanguageDescriptor, type OpDefinition } from "../infra/registry";
-import { Type, isAny, isAnyOrNull, typeToString, typesEqual } from "../infra/types";
+import { Type, isAny, typeToString, typesEqual } from "../infra/types";
 import { hint } from "./nearest";
 import {
   AnalysisContext,
@@ -142,15 +141,17 @@ function writtenAs(node: CNode): string | undefined {
   }
 }
 
-// Does an `any` (or a null) cross into something narrower here? Looked for INSIDE a list too:
-// `any[]` fits `number[]` through array covariance, and used to cross without a word. Functions
-// are left out on purpose: an `(any) -> T` lambda where `(number) -> T` is expected is the
-// gradual typing isCompatible allows deliberately, and warning there would flood every Filter.
+// Does an `any` cross into something narrower here? Looked for INSIDE a list too: `any[]` fits
+// `number[]` through array covariance, and used to cross without a word. Functions are left
+// out on purpose: an `(any) -> T` lambda where `(number) -> T` is expected is the gradual
+// typing isCompatible allows deliberately, and warning there would flood every Filter. A
+// literal `null` is left out too (0.8.0): it is fully known, and the op gives no value for it,
+// so there is no check the program is trading away.
 function castsAny(actual: Type, expected: Type): boolean {
   if (actual.kind === "array" && expected.kind === "array") {
     return castsAny(actual.element, expected.element);
   }
-  return isAnyOrNull(actual) && !isAny(expected);
+  return isAny(actual) && !isAny(expected);
 }
 
 // The type a converting input accepts: its shape, with `any` at every leaf. `string[]` becomes
@@ -334,21 +335,20 @@ function validateInputs(
         });
         continue;
       }
-      // Defaults come from named types only; arrays/functions have no registry entry. They are derived.
-      // TODO: Double check if arrays and functions are handled correctly.
-      const typeDef =
-        opInput.type.kind === "name" ? ctx.descriptor.types.get(opInput.type.name) : undefined;
-      const defVal = typeDef?.default;
-      const value: LiteralValue =
-        typeof defVal === "string" || typeof defVal === "number" || typeof defVal === "boolean"
-          ? defVal
-          : null;
-      analysedInputs[name] = { kind: "literal", type: opInput.type, value, dependsOn: new Set() };
+      // The placeholder is a null literal for every type (0.8.0): an input left out is no value,
+      // and the evaluator gives null for the op. Until then a primitive took its type's default
+      // and a list a null, so `Upper()` was "" and `Length()` already null.
+      analysedInputs[name] = {
+        kind: "literal",
+        type: opInput.type,
+        value: null,
+        dependsOn: new Set(),
+      };
       inputTypes[name] = opInput.type;
       ctx.warnings.push({
         kind: "missing_op_input",
         name,
-        message: `Required input '${name}' of op '${opDef.name}' is absent - using type default`,
+        message: `Required input '${name}' of op '${opDef.name}' is absent, so the op gives no value`,
         source: nodeSource,
       });
       // missing-input placeholder has empty dependsOn - nothing to add to dependsOnAcc
@@ -546,10 +546,20 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
       // → any. (Heterogeneous arrays via union types / generics are deferred - see
       // .docs/todo.md.) The parser's placeholder `node.type` (any) is overridden here.
       const itemTypes = cItems.filter((ci) => ci.kind !== "error").map(getOutputType);
+      // A null item leaves the type alone (0.8.0, option B): `[1, null]` is `number[]`, where it
+      // was `any[]` and warned on the way into Average. A null is dropped from the agreement
+      // only where it fits what the others agree on, so `[x => x, null]` stays the error it is
+      // (a null never fits a function), and `[null]` alone agrees on nothing: `any[]`, where it
+      // was `null[]`, a type no lambda parameter could carry.
+      const agree = (types: Type[]): Type =>
+        types.length > 0 && types.every((t) => typesEqual(t, types[0])) ? types[0] : Type.any;
+      const typed = itemTypes.filter((t) => !(t.kind === "name" && t.name === "null"));
       const elementType =
-        itemTypes.length > 0 && itemTypes.every((t) => typesEqual(t, itemTypes[0]))
-          ? itemTypes[0]
-          : Type.any;
+        typed.length === 0
+          ? Type.any
+          : isCompatible(Type.null, agree(typed), ctx.descriptor)
+            ? agree(typed)
+            : agree(itemTypes);
       // A list of `any` holds data, and a function never fits `any` (isCompatible, the
       // totality guard). The fallback above was the one place a function could ride in one:
       // into Join, which printed nothing for it, and out through an output, where it is not
@@ -610,6 +620,15 @@ function analyseNode(node: ASTNode, ctx: AnalysisContext): CNode {
             kind: "field_access_on_primitive",
             name: node.field,
             message: `Field access '${node.field}' on primitive type '${typeToString(structType)}'`,
+            source: node.source,
+          });
+        } else if (isAny(structType)) {
+          // The checker cannot look into an `any`, so the read is unchecked: a value without
+          // the field gives null at run time (0.8.0), and the warning is the one word about it.
+          ctx.warnings.push({
+            kind: "field_access_on_any",
+            name: node.field,
+            message: `Field access '${node.field}' on an 'any' value, which the checker cannot look into. A value without the field gives null`,
             source: node.source,
           });
         }

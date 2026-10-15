@@ -1,7 +1,7 @@
 import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { type Language } from "../language";
-import { Type, elementOf } from "../infra/types";
+import { Type, elementOf, isAnyOrNull } from "../infra/types";
 
 //? The list segment: the higher-order ops, which are how iteration is written. Each is an
 // ordinary op with a function-typed input (declared last, so its generic element type is
@@ -149,7 +149,10 @@ export function installList(lang: Language): void {
     evaluate: ({ list, initial, reducer }) =>
       (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
     inferInputTypes: (inputTypes) => {
-      const acc = inputTypes["initial"] ?? Type.any;
+      // A null (or any) initial types the accumulator `any`: typed `null`, it would demand a
+      // reducer that returns null (0.8.0; `Reduce(list, null, (acc, item) => acc ?? item)`).
+      const initial = inputTypes["initial"];
+      const acc = !initial || isAnyOrNull(initial) ? Type.any : initial;
       return { reducer: Type.fn([acc, elementOf(inputTypes["list"])], acc) };
     },
     inferOutput: (inputTypes) => {

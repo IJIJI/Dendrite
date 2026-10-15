@@ -1105,6 +1105,21 @@ describe("the rule of no value: the evaluator decides, before any op", () => {
     expect(of("Xor(null, true)")).toBeNull();
   });
 
+  // The analyser's placeholder for a required input left out is a null literal for every type
+  // (0.8.0), so the op gives no value; a primitive took its type's default before. A variadic
+  // left out is an empty list, as before.
+  it("a required input left out is no value, for every type", () => {
+    expect(of("Length()")).toBeNull();
+    expect(of("Upper()")).toBeNull();
+    expect(of("Round()")).toBeNull();
+    expect(of("Concat()")).toEqual([]);
+  });
+
+  it("[null] is a list of any, so a lambda over it reads", () => {
+    expect(of("Some([null], x => x > 0)")).toBe(false);
+    expect(of("Length([null])")).toBe(1);
+  });
+
   it("a value of the wrong kind through any is no value too", () => {
     const via = (body: string, arg: string) =>
       runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;

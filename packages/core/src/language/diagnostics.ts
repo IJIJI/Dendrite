@@ -540,6 +540,16 @@ export const diagnostics = {
       outputs: [{ name: "x", type: Type.any }],
     }),
   },
+  field_access_on_any: {
+    stage: "analyse",
+    severity: "warning",
+    message:
+      "A field read on an `any` value, which the checker cannot look into. A value without the field gives `null` at run time.",
+    example: withPorts(den`output x = $loose.name`, {
+      inputs: [{ name: "loose", type: Type.any }],
+      outputs: [{ name: "x", type: Type.any }],
+    }),
+  },
   unknown_op_input_key: {
     stage: "analyse",
     severity: "warning",
@@ -556,7 +566,7 @@ export const diagnostics = {
     stage: "analyse",
     severity: "warning",
     message:
-      "An op input was left out; the type's default stands in. This is why a half-written program keeps running.",
+      "An op input was left out, so the op gives no value. This is why a half-written program keeps running.",
     example: withPorts(
       den`
       output x = If(true, 1)
@@ -577,7 +587,7 @@ export const diagnostics = {
     stage: "analyse",
     severity: "warning",
     message:
-      "An `any` value flowed somewhere narrower. Allowed, and the reason it might fail at runtime instead.",
+      "An `any` value flowed somewhere narrower. Allowed, and the reason it might give no value at run time instead. A program that compiles with it relies on a check the language does not make, and a stricter check may refuse it later.",
     example: withPorts(den`output x = Add($loose, 1)`, {
       inputs: [{ name: "loose", type: Type.any }],
       outputs: [{ name: "x", type: Type.number }],
