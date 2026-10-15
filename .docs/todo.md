@@ -301,6 +301,10 @@ be done before a 1.0.0. The repo has no written definition of 1.0, so one rule s
 **after 1.0.0, a change that breaks a program, a host's code or a saved file needs a 2.0.0.**
 What only ADDS can come after. The list is being talked through; each row says where it stands.
 
+**Built in 0.8.0 (2026-10-15):** every row below marked "The plan of option B", the `And`/`Or`
+row, the conversion row, the two `NaN` rows and the field-read row. The record is "0.8.0 — decided
+on 2026-10-14" above, and the three backlog entries they closed are in `done.md`.
+
 **Agreed, the maintainer, 2026-10-10:**
 
 | What | Why before 1.0.0 | Where it is written |

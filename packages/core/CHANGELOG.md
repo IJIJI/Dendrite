@@ -7,7 +7,48 @@ package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-(at `^0.7.0` and `^0.7.1`), so a minor release here is always accompanied by a release of both.
+(at `^0.8.0`), so a minor release here is always accompanied by a release of both.
+
+## 0.8.0
+
+- **Breaking: "no value" everywhere.** An op handed a `null`, or a value of another kind, on an
+  input that names a type gives `null` and does not run, where it read the null as the type's
+  empty value: `1 / 0 + 1` is `null` (it was `1`), `Upper(null)` is `null` (it was `""`),
+  `Upper(5)` through an `any` is `null` (it was `"5"`), `And(null, true)` is `null` (it was
+  `false`): `And` and `Or` are three-valued, deciding on a `false` or a `true` on either side. A
+  conversion of no value is no value (`ToString(null)`, `ToBool(null)`). `Average`, `Max` and
+  `Min` skip a `null` item: `Average([1, null])` is `1` (it was `0.5`), `Max([-4, null])` is `-4`
+  (it was `0`). An optional input handed a `null` reads it as absent. The rule is the
+  evaluator's, in one place, so a host's op is under it too; the stdlib's thirty guards are gone.
+  `??` was shipped in 0.7.0 for this: `x ?? 0` means the same before and after.
+- **Breaking: a `NaN` is read as no value, at any depth, on both doors a host has.** A list or a
+  struct a host's op returns is walked, and a `NaN` or an infinity in it becomes `null`, a
+  negative zero `0`, unless the evaluator says `finiteCheck: false` (new): the promise that
+  none is in there, which the library's `Map`, `Filter`, `Find`, `Reduce`, `Concat`,
+  `Flatten`, `If` and `Default` make. A `NaN`, an infinity or an `undefined` a host pushes is
+  read as `null` the same way, on every input and on every path; a `number` input refused a
+  `NaN` before, and an `undefined` passed the door and then stopped every output with
+  `input_not_set`.
+- **Breaking: a field read never throws.** A field read on a value without the field, a number,
+  or a list gives `null`; the run-time error kind `invalid_field_access` is gone. The checker
+  warns where it could not look: `field_access_on_any` (new) on a field read of an `any` value.
+- **Breaking: `Default`'s output type is `If`'s**, the type both sides agree on, else `any`. It
+  took the value's type on faith and never looked at the fallback, so `$n ?? "none"` was typed
+  `number`.
+- **Breaking: `assertSavedPorts` is removed**, as its deprecation in 0.7.1 said; `isSavedProgram`
+  is the guard.
+- **Changed: a required op input left out is no value for every type**, where a primitive took
+  its type's default (`Upper()` was `""`); the `missing_op_input` warning says so. A literal
+  `null` into a typed slot no longer warns `implicit_any_cast`: it is known, and the op gives no
+  value for it. The warning's meaning says that a stricter check may refuse such a program later.
+- **New: `[1, null]` is `number[]`**, where it was `any[]` and warned on its way into `Average`;
+  `[null]` alone is `any[]`, where it was `null[]`.
+- **Fixed:** `Reduce(list, null, …)` compiles, its accumulator typed `any` (it was refused with
+  `unknown_type`); `Convert.toNumber` gives `null` for text that overflows to an infinity
+  (`"1e999"`), which a converting lambda parameter handed on; a field read on a list gives `null`,
+  not JavaScript's `length`.
+- **Known:** a binding read more than once is recomputed per read when its input changed, on
+  every path, where the docs say once per evaluation. To be fixed in 0.8.1.
 
 ## 0.7.1
 

@@ -129,8 +129,8 @@ language.registerOp({
 
 language.registerEvaluator({
   op: "Twice",
-  // n arrives as a number, or as null when the value had no reading as one.
-  evaluate: ({ n }) => (n === null ? null : (n as number) * 2),
+  // n arrives as a number: a value with no reading as one is no value, and Twice does not run.
+  evaluate: ({ n }) => (n as number) * 2,
 });
 ```
 
@@ -139,8 +139,8 @@ to know before you reach for it:
 
 - **A caller's mistake on that input is converted, not reported.** That is what the flag means,
   and why it is opt-in per input. It is free for text: every value has a text form, and the worst
-  case is a list printed as JSON. Take care with `number{:ts}`: a value with no reading as a number
-  becomes `null{:den}`, so the evaluator has to handle a null, as the one above does. The standard
+  case is a list printed as JSON. With `number{:ts}`, a value with no reading as a number is no value,
+  and the op does not run (see below), so the evaluator sees a number or nothing. The standard
   library converts to text only, on `Join{:den}`, and converts nothing to a boolean: a number read as
   a condition is the coercion the language turned down first, and `ToBool{:den}` stays explicit.
 - **Only `string{:ts}`, `number{:ts}`, `boolean{:ts}` or a list of them can carry the flag**, since
@@ -171,20 +171,48 @@ language.registerEvaluator({
 
 `Convert.toString{:ts}` gives `""{:ts}` for a null, writes a number or a boolean out, and gives a list
 or a struct its JSON. `Convert.toNumber{:ts}` reads a plain decimal and gives `null{:ts}` for anything
-else, `"0x10"{:ts}` and `"Infinity"{:ts}` included. `Convert.toBool{:ts}` is false for `false{:ts}`, `0{:ts}`,
+else, `"0x10"{:ts}`, `"Infinity"{:ts}` and text that overflows (`"1e999"{:ts}`) included. `Convert.toBool{:ts}` is false for `false{:ts}`, `0{:ts}`,
 the empty string, null and an empty list. Using them, rather than `String(){:ts}` or `Number(){:ts}`,
 is what keeps a host op's idea of a value in step with the language's.
 
-An evaluator gets its inputs already evaluated and returns a value. It should not throw for ordinary
-bad input (return something sensible instead), because a throw becomes a `host_error{:den}` on the program's
-outputs.
+### What your evaluator receives
 
-A number it returns has to be a real one. `NaN{:ts}` and the infinities are not values a program
-can hold (neither survives JSON, and `NaN{:ts}` is not even equal to itself), so when an evaluator
-returns one, the program gets `null{:den}` in its place. That is the language's "no answer", the
-same one the library's `Divide{:den}` gives for a division by zero, and `IsSet{:den}` and
-`Default{:den}` handle it. It applies to the number an op returns, not to numbers inside a list
-or a struct it returns.
+:::note[No value]
+An input that names a type never arrives as `null{:den}`, nor as a value of another kind: the
+evaluator gives `null{:den}` for the whole op before it runs, so the op gives no value and your
+code never meets the case. Four kinds of input do arrive with one, and the reference marks each:
+
+- `any{:den}`: the value as it is, `null{:den}` included.
+- An optional input, `name?`: `undefined{:ts}` for a `null{:den}`, exactly as when the input is
+  left out.
+- A converting input, `name~`: its leaves converted with `Convert{:ts}` first, so `""{:ts}` for
+  a text and `false{:ts}` for a boolean, and no value for a number.
+- A lazy input: a `Thunk{:ts}`, which is yours to read, or not.
+
+What the evaluator returns passes one check on the way out: a number that is not finite
+(`NaN{:ts}`, an infinity) is `null{:den}`, and a negative zero is `0{:den}`. A list or a struct is
+walked for the same, at any depth, unless the evaluator says `finiteCheck: false{:ts}`.
+:::
+
+The kind an input names is what is checked, never a type's `schema{:ts}`: a `number{:ts}` by
+`typeof{:ts}`, a list by `Array.isArray{:ts}`, a struct as an object, a type that `extends{:ts}` a
+primitive by its root. A schema runs once, at the door, when the host pushes the value
+([Embedding core](../embedding-core/#a-value-has-to-fit-its-type)). An opaque type, with no fields
+and no parent, is not checked at all.
+
+So an evaluator holds no guard for a null and none for a wrong kind, and it should not throw for
+ordinary bad input either: a throw becomes a `host_error{:den}` on the program's outputs, where
+`null{:den}` is the language's "no answer", the same one `Divide{:den}` gives for a division by
+zero, and `??{:den}` and `IsSet{:den}` handle it.
+
+`NaN{:ts}` and the infinities are not values a program can hold: neither survives JSON, and
+`NaN{:ts}` is not even equal to itself. The walk over a returned list or struct costs 4 ns an item
+and 46 ns a struct of four fields, and copies only when it finds one. An op whose numbers are its
+own, a list of readings a sensor gave, turns it off with `finiteCheck: false{:ts}` beside its
+`evaluate{:ts}`: the promise that no number it returns, at any depth, is a `NaN{:ts}` or an
+infinity. The library's ops that only hand values on make it (`Map{:den}`, `Filter{:den}`,
+`Concat{:den}`, …), because what they hand on was read already. A value JSON cannot carry, a
+class instance or a cycle, is passed as it is.
 
 ### An input the op may not need
 

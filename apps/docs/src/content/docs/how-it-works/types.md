@@ -17,7 +17,7 @@ ever registered anywhere:
 ## Named types are registered; arrays and functions are built
 
 A language has a table of named types. `number{:den}`, `string{:den}`, `boolean{:den}`,
-`any{:den}` and `null{:den}` are in it from the start; a host adds its own.
+`any{:den}` is in it from the start, and `null{:den}` is a type the checker knows; a host adds its own.
 
 Arrays and functions are not in any table. They are **structural**: `number[]{:den}` means
 exactly "array whose element is `number{:den}`", and two of them are the same type if their elements
@@ -58,9 +58,14 @@ ordinary ops with fixed output types, so the checker stays honest about what com
 **A function is never `any{:den}`.** This is the one exception to the rule above and it carries a lot
 of weight. See below.
 
-**`null{:den}` flows anywhere a data value is expected.** An unset input holds `null{:den}`, so a
-program over unset inputs still compiles. It is the same trade as `any{:den}` and it is why
-`Default{:den}` and `IsSet{:den}` exist.
+**`null{:den}` flows anywhere a data value is expected, and no further.** A `null{:den}` fits every
+data type, so a program that reads an input with no value still compiles. At run time the trade
+is paid where the value is used: an op handed a `null{:den}` on an input that names a type gives
+`null{:den}` and does not run, and so does one handed a value of another kind through `any{:den}`.
+The evaluator decides it, in one place, before any op; the four inputs that take a `null{:den}`
+are the marks of the reference (`any{:den}`, `?`, `~`, `lazy`). It is why `??{:den}` and
+`IsSet{:den}` exist. A literal `null{:den}` in a typed slot is known, and warns nothing; an
+`any{:den}` crossing into a type warns, as above.
 
 **Arrays are covariant.** `number[]{:den}` fits `any[]{:den}`, because reading is all you can do
 with a list here: there is no mutation, so the usual unsoundness of covariant arrays has nothing

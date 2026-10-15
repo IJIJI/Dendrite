@@ -51,8 +51,9 @@ registered. Two are the same type when their parts are.
 **`any{:den}`**: accepts any *data* value, in both directions, and never a function. The escape hatch
 a host uses when it does not know a value's type. Each crossing warns.
 
-**`null{:den}`**: the value an unset input holds, accepted wherever a data value is expected, so a
-program over unset inputs still runs.
+**`null{:den}`**: no value. Accepted wherever a data value is expected, given by an op with no
+answer, and given again by an op handed one on an input that names a type, so a missing value
+travels to the output. `??{:den}` and `IsSet{:den}` stop it.
 
 **`extends{:ts}`**: a named type declaring a parent. Compatibility walks the chain.
 

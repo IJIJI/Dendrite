@@ -174,34 +174,6 @@ the empty string, and an entry on the generated `string` reference page, which c
 
 ---
 
-## Stdlib — is the split between `Default` and `If` needed?
-
-**What:** `Default(value, fallback)` is `If(IsSet(value), value, fallback)`: the value when it is
-not null, else the fallback. Since 0.7.0 both read their second branch lazily, so the two are
-the same in what they evaluate, and `value` is one memoised node in either spelling. The
-question, asked by the maintainer on 2026-10-14: does the library need two ops for one
-choice, or could `??` desugar to the `If` form and `Default` go?
-
-**For the split:** `Default` says what it does in its name, and a null test is the one choice
-a program makes most; the `??` symbol names it (`a ?? b` reads as "a, or b"), and the reference
-has one op with one sentence where the desugar is three nodes to read in a graph. `Default` is
-also one of the places option B names as taking no value (`todo.md`, "Before 1.0.0"), with
-`IsSet`, `==` and a converting input.
-
-**Against it:** two ops with one meaning is a name to learn and a name to keep; a graph editor
-would show either, and the `If` form is what a reader of `IsSet` already knows.
-
-**Why deferred:** a removal is a break, so it belongs to the review of the stdlib's names before
-1.0.0 (`todo.md`, "Before 1.0.0", "A review of the stdlib's names"), and option B decides what
-`??` means first, since it changes what a null is.
-
-**What it requires:** a count of `Default` across the site, the examples and the tests; the
-decision, with option B's rule in hand; if it goes, `??` desugars to `If(IsSet(a), a, b)`,
-the op is dropped at a minor with a changelog line, and the operators page says what `??` is
-sugar for.
-
----
-
 ## Stdlib — `Clamp` with one bound
 
 **What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")
@@ -668,49 +640,6 @@ a string that knows how to be a list), so an op never has to convert.
 **Why rejected:** a Dendrite value is plain JSON: it crosses the host boundary, the link, and a
 saved document unchanged. A value with behaviour would not. Conversion belongs to the op that
 needs it (the `convert` flag, `types-and-text-plan.md`), or to the author (`ToString`, `as`).
-
----
-
-## Language — a `null` that goes through arithmetic
-
-**What:** an op with no answer gives `null` (2026-10-08, `done.md`), and the next number op
-reads that `null` as zero: `Divide(1, 0) + 1` is `1`, and
-`` `total {Add(ToNumber("abc"), 1)}` `` is `total 1`. So "no answer" lasts one step. The
-alternative is SQL's: a number op that is handed a `null` gives `null`, and the absence reaches
-the output unless a `Default` stops it.
-
-**Why deferred:** it was option D when the `null` rule was chosen, and the only one too large
-for the math batch. It changes every arithmetic op, and it needs answers the batch did not:
-
-- **The comparisons.** `GreaterThan(null, -1)` is `true` today, the null read as zero. If
-  arithmetic propagates, a comparison with no value has to be something: `false`, as SQL treats
-  unknown in a filter, or `null`, which `If` then reads as false.
-- **A `null` inside a list of numbers.** `Average([null, 4])` is `2`: the null counts as an item
-  worth zero. SQL's `AVG` skips it and gives `4`. `Max` and `Min` read it as zero too.
-- **The other segments.** A text op reads `null` as `""` and a list op as `[]`, both on purpose
-  (`types-and-text-plan.md`). Numbers would be the one type whose empty value is not used, on
-  the argument that `""` and `[]` look empty and `0` does not.
-- **The types.** It is the runtime half of "explicit nullability via union types" (the last
-  entry of this file): with `T | null` the checker could demand the `Default`.
-
-**What it requires:** its own plan. **Driving need:** a program whose total must not look valid
-when one of its parts is missing.
-
----
-
-## Core — a `NaN` inside a list an op returns is not read
-
-**What:** the evaluator gives `null` for an op result that is `NaN` or an infinity, and `0` for
-a negative zero (2026-10-08). It reads the value an op RETURNS, when that is a number. A list or
-a struct an op returns is not looked into, so a host op that returns `[NaN]` hands a program a
-value JSON cannot carry. The stdlib cannot make one: a lambda's result inside `Map` comes from
-op calls, and each of those is read on its own.
-
-**Why deferred:** a deliberate ceiling. Walking every list an op returns costs per item on
-every call, and no host op is known to return such a list.
-
-**What it requires:** the walk, behind a measurement, or the check where an output leaves for
-the host, which is per output rather than per op. Decide which when a host op leaks one.
 
 ---
 
