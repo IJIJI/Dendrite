@@ -24,9 +24,9 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.6.0** (2026-10-08). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.6.1** (2026-10-10; released alone, so its number has parted from core's and link's). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
-| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.6.0** (2026-10-08). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.7.1** (2026-10-14). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.7.0** (2026-10-14; not in 0.7.1, whose core its peer range admits). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.7.1** (2026-10-14). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
 | `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09 (`docs-plan.md`); thirty pages in Learn, the stdlib reference, How it works and Host developers, and a stub for Contribute; deployed at the root `dendrite-lang.org/` |
@@ -35,14 +35,20 @@ output result  = status
 
 ## Work tracking
 
-Three files in `.docs/`, and every deferred item goes in one of them **the moment it is
-deferred**: a `TODO` left in code, an option offered and not taken, a "later" in an answer, a
+Four files in `.docs/`, and every deferred item goes in one of the first three **the moment it
+is deferred**: a `TODO` left in code, an option offered and not taken, a "later" in an answer, a
 decision postponed, a follow-up a fix turns up. Nothing is kept only in a conversation.
 
 - **`todo.md`** - the near future: what is being worked on, and what comes straight after.
 - **`backlog.md`** - postponed to some later point in time, each entry with why and what it
   would take. Code `TODO` comments are listed in its "Code-TODO roundup".
 - **`done.md`** - finished entries, kept for reasoning nothing else records.
+- **`handoff.md`** - a moment, not the project: written at the end of a chat for the next
+  one, and replaced each time. It gives the next chat its getting-started steps in order,
+  where things stand, the next work, what was decided beyond the plan, and the habits that
+  held. A handoff is also sent in the chat: the questions the next chat needs the
+  maintainer to answer, batched, and a text in a code block that the maintainer pastes into
+  the new chat to start it (the maintainer, 2026-10-14: always).
 
 A finished todo moves to `done.md`; a backlog item picked up next moves to `todo.md`. When a
 `TODO` comment is answered, delete the comment along with closing its entry.
@@ -86,7 +92,9 @@ is a good one to open a PR, and hand over its title and a one-paragraph descript
 (the maintainer, 2026-10-14: always), but do not open it. When a release follows, walk the
 maintainer through the runbook (`release-plan.md`, "Every later release") step by step, write
 the after-approval check before approval, and hand over the release title and text in the
-shape of the previous releases (the runbook's step 4).
+shape of the previous releases (the runbook's step 4). Every text to be pasted somewhere
+else (a PR title, its description, a release title, its text, a commit message) goes in a
+code block of its own, so it copies in one go (the maintainer, 2026-10-14).
 
 **Branches.** Work happens on `dev`; `main` is the default branch and the only one the Pages
 deploy runs from. `dev` has a GitHub ruleset forbidding merge commits, so never `git merge` into
@@ -166,7 +174,7 @@ packages/core/src/language/
               entry.ts (one program state), seed.ts (defaultValueFor), instance.ts (createInstance)
   stdlib/     index.ts (createStdlib: installs the segments, in the reference's order), one file
               per segment (logic, control, array, arithmetic, list, conversion, string: its ops,
-              their evaluators, their symbols), shared.ts (bin, variadic, toList)
+              their evaluators, their symbols), shared.ts (bin, variadic, numbersOf)
   language.ts Language assembly: createLanguage / extendLanguage / parseSource
   compose.ts  composeLayers: vocabulary + port layers -> the descriptor a program is checked against
   environment.ts createEnvironment / forProgram: the pipeline, bound to a composed descriptor
@@ -195,6 +203,10 @@ See `architecture.md` for the layering DAG and full design.
 - **A number an op returns is a JSON number.** The evaluator, at the one place an op is called,
   gives `null` for `NaN` and the infinities and `0` for a negative zero. So an op holds no guard
   for "no answer": it computes (`a / b`), and the evaluator reads the result.
+- **No value is the evaluator's rule, not an op's.** `receive` (`evaluator.ts`) gives `null`
+  for an op handed a `null`, or a value of another kind, on an input that names a type, before
+  the op runs. The four exceptions are the marks (`any`, `?`, `~`, `lazy`). The stdlib holds no
+  null guard and no type guard (see "Conventions").
 
 ### Functions
 - **Lambda → `Type.fn`**, application via `resolveAppArgs`; **closures capture `localBindings`**.
@@ -238,7 +250,12 @@ See `architecture.md` for the layering DAG and full design.
   input, a lambda typed from the list, has no mark). **A lazy input is marked on its type**,
   `then: lazy any`, so it combines with a name mark: `nodes...: lazy boolean` (decided
   2026-10-13).
-- **`null`, both ways.** An op that has no answer GIVES `null` (`Find` with no match,
-  `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op that is handed a `null`
-  READS it as the empty value of the type it wanted: `0`, `""`, `[]`, `false`. So a `null` lasts
-  one step, and a program that cares tests it where it arises (`Default`, `IsSet`).
+- **`null`, one way (0.8.0, option B).** An op that has no answer GIVES `null` (`Find` with no
+  match, `ToNumber("abc")`, a division by zero, `Max` of an empty list). An op handed a `null`,
+  or a value of another KIND, on an input that names a type GIVES `null` too and does not run:
+  the evaluator decides it (`receive` in `evaluator.ts`), before any op, so the stdlib holds no
+  guard for either. Four inputs take what comes: an `any` input (the value, `null` included),
+  an optional one (a `null` reads as absent), a converting one (its leaves go through `Convert`
+  first, then the rule), a lazy one (the op's to read). `Average`, `Max` and `Min` skip a `null`
+  item (`numbersOf`); `And` and `Or` are three-valued. So a missing value reaches the output,
+  and a program that cares tests it where it arises (`??`, `IsSet`).

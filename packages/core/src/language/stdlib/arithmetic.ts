@@ -6,9 +6,10 @@ import { bin, variadic } from "./shared";
 
 //? The arithmetic segment: the ops over numbers, and their symbols. Negative numbers live here
 // too: `-14` is the prefix symbol over Negate, so a language without this segment has none.
-// A null in a number input reads as zero, as a null reads as "" in a text op and as [] in a
-// list op. An op that has no answer (a division by zero) computes NaN or an infinity and
-// leaves it: the evaluator gives null for either, for every op.
+// A number input holds a number when an op runs: the evaluator gives null for a null, or a
+// value of another kind, before the op is called (the rule of 0.8.0), so no op here guards.
+// An op that has no answer (a division by zero) computes NaN or an infinity and leaves it:
+// the evaluator gives null for either, for every op.
 
 // Round's rule, apart because it is the one op here that is more than a line. Two things are
 // decided rather than inherited from Math.round. A half goes away from zero, the way a person
@@ -170,9 +171,9 @@ export function installArithmetic(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Round",
-    // Number(): roundTo hands its argument back when there is nothing to round away, so a
-    // value that is no number (text, through `any`) must reach it as NaN, not as itself.
-    evaluate: ({ value, digits }) => roundTo(Number(value), Math.trunc((digits as number) ?? 0)),
+    // `digits` left out, or handed a null, is absent: a whole number.
+    evaluate: ({ value, digits }) =>
+      roundTo(value as number, Math.trunc((digits as number | undefined) ?? 0)),
   });
 
   lang.registerOp({

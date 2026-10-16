@@ -690,13 +690,26 @@ describe("warnings", () => {
 
   it("implicit_any_cast: any-typed output into narrow descriptor output → warning, output included", () => {
     const lang = testLang();
+    lang.registerInput({ name: "loose", type: Type.any });
     lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
-    // Output is any-typed (literal null)
-    const prog = makeProgram({}, { score: lit(null) });
+    const prog = makeProgram({}, { score: { kind: "input", name: "loose" } });
     const result = analyse(prog, lang.descriptor);
     expect(result.warnings.some((w) => w.kind === "implicit_any_cast" && w.name === "score")).toBe(
       true,
     );
+    expect(result.errors).toHaveLength(0);
+    expect(result.ok).toBe(true);
+    expect(result.program.outputs.has("score")).toBe(true);
+  });
+
+  // A literal null is fully known (0.8.0): the output gives no value, and no check was traded
+  // away, so it is no crossing. Until then it warned as an `any` would.
+  it("a literal null into a typed output is no implicit_any_cast", () => {
+    const lang = testLang();
+    lang.registerOutput({ name: "score", type: Type.number, mode: "required" });
+    const prog = makeProgram({}, { score: lit(null) });
+    const result = analyse(prog, lang.descriptor);
+    expect(result.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
     expect(result.errors).toHaveLength(0);
     expect(result.ok).toBe(true);
     expect(result.program.outputs.has("score")).toBe(true);
@@ -1001,11 +1014,12 @@ describe("pruning", () => {
     const result = analyse(prog, lang.descriptor);
     expect(result.warnings.some((w) => w.kind === "missing_op_input")).toBe(true);
     expect(result.program.bindings.has("b")).toBe(true);
-    // Placeholder should carry declared boolean type, not 'any'/null from error placeholder
+    // The placeholder carries the declared boolean type, not 'any' from an error placeholder,
+    // and holds null (0.8.0): the op gives no value. It held the type's default before.
     const aInput = opInput(result.program.bindings.get("b"), "a");
     expect(typeToString(getOutputType(aInput))).toBe("boolean");
     if (aInput.kind !== "literal") throw new Error("expected a literal placeholder");
-    expect(aInput.value).toBe(false); // boolean default
+    expect(aInput.value).toBeNull();
   });
 
   it("no error node in program.bindings", () => {
@@ -1071,6 +1085,150 @@ describe("variadic inputs reach inferOutput", () => {
     if (!parsed.ok) throw new Error("does not parse");
     const result = composed.environment.analyse(parsed.program);
     expect(typeToString(getOutputType(result.program.bindings.get("mixed")!))).toBe("any[]");
+  });
+});
+
+// Default's output type is If's since 0.8.0: the type both sides agree on, else `any`. Until
+// then it took the value's type on faith and never looked at the fallback, so `$n ?? "none"`
+// was typed `number`, a lie whenever `$n` is null.
+describe("Default's output type is the type both sides agree on", () => {
+  const typeOf = (src: string, input: Ports["inputs"][number]) => {
+    const lang = testLang();
+    lang.registerInput(input);
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    expect(result.errors).toEqual([]);
+    return typeToString(getOutputType(result.program.outputs.get("x")!));
+  };
+
+  it("agreeing sides keep their type", () => {
+    expect(typeOf("output x = $n ?? 0", { name: "n", type: Type.number })).toBe("number");
+    expect(typeOf('output x = $s ?? "none"', { name: "s", type: Type.string })).toBe("string");
+  });
+
+  it("differing sides are any, where the value's type was taken on faith", () => {
+    expect(typeOf('output x = $n ?? "none"', { name: "n", type: Type.number })).toBe("any");
+    expect(typeOf("output x = null ?? 5", { name: "n", type: Type.number })).toBe("any");
+  });
+
+  it("an any value is any, where the fallback's type was taken on faith", () => {
+    expect(typeOf('output x = $a ?? "none"', { name: "a", type: Type.any })).toBe("any");
+    expect(typeOf('output x = ($a as string) ?? "none"', { name: "a", type: Type.any })).toBe(
+      "string",
+    );
+  });
+});
+
+// A null item leaves a list literal's type alone (0.8.0, option B, decision 7A): `[1, null]`
+// is `number[]`, where it was `any[]` and warned on its way into a typed input.
+describe("a null item in a list literal", () => {
+  const check = (src: string) => {
+    const lang = testLang();
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    const node = result.program.outputs.get("x");
+    return {
+      type: node ? typeToString(getOutputType(node)) : undefined,
+      errors: result.errors.map((e) => e.kind),
+      warnings: result.warnings.map((w) => w.kind).filter((k) => k !== "unknown_program_output"),
+    };
+  };
+
+  it("[1, null] is number[], and feeds a typed input with no warning", () => {
+    expect(check("output x = [1, null]").type).toBe("number[]");
+    expect(check("output x = Average([1, null])").warnings).toEqual([]);
+    expect(check('output x = ["a", null, "b"]').type).toBe("string[]");
+  });
+
+  it("[null] alone, and a list that disagrees apart from its nulls, stay any[]", () => {
+    expect(check("output x = [null]").type).toBe("any[]");
+    expect(check("output x = [null, null]").type).toBe("any[]");
+    expect(check('output x = [1, "a", null]').type).toBe("any[]");
+    expect(check("output x = []").type).toBe("any[]");
+  });
+
+  it("a null beside a function is still the mixed-list error: a null never fits a function", () => {
+    expect(check("output x = [y => y, null]").errors).toEqual(["function_in_mixed_list"]);
+  });
+});
+
+// The checker cannot look into an `any`, so a field read on one is unchecked; it warns, and the
+// run gives null for a value without the field (0.8.0, 6A: "but do warn").
+describe("field_access_on_any", () => {
+  const warningsOf = (src: string, type: Type) => {
+    const lang = testLang();
+    lang.registerType("Bus", { fields: { name: Type.string } });
+    lang.registerInput({ name: "v", type });
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    expect(result.errors).toEqual([]);
+    return result.warnings.filter((w) => w.kind !== "unknown_program_output");
+  };
+
+  it("warns on a field read of an any, once per read, and names the field", () => {
+    const warnings = warningsOf("output x = $v.name.first", Type.any);
+    expect(warnings.map((w) => w.kind)).toEqual(["field_access_on_any", "field_access_on_any"]);
+    expect(warnings[0]!.name).toBe("name");
+    expect(warnings[0]!.message).toMatch(/cannot look into/);
+  });
+
+  it("stays quiet on a struct type, a primitive keeps its own warning", () => {
+    expect(warningsOf("output x = $v.name", Type.name("Bus"))).toEqual([]);
+    expect(warningsOf("output x = $v.name", Type.number).map((w) => w.kind)).toEqual([
+      "field_access_on_primitive",
+    ]);
+  });
+});
+
+describe("a Reduce with a null initial", () => {
+  const compile = (src: string) => {
+    const lang = testLang();
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    return {
+      errors: result.errors.map((e) => `${e.kind}: ${e.message}`),
+      warnings: result.warnings.map((w) => w.kind).filter((k) => k !== "unknown_program_output"),
+    };
+  };
+
+  // Found by the 0.8.0 probes: `null` typed the accumulator, which demanded a reducer that
+  // returns null, and the written-type check refused `null` as a name before that.
+  it("compiles: the accumulator is any", () => {
+    expect(compile("output x = Reduce([1, 2], null, (acc, i) => acc ?? i)")).toEqual({
+      errors: [],
+      warnings: [],
+    });
+    expect(compile("output x = Reduce([1, 2], null, (acc, i) => acc + i)")).toEqual({
+      errors: [],
+      warnings: ["implicit_any_cast"],
+    });
+  });
+});
+
+describe("a required op input left out is a null placeholder, for every type", () => {
+  const warningOf = (src: string) => {
+    const lang = testLang();
+    const parsed = parseSource(src, lang.language);
+    if (!parsed.ok) throw new Error("does not parse");
+    const result = analyse(parsed.program, lang.descriptor);
+    expect(result.errors).toEqual([]);
+    return result.warnings.find((w) => w.kind === "missing_op_input");
+  };
+
+  it("warns that the op gives no value, where a primitive took its type's default", () => {
+    expect(warningOf("output x = Upper()")?.message).toBe(
+      "Required input 'text' of op 'Upper' is absent, so the op gives no value",
+    );
+    expect(warningOf("output x = Length()")?.name).toBe("list");
+    expect(warningOf("output x = Round()")?.name).toBe("value");
+  });
+
+  it("a variadic left out is an empty list and no warning, as before", () => {
+    expect(warningOf("output x = Concat()")).toBeUndefined();
   });
 });
 
@@ -1521,17 +1679,17 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
   });
 
   it("names the op and its input when the value has no name of its own", () => {
-    const [warning] = castsIn("output out = GreaterThan(Default(null, null), 0)");
-    expect(warning?.message).toBe("Input 'a' of 'GreaterThan' is 'null' typed - 'number' expected");
+    const [warning] = castsIn("output out = GreaterThan(Default($val, 0), 0)", anyInput("val"));
+    expect(warning?.message).toBe("Input 'a' of 'GreaterThan' is 'any' typed - 'number' expected");
   });
 
-  it("says 'null' for a null, which it used to call 'any'", () => {
+  // Until 0.8.0 a literal null crossed as an `any` did, and the sentence said 'null' for it.
+  // A literal null is known now, so nothing crosses and nothing is said.
+  it("says nothing for a literal null", () => {
     const language = testLang();
     language.registerOutput({ name: "score", type: Type.number, mode: "required" });
     const result = analyse(makeProgram({}, { score: lit(null) }), language.descriptor);
-    expect(result.warnings.map((w) => w.message)).toContain(
-      "Output 'score' is 'null' typed - 'number' expected",
-    );
+    expect(result.warnings.filter((w) => w.kind === "implicit_any_cast")).toEqual([]);
   });
 
   it("a lambda's return is not an 'Input'", () => {
@@ -1551,14 +1709,22 @@ describe("implicit_any_cast: what it says, and what it sees", () => {
 
   it("an application's argument is an 'Argument', not an 'Input'", () => {
     const language = testLang();
+    language.registerInput({ name: "val", type: Type.any });
+    // A nameless any-typed value: an op node, whose type is `any` since its sides disagree.
+    const nameless: ASTNode = {
+      kind: "operation",
+      op: "Default",
+      inputs: { value: { kind: "input", name: "val" }, fallback: lit(0) },
+      output: Type.any,
+    };
     const program = makeProgram(
       { f: lambda([{ name: "x", type: Type.number }], ref("x")) },
-      { out: app(ref("f"), [lit(null)]) },
+      { out: app(ref("f"), [nameless]) },
     );
     const [warning] = analyse(program, language.descriptor).warnings.filter(
       (w) => w.kind === "implicit_any_cast",
     );
-    expect(warning?.message).toBe("Argument 'x' is 'null' typed - 'number' expected");
+    expect(warning?.message).toBe("Argument 'x' is 'any' typed - 'number' expected");
   });
 
   it("an incompatibility names the SLOT, and reads as a sentence", () => {

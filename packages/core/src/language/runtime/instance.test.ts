@@ -366,6 +366,57 @@ describe("ProgramInstance - values", () => {
   });
 });
 
+// The host-push door (0.8.0): a NaN, an infinity or an undefined a host pushes is read as the
+// null it means, at any depth, on a typed input as on `any`, and what the instance publishes
+// (`values`, the snapshot) is what runs, not the raw push. Until then a `number` input refused
+// a NaN through zod, and an `undefined` passed the door and stopped every output.
+describe("ProgramInstance - a NaN or an undefined pushed is no value", () => {
+  const loose: Ports = {
+    inputs: [
+      { name: "p", type: Type.number },
+      { name: "a", type: Type.any },
+    ],
+    outputs: [],
+  };
+  const setupLoose = (options: Partial<InstanceOptions> = {}) =>
+    setup({ program: serialiseSource("output out = Add($g, $p)", loose), ...options });
+
+  it("a NaN on a number input is null, with no diagnostic and no error", () => {
+    const { instance } = setupLoose();
+    instance.setInput("p", 3);
+    instance.setInput("p", NaN);
+    expect(kinds(instance)).toEqual([]);
+    expect(instance.outputs.get().error).toBeNull();
+    expect(outputsOf(instance)).toBeNull();
+    expect(instance.values.get()["p"]).toBeNull();
+    expect(instance.snapshot.get().inputValues).toEqual({ p: null, a: null });
+  });
+
+  it("a NaN inside a value on an any input is null at any depth, in values too", () => {
+    const { instance } = setupLoose();
+    instance.setInput("a", [1, NaN]);
+    expect(instance.values.get()["a"]).toEqual([1, null]);
+    instance.setInput("a", { x: NaN });
+    expect(instance.values.get()["a"]).toEqual({ x: null });
+  });
+
+  it("an undefined is null: no input_not_set, nothing stale", () => {
+    const { instance } = setupLoose();
+    instance.setInput("p", 3);
+    instance.setInput("p", undefined);
+    const result = instance.outputs.get();
+    expect(result.error).toBeNull();
+    expect(result.stale).toBe(false);
+    expect(outputsOf(instance)).toBeNull();
+    expect(instance.snapshot.get().inputValues).toEqual({ p: null, a: null });
+  });
+
+  it("a starting value is read the same way", () => {
+    const { instance } = setupLoose({ inputValues: { a: NaN, p: Infinity } });
+    expect(instance.values.get()).toEqual({ p: null, a: null });
+  });
+});
+
 describe("ProgramInstance - staleness", () => {
   it("keeps the last outputs when a new program fails, and recovers with the values kept", () => {
     const { instance, runtime } = setup();

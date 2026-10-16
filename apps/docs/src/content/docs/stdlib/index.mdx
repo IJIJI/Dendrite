@@ -68,6 +68,11 @@ because it says how the op receives the value, not what the value is; it combine
 mark, `nodes...: lazy boolean`. A host declares it with `lazy: true{:ts}`
 ([Extending the language](../host/extending-the-language/#an-input-the-op-may-not-need)).
 
+An input with none of the marks, one that only names a type, gives no value for no value: an op
+handed a `null{:den}` there, or a value of another kind, gives `null{:den}` and does not run. The
+marks say which inputs take one: `any{:den}` takes the value as it is, `?` reads it as absent, `~`
+converts its leaves, `lazy` leaves it to the op.
+
 ## `any{:den}` in a signature
 
 An input typed `any{:den}` accepts any data value. `Length(list: any[]){:den}` takes a list of

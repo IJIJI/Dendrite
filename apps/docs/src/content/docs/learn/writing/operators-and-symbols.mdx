@@ -78,6 +78,12 @@ loosest of all. Only the branch taken is evaluated: `c ? a : b{:den}` is `If(c, 
 in a branch is refused for now, because the branches are `any{:den}` to the checker and a
 function is never `any{:den}`; union types will type them from each other.
 
+A `null{:den}` on either side of an arithmetic or a comparison symbol gives `null{:den}`: the op
+behind it has no number to work with and does not run. Two symbols read a `null{:den}` instead of
+passing it on, `=={:den}` (so `$x == null{:den}` asks the question) and `??{:den}`; and
+`&&{:den}` and `||{:den}` are three-valued, deciding on either side: `false && null{:den}` is
+`false{:den}`, `true && null{:den}` is `null{:den}`.
+
 ## Try it
 
 <Live client:only="react" source={orderExample.source} ports={orderExample.ports} />

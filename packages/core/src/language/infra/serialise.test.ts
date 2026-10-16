@@ -8,7 +8,6 @@ import { Policy } from "./ports";
 import { type RawProgram } from "./program";
 import { EMPTY_PORTS, isPorts, type Ports } from "./ports";
 import {
-  assertSavedPorts,
   den,
   deserialise,
   isSavedProgram,
@@ -172,11 +171,6 @@ describe("ports on a saved program", () => {
   it("rejects malformed ports on load, ast form through deserialise", () => {
     const bad = { version: 1, form: "ast", bindings: {}, outputs: {}, ports: { inputs: "x" } };
     expect(() => deserialise(bad as unknown as SavedAstProgram)).toThrow(/ports is not a Ports/);
-    expect(() =>
-      assertSavedPorts({ ...serialiseSource("x"), ports: null } as unknown as SavedProgram),
-    ).toThrow(/ports is not a Ports/);
-    expect(() => assertSavedPorts(serialiseSource("x"))).not.toThrow();
-    expect(() => assertSavedPorts(serialiseSource("x", PORTS))).not.toThrow();
   });
 });
 

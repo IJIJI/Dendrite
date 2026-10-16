@@ -93,6 +93,16 @@ runs: a list item by item, a struct field by field, a named type along its whole
 with every `schema{:ts}` on it. `null{:den}` fits every type. A struct with a declared field missing
 does not fit, and an extra field is ignored.
 
+:::note[No value]
+A `null{:den}` pushed into any input is accepted and means no value: the program runs, and an op
+handed it gives `null{:den}` in turn ([The type system](../../how-it-works/types/)). A `NaN{:ts}`,
+an infinity or an `undefined{:ts}` pushed is read as `null{:den}` too, at any depth of a list or a
+struct, on every input and on every path, the runner included, and an instance's `values{:ts}`
+and `snapshot{:ts}` show the `null{:den}`. An output can be `null{:den}`: that is the program
+saying a value was missing somewhere, and `??{:den}` and `IsSet{:den}` are its tools for it.
+Nothing throws.
+:::
+
 What differs is how each one says no.
 
 - **The runtime throws.** `runtime.updateInputs{:ts}` and a handle's `setInput{:ts}` are called by your

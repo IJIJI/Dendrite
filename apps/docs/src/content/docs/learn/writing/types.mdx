@@ -64,11 +64,11 @@ which means:
 />
 
 That compiles, with a warning where the `any{:den}` meets `Length{:den}`, and the warning names
-what you wrote: `'$whatever' is 'any' typed`. Here `$whatever{:den}` holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it:
-`length{:den}` shows 0, a plausible number that is simply wrong, because the one check that
-would have caught it is the one `any{:den}` gave up. (A list op reads anything that is not a list
-as an empty one, so the program keeps running; what it cannot do is tell you the value was never
-a list.)
+what you wrote: `'$whatever' is 'any' typed`. Here `$whatever{:den}` holds a list, so `length{:den}` is 3. Type a number into it instead and nothing stops it
+before the program runs: `length{:den}` shows no value, because a number is no list, and the one
+check that would have said so earlier is the one `any{:den}` gave up. (An op handed a value of the
+wrong kind gives `null{:den}` and does not run, so the program keeps running; what it cannot do is
+tell you where the list went.)
 
 So `any{:den}` is an escape hatch with a cost: you trade the check for the flexibility. When you see
 an `implicit_any_cast{:den}` warning, that is the checker telling you where the trade happened,
@@ -78,25 +78,30 @@ The one thing `any{:den}` will **not** accept is a function. That single excepti
 language total, and it is explained in
 [the type system](../../../how-it-works/types/) under How it works.
 
-## `null{:den}` goes anywhere
+## `null{:den}` is one value, and it travels
 
-An input with no value yet holds `null{:den}`, and `null{:den}` is accepted wherever a data value is
-expected. A program over unset inputs therefore still compiles and still runs, rather than
-refusing to start.
+`null{:den}` means "no value", and it is accepted wherever a data value is expected. An input
+with no default of its own starts at its type's empty value, `0{:den}`, `""{:den}`, `false{:den}`
+or `[]{:den}`, and at `null{:den}` for `any{:den}` or a type with none, so a program over unset
+inputs still compiles and still runs.
 
-It will not produce sensible numbers, which is what `Default{:den}` and `IsSet{:den}` are for -
-see [Inputs](../inputs/). A list op reads a `null{:den}` as an empty list, so `Length{:den}` of an
-unset list is 0 and `Find{:den}` over one is `null{:den}`, and a field of `null{:den}` is `null{:den}`
-again, so `Find(buses, b => b.id == 9).name{:den}` is simply unset when no bus matches. Nothing
-throws.
-
-`null{:den}` is also what an op gives when it has no answer: `Find{:den}` with no match,
+`null{:den}` is what an op gives when it has no answer: `Find{:den}` with no match,
 `ToNumber{:den}` of text that is no number, a division by zero, the largest of an empty list.
-Going the other way, an op that is handed a `null{:den}` reads it as the empty value of the type
-it wanted: a list op as an empty list, a text op as empty text, a number op as zero. The two
-meet, so a missing answer lasts one step: `Divide(1, 0) + 1{:den}` is `1`, because the sum reads
-the missing quotient as zero. When the difference matters, say so where it arises, with
-`Default(Divide(a, b), 0){:den}` or `IsSet{:den}`.
+And an op handed a `null{:den}` on an input that names a type gives `null{:den}` too, and does not
+run: `Divide(1, 0) + 1{:den}` is `null{:den}`, because the sum has no number to add. So a missing
+value travels to the output, and you say where it stops, with `(Divide(a, b) ?? 0) + 1{:den}`, or
+with `IsSet{:den}` where the difference matters. A value of the wrong kind, a number where text is
+declared, reaching an op through `any{:den}`, is no value in the same way. A field read never
+throws: `Find(buses, b => b.id == 9).name{:den}` is `null{:den}` when no bus matches.
+
+Four places take a `null{:den}` without passing it on, and the reference marks each: an
+`any{:den}` input (`IsSet{:den}`, `??{:den}`, `=={:den}`, the value `Includes{:den}` looks for),
+an optional input (`Round(2.5, null){:den}` rounds to a whole number, as `Round(2.5){:den}`
+does), a converting one (`Join{:den}` prints nothing for a missing part), and a lazy one
+(`If{:den}`'s branches). A list is one more: `Average{:den}`, `Max{:den}` and `Min{:den}` skip a
+`null{:den}` item, so `Average([1, null]){:den}` is `1`, while `Length([1, null]){:den}` counts
+it. And `&&{:den}` and `||{:den}` are three-valued: `false && null{:den}` is `false{:den}`,
+because a false on either side decides, and `true && null{:den}` is `null{:den}`.
 
 ## Converting on purpose
 
@@ -157,9 +162,9 @@ output known = IsSet(rows)
 
 `rows{:den}` is the list when `$rows{:den}` holds a list of numbers, and `null{:den}` when it holds
 anything else: a number, a list with text in it, nothing at all. That is the answer `ToNumber{:den}`
-gives for text that is not a number, for the same reason. `null{:den}` means "no value", the list
-ops read it as an empty list, `IsSet{:den}` sees it, and `Default(rows, []){:den}` is the fallback you
-write yourself. There is no warning, because nothing is left to warn about: the value was checked.
+gives for text that is not a number, for the same reason. `null{:den}` means "no value": an op
+handed it gives `null{:den}` again, `IsSet{:den}` sees it, and `rows ?? []{:den}` is the fallback
+you write yourself. There is no warning, because nothing is left to warn about: the value was checked.
 
 A cast never throws and never changes a value. `"5" as number{:den}` is `null{:den}`, not `5`. When
 the checker can already see that no value could fit, as there, it says so with

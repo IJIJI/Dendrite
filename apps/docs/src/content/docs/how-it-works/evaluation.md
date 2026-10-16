@@ -70,6 +70,18 @@ computed then and cached from then on. A converting input converts inside the th
 cache entry still depends on every input it has, so a change inside the skipped branch recomputes
 the op, which then re-reads the branch it takes.
 
+## An op receives what it declared, or does not run
+
+Before an op's evaluator is called, each of its inputs is read against the declaration: an input
+that names a type and holds `null{:den}`, or a value of another kind, is no value, and the op's
+result is `null{:den}` without the evaluator running. Four inputs take what comes: an `any{:den}`
+input, an optional one (a `null{:den}` reads as absent), a converting one (its leaves go through
+the conversion first) and a lazy one (the op's to read). On the way out, a number that is not
+finite is `null{:den}` and a negative zero is `0{:den}`; a list or a struct is walked for the same
+unless the evaluator says `finiteCheck: false{:ts}`. A value a host pushes is read the same way at
+the door. The rule is one function in the evaluator, so a host's op is under it too
+([Extending the language](../../host/extending-the-language/#what-your-evaluator-receives)).
+
 ## Stale, rather than hidden
 
 When a program stops compiling, the last one that did keeps running.

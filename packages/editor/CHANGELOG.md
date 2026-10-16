@@ -6,8 +6,14 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.7.0`: a minor release
+break the API. This package declares `@dendrite-lang/core` as a peer at `^0.8.0`: a minor release
 of core needs a release here too, even if nothing in this package changed.
+
+## 0.8.0
+
+- **No change in the package.** The peer range moves to core `^0.8.0`. With core 0.8.0 an
+  output is `null` wherever a value was missing on its way (core's changelog, "no value
+  everywhere"), and the Outputs pane prints it as it prints any value.
 
 ## 0.7.0
 

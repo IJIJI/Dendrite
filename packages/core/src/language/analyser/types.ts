@@ -53,6 +53,7 @@ export type AnalysisWarningKind =
   | "unused_binding" // Binding declared but never referenced by any output
   | "missing_desired_program_output" // Descriptor marks output as 'desired' but program omits it
   | "field_access_on_primitive" // Field access on string/number/boolean typed node
+  | "field_access_on_any" // Field access on an any-typed node: unchecked, null when absent
   | "unknown_op_input_key" // Op node passes a key not declared by the op
   | "missing_op_input" // Required OpInput absent — type-default placeholder injected
   | "implicit_any_cast" // Any-typed value flows into a narrow expected type

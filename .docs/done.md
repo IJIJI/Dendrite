@@ -5,6 +5,271 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+**Closed by 0.8.0 on 2026-10-15** (the release itself gets its record when it is on npm): the
+three entries below are the backlog entries as they stood, kept for their reasoning. A `null`
+goes through every op the same way, a `NaN` a host returns or pushes is read at any depth,
+and `Default` stays beside `If`.
+
+---
+
+## Language — a `null` that goes through arithmetic — DONE 2026-10-15 (0.8.0)
+
+**Closed by 0.8.0 on 2026-10-15:** the rule is the evaluator's (`receive`), for every op: an op
+handed a `null`, or a value of another kind, on an input that names a type gives `null` and
+does not run. The comparisons give `null`; `Average`, `Max` and `Min` skip a `null` item
+through `numbersOf`; a text op and a list op hand it on like a number op. The plan is
+`todo.md`, "0.8.0 — decided on 2026-10-14".
+
+**What:** an op with no answer gives `null` (2026-10-08, `done.md`), and the next number op
+reads that `null` as zero: `Divide(1, 0) + 1` is `1`, and
+`` `total {Add(ToNumber("abc"), 1)}` `` is `total 1`. So "no answer" lasts one step. The
+alternative is SQL's: a number op that is handed a `null` gives `null`, and the absence reaches
+the output unless a `Default` stops it.
+
+**Why deferred:** it was option D when the `null` rule was chosen, and the only one too large
+for the math batch. It changes every arithmetic op, and it needs answers the batch did not:
+
+- **The comparisons.** `GreaterThan(null, -1)` is `true` today, the null read as zero. If
+  arithmetic propagates, a comparison with no value has to be something: `false`, as SQL treats
+  unknown in a filter, or `null`, which `If` then reads as false.
+- **A `null` inside a list of numbers.** `Average([null, 4])` is `2`: the null counts as an item
+  worth zero. SQL's `AVG` skips it and gives `4`. `Max` and `Min` read it as zero too.
+- **The other segments.** A text op reads `null` as `""` and a list op as `[]`, both on purpose
+  (`types-and-text-plan.md`). Numbers would be the one type whose empty value is not used, on
+  the argument that `""` and `[]` look empty and `0` does not.
+- **The types.** It is the runtime half of "explicit nullability via union types" (the last
+  entry of this file): with `T | null` the checker could demand the `Default`.
+
+**What it requires:** its own plan. **Driving need:** a program whose total must not look valid
+when one of its parts is missing.
+
+
+## Core — a `NaN` inside a list an op returns is not read — DONE 2026-10-15 (0.8.0)
+
+**Closed by 0.8.0 on 2026-10-15:** the walk, in `clean` (evaluator.ts), reads a list or a
+struct a host op returns at any depth, 4 ns an item, and the push door reads the same;
+`finiteCheck: false` on an evaluator turns the walk off on the op's promise, and the stdlib's
+eight ops that hand values on say so.
+
+**What:** the evaluator gives `null` for an op result that is `NaN` or an infinity, and `0` for
+a negative zero (2026-10-08). It reads the value an op RETURNS, when that is a number. A list or
+a struct an op returns is not looked into, so a host op that returns `[NaN]` hands a program a
+value JSON cannot carry. The stdlib cannot make one: a lambda's result inside `Map` comes from
+op calls, and each of those is read on its own.
+
+**Why deferred:** a deliberate ceiling. Walking every list an op returns costs per item on
+every call, and no host op is known to return such a list.
+
+**What it requires:** the walk, behind a measurement, or the check where an output leaves for
+the host, which is per output rather than per op. Decide which when a host op leaks one.
+
+
+## Stdlib — is the split between `Default` and `If` needed? — DONE 2026-10-15 (0.8.0)
+
+**Closed by 0.8.0 on 2026-10-15, kept:** `Default` stays the op under `??`. Probed: `Tick() ??
+0` calls the op once, the `If(IsSet(Tick()), Tick(), 0)` form twice, since the desugar writes
+`a` into two nodes and the analyser copies a node per visit; one op call is also cheaper than a
+thunk. Its output type is `If`'s now (both sides agree, else `any`), which removed the one type
+argument for the split.
+
+**What:** `Default(value, fallback)` is `If(IsSet(value), value, fallback)`: the value when it is
+not null, else the fallback. Since 0.7.0 both read their second branch lazily, so the two are
+the same in what they evaluate, and `value` is one memoised node in either spelling. The
+question, asked by the maintainer on 2026-10-14: does the library need two ops for one
+choice, or could `??` desugar to the `If` form and `Default` go?
+
+**For the split:** `Default` says what it does in its name, and a null test is the one choice
+a program makes most; the `??` symbol names it (`a ?? b` reads as "a, or b"), and the reference
+has one op with one sentence where the desugar is three nodes to read in a graph. `Default` is
+also one of the places option B names as taking no value (`todo.md`, "Before 1.0.0"), with
+`IsSet`, `==` and a converting input.
+
+**Against it:** two ops with one meaning is a name to learn and a name to keep; a graph editor
+would show either, and the `If` form is what a reader of `IsSet` already knows.
+
+**Why deferred:** a removal is a break, so it belongs to the review of the stdlib's names before
+1.0.0 (`todo.md`, "Before 1.0.0", "A review of the stdlib's names"), and option B decides what
+`??` means first, since it changes what a null is.
+
+**What it requires:** a count of `Default` across the site, the examples and the tests; the
+decision, with option B's rule in hand; if it goes, `??` desugars to `If(IsSet(a), a, b)`,
+the op is dropped at a minor with a changelog line, and the operators page says what `??` is
+sugar for.
+
+---
+
+## 0.7.1 on npm — DONE 2026-10-14
+
+`@dendrite-lang/core` and `@dendrite-lang/link` at **0.7.1**, the same day as 0.7.0; the editor
+stays at 0.7.0, admitted by its peer range. A patch: a saved program that is not well formed
+is reported, never thrown. `isSavedProgram` is the trust boundary, asked by `load`,
+`setProgram` and `createInstance` before anything reads a program, and exported; a layer of a
+bad shape is `malformed_ports`, refused inside `composeLayers` so every door reports it its own
+way (an instance publishes it refused, a runtime returns it, a layer built in code throws its
+report). The link imports core's guard, one check stricter than its own was. The decisions and
+the probe table are in the entry kept below.
+
+**The commits, in order:** the notes (0.7.1 next, the 0.7.0 entry under its record); core;
+the link, the docs, the changelogs and the versions, with the lockfile and the version note
+in the same commit this time; then two rules into `CLAUDE.md` (a PR comes with its title and
+paragraph, a release with its walk and text; a text to paste goes in a code block).
+
+**Decided during the work:** the `layers` option of `createInstance` is host code, as a
+runtime's layers are: a `null` there is read in five places, so a guard would be Shotgun
+Surgery, and the line (data is reported, code throws) is in the docs and pinned by a test.
+`malformed_ports` has `triggeredBy` and no sample, because the diagnostics page prints a
+compose sample's declarations and a bad shape has none. `assertSavedPorts` stays, deprecated,
+because it leaves `index.ts` through `export *` and a patch removes nothing. The `hasFields`
+flag of `resolveField` was not touched by this release; the entry on the nearest name is
+0.7.0's.
+
+**The runbook** held. PR #28 showed 6 of 6 (two notes commits from after 0.7.0 were in it, as
+the count `origin/main..dev` says they are). Two tags, one release on core's tag in the shape
+of the previous ones, one `Stage release` run of 1m00s with the editor skipped as on npm, two
+approvals core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.7.1 on core and the link and
+0.7.0 on the editor, attestations on all three, the link's peer `^0.7.1`, and a clean install
+ran a check of 11 lines, written before approval: the versions and peers, `isSavedProgram` on
+nine shapes, `assertSavedPorts` still exported, the published types, `load` per shape,
+`setProgram` per shape with the old program running and the next sound one working,
+`createInstance` per shape, `setLayer` refused with nothing moved, the runtime's two doors,
+`composeLayers` by layer id, and the link refusing an `ast` form without record bindings. On
+the tarballs 11 of 11; on 0.7.0 from npm 10 of 11 failed with the probe table's own
+`TypeError`s, and the one that passed should. The live site followed: *Embedding core* names
+`isSavedProgram` and `malformed_ports`, *Every diagnostic* has the kind, *Installation* says
+0.7.1.
+
+## 0.7.1 — the todo entry as it stood, with its decisions and the plan — DONE 2026-10-14
+
+**This is the next work.** A patch for core and the link, straight after 0.7.0 (on npm since
+2026-10-14). The entry as it stood in the backlog, with its probe table and the decisions of
+2026-10-14, then the plan.
+
+### The entry
+
+**What:** a saved program is data from outside: a host reads it from a file or a database and
+hands it over. Core checks part of it, and what it does not check comes out as a raw
+`TypeError`, from commands that are documented to report through the observables. Probed on
+2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
+
+| Handed to `setProgram` | The call | A sound program next |
+| --- | --- | --- |
+| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
+| Ports where `inputs` is a text | `TypeError` | **Throws again** |
+| An input with no name | `TypeError` | **Throws again** |
+| An input whose type is a text | `malformed_program`, stale | Works |
+| Ports that are `null` | `malformed_program`, stale | Works |
+| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
+| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
+| A version from the future | `unsupported_version`, stale | Works |
+
+`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
+no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
+source and for the form.
+
+**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
+persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
+is already replaced, so every later recompile throws too.
+
+**The cause under all of it:** the whole check exists, and it is in the wrong package.
+`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
+the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
+that arrives from storage goes past it.
+
+**Who can reach it:** any host that loads what it saved, when the file is damaged or was
+written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
+`SavedProgram`.
+
+**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
+0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
+the *Embedding core* sample was probed for the docs pass of 0.6.1.
+
+**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
+instance already reports `unsupported_version` that way: a diagnostic, and the old program
+keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
+would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
+range has to say so.
+
+**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
+three things the plan settled with it:
+
+- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
+  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
+  every door composes, so the kind is the same at both levels and each level keeps its channel:
+  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
+  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
+  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
+  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
+  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
+  global and a program layer? The kind should be, the channel should not.
+- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
+  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
+  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
+  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
+  through `export *`, and a patch removes nothing.
+- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
+  host layer with `ports: null` is read in five places before and after compose, so a guard
+  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
+  reported, a layer built in code throws); one test pins it.
+
+Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
+page prints every compose sample's declarations through `declarationsOf`, which maps over
+`ports.inputs` and would break the build on a bad shape; and the link's one test file is
+`link.test.ts`. The release record is written after the release, as every record is.
+
+**What it requires, in two sizes:**
+
+- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
+  `malformed_program` where it fails. It ends the three cases that break an instance. The four
+  other raw errors stay.
+- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
+  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
+  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
+  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
+  the table, and one that a refused program leaves the next one working.
+
+### The plan (from the approved plan of 0.7.0 and 0.7.1, revision 7)
+
+Three commits, each with its gates green before its handover, the docs build for the last.
+
+**Commit B: core.**
+
+| File | Change |
+| --- | --- |
+| `compose.ts` | `PortProblem.kind` gains `"malformed_ports"`. In `walk`, before reading `layer.ports`: `isPorts` fails → a problem with the layer's id, `where: "ports"`, and the layer is skipped |
+| `diagnostics.ts` | `malformed_ports`: stage `compose`, with `triggeredBy` and no sample (the docs page prints every compose sample's declarations through `declarationsOf`, which maps over `ports.inputs` and would break the build on a bad shape) |
+| `infra/serialise.ts` | `isSavedProgram(value: unknown): value is SavedProgram`: a record, a numeric `version`, a `form` of the three, a `code` form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the nodes stay `deserialise`'s), `ports` absent or `isPorts`. Exported from `index.ts`. `assertSavedPorts` stays, marked `@deprecated` for `isSavedProgram` |
+| `environment.ts`, `load` | `!isSavedProgram(saved)` → `unsupported_form` when `form` is a string none of the three names, else `malformed_program`; then `migrate` (`unsupported_version`) and the switch as today; `assertSavedPorts` no longer called |
+| `runtime/instance.ts` | The constructor takes the document layer's ports from the program only when `isSavedProgram` holds (`EMPTY_PORTS` otherwise); `recompile` → `load` publishes the diagnostic. `setProgram`: `isSavedProgram` first, and the two `saved.ports` reads behind it. `setLayer`: no change, the compose problem carries the layer's id. The `layers` option is host code, as `createRuntime`'s layers are: a bad one there throws, and one test pins the line |
+
+Tests: `runtime/instance.test.ts`, one per row of the probe table on the call the row names,
+plus `setLayer` with `inputs: "x"`, `createInstance` with a bad first program, a sound program
+after a refused one, and a host layer with `ports: null` throwing. `runtime/runtime.test.ts`:
+`runtime.setLayer` with a bad shape returns one `malformed_ports`, `createRuntime` with one
+throws its report. `environment.test.ts`: `load` per bad shape. `compose.test.ts`: the kind with
+its `layerId`, the other layers still composing. `infra/serialise.test.ts`: `isSavedProgram` per
+shape. `packages/link/src/link.test.ts`: unchanged in outcome.
+
+**Commit C: link, docs, changelogs, versions.**
+
+| Where | What |
+| --- | --- |
+| `packages/link/src/protocol.ts`, `package.json` | Its own `isSavedProgram` deleted, core's imported; `0.7.1`, peer `^0.7.1` |
+| `packages/core/package.json` | `0.7.1` |
+| `host/embedding-core.md` | A damaged file is reported on `diagnostics` (`malformed_program`, `unsupported_form`), a layer of a bad shape that arrives as data as `malformed_ports`; a layer a host builds in code (`createRuntime`'s `layers`, `createInstance`'s `layers` option) throws, as any compose problem there |
+| `host/packages/core.md` | `isSavedProgram` among the named exports |
+| `how-it-works/diagnostics.mdx` | Generated: `malformed_ports` with its `triggeredBy` |
+| The two changelogs | Core 0.7.1: the eight raw errors become diagnostics, `malformed_ports`, `isSavedProgram` exported. Link 0.7.1: core's guard, peer `^0.7.1` |
+| The notes | Nothing moves; the record "0.7.1 on npm" is written after the release, and this entry goes to `done.md` with it |
+
+Then the release, per the runbook: `yarn install` after the peer bump (the lockfile), the
+version note on *Installation* at 0.7.1, the PR, the tags, one release in the shape of the
+previous ones, two approvals core first, the check from outside the repo. The editor's peer
+`^0.7.0` admits 0.7.1: no editor release.
+
+---
+
 ## 0.7.0 on npm — DONE 2026-10-14
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.7.0**, six days

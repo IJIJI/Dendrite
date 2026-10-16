@@ -59,8 +59,10 @@ does not know. [Types in practice](../types/) covers what that costs you.
 ## Defaults, and inputs that are not set
 
 An input can carry a default, which is what it holds before anything supplies a value. Without
-one it starts as `null{:den}`, and `null{:den}` flows anywhere a value is expected, so a program over
-unset inputs still runs rather than failing.
+one it starts at its type's empty value, `0{:den}`, `""{:den}`, `false{:den}` or `[]{:den}`, and at
+`null{:den}` for `any{:den}` or a type with none. `null{:den}` is accepted anywhere a value is
+expected, so a program over unset inputs still runs rather than failing, and an op handed it
+gives `null{:den}` in turn.
 
 Two ops exist for exactly this:
 

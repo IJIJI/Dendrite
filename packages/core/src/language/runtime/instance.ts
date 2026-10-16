@@ -1,5 +1,6 @@
 import { type ComposeResult, type PortProblem } from "../compose";
 import { type ProgramEnvironmentFactory, type LoadResult } from "../environment";
+import { clean } from "../evaluator/evaluator";
 import { type EvalError } from "../evaluator/types";
 import { type SourceRef } from "../infra/nodes";
 import { type Observable, createSubject } from "../infra/observable";
@@ -209,7 +210,7 @@ class Instance implements ProgramInstance {
     const persisted = this.persistedLayer();
     for (const input of persisted?.ports.inputs ?? []) {
       if (options.inputValues && input.name in options.inputValues) {
-        this.programValues[input.name] = options.inputValues[input.name];
+        this.programValues[input.name] = clean(options.inputValues[input.name]);
       }
     }
 
@@ -248,7 +249,10 @@ class Instance implements ProgramInstance {
     if (wasPersisted) this.publishSnapshot();
   }
 
-  setInput(name: string, value: unknown): void {
+  setInput(name: string, raw: unknown): void {
+    // What the evaluator will see: a NaN, an infinity or an undefined a host pushes is no
+    // value (0.8.0), and `values` and the snapshot show what runs, not the raw push.
+    const value = clean(raw);
     if (!this.admit(this.programInput(name), value)) return;
     if (Object.is(this.programValues[name], value) && name in this.programValues) return;
     this.storeValue(name, value);
@@ -257,8 +261,9 @@ class Instance implements ProgramInstance {
     if (this.live) this.handle?.setInput(name, value);
   }
 
-  fireTrigger(name: string, value: unknown): void {
+  fireTrigger(name: string, raw: unknown): void {
     const def = this.programInput(name);
+    const value = clean(raw);
     if (!this.admit(def, value)) return;
     if (!this.live) return;
     this.handle?.fireTrigger(name, value);

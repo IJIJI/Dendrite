@@ -1,7 +1,7 @@
 import { Convert } from "../infra/convert";
 import { valueFits } from "../infra/fits";
 import { CNode, type COperationNode } from "../infra/nodes";
-import { type Type } from "../infra/types";
+import { type Type, isAny } from "../infra/types";
 import { CoreProgram } from "../infra/program";
 import { type FnValue, type OpInput, Vocabulary } from "../infra/registry";
 import { Thunk } from "../infra/thunk";
@@ -21,10 +21,53 @@ export function createEvalState(): EvalState {
   };
 }
 
-//? Input management: The host facing inputs, string-typed.
+//? Input management: The host facing inputs, string-typed. Every path a host has into the
+// evaluation state ends here (`run`, the runner, an entry's setInput and re-seed, the runtime's
+// global inputs), so this is the door where a pushed value is read as the language holds it.
 // TODO: Maybe an evalstate object? Or some other centralised way to manage evalstates that can be easily used by the run types?
 export function updateInput(name: string, value: unknown, state: EvalState): void {
-  state.inputs.set(name, value);
+  state.inputs.set(name, clean(value));
+}
+
+// A number as JSON would carry it: NaN and the infinities are no value, a negative zero is 0.
+const finiteOr = (n: number): number | null =>
+  Number.isFinite(n) ? (Object.is(n, -0) ? 0 : n) : null;
+
+// ponytail: a depth bound as the cycle guard, no allocation per push; a NaN below 32 levels
+// survives, and a Set replaces the bound if a host ever meets one.
+const WALK_DEPTH = 32;
+const isPlain = (value: object): boolean => {
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
+/**
+ * A value as the language holds it: an `undefined` is null, a number that is not finite is
+ * null and a negative zero is 0, at any depth of a list or a plain object, copying only what
+ * changed (by Object.is, since 0 and -0 are ===). Anything else, a class instance, a DOM node,
+ * a function, is passed as it is: a value JSON cannot carry is the host's own. Two doors call
+ * it: a host's push (updateInput, and an instance's own store) and a host op's result.
+ */
+export function clean(value: unknown, depth = WALK_DEPTH): unknown {
+  if (value === undefined) return null;
+  if (typeof value === "number") return finiteOr(value);
+  if (depth === 0 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    let copy: unknown[] | undefined;
+    for (let i = 0; i < value.length; i++) {
+      const item = clean(value[i], depth - 1);
+      if (!Object.is(item, value[i])) (copy ??= value.slice())[i] = item;
+    }
+    return copy ?? value;
+  }
+  if (!isPlain(value)) return value;
+  const record = value as Record<string, unknown>;
+  let copy: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    const item = clean(record[key], depth - 1);
+    if (!Object.is(item, record[key])) (copy ??= { ...record })[key] = item;
+  }
+  return copy ?? value;
 }
 
 //? EvalContext: the invariants of a single evaluation traversal (the program, the
@@ -148,19 +191,14 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
     case "field":
       return memoise(node, ctx, state, () => {
         const src = evalNode(node.struct, ctx, state);
-        // A field of nothing is nothing: `Find(...).name` with no match is null, not a throw,
-        // the way a null reads as "" in a string op and as [] in a list op. A struct that IS
-        // there but lacks the field is still an error: that value came from a host and does
-        // not match its declared type.
-        if (src === null || src === undefined) return null;
+        // A field read that finds nothing is no value: `Find(...).name` with no match, a value
+        // that is no struct (a number through `any`; a list, which has no fields here), a
+        // struct without the field. The checker warns where it could not look
+        // (field_access_on_any, field_access_on_primitive); the run gives null, never a throw.
+        if (src === null || typeof src !== "object" || Array.isArray(src)) return null;
         const record = src as Record<string, unknown>;
-        if (typeof record !== "object" || !(node.field in record)) {
-          throw new EvalError(
-            "invalid_field_access",
-            `Field '${node.field}' does not exist on value`,
-          );
-        }
-        return record[node.field];
+        // A key holding `undefined`, which only an in-process host can hand in, is no value too.
+        return node.field in record ? (record[node.field] ?? null) : null;
       });
 
     case "lambda": {
@@ -216,6 +254,9 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           throw new EvalError("evaluator_not_found", `No evaluator for op: '${node.op}'`);
         }
         const resolved = resolveInputs(node, ctx, state);
+        // The rule of "no value": an input that names a type and holds none, or a value of
+        // another kind, is no value for the whole op, which does not run (see `receive`).
+        if (resolved === NO_VALUE) return null;
         try {
           // NaN and the infinities are not values a program can hold: they are not JSON, so
           // they would change on the way to a host, and NaN is not even equal to itself. An op
@@ -233,9 +274,12 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
               `Evaluator '${node.op}' returned a Thunk; read .value before returning`,
             );
           }
-          if (typeof value !== "number") return value;
-          if (!Number.isFinite(value)) return null;
-          return Object.is(value, -0) ? 0 : value;
+          if (typeof value === "number") return finiteOr(value);
+          // A list or a struct is walked for the same, unless the evaluator promises that none
+          // is in it (`finiteCheck: false`): a host's op is the one door a NaN has left, since
+          // a host's push is cleaned at updateInput and the library's ops hand on what was
+          // read here.
+          return evaluator.finiteCheck === false ? value : clean(value);
         } catch (e) {
           if (e instanceof EvalError) throw e;
           throw new EvalError("host_error", `Evaluator '${node.op}' threw: ${e}`);
@@ -244,17 +288,72 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
   }
 }
 
-// Evaluate an op node's inputs into the record its evaluator receives. An input declared
-// `convert` is converted leaf by leaf first, so the op sees the type it declared; one whose
-// runtime shape is wrong (an `any` holding a number where a list was declared) passes through
-// unchanged, and the op's own guard handles it, as it did before the flag existed. An input
-// declared `lazy` is handed over as a Thunk over the node (the memoised node is under it, and
-// the conversion happens inside), so a branch the op never reads is never evaluated.
+// The rule of "no value" (0.8.0, option B), in one place, for every op, a host's included: an
+// input that names a type and is handed a `null`, or a value of another KIND, is no value,
+// and the op does not run; the evaluator gives null for it. Four inputs take what comes: an
+// `any` input (the value, null included), an optional one (a null reads as absent,
+// `undefined`, as when the input is left out), a converting one (its leaves go through
+// `Convert` first, then this rule reads the result), and a lazy one (a Thunk, the op's to
+// read). A kind is a primitive's `typeof`, `Array.isArray` for a list, an object that is no
+// list for a struct, and the root's `typeof` for a type that extends a primitive. An opaque
+// host type (no fields, no parent) is not checked, and no type's schema is run here: the kind
+// at every op, the schema at the door (valueFits). So no op holds a guard for either.
+const NO_VALUE: unique symbol = Symbol("no value");
+
+type Primitive = "number" | "string" | "boolean";
+const PRIMITIVE = new Set<string>(["number", "string", "boolean"]);
+
+// The kind a named type stands for, found along its `extends` chain. A primitive name answers
+// before the cycle guard is allocated (4 ns against 22, measured), only a chain allocates it.
+function kindOf(name: string, descriptor: Vocabulary): Primitive | "struct" | undefined {
+  if (PRIMITIVE.has(name)) return name as Primitive;
+  let current: string | undefined = name;
+  let seen: Set<string> | undefined; // cycle guard for malformed extends chains
+  while (current && !seen?.has(current)) {
+    if (PRIMITIVE.has(current)) return current as Primitive;
+    (seen ??= new Set()).add(current);
+    const def = descriptor.types.get(current);
+    if (!def) return undefined;
+    if (def.fields) return "struct";
+    current = def.extends;
+  }
+  return undefined;
+}
+
+// What the op receives on one strict input: the value, `undefined` for an absent optional one,
+// or NO_VALUE, which stops the op.
+function receive(value: unknown, def: OpInput | undefined, descriptor: Vocabulary): unknown {
+  if (!def) return value;
+  if (value === null || value === undefined) {
+    if (def.required === false) return undefined;
+    return isAny(def.type) ? null : NO_VALUE;
+  }
+  switch (def.type.kind) {
+    case "array":
+      return Array.isArray(value) ? value : NO_VALUE;
+    case "function":
+      return value; // the analyser admits only a lambda, or a reference to one, here
+    case "name": {
+      const kind = isAny(def.type) ? undefined : kindOf(def.type.name, descriptor);
+      if (kind === undefined) return value;
+      if (kind === "struct") {
+        return typeof value === "object" && !Array.isArray(value) ? value : NO_VALUE;
+      }
+      return typeof value === kind ? value : NO_VALUE;
+    }
+  }
+}
+
+// Evaluate an op node's inputs into the record its evaluator receives, or NO_VALUE when the
+// rule above stops the op. An input declared `convert` is converted leaf by leaf first, so the
+// op sees the type it declared. An input declared `lazy` is handed over as a Thunk over the
+// node (the memoised node is under it, and the conversion happens inside), so a branch the op
+// never reads is never evaluated, and the rule never sees it.
 function resolveInputs(
   node: COperationNode,
   ctx: EvalContext,
   state: EvalState,
-): Record<string, unknown> {
+): Record<string, unknown> | typeof NO_VALUE {
   const declared = new Map(ctx.descriptor.ops.get(node.op)?.inputs.map((i) => [i.name, i]));
   const resolved: Record<string, unknown> = {};
   for (const [key, input] of Object.entries(node.inputs)) {
@@ -263,8 +362,19 @@ function resolveInputs(
       const value = evalNode(n, ctx, state);
       return def?.convert ? convertTo(value, def.type) : value;
     };
-    const one = (n: CNode): unknown => (def?.lazy ? new Thunk(() => read(n)) : read(n));
-    resolved[key] = Array.isArray(input) ? input.map(one) : one(input);
+    const one = (n: CNode): unknown =>
+      def?.lazy ? new Thunk(() => read(n)) : receive(read(n), def, ctx.descriptor);
+    // The test is on the node side: a variadic input is a list of nodes, and a list VALUE
+    // (ten thousand items in one `list` input) is never scanned.
+    if (Array.isArray(input)) {
+      const values = input.map(one);
+      if (values.includes(NO_VALUE)) return NO_VALUE;
+      resolved[key] = values;
+    } else {
+      const value = one(input);
+      if (value === NO_VALUE) return NO_VALUE;
+      resolved[key] = value;
+    }
   }
   return resolved;
 }

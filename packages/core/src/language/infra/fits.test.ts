@@ -24,14 +24,22 @@ describe("valueFits: a runtime value against a Type", () => {
     expect(fits(undefined, Type.string)).toBe(true);
   });
 
-  it("a primitive is checked by its schema, so NaN and Infinity are not numbers", () => {
+  it("a primitive is checked by its schema", () => {
     expect(fits(5, Type.number)).toBe(true);
     expect(fits("5", Type.number)).toBe(false);
-    expect(fits(NaN, Type.number)).toBe(false);
-    expect(fits(Infinity, Type.number)).toBe(false);
     expect(fits("a", Type.string)).toBe(true);
     expect(fits(true, Type.boolean)).toBe(true);
     expect(fits(1, Type.boolean)).toBe(false);
+  });
+
+  // Since 0.8.0 the door reads a NaN or an infinity as null (updateInput), so it fits as a
+  // null does: on a number, inside a list, on any. Until then a number input refused it.
+  it("a number that is not finite fits every type, as the null it is read as", () => {
+    expect(fits(NaN, Type.number)).toBe(true);
+    expect(fits(Infinity, Type.number)).toBe(true);
+    expect(fits([1, NaN], Type.array(Type.number))).toBe(true);
+    expect(fits(NaN, Type.any)).toBe(true);
+    expect(fits(NaN, Type.name("Grade"))).toBe(true);
   });
 
   it("a list fits when each item fits the element type", () => {

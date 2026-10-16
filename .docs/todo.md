@@ -15,9 +15,10 @@ changed on 2026-10-10. "Possibly" is the maintainer's word.
 | Release | Holds | Entry |
 | --- | --- | --- |
 | 0.7.0 | **On npm since 2026-10-14** (`done.md`, "0.7.0 on npm") | done |
-| 0.7.1, next | **A saved program that is not well formed is reported, never thrown** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch: it breaks nothing | below |
-| 0.8.0, the minor after 0.7 | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules | The last section of this file |
-| 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true | `backlog.md`, "Core — a typed evaluator derived from the op's declaration" |
+| 0.7.1 | **On npm since 2026-10-14** (`done.md`, "0.7.1 on npm") | done |
+| 0.8.0, next | **"No value", option B, everywhere**, with its docs (the maintainer, 2026-10-12). 0.7.0 brings `??` first, so a program can be made ready: `x ?? 0` means the same under both rules. **Planned, probed and approved 2026-10-14**: the plan file `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 | Below, "0.8.0 — decided on 2026-10-14", and "Before 1.0.0" |
+| 0.8.1 | **The strict keys: the evaluator typed from the op's declaration**, so the stdlib's 35 casts go (the maintainer, 2026-10-13: "something I definitely want"). A patch, it only adds; after 0.8.0 because the door is what makes the types true. **And a fix: a binding recomputed once per reference** (found 2026-10-14; the maintainer: 0.8.1, "it has a timeframe") | `backlog.md`, "Core — a typed evaluator derived from the op's declaration"; below, "Core — a binding is recomputed once per reference" |
+| 0.8.2 | **What the editor and the docs need after "no value"**: how a `null` output is shown, the samples re-read, and the rest of the list below. A patch of the editor, possibly the docs alone | Below, "0.8.1 and 0.8.2" |
 | Soon after | **The visual (Rete) half starts, with a plan.** The maintainer, 2026-10-10: "it will become harder to implement the more we wait" | `backlog.md`, "Editor — the visual (Rete) half" |
 | After 0.7 | Union types, `A \| B` (the maintainer, 2026-10-10; it was "0.7, possibly") | `backlog.md`, "Language — union types" |
 | Later, possibly | Strings as lists, with `Split`, `Slice` and `Replace` | `backlog.md`, "Language — strings as lists" |
@@ -29,133 +30,177 @@ of this file is what must be done before a 1.0.0.
 
 ---
 
-## 0.7.1 — a saved program or layer that is not well formed
+## 0.8.0 — decided on 2026-10-14
 
-**This is the next work.** A patch for core and the link, straight after 0.7.0 (on npm since
-2026-10-14). The entry as it stood in the backlog, with its probe table and the decisions of
-2026-10-14, then the plan.
+The plan of option B, probed on 0.7.1 source and approved by the maintainer on 2026-10-14
+after four review passes and one independent review from another chat, assessed claim by
+claim. The plan file is `perfect-agreed-make-sure-purrfect-karp.md` in the maintainer's plan
+folder (revision 3); this section is the record in the repo. Every decision of option B was
+taken on 2026-10-12 ("Before 1.0.0", below). What the plan settled, each with its letter:
 
-### The entry
-
-**What:** a saved program is data from outside: a host reads it from a file or a database and
-hands it over. Core checks part of it, and what it does not check comes out as a raw
-`TypeError`, from commands that are documented to report through the observables. Probed on
-2026-10-12, each case on a fresh instance, followed by a sound `setProgram`:
-
-| Handed to `setProgram` | The call | A sound program next |
+| Question | Decided | Letter |
 | --- | --- | --- |
-| Ports with no `outputs` | `TypeError`: `layer.ports.outputs is not iterable` | **Throws again** |
-| Ports where `inputs` is a text | `TypeError` | **Throws again** |
-| An input with no name | `TypeError` | **Throws again** |
-| An input whose type is a text | `malformed_program`, stale | Works |
-| Ports that are `null` | `malformed_program`, stale | Works |
-| A source that is a number | `TypeError`: `s.source.startsWith is not a function` | Works |
-| A form nobody knows | `TypeError`, though the kind `unsupported_form` exists | Works |
-| A version from the future | `unsupported_version`, stale | Works |
+| `Default` and `If` | `Default` stays the op under `??`. A desugar to `If(IsSet(a), a, b)` writes `a` into two nodes, and the analyser copies a node per visit, so `a` evaluates twice (probed: `Tick() ?? 0` calls once, the inline `If` form twice). One op call is also cheaper than a thunk, and `??` is shipped over `Default` | 1A |
+| `Default`'s output type | Aligned with `If`: the branches' type when they agree, else `any`. `$n ?? "none"` was typed `number` with the fallback unchecked: the one exception to the language's rule for types that disagree | 2A |
+| The mark on the evaluator | `finiteCheck: false` (renamed on 2026-10-15 from `finite: true`, which read backwards as a switch: the check is on by default, `false` turns the walk off on the op's promise that no number it returns, at any depth, is a `NaN` or an infinity) | 3A |
+| The host-push door for a `NaN` | Read as `null`, on every input, in `updateInput`, the one function every path enters the evaluation state through. A `number` input refused a `NaN` through zod before, never by decision; it reads it as `null` now. An `undefined` the same way (probed: it passed the door and stopped every output with `input_not_set`) | 4B |
+| The field read on an `any` | A new warning, `field_access_on_any`. The run-time kind `invalid_field_access` is unreachable and goes | 5a A, 5b A |
+| `assertSavedPorts` | Removed in 0.8.0, as its deprecation said | 6a A |
+| The "`null`, both ways" convention | Rewritten in place, in the commit that changes the code | 6b A |
+| The samples on the site | Run on 0.7.1 and on 0.8.0 once; the prose beside a moved result is fixed. No pinning test | 6c |
+| The cost of the rule | Measured, settled: one comparison per input inside the loop that already runs | 6d |
+| A binding recomputed once per reference | Not this release: 0.8.1 (below), and a "Known" line in the changelog | 7B |
+| `Reduce(list, null, …)` refused as `unknown_type` | Fixed in 0.8.0, in `Reduce`'s own `inferInputTypes`: a `null` or `any` initial types the accumulator `any` | 8 |
+| The 1.x sentence | Not written: the repo has no definition of 1.0 yet. A hedge only, in `implicit_any_cast`'s meaning: a stricter check may refuse such a program later | 9 |
+| Which list ops skip a `null` item | `Average`, `Max`, `Min`, through one helper. `Length([1, null])` is 2, `Map([1, null], x => x + 1)` is `[2, null]` | 10A |
+| An optional input handed `null` | Reads as absent: the op sees `undefined`, as when the input is left out. `Round(2.5, null)` is 3. Python, Kotlin, C# and Rust read their one "nothing" so; JavaScript keeps `null` apart from `undefined`; SQL propagates | 11A |
+| A value of the wrong kind on a typed input | No value, like a `null`: the KIND the type names is checked at every op (a primitive by `typeof`, a list by `Array.isArray`, a struct as an object, a type that extends a primitive by its root, an opaque handle not at all), a type's schema only at the door. `Upper(5)` and `"abc" + 1` give `null`; the stdlib's thirty guards go, which served this second rule as much as the `null` one | 12A |
+| A `~` on an expression, converting to the slot's type | Rejected (`backlog.md`, "Language — `~` on an expression") | — |
+| The door's standard for `null` | The language's: `null` is a member of every type and stays accepted; a wrong kind is refused as today. Stricter would leave a host no way to clear a value | — |
+| Run-time tracking | Probably not before 1.0 (`backlog.md`, "Core — run-time tracking") | — |
 
-`setLayer` and `createInstance` give the same `TypeError` for ports of the wrong shape, with
-no lasting harm. `env.load` answers `malformed_program` for the ports and throws for the
-source and for the form.
+**Today's result per changed case** (probed on 0.7.1 source, 2026-10-14), and the result
+under the plan. Each row is a test in the commit named.
 
-**Why three cases break the instance for good:** `setProgram` writes `saved.ports` into the
-persisted layer and THEN recompiles (`runtime/instance.ts`). When composing throws, the layer
-is already replaced, so every later recompile throws too.
+| Expression | 0.7.1 | 0.8.0 | Commit |
+| --- | --- | --- | --- |
+| `1 / 0 + 1` | `1` | `null` | 1 |
+| `Add(1, null)`, `Multiply(2, null)`, `Subtract(null, 1)`, `Negate(null)`, `Divide(null, 2)`, `Mod(null, 3)`, `Pow(null, 2)`, `Abs(null)`, `Floor(null)`, `Ceil(null)`, `Clamp(null, 0, 10)`, `Round(null)` | `1`, `0`, `-1`, `0`, `0`, `0`, `0`, `0`, `0`, `0`, `0`, `0` | `null`, each | 1 |
+| `Divide(2, null)` | `null` | `null` | 1 |
+| `Round(2.5, null)` | `3` | `3` (absent, 11A) | 1 |
+| `null > -1`, `null < 1`, `null >= 0`, `null <= 0` | `true`, each | `null`, each | 1 |
+| `null == 0`, `null == null`, `null != 0` | `false`, `true`, `true` | the same (`Equals` takes `any`) | 1 |
+| `Not(null)`, `!null`, `Xor(null, true)` | `true`, `true`, `true` | `null`, each | 1 |
+| `And(null, true)`, `And(true, null)` | `false`, `false` | `null`, `null` | 1 |
+| `And(false, null)`, `And(null, false)` | `false`, `false` | `false`, `false` | 1 |
+| `Or(null, true)`, `Or(true, null)` | `true`, `true` | `true`, `true` | 1 |
+| `Or(null, false)`, `Or(false, null)` | `false`, `false` | `null`, `null` | 1 |
+| `If(null, 1, 2)`, `null ? 1 : 2` | `2`, `2` | `null`, and no branch is read | 1 |
+| `null ?? 5`, `Default(null, 5)`, `IsSet(null)` | `5`, `5`, `false` | the same | 1 |
+| `ToString(null)`, `ToNumber(null)`, `ToBool(null)` | `""`, `null`, `false` | `null`, each | 1 |
+| `Upper(null)`, `Lower(null)`, `Trim(null)` | `""`, each | `null`, each | 1 |
+| `Contains(null, "a")`, `Contains("a", null)`, `StartsWith(null, "a")`, `EndsWith("a", null)` | `false`, `true`, `false`, `true` | `null`, each | 1 |
+| `Join([1, null], ",")`, `` `total {null}` ``, `"a" ++ null` | `"1,"`, `"total "`, `"a"` | the same (a converting leaf) | 1 |
+| `Join(["a", "b"], null)` | `"ab"` | `"ab"` (absent, 11A) | 1 |
+| `Join(null, ",")` | `""` | `null` (a converting input converts its leaves; a list that is no list is no value) | 1 |
+| `Length(null)`, `Flatten(null, 1)`, `Flatten([[1]], null)`, `Concat([1], null)`, `Includes(null, 1)` | `0`, `[]`, `[[1]]`, `[1]`, `false` | `null`, each | 1 |
+| `Average([1, null])`, `Max([-4, null])`, `Min([4, null])` | `0.5`, `0`, `0` | `1`, `-4`, `4` | 1 |
+| `Average([null])`, `Max([null])` | `0`, `0` | `null`, `null` (nothing left) | 1 |
+| `Average([1, "a"])` (through `any`) | `12` | `1` (the skip is by kind) | 1 |
+| `Average(null)`, `Max(null)` | `null`, `null` | `null`, `null` | 1 |
+| `Includes([1, null], null)` | `true` | `true` | 1 |
+| `Filter(null, x => true)`, `Map(null, x => x)`, `Find(null, x => true)`, `Every(null, x => false)`, `Some(null, x => true)`, `Reduce(null, 0, (acc, i) => acc + i)` | `[]`, `[]`, `null`, `true`, `false`, `0` | `null`, each | 1 |
+| `Map([1, null], x => x + 1)` | `[2, 1]` | `[2, null]` | 1 |
+| `Filter([1, null], x => x > 0)`, `Every([1, null], x => x > 0)` | `[1]`, `false` | `[1]`, `false` (a predicate's no value does not hold) | 1 |
+| `Reduce([1, 2], null, (acc, i) => acc + i)` | compile error `unknown_type` | `null`; compiles, warns `implicit_any_cast` on `acc + i` (8) | 3 |
+| `Length()`, `Upper()`, `Round()` (a required input left out, `missing_op_input`) | `0`, `""`, `0` | `null`, each: the placeholder is `null` for every type, and the warning says so | 3 |
+| `Concat()` (a variadic left out) | `[]` | `[]` | 3 |
+| `$a.length` with `a: any` holding `[1, 2]` | `2` (JavaScript's own field) | `null`: a list has no fields | 1 |
+| `Map(["1e999"], (n~: number) => n)` | `[Infinity]` | `[null]`: `Convert.toNumber` gives `null` for a number that is not finite | 2 |
+| `null ?? 5` (its type) | `null` | `any` | 1 |
+| `[1, null]` (its type) | `any[]` | `number[]` | 3 |
+| `Average([1, null]) + 1` | `1.5`, warns `implicit_any_cast` | `2`, no warning | 3 |
+| `[null]`, `[null, null]` | `any[]` | `any[]` | 3 |
+| `[x => x, null]` | `function_in_mixed_list` | the same | 3 |
+| `null as number`, `"5" as number` | `null`, `null` | the same | 1 |
+| `Upper($a)` with `a: any` holding `5` | `"5"`, warns | `null`, warns (12A) | 1 |
+| `$a + 1` with `a` holding `"abc"` | `"0abc1"`, warns | `null`, warns (12A) | 1 |
+| `If($b, 1, 2)` with `b` holding `null` | `2` | `null` | 1 |
+| `$a.name` with `a: any` holding `5`, or `{ x: 1 }` | throws `invalid_field_access` | `null`, and the checker warns `field_access_on_any` | 1, 3 |
+| `$a.name` with `a` holding `null`, or `{ name: "x" }` | `null`, `"x"` | the same, and the warning | 1, 3 |
+| `$a.x` with `a` holding `{ x: undefined }` | `undefined` | `null` | 1 |
+| `$n.z` with `n: number` | warns `field_access_on_primitive`, throws | warns, `null` | 1 |
+| `$p.z` with `p: Pair` lacking `z` | compile error `unknown_field` | the same | — |
+| `$p.n` with `p` holding `null`, or `{ n: null, m: 1 }` | `null`, `null` | the same | 1 |
+| A host op returning `[1, NaN, -0, Infinity]` | arrives untouched | `[1, null, 0, null]` | 2 |
+| A host op returning `{ n: NaN, m: 1 }` | arrives untouched | `{ n: null, m: 1 }` | 2 |
+| A host op returning `NaN` | `null` | `null` | 2 |
+| `setInput("a", NaN)` on `a: any`, and `[1, NaN]`, and `{ x: NaN }` | arrive untouched; `$a == $a` is `false` | `null`, `[1, null]`, `{ x: null }`; `$a == $a` is `true` | 2 |
+| `setInput("n", NaN)` on `n: number` | `value_does_not_fit`, nothing moves | `null` (4B) | 2 |
+| `runtime.updateInputs({ g: NaN })` on `g: number` | throws | `null` | 2 |
+| `setInput("n", null)` on `n: number` | `null` | `null` | — |
+| `setInput("n", undefined)`, on `n: number` or `a: any` | admitted, then `input_not_set` stops every output, stale | `null` | 2 |
+| A host op with `convert` on `number`, on `boolean`, handed `null` | `null`, `false` | `null`, `false` (`Convert`'s own answers) | 1 |
 
-**The cause under all of it:** the whole check exists, and it is in the wrong package.
-`isSavedProgram` in `packages/link/src/protocol.ts` tests the version, the form, the source and
-the ports (through core's `isPorts`), so a program that arrives over a link is safe. A program
-that arrives from storage goes past it.
+**Costs**, measured on 0.7.1 (the runner, every input changed):
 
-**Who can reach it:** any host that loads what it saved, when the file is damaged or was
-written by another version. TypeScript does not help: read JSON is `unknown`, cast to a
-`SavedProgram`.
-
-**When: 0.7.1** (the maintainer, 2026-10-12: "Do it in 0.7.1"). A patch, straight after
-0.7.0: a raw error becomes a diagnostic, so nothing breaks. It was found in passing, while
-the *Embedding core* sample was probed for the docs pass of 0.6.1.
-
-**Proposed, and not yet said yes to:** the fix at the door, and report rather than throw (an
-instance already reports `unsupported_version` that way: a diagnostic, and the old program
-keeps running, stale). The plan of 0.7.1 confirms both. One thing it must settle: the link
-would import `isSavedProgram` from core, so the link needs core 0.7.1 or later, and its peer
-range has to say so.
-
-**Decided 2026-10-14** (the maintainer: "Agreed on both"): **the fix at the door**, and
-three things the plan settled with it:
-
-- **A layer of a bad shape is refused inside `composeLayers`**, as a new `PortProblem` kind,
-  `malformed_ports`, with the layer's id. It is the one function that reads `layer.ports`, and
-  every door composes, so the kind is the same at both levels and each level keeps its channel:
-  `runtime.setLayer` returns it, `createRuntime` throws its report, `instance.setLayer`
-  publishes it with `refused: true` (its filter by `layerId` already matches). A program's own
-  ports never get that far: `setProgram` and `createInstance` refuse them at the door, as
-  `malformed_program`, before the layer is written. So the narrow fix below needs no `isPorts` of its
-  own in `setLayer`: it falls out. The question that decided it: is the error the same for a
-  global and a program layer? The kind should be, the channel should not.
-- **`isSavedProgram` is thin**: a record, a numeric `version`, a `form` of the three, a `code`
-  form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the
-  nodes stay `deserialise`'s, which throws into `malformed_program` today), `ports` absent or
-  `isPorts`. `assertSavedPorts` stays exported and marked deprecated: it leaves `index.ts`
-  through `export *`, and a patch removes nothing.
-- **The `layers` option of `createInstance` is host code**, as `createRuntime`'s layers are: a
-  host layer with `ports: null` is read in five places before and after compose, so a guard
-  would be Shotgun Surgery. The constructor keeps its throw; the docs draw the line (data is
-  reported, a layer built in code throws); one test pins it.
-
-Two facts for the work: `malformed_ports` gets `triggeredBy` and no sample, because the docs
-page prints every compose sample's declarations through `declarationsOf`, which maps over
-`ports.inputs` and would break the build on a bad shape; and the link's one test file is
-`link.test.ts`. The release record is written after the release, as every record is.
-
-**What it requires, in two sizes:**
-
-- **The narrow fix:** `isPorts(saved.ports)` in `setProgram` before the layer is touched, and
-  `malformed_program` where it fails. It ends the three cases that break an instance. The four
-  other raw errors stay.
-- **The fix at the door:** `isSavedProgram` moves to core beside `isPorts`, and the link imports
-  it. `env.load` asks it first, so `load`, `setProgram` and `createInstance` answer
-  `malformed_program` or `unsupported_form` and never throw; `setProgram` installs the ports
-  only after that; `setLayer` asks `isPorts`. No new diagnostic kind. A test for each row of
-  the table, and one that a refused program leaves the next one working.
-
-### The plan (from the approved plan of 0.7.0 and 0.7.1, revision 7)
-
-Three commits, each with its gates green before its handover, the docs build for the last.
-
-**Commit B: core.**
-
-| File | Change |
+| Measured | ns |
 | --- | --- |
-| `compose.ts` | `PortProblem.kind` gains `"malformed_ports"`. In `walk`, before reading `layer.ports`: `isPorts` fails → a problem with the layer's id, `where: "ports"`, and the layer is skipped |
-| `diagnostics.ts` | `malformed_ports`: stage `compose`, with `triggeredBy` and no sample (the docs page prints every compose sample's declarations through `declarationsOf`, which maps over `ports.inputs` and would break the build on a bad shape) |
-| `infra/serialise.ts` | `isSavedProgram(value: unknown): value is SavedProgram`: a record, a numeric `version`, a `form` of the three, a `code` form with a string `source`, an `ast` form whose `bindings` and `outputs` are records (the nodes stay `deserialise`'s), `ports` absent or `isPorts`. Exported from `index.ts`. `assertSavedPorts` stays, marked `@deprecated` for `isSavedProgram` |
-| `environment.ts`, `load` | `!isSavedProgram(saved)` → `unsupported_form` when `form` is a string none of the three names, else `malformed_program`; then `migrate` (`unsupported_version`) and the switch as today; `assertSavedPorts` no longer called |
-| `runtime/instance.ts` | The constructor takes the document layer's ports from the program only when `isSavedProgram` holds (`EMPTY_PORTS` otherwise); `recompile` → `load` publishes the diagnostic. `setProgram`: `isSavedProgram` first, and the two `saved.ports` reads behind it. `setLayer`: no change, the compose problem carries the layer's id. The `layers` option is host code, as `createRuntime`'s layers are: a bad one there throws, and one test pins the line |
+| One op call (4-op and 39-op programs agree) | about 1570 |
+| One `=== null` comparison | 3.5 |
+| A second loop over two declared inputs (refused: the check sits in the loop that runs already) | 82 |
+| Precomputed keys per op (refused: not needed) | 17 |
+| The kind of a declared type, a primitive name (no lookup) | 4.0 |
+| The kind of a host type: a struct, an opaque handle, one `extends` level, two levels | 32, 30, 45, 62 |
+| The `NaN` walk, per clean number item in a list of 1000 | 4.0 |
+| The walk, per struct of four fields | 46 |
+| The walk, one scalar | 3.5 |
+| The walk, 1000 numbers with one `NaN` (a copy) | 12 300 |
 
-Tests: `runtime/instance.test.ts`, one per row of the probe table on the call the row names,
-plus `setLayer` with `inputs: "x"`, `createInstance` with a bad first program, a sound program
-after a refused one, and a host layer with `ports: null` throwing. `runtime/runtime.test.ts`:
-`runtime.setLayer` with a bad shape returns one `malformed_ports`, `createRuntime` with one
-throws its report. `environment.test.ts`: `load` per bad shape. `compose.test.ts`: the kind with
-its `layerId`, the other layers still composing. `infra/serialise.test.ts`: `isSavedProgram` per
-shape. `packages/link/src/link.test.ts`: unchanged in outcome.
+**Two findings outside the scope**, from the same probes: a binding is recomputed once per
+reference when its input changed (0.8.1, below), and `Reduce([1, 2], null, …)` fails to
+compile with `unknown_type` (fixed in 0.8.0, row 8). The samples probe ran on 0.7.1 source on
+2026-10-15: 35 samples, none throws, none fails; its file waits in the chat's scratchpad for
+the run after the code lands.
 
-**Commit C: link, docs, changelogs, versions.**
+**The commits**, as the plan has them: 0 the notes and the samples' "before"; 1 the rule in
+the evaluator (one function, `receive`), the stdlib under it, the convention rewritten; 2 the
+`NaN` doors (`clean`, `finiteCheck: false`, the push door, `Convert.toNumber` finite); 3 the analyser
+(`[1, null]`, `field_access_on_any`, `Reduce`'s accumulator, `castsAny` without `null`, the
+missing-input placeholder `null` for every type); 4 `assertSavedPorts` out; 5 the docs with
+the "No value" box on both Host developers pages, the changelogs, the versions, the lockfile.
+Then the release.
 
-| Where | What |
-| --- | --- |
-| `packages/link/src/protocol.ts`, `package.json` | Its own `isSavedProgram` deleted, core's imported; `0.7.1`, peer `^0.7.1` |
-| `packages/core/package.json` | `0.7.1` |
-| `host/embedding-core.md` | A damaged file is reported on `diagnostics` (`malformed_program`, `unsupported_form`), a layer of a bad shape that arrives as data as `malformed_ports`; a layer a host builds in code (`createRuntime`'s `layers`, `createInstance`'s `layers` option) throws, as any compose problem there |
-| `host/packages/core.md` | `isSavedProgram` among the named exports |
-| `how-it-works/diagnostics.mdx` | Generated: `malformed_ports` with its `triggeredBy` |
-| The two changelogs | Core 0.7.1: the eight raw errors become diagnostics, `malformed_ports`, `isSavedProgram` exported. Link 0.7.1: core's guard, peer `^0.7.1` |
-| The notes | Nothing moves; the record "0.7.1 on npm" is written after the release, and this entry goes to `done.md` with it |
+---
 
-Then the release, per the runbook: `yarn install` after the peer bump (the lockfile), the
-version note on *Installation* at 0.7.1, the PR, the tags, one release in the shape of the
-previous ones, two approvals core first, the check from outside the repo. The editor's peer
-`^0.7.0` admits 0.7.1: no editor release.
+## 0.8.1 and 0.8.2 — further items, each to discuss for its need and its options
+
+Seven suggestions from the handoff of 2026-10-14, parked here by the maintainer ("add them all
+to a 0.8.2/1, depending on what it touches, as a further discuss the need and options"). None
+is decided. Each row says what it touches, which patch it would ride, and the one thing that
+cannot wait: three are bound to 0.8.0's plan by their nature, and the row says what is left
+for the patch.
+
+| Suggestion | Touches | Release | The need and the options to discuss |
+| --- | --- | --- | --- |
+| **Remove `assertSavedPorts`** | Core's public surface (`serialise.ts`, `index.ts`) | **0.8.0** (decided 2026-10-14, 6a A) | 0.7.1 deprecated it "until a minor removes it". Need: one fewer export with two ways to say one thing. Options: 0.8.0 (one breaking line more on a release that has many), or 0.9.0 (a release of its own for one line) |
+| **Rewrite the "`null`, both ways" convention** | `CLAUDE.md` "Conventions", *The type system* page | **0.8.0, the commit that changes the code** (decided 2026-10-14, 6b A: in place, so the rules file is true at every commit); the page in 0.8.0's docs pass | It states the rule option B replaces. Need: a rules file that is true. Options: rewrite in place, or a dated line that says what changed and when |
+| **Run every sample on the site before and after** | `apps/docs` (the samples, `content.test.ts`), the ops' examples | **0.8.0, once** (decided 2026-10-14, 6c): a one-off probe, run on 0.7.1 source on 2026-10-15 (35 samples, the file in the chat's scratchpad) and again before the docs pass; no pinning test | `content.test.ts` checks that a sample loads, not what it gives. Need: prose beside a moved result must not lie. Options: a one-off probe for the release, or a test that pins each sample's outputs so a later change shows |
+| **How the editor shows a `null` output** | The editor's outputs pane | 0.8.2 (an editor patch) | Under option B a null output is ordinary, and the pane prints JSON, so `null` beside a number reads as a fault. Options: print "no value" in a muted style, print `null` as the language writes it, or leave it, with the docs saying what it means |
+| **Measure the rule's cost** | `evaluator.ts`, the probe | **Settled 2026-10-14**: 3.5 ns per input, inside the loop that already runs, against about 1570 ns per op call; a host type's kind 30 to 62 ns. Nothing is left | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
+| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`, renamed `finiteCheck: false` on 2026-10-15** (the check is on by default, `false` turns it off; 3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
+| **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | **0.8.0**: the rule skips the op before any thunk is read, one test pins it | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
+
+---
+
+## Core — a binding is recomputed once per reference
+
+**What:** found 2026-10-14 by the probes of the 0.8.0 plan. A binding that depends on an input
+that changed is recomputed once per reference within one evaluation, on every path (`run`,
+the runner, the instance): `let t = Tick($n)` read three times calls the host op `Tick` three
+times; read inside a `Map` body over five items, five times. When nothing changed, zero. The
+docs promise the opposite in four places (*Evaluation* "A binding is computed once per
+evaluation", *Glossary*, *How a program runs*, *Bindings and outputs*), and `CLAUDE.md` says
+"evaluated at most once".
+
+**Why:** `isCached(node, cache, dependsOn, changedInputs)` answers "not cached" whenever the
+node depends on a changed input, with no notion of "computed in this traversal". So the first
+reference computes and caches, and the second reference finds the entry, sees the dependency
+on a changed input, and computes again. Results are right; the work repeats. A host op with a
+side effect or a cost (a tally lookup, for Beacon) runs once per reference, and
+`let limit = Max($data)` inside `Filter($data, x => x > limit)` computes `Max` once per item.
+
+**When: 0.8.1** (the maintainer, 2026-10-14: 7B, "in todo as it has a timeframe"). 0.8.0's
+changelog carries a "Known" line so the docs' promise is not silently false for a release.
+
+**What it requires:** about eight lines and two tests. A `computed: WeakSet<object>` on
+`EvalContext`, made per traversal in `evaluate` and `evaluateProgram`; in the `ref` case and
+in `memoise`, a node in `computed` is a hit before `isCached` is asked, and a node is added
+after it is computed (a closure is not cached, as today); a hit in `bodyScope` is always
+valid, since that cache is fresh per application, so `memoise` asks `isCached` only for
+`nodeCache`. Tests: the three-reference program calls `Tick` once per run, and the `Map` body
+case once, with the counting host op of the lazy tests. Then the "Known" line closes and the
+four docs sentences are true.
 
 ---
 
@@ -255,6 +300,10 @@ Asked for by the maintainer on 2026-10-10: the todos that have no clear time, an
 be done before a 1.0.0. The repo has no written definition of 1.0, so one rule sorts them:
 **after 1.0.0, a change that breaks a program, a host's code or a saved file needs a 2.0.0.**
 What only ADDS can come after. The list is being talked through; each row says where it stands.
+
+**Built in 0.8.0 (2026-10-15):** every row below marked "The plan of option B", the `And`/`Or`
+row, the conversion row, the two `NaN` rows and the field-read row. The record is "0.8.0 — decided
+on 2026-10-14" above, and the three backlog entries they closed are in `done.md`.
 
 **Agreed, the maintainer, 2026-10-10:**
 

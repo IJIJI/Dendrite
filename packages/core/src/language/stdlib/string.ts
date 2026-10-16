@@ -1,14 +1,13 @@
-import { Convert } from "../infra/convert";
 import { type ASTNode, operationNode } from "../infra/nodes";
 import { den } from "../infra/serialise";
 import { BP, type Language } from "../language";
 import { Type } from "../infra/types";
-import { toList } from "./shared";
 
 //? The string segment: building text and asking about it, with the two spellings that are
-// sugar over Join, `++` and the template. Every op reads its text through Convert.toString,
-// so a null is the empty string and no op throws. Case is `toUpperCase` / `toLowerCase`, never
-// the locale variants: the same program has to give the same text on every host.
+// sugar over Join, `++` and the template. A text input holds text when an op runs: the
+// evaluator gives null for a null, or a value of another kind, before the op is called (the
+// rule of 0.8.0), so no op here guards. Case is `toUpperCase` / `toLowerCase`, never the
+// locale variants: the same program has to give the same text on every host.
 export function installString(lang: Language): void {
   // `separator` is the first optional op input in the library: `required: false` means the
   // analyser raises no missing_op_input for it, and the evaluator is handed `undefined`.
@@ -32,8 +31,9 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Join",
-    // `parts` arrives converted (the flag); a null separator still reads as "".
-    evaluate: ({ parts, separator }) => toList(parts).join(Convert.toString(separator)),
+    // `parts` arrives converted (the flag); a separator left out, or handed a null, is absent.
+    evaluate: ({ parts, separator }) =>
+      (parts as string[]).join((separator as string | undefined) ?? ""),
   });
 
   lang.registerOp({
@@ -46,7 +46,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Upper",
-    evaluate: ({ text }) => Convert.toString(text).toUpperCase(),
+    evaluate: ({ text }) => (text as string).toUpperCase(),
   });
 
   lang.registerOp({
@@ -59,7 +59,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Lower",
-    evaluate: ({ text }) => Convert.toString(text).toLowerCase(),
+    evaluate: ({ text }) => (text as string).toLowerCase(),
   });
 
   lang.registerOp({
@@ -72,7 +72,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Trim",
-    evaluate: ({ text }) => Convert.toString(text).trim(),
+    evaluate: ({ text }) => (text as string).trim(),
   });
 
   // `Contains`, not `Includes`: Includes asks whether a LIST holds an item, and the two stay
@@ -90,7 +90,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "Contains",
-    evaluate: ({ text, part }) => Convert.toString(text).includes(Convert.toString(part)),
+    evaluate: ({ text, part }) => (text as string).includes(part as string),
   });
 
   lang.registerOp({
@@ -106,7 +106,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "StartsWith",
-    evaluate: ({ text, part }) => Convert.toString(text).startsWith(Convert.toString(part)),
+    evaluate: ({ text, part }) => (text as string).startsWith(part as string),
   });
 
   lang.registerOp({
@@ -122,7 +122,7 @@ export function installString(lang: Language): void {
   });
   lang.registerEvaluator({
     op: "EndsWith",
-    evaluate: ({ text, part }) => Convert.toString(text).endsWith(Convert.toString(part)),
+    evaluate: ({ text, part }) => (text as string).endsWith(part as string),
   });
 
   // -------------------------------------------------------------------------

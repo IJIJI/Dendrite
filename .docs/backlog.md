@@ -30,6 +30,11 @@ separate things, none needed by the check that shipped.
   `null` (the evaluator's rule, `done.md`). **Requires:** a `valueFits` call where an `any`-typed argument meets a
   concrete op input, with an `EvalError` as the channel. **Why deferred:** it costs per op
   call, not per pushed value, and the cast (`as`) is the explicit way to check today.
+  **Narrowed 2026-10-14 (0.8.0, 12A):** from 0.8.0 the KIND an input names is checked at every
+  op call (a primitive by `typeof`, a list by `Array.isArray`, a struct as an object, a type
+  that extends a primitive by its root), so `Add("abc", 1)` and `GreaterThan("abc", 1)` give
+  `null`, the language's "no value". What stays here is the schema half: a host type's zod
+  rules run at the door only, never per op call.
 - **A switch for the check.** It is always on. **Why deferred:** no host has measured a cost,
   and a flag without a consumer is Speculative Generality. **Requires:** a host with a frame
   rate push of a large list or struct and a number; then a policy on the layer, not a global.
@@ -248,6 +253,62 @@ thing it always did: its signature cannot be honest. With no union types the ref
 **What it requires:** about one commit, recorded when the entry was written (2026-09-20): the
 variadic branch of `validateInputs` analyses all items before it checks them, then `Add` gets
 `inferInputTypes`, `inferOutput` and an evaluator that sums or joins.
+
+---
+
+## Language — `~` on an expression, converting to the slot's type — REJECTED 2026-10-14
+
+**What:** asked by the maintainer on 2026-10-14, while 12A was decided: could a `~` in front
+of a variable, `Upper(~$a)`, convert it to the type the slot expects? Today `~` is a mark on a
+declaration only: an op input (`parts~`) or a lambda parameter (`(t~: string)`), and it says
+that the RECEIVER converts.
+
+**Possible, but not as sugar:** a symbol becomes its op while the parser reads, before any
+type is known, so `~$a` cannot pick `ToString` or `ToNumber` at parse time. It would be a node
+of its own that the analyser types from the slot it sits in (`validateInputs` knows an op
+input's expected type), and an error where no expected type exists.
+
+**Rejected, four reasons:**
+
+- The target is invisible at the write site: `Upper(~$a)` makes text and `Add(~$a, 1)` a
+  number, so moving the expression changes its meaning.
+- Three spellings exist: `ToNumber($a)` names the target, `$a as number` checks and gives
+  `null`, and `~` on a declaration lets the receiver convert. A fourth is a name to learn for
+  the same thing.
+- `~` would mean two things: on a declaration "the receiver converts", on an expression "the
+  sender asks". One symbol, two readings.
+- The docs' position is that nothing converts on its own: a program says so, where it wants
+  it, and to what.
+
+The case it would serve, an `any` input whose kind the host knows, is better served by typing
+the input.
+
+---
+
+## Language — array index access, `list[i]`
+
+**What:** asked by the maintainer on 2026-10-15, while 0.8.0 was built. A program cannot read
+one item of a list by its position: there is no `xs[0]`, no `At(xs, 0)`, no `First` or `Last`.
+What exists goes through a function (`Find(xs, item => …)`, `Reduce`) or asks about the whole
+(`Length`, `Includes`). Since 0.8.0 a field read on a list gives `null` (a list has no fields),
+so `xs.length` is no way round either: `Length(xs)` is.
+
+**Why deferred:** no consumer named yet; found while the field read was decided, not asked
+for by a program.
+
+**What it requires, two sizes:**
+
+- **An op**, `At(list, index)`: no syntax, a reference entry, an evaluator of one line, an
+  `inferOutput` that gives the list's element type. Out of range, or a negative index, is no
+  value (the rule of 0.8.0): `null`, and `??` says what stands in. Decide whether the index
+  counts from 0 (every language the comparison names: C++, Java, JavaScript, Python, Rust,
+  Go) or from 1 (a spreadsheet's `INDEX`, SQL arrays, R). `First(list)` and `Last(list)` would
+  be the two spellings worth their own op, since `At(xs, Length(xs) - 1)` reads badly.
+- **The syntax**, `xs[i]`: a led on `[` at the `MEMBER` tier, registered beside the list
+  literal's nud on the same token (`core-grammar.ts` reads `[` as a nud today, and as `[]` after
+  a type), desugaring to the op; the analyser then types it through the op's `inferOutput`,
+  and the editor colours nothing new. A slice, `xs[1:3]`, is a separate question and belongs
+  with "strings as lists".
 
 ---
 
@@ -579,49 +640,6 @@ a string that knows how to be a list), so an op never has to convert.
 **Why rejected:** a Dendrite value is plain JSON: it crosses the host boundary, the link, and a
 saved document unchanged. A value with behaviour would not. Conversion belongs to the op that
 needs it (the `convert` flag, `types-and-text-plan.md`), or to the author (`ToString`, `as`).
-
----
-
-## Language — a `null` that goes through arithmetic
-
-**What:** an op with no answer gives `null` (2026-10-08, `done.md`), and the next number op
-reads that `null` as zero: `Divide(1, 0) + 1` is `1`, and
-`` `total {Add(ToNumber("abc"), 1)}` `` is `total 1`. So "no answer" lasts one step. The
-alternative is SQL's: a number op that is handed a `null` gives `null`, and the absence reaches
-the output unless a `Default` stops it.
-
-**Why deferred:** it was option D when the `null` rule was chosen, and the only one too large
-for the math batch. It changes every arithmetic op, and it needs answers the batch did not:
-
-- **The comparisons.** `GreaterThan(null, -1)` is `true` today, the null read as zero. If
-  arithmetic propagates, a comparison with no value has to be something: `false`, as SQL treats
-  unknown in a filter, or `null`, which `If` then reads as false.
-- **A `null` inside a list of numbers.** `Average([null, 4])` is `2`: the null counts as an item
-  worth zero. SQL's `AVG` skips it and gives `4`. `Max` and `Min` read it as zero too.
-- **The other segments.** A text op reads `null` as `""` and a list op as `[]`, both on purpose
-  (`types-and-text-plan.md`). Numbers would be the one type whose empty value is not used, on
-  the argument that `""` and `[]` look empty and `0` does not.
-- **The types.** It is the runtime half of "explicit nullability via union types" (the last
-  entry of this file): with `T | null` the checker could demand the `Default`.
-
-**What it requires:** its own plan. **Driving need:** a program whose total must not look valid
-when one of its parts is missing.
-
----
-
-## Core — a `NaN` inside a list an op returns is not read
-
-**What:** the evaluator gives `null` for an op result that is `NaN` or an infinity, and `0` for
-a negative zero (2026-10-08). It reads the value an op RETURNS, when that is a number. A list or
-a struct an op returns is not looked into, so a host op that returns `[NaN]` hands a program a
-value JSON cannot carry. The stdlib cannot make one: a lambda's result inside `Map` comes from
-op calls, and each of those is read on its own.
-
-**Why deferred:** a deliberate ceiling. Walking every list an op returns costs per item on
-every call, and no host op is known to return such a list.
-
-**What it requires:** the walk, behind a measurement, or the check where an output leaves for
-the host, which is per output rather than per op. Decide which when a host op leaks one.
 
 ---
 
@@ -1314,6 +1332,11 @@ the value is `any`), an input that holds nothing.
 **Why deferred:** it wants the rule for "no value" first (`todo.md`, "Before 1.0.0"): once a
 `null` reaches the output instead of turning into a zero, the output itself says that something
 is missing, and the record only has to say WHERE. It also has costs that nothing has measured.
+
+**When:** probably not before 1.0 (the maintainer, 2026-10-14). Under option B the language
+gets more opaque in one way, a `null` output says that a value was missing but not where, and
+the maintainer wants, at some point, a way to trace the values a program ran with and to log
+run-time problems; this entry is that way.
 
 **What it requires:**
 
