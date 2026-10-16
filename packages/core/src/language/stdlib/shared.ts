@@ -22,5 +22,7 @@ export const variadic =
 // `Average([1, null])` is 1 and `Max([-4, null])` is -4 (0.8.0, option B). The list itself is
 // a list by the time an op runs: the evaluator gives null for a null, or anything that is no
 // list, before the op is called, so this is the one guard the stdlib keeps.
-export const numbersOf = (list: unknown): number[] =>
-  (list as unknown[]).filter((item): item is number => typeof item === "number");
+// The list is `number[]` by declaration; its items are checked here, by kind, because the door
+// checks a list's kind and not its items (the one limit of the typed keys, 0.8.1).
+export const numbersOf = (list: readonly number[]): number[] =>
+  list.filter((item) => typeof item === "number");

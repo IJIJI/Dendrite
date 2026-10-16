@@ -105,10 +105,55 @@ export interface OutputDefinition {
 export type FnValue = (...args: unknown[]) => unknown;
 
 /**
- * The lazy inputs of an op definition, as its evaluator receives them: a `Thunk` for a lazy
- * input, a `Thunk[]` for a lazy variadic one, `Thunk | undefined` for a lazy optional one (an
- * absent optional input has no key). Every other input stays `unknown`. An op named by a
- * string declares nothing here, so nothing is typed.
+ * The value an input of a declared `Type` holds when an op runs: `number`, `string`,
+ * `boolean` and `null` their primitive, a list a list of its element's, a function an
+ * `FnValue`, `any` and a host type `unknown`. True by the rule of 0.8.0 (an input that names
+ * a type arrives as that kind, or the op does not run), with one limit: the items of a
+ * declared `T[]` are the declaration's, as a host's declared output type is, since the door
+ * checks a list's kind and not its items.
+ */
+export type ValueOf<T> = T extends { kind: "name"; name: infer N }
+  ? N extends "number"
+    ? number
+    : N extends "string"
+      ? string
+      : N extends "boolean"
+        ? boolean
+        : N extends "null"
+          ? null
+          : unknown
+  : T extends { kind: "array"; element: infer E }
+    ? ValueOf<E>[]
+    : T extends { kind: "function" }
+      ? FnValue
+      : unknown;
+
+type OneInput<I extends OpInput> = I extends { lazy: true }
+  ? Thunk<ValueOf<I["type"]>>
+  : ValueOf<I["type"]>;
+
+/**
+ * The inputs of an op definition, as its evaluator receives them (0.8.1): each key typed from
+ * its declaration, a `Thunk<T>` for a lazy input, `T[]` for a variadic one, `T | undefined`
+ * for an optional one (an absent optional input has no key, and a null one reads as absent),
+ * the declared type for a converting one. An op named by a string declares nothing here, so
+ * every key is `unknown`; so does an op whose `inputs` is a variable typed `OpInput[]` rather
+ * than a literal, since the names and types are not literal then.
+ */
+export type InputsOf<D> = D extends OpDefinition
+  ? {
+      [I in D["inputs"][number] as I["name"]]: I extends { variadic: true }
+        ? OneInput<I>[]
+        : I extends { required: false }
+          ? OneInput<I> | undefined
+          : OneInput<I>;
+    }
+  : Record<string, unknown>;
+
+/**
+ * The lazy inputs alone, as 0.7.0 typed them.
+ * @deprecated `InputsOf` types every key since 0.8.1; this is its lazy slice, kept for a host
+ * that named it. It leaves in the minor before 1.0.
  */
 export type LazyInputsOf<D> = D extends OpDefinition
   ? {
@@ -127,10 +172,11 @@ export type LazyInputsOf<D> = D extends OpDefinition
  * function-typed input — the function arrives as a resolved FnValue in `inputs`
  * and is called directly; there is no separate body/apply mechanism.
  *
- * `op` is the op's name, or the definition `registerOp` returned. With the definition, the
- * lazy keys of `inputs` are typed from it, so `then.value` compiles and `condition.value`
- * does not (`language/lazy.test-d.ts` holds each case). The language stores the name either
- * way, so a reader of `op` always sees a string.
+ * `op` is the op's name, or the definition `registerOp` returned. With the definition, every
+ * key of `inputs` is typed from it (`InputsOf`): `condition` is a boolean, `then` a `Thunk`,
+ * a variadic number a `number[]`, so no cast is needed and a wrong one does not compile
+ * (`language/evaluator.test-d.ts` holds each case). The language stores the name either way,
+ * so a reader of `op` always sees a string.
  */
 export interface EvaluatorDefinition<D extends OpDefinition | string = string> {
   op: D;
@@ -146,7 +192,7 @@ export interface EvaluatorDefinition<D extends OpDefinition | string = string> {
   finiteCheck?: false;
   // A method signature, not a property: its parameter is checked bivariantly, which is what
   // lets a definition typed by `D` store into the map of untyped ones (registerEvaluator).
-  evaluate(inputs: Record<string, unknown> & LazyInputsOf<D>): unknown;
+  evaluate(inputs: InputsOf<D>): unknown;
   /**
    * Analysis-time output type inference. Called by the analyser after resolving
    * input types. Returns undefined to fall back to OpDefinition.output.

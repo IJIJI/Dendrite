@@ -7,7 +7,7 @@ sidebar:
 
 _Host developers is for embedding the language in an application of your own. If you are writing programs in it, start with [Learn](../../learn/getting-started/)._
 
-:::note[0.8.0]
+:::note[0.8.1]
 Before 1.0 a minor version may break the API, and the editor and the link depend on core
 (`^0.8.0`), so a minor release of core comes with a release of both. Each package's
 changes are in its changelog:

@@ -64,7 +64,7 @@ An op is two registrations: its **definition**, which is what the analyser check
 **evaluator**, which is what runs.
 
 ```ts
-language.registerOp({
+const Fahrenheit = language.registerOp({
   name: "Fahrenheit",
   category: "arithmetic",
   description: "A temperature in degrees Celsius, as degrees Fahrenheit.",
@@ -73,14 +73,23 @@ language.registerOp({
 });
 
 language.registerEvaluator({
-  op: "Fahrenheit",
-  evaluate: ({ celsius }) => (celsius as number) * 1.8 + 32,
+  op: Fahrenheit,
+  evaluate: ({ celsius }) => celsius * 1.8 + 32,
 });
 ```
 
 `Fahrenheit($reading.celsius){:den}` now works in any program on this language, with the same
 checking, the same call syntax, and the same named arguments as anything in the standard library.
 A program cannot tell where an op came from.
+
+`registerOp{:ts}` hands the definition back, and giving it to `registerEvaluator{:ts}` as
+`op{:ts}` types each input from its declaration: `celsius{:ts}` is a `number{:ts}` here, so the
+evaluator needs no cast, and one that disagrees with the declaration does not compile. A list
+is a list of its element's type, a function an `FnValue{:ts}`, an optional input may be
+`undefined{:ts}`, and `any{:ts}` and a type of your own are `unknown{:ts}`, which you narrow
+once. The items of a list are the declaration's: the language checks that a list is a list,
+not each item in it, as it never checks your declared output type at run time either. An op
+registered by its name, `op: "Fahrenheit"{:ts}`, sees every input as `unknown{:ts}`.
 
 Keep the two halves in step. An op with no evaluator, or an evaluator for an op that does not exist,
 makes the language itself invalid, and composing it **throws** rather than reporting: there is no
@@ -104,8 +113,8 @@ inputs: [
 ],
 ```
 
-Without that flag a missing input is a warning, and the type's own default stands in (`0`, the
-empty string, `false`), which is why a half-written call still runs.
+Without that flag a missing input is a warning, and the op gives no value, which is why a
+half-written call still runs: the rest of the program does.
 
 ### An input that converts
 
@@ -119,7 +128,7 @@ runs, the evaluator converts each leaf with the same rules `ToString{:den}`, `To
 own lambda can carry the same mark on a parameter, `(t~: string) => …{:den}`, with the same rules.
 
 ```ts
-language.registerOp({
+const Twice = language.registerOp({
   name: "Twice",
   category: "arithmetic",
   inputs: [{ name: "n", type: Type.number, convert: true }],
@@ -128,9 +137,9 @@ language.registerOp({
 });
 
 language.registerEvaluator({
-  op: "Twice",
+  op: Twice,
   // n arrives as a number: a value with no reading as one is no value, and Twice does not run.
-  evaluate: ({ n }) => (n as number) * 2,
+  evaluate: ({ n }) => n * 2,
 });
 ```
 
@@ -155,7 +164,7 @@ The three rules are exported as `Convert{:ts}`, for an evaluator that wants them
 not flag, typically one declared `any{:ts}`:
 
 ```ts
-language.registerOp({
+const Shout = language.registerOp({
   name: "Shout",
   category: "string",
   inputs: [{ name: "value", type: Type.any }],
@@ -164,7 +173,7 @@ language.registerOp({
 });
 
 language.registerEvaluator({
-  op: "Shout",
+  op: Shout,
   evaluate: ({ value }) => Convert.toString(value).toUpperCase() + "!",
 });
 ```
@@ -226,7 +235,7 @@ const Guard = language.registerOp({
   name: "Guard",
   category: "control",
   inputs: [
-    { name: "reading", type: Type.name("Reading") },
+    { name: "reading", type: Type.name("Reading"), required: false },
     { name: "fallback", type: Type.name("Reading"), lazy: true },
   ],
   output: Type.name("Reading"),
@@ -235,14 +244,15 @@ const Guard = language.registerOp({
 
 language.registerEvaluator({
   op: Guard,
-  evaluate: ({ reading, fallback }) => (reading === null ? fallback.value : reading),
+  evaluate: ({ reading, fallback }) => reading ?? fallback.value,
 });
 ```
 
-`registerOp{:ts}` hands the definition back, and giving it to `registerEvaluator{:ts}` as `op{:ts}` is
-what types `fallback{:ts}` as a `Thunk{:ts}`: `fallback.value{:ts}` compiles, `reading.value{:ts}` does
-not, and an op registered by its name, `op: "Guard"{:ts}`, sees every input as `unknown{:ts}` as
-before. A variadic lazy input arrives as a `Thunk[]{:ts}`, and a converting one converts inside the
+`reading{:ts}` is optional, so a reading that is not there, `null{:den}` or left out, arrives as
+`undefined{:ts}` and the op runs: declared required, a `null{:den}` would give no value for the
+whole op before the fallback could be read. Handing the definition over as `op{:ts}` is what
+types `fallback{:ts}` as a `Thunk{:ts}`: `fallback.value{:ts}` compiles, `reading.value{:ts}` does
+not. A variadic lazy input arrives as a `Thunk[]{:ts}`, and a converting one converts inside the
 thunk. The reference prints the mark on the type, `fallback: lazy Reading`. Read a thunk during
 the call: one kept for later would read a traversal that is gone, and one returned is a
 `host_error{:den}`.
@@ -279,7 +289,7 @@ A signature is the general case. When an op can say something more specific abou
 call, give its evaluator an `inferOutput{:ts}`:
 
 ```ts
-language.registerOp({
+const Last = language.registerOp({
   name: "Last",
   category: "array",
   inputs: [{ name: "list", type: Type.array(Type.any) }],
@@ -287,8 +297,8 @@ language.registerOp({
 });
 
 language.registerEvaluator({
-  op: "Last",
-  evaluate: ({ list }) => (list as unknown[]).at(-1) ?? null,
+  op: Last,
+  evaluate: ({ list }) => list.at(-1) ?? null,
   inferOutput: ({ list }) => (list ? elementOf(list) : undefined),
 });
 ```

@@ -315,6 +315,21 @@ and four things are worth keeping.**
 releases included (6 here, where the work was 4). Count before the PR, not from memory. The
 check reused the probe table's rows unchanged, 11 lines, both ways.
 
+## What the tenth release taught
+
+**0.8.0, 2026-10-16: the runbook held.** Three things to keep.
+
+- **A notes script that writes `package.json` writes it LF.** The three package files are LF in
+  the working copy where the markdown is CRLF, and `format:check` refused them after a script
+  wrote them with CRLF; `yarn prettier --write` on the three fixed it.
+- **A check line tests the item, not its JSON.** `JSON.stringify([1, NaN])` is `[1,null]`, so a
+  line that compared the walked list through JSON passed on 0.7.1, where the `NaN` was still
+  there. The run on the previous version is what caught it: read the lines that pass there.
+- **The samples' "before" run happens before the first code commit**, on the released source,
+  in commit 0's window; the probe lives in the scratchpad and is copied into the tree for each
+  run, never committed. 35 samples, none moved this time, which the docs pass still needed to
+  know.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the

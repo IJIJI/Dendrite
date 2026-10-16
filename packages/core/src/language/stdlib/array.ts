@@ -8,7 +8,7 @@ import { numbersOf } from "./shared";
 // holds a list when an op runs: the evaluator gives null for a null, or a value of another
 // kind, before the op is called (the rule of 0.8.0), so no op here guards its list.
 export function installArray(lang: Language): void {
-  lang.registerOp({
+  const Length = lang.registerOp({
     name: "Length",
     inputs: [{ name: "list", type: Type.array(Type.any) }],
     output: Type.number,
@@ -17,13 +17,13 @@ export function installArray(lang: Language): void {
     examples: [den`output count = Length([4, 8, 15])`],
   });
   lang.registerEvaluator({
-    op: "Length",
-    evaluate: ({ list }) => (list as unknown[]).length,
+    op: Length,
+    evaluate: ({ list }) => list.length,
   });
 
   // Variadic: each argument is ONE array (the per-arg type), collected into an
   // array-of-arrays at eval time and joined one level.
-  lang.registerOp({
+  const Concat = lang.registerOp({
     name: "Concat",
     inputs: [{ name: "arrays", type: Type.array(Type.any), variadic: true }],
     output: Type.array(Type.any),
@@ -32,9 +32,9 @@ export function installArray(lang: Language): void {
     examples: [den`output all = Concat([1, 2], [3], [4, 5])`],
   });
   lang.registerEvaluator({
-    op: "Concat",
+    op: Concat,
     finiteCheck: false,
-    evaluate: ({ arrays }) => (arrays as unknown[][]).flat(),
+    evaluate: ({ arrays }) => arrays.flat(),
     // Two `number[]` make a `number[]`; lists of different types stay `any[]`.
     inferOutput: (inputTypes) => {
       const arrays = inputTypes["arrays"];
@@ -42,7 +42,7 @@ export function installArray(lang: Language): void {
     },
   });
 
-  lang.registerOp({
+  const Flatten = lang.registerOp({
     name: "Flatten",
     inputs: [
       { name: "array", type: Type.array(Type.array(Type.any)) },
@@ -54,12 +54,12 @@ export function installArray(lang: Language): void {
     examples: [den`output flat = Flatten([[1, 2], [3, 4]], 1)`],
   });
   lang.registerEvaluator({
-    op: "Flatten",
+    op: Flatten,
     finiteCheck: false,
-    evaluate: ({ array, depth }) => (array as unknown[]).flat(depth as number),
+    evaluate: ({ array, depth }) => array.flat(depth),
   });
 
-  lang.registerOp({
+  const Average = lang.registerOp({
     name: "Average",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
@@ -69,7 +69,7 @@ export function installArray(lang: Language): void {
     examples: [den`output mean = Average([4, 8, 15])`],
   });
   lang.registerEvaluator({
-    op: "Average",
+    op: Average,
     // A null item is skipped (numbersOf). Of nothing this is 0 / 0, NaN, which the evaluator
     // reads as null.
     evaluate: ({ list }) => {
@@ -82,7 +82,7 @@ export function installArray(lang: Language): void {
   // standing and the evaluator reads it as null: nothing is the largest of nothing. A null item
   // is skipped, as Average skips it (numbersOf). reduce (no spread) avoids call-stack limits on
   // big lists.
-  lang.registerOp({
+  const Max = lang.registerOp({
     name: "Max",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
@@ -92,11 +92,11 @@ export function installArray(lang: Language): void {
     examples: [den`output top = Max([4, 8, 15])`],
   });
   lang.registerEvaluator({
-    op: "Max",
+    op: Max,
     evaluate: ({ list }) => numbersOf(list).reduce((largest, n) => Math.max(largest, n), -Infinity),
   });
 
-  lang.registerOp({
+  const Min = lang.registerOp({
     name: "Min",
     inputs: [{ name: "list", type: Type.array(Type.number) }],
     output: Type.number,
@@ -106,12 +106,12 @@ export function installArray(lang: Language): void {
     examples: [den`output low = Min([4, 8, 15])`],
   });
   lang.registerEvaluator({
-    op: "Min",
+    op: Min,
     evaluate: ({ list }) =>
       numbersOf(list).reduce((smallest, n) => Math.min(smallest, n), Infinity),
   });
 
-  lang.registerOp({
+  const Includes = lang.registerOp({
     name: "Includes",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -123,7 +123,7 @@ export function installArray(lang: Language): void {
     examples: [den`output has = Includes(["a", "b"], "b")`],
   });
   lang.registerEvaluator({
-    op: "Includes",
-    evaluate: ({ list, value }) => (list as unknown[]).includes(value),
+    op: Includes,
+    evaluate: ({ list, value }) => list.includes(value),
   });
 }

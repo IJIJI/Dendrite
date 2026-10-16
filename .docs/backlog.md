@@ -68,6 +68,9 @@ its own feature (see "struct literals" below for the neighbouring gap).
 
 ## Language — strings as lists (possibly 0.8)
 
+**When: 0.10.0**, with no name removed: `Contains` stays the text op and `Includes` the list op, so
+the break is `Length("abc")` alone (the release plan of 2026-10-16, `todo.md`).
+
 **Where it stands (2026-10-08):** moved out of 0.6.0 by the maintainer, possibly to **0.8**,
 after union types (possibly 0.7) and with `Split`, `Slice` and `Replace` ("the rest of the
 string ops", below). It was in `todo.md` from 2026-09-22. Two answers of that day change the
@@ -160,7 +163,8 @@ above.
 
 ## Stdlib — the rest of the string ops
 
-**When:** with strings as lists, above: possibly 0.8 (the maintainer, 2026-10-08).
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`): `Split`, `Slice` and `Replace` only
+add; strings as lists comes after, in 0.10.0.
 
 **What:** `Replace` (first match or every match: decide), `Split` (by code point when the
 separator is empty, per the Unicode note above), and a `Slice` that arrays want too.
@@ -175,6 +179,8 @@ the empty string, and an entry on the generated `string` reference page, which c
 ---
 
 ## Stdlib — `Clamp` with one bound
+
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`).
 
 **What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")
 and `Min([x, 10])` ("at most 10") today, and `Max` for "at least" is a spelling people get the
@@ -202,6 +208,8 @@ changelog line.
 
 ## Stdlib — what the math batch left out: symbols, and `digits` on `Floor` and `Ceil`
 
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`).
+
 **What:** two things offered with the seven math ops (2026-10-08) and not taken.
 
 - **No symbol** for `Mod` or `Pow`. `%` and `^` (or `**`) are the usual ones. A symbol can be
@@ -219,6 +227,8 @@ a new tier above it for a power, which binds tighter and to the right.
 ---
 
 ## Language — struct literals (constructing a struct in a program)
+
+**When: 0.10.0**, the lists minor (the release plan of 2026-10-16, `todo.md`).
 
 Reading host structs is
 done; *producing* one (`{ a: …, b: … }` in a program) is separate and larger — it wants a structural
@@ -286,6 +296,9 @@ the input.
 ---
 
 ## Language — array index access, `list[i]`
+
+**When: `At`, `First` and `Last` in 0.8.3; the syntax `xs[i]` in 0.10.0** (the release plan of
+2026-10-16, `todo.md`).
 
 **What:** asked by the maintainer on 2026-10-15, while 0.8.0 was built. A program cannot read
 one item of a list by its position: there is no `xs[0]`, no `At(xs, 0)`, no `First` or `Last`.
@@ -361,6 +374,8 @@ own text form" below is the other direction (`toText`); design the two together.
 
 ## Language — a `null` item in a list literal: reassess before 1.0.0
 
+**When: 0.9.0**, with union types (the release plan of 2026-10-16, `todo.md`).
+
 **What:** decided on 2026-10-12 for the plan of option B: a `null` item leaves a list
 literal's type alone, so `[1, null]` is `number[]`, where it is `any[]` today (a list with a
 `null` in it counts as a mixed list, and `Average([1, null])` warns `implicit_any_cast`). The
@@ -374,41 +389,6 @@ looser answer, and tightening it after 1.0.0 is a break that no warning announce
 **What it requires:** the question, once union types are planned: is `null` a member of every
 type for good, or of a type that says so. The first keeps this rule. The second changes it,
 and has to come before 1.0.0 or be covered by a warning first.
-
----
-
-## Core — a typed evaluator derived from the op's declaration (the strict keys)
-
-**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
-`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
-because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
-declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
-`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
-keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
-`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
-cast goes, and the four lazy ops do not change again.
-
-**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
-is in `todo.md`, "The order after 0.6.1".
-
-**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
-`number` is true only once the evaluator guarantees an input's declared type at the door, which
-is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
-can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
-widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
-comes after option B.
-
-**What it requires:** (a) `Type.number` and the other constants typed as their literals, and
-`Type.array` / `Type.fn` keeping the element's type: additive. (b) A mapping from a `Type`
-literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
-`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
-array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
-`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
-(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
-`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
-anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
-API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
-lazy slice verified by a probe.
 
 ---
 
@@ -451,6 +431,9 @@ scope). If level 3 comes, the lambda is its value and the `Thunk` its internal f
 ---
 
 ## Language — union types, `A | B` (possibly 0.7)
+
+**When: 0.9.0, before the Rete half** (the release plan of 2026-10-16, `todo.md`): `Type` has to be
+final when the editor switches over it.
 
 **What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
 0.6.1, "possibly", with strings as lists after it. It is the general answer behind several
@@ -752,7 +735,37 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 
 ---
 
+## Editor — what a `null` output does, and what a host may configure
+
+**What:** since 0.8.0 a `null` output is ordinary: it is the program saying a value was
+missing on its way. The Outputs pane prints every value through `formatValue`
+(`packages/editor/src/ports/format.ts`), so a `null` is the text `null`, in the same style as
+a number beside it. Decided by the maintainer on 2026-10-16: it stays so for now, since
+`null` is what the language writes, and the questions below are asked here instead.
+
+**The questions:**
+
+- A muted style on the value, so `null` beside `42` reads as "no value here, on purpose"
+  rather than as a fault. One class on the `<code>`, one rule in `style.css`.
+- A host option on the pane: print "no value" instead of `null`, or hide such a row, or a
+  callback that formats one. `OutputsProps` has `stale` for the stale rows already; a sibling
+  for a missing value would sit beside it.
+- The lines variant (`.dendrite-outputs-lines`, `→ name: type = value`): what it prints for a
+  missing value, and whether it drops the `=`.
+- Whether the type tag should say it: an output declared `number` that holds `null`.
+
+**Why deferred:** no host has asked. The one pane in the field is the playground's.
+
+**What it requires:** a look at a real page first, light and dark, in the Minimal strip and in
+a pane's row, as the surfaces had; then one of the options above, in an editor patch, with a
+line on *Packages: editor*.
+
+---
+
 ## Editor — the visual (Rete) half, and what it pulls in
+
+**When: right after 0.9.0** (the release plan of 2026-10-16, `todo.md`): union types first, so
+`Type` is final; its own plan.
 
 **→ Planned in [editor-plan.md](editor-plan.md)** (settled 2026-09-04: monorepo, node-modules
 linker, ONE package with a `/react` subpath, headless core + React UI, config presets instead of
@@ -1317,6 +1330,134 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
+## Core — whether an evaluator may still be registered by the op's name
+
+**What:** asked by the maintainer on 2026-10-16, while 0.8.1 was built. Since 0.8.1
+`registerEvaluator` takes the op's definition as `op` and types every input from it
+(`InputsOf`). It still takes the op's NAME, `op: "Fahrenheit"`, and then every input is
+`unknown`, as before 0.7.0. The question is whether the name form should go, so there is one
+way to register an evaluator, and it is the typed one.
+
+**Who uses the name form today** (counted 2026-10-16): the library, none (0.8.1 moved all 46
+ops to definitions); the editor, the link, the examples, the docs and the playground, none;
+core's own tests, about 19, for small host ops (`Boom`, `Count`, `Reading`, `Give`). Inside
+core, `extendLanguage` re-registers a base's evaluators from the map, where `op` is stored as a
+name (`registerEvaluator` normalises it), and `validateDescriptor` reports an
+`orphan_evaluator` by name. *Extending the language* names the form once, as the untyped one.
+
+**For removing it:**
+
+- One way to register, and the typed one. The name form loses the typing silently: a host who
+  copies an older sample gets `unknown` keys and casts them, where the definition would have
+  caught a cast that disagrees with the declaration.
+- A typo in the name is caught only when the language composes (`orphan_evaluator`, which
+  throws); with the definition it is a compile error.
+
+**For keeping it:**
+
+- An op whose definition the host does not hold as a literal: inputs built in a loop or read
+  from configuration (`OpInput[]`, which types as `unknown` either way), or a definition read
+  back from `language.descriptor.ops`, which is the widened `OpDefinition`.
+- Replacing the library's evaluator for one of its ops (`op: "Upper"`) without importing a
+  definition the library does not export. The library's definitions are not exported today.
+- A split between a package that defines ops and one that implements them (a shared language
+  package, an evaluator on the server): the name is the one thing both sides share without a
+  shared object.
+
+**The options:**
+
+| Option | What it does | Cost |
+| --- | --- | --- |
+| **A. Keep both** | As today; the docs say the definition is the way, the name the escape hatch | Two ways to say one thing; the silent loss of typing stays |
+| **B. Deprecate the name, remove it in the minor before 1.0** | `op: string` marked `@deprecated` in a patch; the removal on the pre-1.0 list beside `updateInputs` | The three cases above lose their route: each needs `registerEvaluator({ op: lang.descriptor.ops.get("X")! })`, which types as `unknown` anyway, or the library exports its definitions |
+| **C. Keep the name as its own, explicit call** | `registerEvaluatorByName("Upper", …)`, so the untyped intent is written, and `registerEvaluator` takes a definition only | One more name on the API; the type of `registerEvaluator` gets simpler (no `\| string`) |
+| **D. Accept the widened definition and drop the string** | `op: lang.descriptor.ops.get("Upper")!` is the route for the three cases | To probe first: what `InputsOf<OpDefinition>` gives for a widened definition (every key `unknown`, by reading the type, but not tested) |
+
+**Why deferred:** no host has met a problem with either form, and the cases for keeping it have
+no named consumer yet either. Beacon is the first host that may define ops in one place and
+run them in another.
+
+**What it requires:** a decision before the pre-1.0 minor, since B and D remove a form and C
+changes the call a host writes. With B or D: the deprecation in a patch first, core's tests
+moved to definitions (about 19 registrations), `extendLanguage` reading the stored definition
+from `ops` rather than the name, and a line on *Extending the language*. A probe of the
+widened `OpDefinition` under `tsc` before D is chosen.
+
+**When:** not placed. Before the pre-1.0 minor (the order after 0.8.0, `todo.md`), where every
+removal is listed.
+
+---
+
+## Core — less recomputation, and whether the two cache checks become one
+
+**What:** asked by the maintainer on 2026-10-16, while 0.8.1's binding fix was built. Two
+questions in one entry, because one mechanism answers both:
+
+1. Whether `isCached` and `computed` (the per-traversal set of 0.8.1, `evaluator.ts`) should
+   become one mechanism: revision stamps, as Salsa (rust-analyzer) and Adapton have them.
+   Today they answer two questions with two lifetimes: `isCached` whether a value from an
+   EARLIER traversal is still valid, `computed` whether a value was made in THIS one.
+2. Whether the evaluator can recompute less: a node recomputes when an input it reads was
+   pushed, whether or not any value it depends on changed.
+
+**What it does today** (probed 2026-10-16 on `dev`, a host op `Tock` counting its calls,
+through `runtime.updateInputs`):
+
+| Case | `Tock` calls on the second push |
+| --- | --- |
+| `Tock($n)`, the same number pushed again | 1 |
+| `Tock($xs)`, an equal list pushed again (a new array) | 1 |
+| `let pos = $n > 0` then `Tock(pos)`, `n` from 5 to 6 (`pos` stays `true`) | 1 |
+| `Tock(Length($xs))`, a new list of the same length | 1 |
+| `Map($xs, x => Tock(x))`, one item of five changed | 5 |
+
+Each is a call that could be saved. By reading the code, the runner (`createProgramRunner`)
+does the same, while an instance's `setInput` already skips a value that `Object.is` the
+stored one.
+
+**Why it recomputes:** `dependsOn` is a static set of input NAMES per node, and `isCached`
+asks one thing: did any of those names change? It does not ask whether a VALUE changed, at the
+door or at any node on the way. So an input pushed again with the same value counts as
+changed, and a binding that recomputes to the same value still marks every node above it.
+
+**The options, from cheap to deep:**
+
+| Option | What it does | Cost | Saves |
+| --- | --- | --- | --- |
+| **A. The door skips an unchanged value** | `applyChanges` and the runner leave out a value that `Object.is` the stored one, as an instance does | A few lines and no type change. But a host sees it: `onOutput` fires less, and a host that reads it as a tick changes. A trigger must still fire with any value, so triggers are exempt. A change a running host can see is a minor by the rules | Row 1 |
+| **B. The same, compared structurally** | A list or a struct compared item by item to the stored one, inside the walk `clean` does already | One stored value per input to compare against (it is stored already), and a compare per item per push: a list of 10 000 numbers is compared on every push | Row 2 |
+| **C. Early cutoff** (Salsa's "backdating") | A node that recomputes to an equal value keeps its old "changed at" mark, so the nodes above it stay hits. Each cache entry records the traversal at which it was last checked and the one at which its value last changed, and a node checks its direct dependencies, not its input names | These are the revision stamps of question 1. The cache's values change shape, and `EvalState.nodeCache` is in the public type. An equality check per recomputed node (`Object.is`, or structural for a list, at a cost per item). Every cache read changes (`memoise`, the `ref` case) | Rows 3 and 4, and every node above them |
+| **D. Per-item reuse in a higher-order op** | `Map`, `Filter` and the others keep the result per item and call the lambda only for an item that changed | A cache per op node keyed by item (by position or by value), and a lambda that reads anything else that changed must invalidate all of it. The most code of the four | Row 5 |
+
+**How the two questions meet:** option C is the revision stamps. If C is worth it, `isCached`
+and `computed` become one mechanism as a side effect, and the 0.8.1 set goes. If C is not
+worth it, the two checks stay as they are: two facts, one `||` at the one call site that needs
+both (the reasoning of 2026-10-16, in 0.8.1's record once released).
+
+**Why deferred:** no host has measured a cost. An op call costs about 1570 ns (0.8.0's
+probes), and no program of Beacon's size and update rate exists yet to say whether the saved
+calls matter. Each option except A has a memory or a type cost, and A is a behaviour change.
+All four wait for a number.
+
+**What it requires:**
+
+- **A measurement first**, on `examples/4-large_dataset` and on a program shaped like
+  Beacon's tally: the time per update, and how many op calls each option would save on it.
+- **A** only with B decided, since a host that pushes lists gains nothing from A alone; both
+  in a core minor, with the trigger exemption and the `onOutput` change in the changelog.
+- **C** weighed with 0.9.1's plan: "why is this `null`?" (the small step of run-time tracking)
+  wants the same record per node, which traversal computed it, so the two may share it.
+- **D** only for a measured consumer: it is the most code, and the first three cover the
+  common cases.
+
+**A neighbour, not this entry:** an instance publishes a new outputs object on every
+evaluation, so a pane re-renders when no output changed (by reading the code; `createSubject`
+skips only an `Object.is`-equal value). With C or A in place, that is the next saving.
+
+**When:** not placed. To weigh with 0.9.1's plan, for the reason under C.
+
+---
+
 ## Core — run-time tracking: what happened while a program ran
 
 **What:** asked by the maintainer on 2026-10-12. A run gives values, or it throws ONE
@@ -1336,7 +1477,8 @@ is missing, and the record only has to say WHERE. It also has costs that nothing
 **When:** probably not before 1.0 (the maintainer, 2026-10-14). Under option B the language
 gets more opaque in one way, a `null` output says that a value was missing but not where, and
 the maintainer wants, at some point, a way to trace the values a program ran with and to log
-run-time problems; this entry is that way.
+run-time problems; this entry is that way. **The small first step** ("why is this `null`?",
+one output, on demand) is placed earlier: 0.9.1 (the release plan of 2026-10-16, `todo.md`).
 
 **What it requires:**
 

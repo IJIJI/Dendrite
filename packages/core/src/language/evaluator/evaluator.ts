@@ -78,6 +78,12 @@ interface EvalContext {
   // Only the evaluators are read here; a full descriptor satisfies this too.
   descriptor: Vocabulary;
   changedInputs: Set<string> | undefined;
+  // The bindings computed in THIS traversal. `isCached` answers for the traversal before
+  // (a node that reads a changed input is never a hit there), so without this a binding read
+  // three times was computed three times, and one read in a Map body once per item. A binding
+  // is the one node with many readers: an inline node has one parent (the analyser copies a
+  // node per visit), and a body node lives in a bodyScope fresh per application.
+  computed: WeakSet<object>;
 }
 
 //? isCached
@@ -117,7 +123,7 @@ export function evaluate(
   changedInputs: Set<string> | undefined,
   descriptor: Vocabulary,
 ): unknown {
-  return evalNode(node, { program, descriptor, changedInputs }, state);
+  return evalNode(node, { program, descriptor, changedInputs, computed: new WeakSet() }, state);
 }
 
 //? evalNode
@@ -162,7 +168,12 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
           `Reference '${node.name}' not found in bindings or scope - possible analyser bug`,
         );
       }
-      if (isCached(binding, state.nodeCache, node.dependsOn, ctx.changedInputs)) {
+      // Computed once per evaluation: a second reference in this traversal is a hit, whatever
+      // its inputs did, since they changed before the traversal and not during it.
+      if (
+        ctx.computed.has(binding) ||
+        isCached(binding, state.nodeCache, node.dependsOn, ctx.changedInputs)
+      ) {
         return state.nodeCache.get(binding);
       }
       // A global binding is lexically in the global scope: evaluate it WITHOUT the
@@ -181,7 +192,10 @@ function evalNode(node: CNode, ctx: EvalContext, state: EvalState): unknown {
       const result = evalNode(binding, ctx, globalState);
       // Don't cache closures: they capture `changedInputs`, so re-create them each
       // pass to stay correct under incremental re-evaluation. (Cheap to rebuild.)
-      if (typeof result !== "function") state.nodeCache.set(binding, result);
+      if (typeof result !== "function") {
+        state.nodeCache.set(binding, result);
+        ctx.computed.add(binding);
+      }
       return result;
     }
 
@@ -403,7 +417,7 @@ export function evaluateProgram(
   descriptor: Vocabulary,
   changedInputs?: Set<string>,
 ): Map<string, unknown> {
-  const ctx: EvalContext = { program, descriptor, changedInputs };
+  const ctx: EvalContext = { program, descriptor, changedInputs, computed: new WeakSet() };
   const results = new Map<string, unknown>();
   for (const [name, node] of program.outputs) {
     results.set(name, evalNode(node, ctx, state));

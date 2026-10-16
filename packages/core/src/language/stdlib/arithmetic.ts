@@ -29,7 +29,7 @@ function roundTo(value: number, digits: number): number {
 }
 
 export function installArithmetic(lang: Language): void {
-  lang.registerOp({
+  const Add = lang.registerOp({
     name: "Add",
     inputs: [{ name: "nodes", type: Type.number, variadic: true }],
     output: Type.number,
@@ -38,11 +38,11 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output sum = Add(1, 2, 3)`],
   });
   lang.registerEvaluator({
-    op: "Add",
-    evaluate: ({ nodes }) => (nodes as number[]).reduce((a, b) => a + b, 0),
+    op: Add,
+    evaluate: ({ nodes }) => nodes.reduce((a, b) => a + b, 0),
   });
 
-  lang.registerOp({
+  const Subtract = lang.registerOp({
     name: "Subtract",
     inputs: [
       { name: "a", type: Type.number },
@@ -54,11 +54,11 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output diff = Subtract(10, 4)`],
   });
   lang.registerEvaluator({
-    op: "Subtract",
-    evaluate: ({ a, b }) => (a as number) - (b as number),
+    op: Subtract,
+    evaluate: ({ a, b }) => a - b,
   });
 
-  lang.registerOp({
+  const Negate = lang.registerOp({
     name: "Negate",
     inputs: [{ name: "a", type: Type.number }],
     output: Type.number,
@@ -67,11 +67,11 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output below = Negate(14)`, den`output alsoBelow = -14`],
   });
   lang.registerEvaluator({
-    op: "Negate",
-    evaluate: ({ a }) => -(a as number),
+    op: Negate,
+    evaluate: ({ a }) => -a,
   });
 
-  lang.registerOp({
+  const Multiply = lang.registerOp({
     name: "Multiply",
     inputs: [{ name: "nodes", type: Type.number, variadic: true }],
     output: Type.number,
@@ -80,11 +80,11 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output area = Multiply(3, 4)`],
   });
   lang.registerEvaluator({
-    op: "Multiply",
-    evaluate: ({ nodes }) => (nodes as number[]).reduce((a, b) => a * b, 1),
+    op: Multiply,
+    evaluate: ({ nodes }) => nodes.reduce((a, b) => a * b, 1),
   });
 
-  lang.registerOp({
+  const Divide = lang.registerOp({
     name: "Divide",
     inputs: [
       { name: "a", type: Type.number },
@@ -96,14 +96,14 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output half = Divide(9, 2)`, den`output none = Divide(9, 0)`],
   });
   lang.registerEvaluator({
-    op: "Divide",
+    op: Divide,
     // By zero the quotient is an infinity or NaN, which the evaluator reads as null.
-    evaluate: ({ a, b }) => (a as number) / (b as number),
+    evaluate: ({ a, b }) => a / b,
   });
 
   // The sign is the first number's, as `%` has it in JavaScript and C: Mod(-7, 3) is -1, not
   // the 2 that Python and a spreadsheet give. Chosen 2026-10-08, with both tables in view.
-  lang.registerOp({
+  const Mod = lang.registerOp({
     name: "Mod",
     inputs: [
       { name: "a", type: Type.number },
@@ -116,12 +116,12 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output left = Mod(7, 3)`, den`output below = Mod(-7, 3)`],
   });
   lang.registerEvaluator({
-    op: "Mod",
+    op: Mod,
     // By zero the remainder is NaN, which the evaluator reads as null.
-    evaluate: ({ a, b }) => (a as number) % (b as number),
+    evaluate: ({ a, b }) => a % b,
   });
 
-  lang.registerOp({
+  const Pow = lang.registerOp({
     name: "Pow",
     inputs: [
       { name: "base", type: Type.number },
@@ -134,12 +134,12 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output kilo = Pow(2, 10)`, den`output root = Pow(9, 0.5)`],
   });
   lang.registerEvaluator({
-    op: "Pow",
+    op: Pow,
     // A negative base with a fraction is NaN and an overflow is an infinity: null, both.
-    evaluate: ({ base, exponent }) => Math.pow(base as number, exponent as number),
+    evaluate: ({ base, exponent }) => Math.pow(base, exponent),
   });
 
-  lang.registerOp({
+  const Abs = lang.registerOp({
     name: "Abs",
     inputs: [{ name: "value", type: Type.number }],
     output: Type.number,
@@ -148,12 +148,12 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output distance = Abs(-14)`],
   });
   lang.registerEvaluator({
-    op: "Abs",
-    evaluate: ({ value }) => Math.abs(value as number),
+    op: Abs,
+    evaluate: ({ value }) => Math.abs(value),
   });
 
   // `digits` is optional, as Join's separator is: left out, the result is a whole number.
-  lang.registerOp({
+  const Round = lang.registerOp({
     name: "Round",
     inputs: [
       { name: "value", type: Type.number },
@@ -170,13 +170,12 @@ export function installArithmetic(lang: Language): void {
     ],
   });
   lang.registerEvaluator({
-    op: "Round",
+    op: Round,
     // `digits` left out, or handed a null, is absent: a whole number.
-    evaluate: ({ value, digits }) =>
-      roundTo(value as number, Math.trunc((digits as number | undefined) ?? 0)),
+    evaluate: ({ value, digits }) => roundTo(value, Math.trunc(digits ?? 0)),
   });
 
-  lang.registerOp({
+  const Floor = lang.registerOp({
     name: "Floor",
     inputs: [{ name: "value", type: Type.number }],
     output: Type.number,
@@ -185,11 +184,11 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output down = Floor(7.8)`, den`output further = Floor(-7.2)`],
   });
   lang.registerEvaluator({
-    op: "Floor",
-    evaluate: ({ value }) => Math.floor(value as number),
+    op: Floor,
+    evaluate: ({ value }) => Math.floor(value),
   });
 
-  lang.registerOp({
+  const Ceil = lang.registerOp({
     name: "Ceil",
     inputs: [{ name: "value", type: Type.number }],
     output: Type.number,
@@ -198,13 +197,13 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output up = Ceil(7.2)`],
   });
   lang.registerEvaluator({
-    op: "Ceil",
-    evaluate: ({ value }) => Math.ceil(value as number),
+    op: Ceil,
+    evaluate: ({ value }) => Math.ceil(value),
   });
 
   // The bounds work in either order, so there is no wrong way round to answer for: the value
   // is held between the smaller and the larger of the two.
-  lang.registerOp({
+  const Clamp = lang.registerOp({
     name: "Clamp",
     inputs: [
       { name: "value", type: Type.number },
@@ -217,10 +216,10 @@ export function installArithmetic(lang: Language): void {
     examples: [den`output level = Clamp(15, 0, 10)`, den`output floor = Clamp(-3, 0, 10)`],
   });
   lang.registerEvaluator({
-    op: "Clamp",
+    op: Clamp,
     evaluate: ({ value, low, high }) => {
-      const [a, b] = [low as number, high as number];
-      return Math.min(Math.max(value as number, Math.min(a, b)), Math.max(a, b));
+      const [a, b] = [low, high];
+      return Math.min(Math.max(value, Math.min(a, b)), Math.max(a, b));
     },
   });
 

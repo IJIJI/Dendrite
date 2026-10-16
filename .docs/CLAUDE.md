@@ -24,9 +24,9 @@ output result  = status
 
 | Package | Description | Status |
 |---|---|---|
-| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.7.1** (2026-10-14). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
-| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.7.0** (2026-10-14; not in 0.7.1, whose core its peer range admits). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
-| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.7.1** (2026-10-14). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
+| `@dendrite-lang/core` | Evaluator, type system, parser, analyser — this repo | **On npm at 0.8.0** (2026-10-16). In development. Inputs/outputs LEFT `Language` for layered `Ports` + `ProgramInstance` (delivered 2026-09-07; see `architecture.md` and `decisions.md`) |
+| `@dendrite-lang/editor` | Dual-mode editor: code editor + Rete block-flow editor | **On npm at 0.8.0** (2026-10-16). In development — headless core + React blocks (`./react`: `<Editor>`, canvas, panes, top bar, actions, a static `Source`) and three layout presets on one `LayoutConfig` (Minimal · Compact · Full, 2026-09-10); mounts over a `Connection` (own stack, a host's runtime, or an attached instance) since 2026-09-08; Rete to come (`editor-plan.md`) |
+| `@dendrite-lang/link` | A `ProgramInstance` across a channel: `serveInstance` on the host, `connectInstance` for a replica; MessagePort and WebSocket adapters | **On npm at 0.8.0** (2026-10-16). Landed 2026-09-08 (`architecture.md` "Linking", `packages/link/README.md`) |
 | `@dendrite-lang/beacon` | Beacon tally integration — extends `@dendrite-lang/core` | Planned |
 | `apps/playground` | The playground: a React host of the editor, fully client-side | Deployed at `dendrite-lang.org/playground/` |
 | `apps/docs` | The documentation site: Astro + Starlight, the stdlib reference generated from the descriptor, live examples as editor islands | Built 2026-09-09 (`docs-plan.md`); thirty pages in Learn, the stdlib reference, How it works and Host developers, and a stub for Contribute; deployed at the root `dendrite-lang.org/` |
@@ -66,6 +66,11 @@ nothing, in [refactoring.guru](https://refactoring.guru)'s vocabulary: name the 
 pattern if one fixes it, and say so when something is deliberately *not* a smell. KISS counts as
 much as patterns. The main guard is **Speculative Generality**: no flag, option or abstraction
 without a named consumer.
+
+**A patch may change TypeScript types where no run-time behaviour changes** (the maintainer,
+2026-10-16): a narrower type on an existing member, a literal where a union was, a member a
+host's own facade must now carry. Each such case is named in the changelog under "Changed
+(types)". A change a program or a running host can see stays a minor.
 
 **Gates**, all at the root, each judged by its **exit code**: `yarn typecheck`, `yarn lint`,
 `yarn format:check`, `yarn test`, and `yarn workspace dendrite-docs build` when the docs changed.
@@ -213,6 +218,11 @@ See `architecture.md` for the layering DAG and full design.
 - **Higher-order ops = ordinary ops with a function-typed input.** `EvaluatorDefinition` has
   `inferInputTypes` (refine the function input's element type from resolved inputs) and `inferOutput`
   (concrete output type). No `apply`, no `HigherOrderNode`.
+- **An evaluator's inputs are typed from the definition handed as `op`** (`InputsOf`,
+  `registry.ts`, 0.8.1): a strict key is its declared type, a lazy one a `Thunk<T>`, a variadic
+  one `T[]`, an optional one `T | undefined`; `any` and a host type are `unknown`. So the stdlib
+  holds no cast, and `const Add = lang.registerOp(…)` then `op: Add` is how an op is written. The
+  `Type` constants keep their literal types for it. An op by name keeps every key `unknown`.
 
 ### Registration / Language
 - A **`Language` = `{ descriptor: Vocabulary, grammar }`** with one unified register API
@@ -257,5 +267,7 @@ See `architecture.md` for the layering DAG and full design.
   guard for either. Four inputs take what comes: an `any` input (the value, `null` included),
   an optional one (a `null` reads as absent), a converting one (its leaves go through `Convert`
   first, then the rule), a lazy one (the op's to read). `Average`, `Max` and `Min` skip a `null`
-  item (`numbersOf`); `And` and `Or` are three-valued. So a missing value reaches the output,
+  item (`numbersOf`); `And` and `Or` are three-valued. One limit: the items of a declared
+  `T[]` are the declaration's, as a host's declared output type is, since the door checks a
+  list's kind and not its items; the three aggregates filter by kind for that reason. So a missing value reaches the output,
   and a program that cares tests it where it arises (`??`, `IsSet`).

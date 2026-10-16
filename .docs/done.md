@@ -5,6 +5,274 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+**Closed by 0.8.1 on 2026-10-16** (the release itself gets its record when it is on npm): the
+two entries below as they stood, kept for their reasoning.
+
+---
+
+## Core — a typed evaluator derived from the op's declaration (the strict keys) — DONE 2026-10-16 (0.8.1)
+
+**Closed by 0.8.1:** `InputsOf` and `ValueOf` (`registry.ts`) type every key from the
+definition handed as `op`, the `Type` constants keep their literal types (`fn` returns the
+function member of the union, since a function is an `FnValue` whatever its signature),
+and the library's 52 casts are gone. Probed under `tsc` first; `evaluator.test-d.ts` holds
+each case, `LazyInputsOf` stays deprecated.
+
+**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
+`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
+because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
+declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
+`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
+keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
+`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
+cast goes, and the four lazy ops do not change again.
+
+**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
+is in `todo.md`, "The order after 0.6.1".
+
+**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
+`number` is true only once the evaluator guarantees an input's declared type at the door, which
+is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
+can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
+widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
+comes after option B.
+
+**What it requires** (the plan of 2026-10-16, 0.8.1 commit 1): (a) `Type.number` and the
+other constants typed as their literals, and `Type.array` keeping the element's type;
+`Type.fn` needs no generic, since a function input is an `FnValue` whatever its signature:
+additive. One limit, stated: the items of a declared `T[]` are the declaration's, as a host's
+declared output type is (the door checks a list's kind, not its items), which is why the
+three aggregates keep `numbersOf`. (b) A mapping from a `Type`
+literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
+`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
+array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
+`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
+(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
+`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
+anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
+API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
+lazy slice verified by a probe.
+
+---
+
+## Core — a binding is recomputed once per reference — DONE 2026-10-16 (0.8.1)
+
+**Closed by 0.8.1:** a per-traversal set, `computed`, on `EvalContext`, read in the `ref`
+case before `isCached`: four lines, five tests, each failing without the fix. Whether the
+two checks become one (revision stamps) is a backlog question now: "Core — less
+recomputation, and whether the two cache checks become one".
+
+**What:** found 2026-10-14 by the probes of the 0.8.0 plan. A binding that depends on an input
+that changed is recomputed once per reference within one evaluation, on every path (`run`,
+the runner, the instance): `let t = Tick($n)` read three times calls the host op `Tick` three
+times; read inside a `Map` body over five items, five times. When nothing changed, zero. The
+docs promise the opposite in four places (*Evaluation* "A binding is computed once per
+evaluation", *Glossary*, *How a program runs*, *Bindings and outputs*), and `CLAUDE.md` says
+"evaluated at most once".
+
+**Why:** `isCached(node, cache, dependsOn, changedInputs)` answers "not cached" whenever the
+node depends on a changed input, with no notion of "computed in this traversal". So the first
+reference computes and caches, and the second reference finds the entry, sees the dependency
+on a changed input, and computes again. Results are right; the work repeats. A host op with a
+side effect or a cost (a tally lookup, for Beacon) runs once per reference, and
+`let limit = Max($data)` inside `Filter($data, x => x > limit)` computes `Max` once per item.
+
+**When: 0.8.1** (the maintainer, 2026-10-14: 7B, "in todo as it has a timeframe"). 0.8.0's
+changelog carries a "Known" line so the docs' promise is not silently false for a release.
+
+**What it requires:** about four lines and three tests (the plan of 2026-10-16, 0.8.1 commit
+2). A `computed: WeakSet<object>` on `EvalContext`, made per traversal in `evaluate` and
+`evaluateProgram`; in the `ref` case alone, a binding in `computed` is a hit before `isCached`
+is asked, and is added after it is computed (a closure is not cached, as today). `memoise` is
+left alone: every inline node has one parent and the analyser copies a node per visit, so
+once a binding is computed once, a top-level inline node is visited once per traversal and a
+body node once per application in its fresh `bodyScope`. Tests: the three-reference program
+calls `Tick` once per run on `run`, a runner and an instance, and the `Map` body case once,
+with the counting host op of the lazy tests. Then the "Known" line closes and the four docs
+sentences are true.
+
+---
+
+## 0.8.0 on npm — DONE 2026-10-16
+
+`@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.8.0**, two days
+after 0.7.1. A minor of all three: it changes results a program sees, and removes two names a
+host can reach. "No value" everywhere, option B: an op handed a `null`, or a value of another
+kind, on an input that names a type gives `null` and does not run, decided in one function of
+the evaluator (`receive`) before any op, so the stdlib's thirty guards went; `Average`, `Max`
+and `Min` skip a `null` item; `And` and `Or` are three-valued; a conversion of no value is no
+value; a field read never throws and warns where the checker could not look
+(`field_access_on_any`); `[1, null]` is `number[]`; a `NaN` a host returns or pushes is read as
+`null` at any depth (`clean`), unless the evaluator says `finiteCheck: false`; `Default`'s
+output type is `If`'s; `invalid_field_access` and `assertSavedPorts` are gone. The plan was
+`perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after
+four review passes and one independent review from another chat, assessed claim by claim; its
+decisions and probes are in the entry kept below.
+
+**The commits, in order:** the notes (the decisions, the probes, the binding finding for 0.8.1,
+the `~` on an expression rejected); the rule and the stdlib under it; the `NaN` doors; the
+analyser; `assertSavedPorts` out, with the index-access backlog entry; the docs, changelogs and
+versions, with the lockfile. Six commits of work; the PR showed 11 of 11, with the notes
+commits since 0.7.1.
+
+**Decided during the work, beyond the plan:** `finite: true` became `finiteCheck: false` before
+it was committed (the maintainer, 2026-10-15: a promise reads backwards as a switch; the check
+is on by default and `false` turns it off). `[null]` alone was `null[]`, not `any[]` as the
+probe table said, and a lambda over it met `unknown_type`: the rule types it `any[]`. The
+missing-input placeholder became `null` for every type, where a primitive took its type's
+default. A literal `null` no longer counts as an `any` crossing. The `Reduce` fix moved into its
+`inferInputTypes`, the written-type check untouched (no other path hands it a `null`). The
+walk compares by `Object.is` (`0` and `-0` are `===`), walks plain objects only, and bounds its
+depth as the cycle guard. The instance cleans before it stores, so `values` and the snapshot
+show what runs. `Convert.toNumber` gives `null` for an overflow. The samples probe, 35 samples
+run on 0.7.1 source and again on 0.8.0, found no moved output, so the docs pass rewrote prose
+only; no sample on the site reads a field of an `any`.
+
+**The runbook** held. PR #29 showed 11 of 11. Three tags on `origin/main`, one GitHub release
+on core's tag in the shape of the previous ones, one `Stage release` run of 1m15s, green,
+three approvals core first.
+
+**Checked after approval, from outside the repo:** `latest` is 0.8.0 on all three,
+attestations on all three, the peers `^0.8.0`, and a clean install ran a check of 17 lines,
+written before approval: the versions and peers, `1 / 0 + 1`, the skip, the three-valued
+`And`, the conversions, a wrong kind through `any`, the optional input, the field read and its
+warning, `[1, null]` into `Average` without a warning, `Reduce` with a `null` initial,
+`Default`'s type, the `NaN` walk and `finiteCheck: false`, `setInput` of a `NaN` and of an
+`undefined`, the two removed names and the documented kind, the fingerprint at 46. On the
+tarballs 17 of 17; on 0.7.1 from npm 2 of 17 passed, the two that should (`Round(2.5, null)`
+was 3 before too, the fingerprint is unchanged); on `latest` 17 of 17. The check's `NaN` line
+first compared through JSON, which writes a `NaN` as `null`, and passed on 0.7.1: rewritten to
+test the item. The live site followed: the "No value" box on both Host developers pages,
+`finiteCheck` on *Extending the language*, `field_access_on_any` on *Every diagnostic*,
+*Installation* at 0.8.0.
+
+**The release plan** agreed right after, 2026-10-16: `todo.md`, "The order after 0.8.0".
+
+## 0.8.0 — the todo entry as it stood, with its decisions and probes — DONE 2026-10-16
+
+The plan of option B, probed on 0.7.1 source and approved by the maintainer on 2026-10-14
+after four review passes and one independent review from another chat, assessed claim by
+claim. The plan file is `perfect-agreed-make-sure-purrfect-karp.md` in the maintainer's plan
+folder (revision 3); this section is the record in the repo. Every decision of option B was
+taken on 2026-10-12 ("Before 1.0.0", below). What the plan settled, each with its letter:
+
+| Question | Decided | Letter |
+| --- | --- | --- |
+| `Default` and `If` | `Default` stays the op under `??`. A desugar to `If(IsSet(a), a, b)` writes `a` into two nodes, and the analyser copies a node per visit, so `a` evaluates twice (probed: `Tick() ?? 0` calls once, the inline `If` form twice). One op call is also cheaper than a thunk, and `??` is shipped over `Default` | 1A |
+| `Default`'s output type | Aligned with `If`: the branches' type when they agree, else `any`. `$n ?? "none"` was typed `number` with the fallback unchecked: the one exception to the language's rule for types that disagree | 2A |
+| The mark on the evaluator | `finiteCheck: false` (renamed on 2026-10-15 from `finite: true`, which read backwards as a switch: the check is on by default, `false` turns the walk off on the op's promise that no number it returns, at any depth, is a `NaN` or an infinity) | 3A |
+| The host-push door for a `NaN` | Read as `null`, on every input, in `updateInput`, the one function every path enters the evaluation state through. A `number` input refused a `NaN` through zod before, never by decision; it reads it as `null` now. An `undefined` the same way (probed: it passed the door and stopped every output with `input_not_set`) | 4B |
+| The field read on an `any` | A new warning, `field_access_on_any`. The run-time kind `invalid_field_access` is unreachable and goes | 5a A, 5b A |
+| `assertSavedPorts` | Removed in 0.8.0, as its deprecation said | 6a A |
+| The "`null`, both ways" convention | Rewritten in place, in the commit that changes the code | 6b A |
+| The samples on the site | Run on 0.7.1 and on 0.8.0 once; the prose beside a moved result is fixed. No pinning test | 6c |
+| The cost of the rule | Measured, settled: one comparison per input inside the loop that already runs | 6d |
+| A binding recomputed once per reference | Not this release: 0.8.1 (below), and a "Known" line in the changelog | 7B |
+| `Reduce(list, null, …)` refused as `unknown_type` | Fixed in 0.8.0, in `Reduce`'s own `inferInputTypes`: a `null` or `any` initial types the accumulator `any` | 8 |
+| The 1.x sentence | Not written: the repo has no definition of 1.0 yet. A hedge only, in `implicit_any_cast`'s meaning: a stricter check may refuse such a program later | 9 |
+| Which list ops skip a `null` item | `Average`, `Max`, `Min`, through one helper. `Length([1, null])` is 2, `Map([1, null], x => x + 1)` is `[2, null]` | 10A |
+| An optional input handed `null` | Reads as absent: the op sees `undefined`, as when the input is left out. `Round(2.5, null)` is 3. Python, Kotlin, C# and Rust read their one "nothing" so; JavaScript keeps `null` apart from `undefined`; SQL propagates | 11A |
+| A value of the wrong kind on a typed input | No value, like a `null`: the KIND the type names is checked at every op (a primitive by `typeof`, a list by `Array.isArray`, a struct as an object, a type that extends a primitive by its root, an opaque handle not at all), a type's schema only at the door. `Upper(5)` and `"abc" + 1` give `null`; the stdlib's thirty guards go, which served this second rule as much as the `null` one | 12A |
+| A `~` on an expression, converting to the slot's type | Rejected (`backlog.md`, "Language — `~` on an expression") | — |
+| The door's standard for `null` | The language's: `null` is a member of every type and stays accepted; a wrong kind is refused as today. Stricter would leave a host no way to clear a value | — |
+| Run-time tracking | Probably not before 1.0 (`backlog.md`, "Core — run-time tracking") | — |
+
+**Today's result per changed case** (probed on 0.7.1 source, 2026-10-14), and the result
+under the plan. Each row is a test in the commit named.
+
+| Expression | 0.7.1 | 0.8.0 | Commit |
+| --- | --- | --- | --- |
+| `1 / 0 + 1` | `1` | `null` | 1 |
+| `Add(1, null)`, `Multiply(2, null)`, `Subtract(null, 1)`, `Negate(null)`, `Divide(null, 2)`, `Mod(null, 3)`, `Pow(null, 2)`, `Abs(null)`, `Floor(null)`, `Ceil(null)`, `Clamp(null, 0, 10)`, `Round(null)` | `1`, `0`, `-1`, `0`, `0`, `0`, `0`, `0`, `0`, `0`, `0`, `0` | `null`, each | 1 |
+| `Divide(2, null)` | `null` | `null` | 1 |
+| `Round(2.5, null)` | `3` | `3` (absent, 11A) | 1 |
+| `null > -1`, `null < 1`, `null >= 0`, `null <= 0` | `true`, each | `null`, each | 1 |
+| `null == 0`, `null == null`, `null != 0` | `false`, `true`, `true` | the same (`Equals` takes `any`) | 1 |
+| `Not(null)`, `!null`, `Xor(null, true)` | `true`, `true`, `true` | `null`, each | 1 |
+| `And(null, true)`, `And(true, null)` | `false`, `false` | `null`, `null` | 1 |
+| `And(false, null)`, `And(null, false)` | `false`, `false` | `false`, `false` | 1 |
+| `Or(null, true)`, `Or(true, null)` | `true`, `true` | `true`, `true` | 1 |
+| `Or(null, false)`, `Or(false, null)` | `false`, `false` | `null`, `null` | 1 |
+| `If(null, 1, 2)`, `null ? 1 : 2` | `2`, `2` | `null`, and no branch is read | 1 |
+| `null ?? 5`, `Default(null, 5)`, `IsSet(null)` | `5`, `5`, `false` | the same | 1 |
+| `ToString(null)`, `ToNumber(null)`, `ToBool(null)` | `""`, `null`, `false` | `null`, each | 1 |
+| `Upper(null)`, `Lower(null)`, `Trim(null)` | `""`, each | `null`, each | 1 |
+| `Contains(null, "a")`, `Contains("a", null)`, `StartsWith(null, "a")`, `EndsWith("a", null)` | `false`, `true`, `false`, `true` | `null`, each | 1 |
+| `Join([1, null], ",")`, `` `total {null}` ``, `"a" ++ null` | `"1,"`, `"total "`, `"a"` | the same (a converting leaf) | 1 |
+| `Join(["a", "b"], null)` | `"ab"` | `"ab"` (absent, 11A) | 1 |
+| `Join(null, ",")` | `""` | `null` (a converting input converts its leaves; a list that is no list is no value) | 1 |
+| `Length(null)`, `Flatten(null, 1)`, `Flatten([[1]], null)`, `Concat([1], null)`, `Includes(null, 1)` | `0`, `[]`, `[[1]]`, `[1]`, `false` | `null`, each | 1 |
+| `Average([1, null])`, `Max([-4, null])`, `Min([4, null])` | `0.5`, `0`, `0` | `1`, `-4`, `4` | 1 |
+| `Average([null])`, `Max([null])` | `0`, `0` | `null`, `null` (nothing left) | 1 |
+| `Average([1, "a"])` (through `any`) | `12` | `1` (the skip is by kind) | 1 |
+| `Average(null)`, `Max(null)` | `null`, `null` | `null`, `null` | 1 |
+| `Includes([1, null], null)` | `true` | `true` | 1 |
+| `Filter(null, x => true)`, `Map(null, x => x)`, `Find(null, x => true)`, `Every(null, x => false)`, `Some(null, x => true)`, `Reduce(null, 0, (acc, i) => acc + i)` | `[]`, `[]`, `null`, `true`, `false`, `0` | `null`, each | 1 |
+| `Map([1, null], x => x + 1)` | `[2, 1]` | `[2, null]` | 1 |
+| `Filter([1, null], x => x > 0)`, `Every([1, null], x => x > 0)` | `[1]`, `false` | `[1]`, `false` (a predicate's no value does not hold) | 1 |
+| `Reduce([1, 2], null, (acc, i) => acc + i)` | compile error `unknown_type` | `null`; compiles, warns `implicit_any_cast` on `acc + i` (8) | 3 |
+| `Length()`, `Upper()`, `Round()` (a required input left out, `missing_op_input`) | `0`, `""`, `0` | `null`, each: the placeholder is `null` for every type, and the warning says so | 3 |
+| `Concat()` (a variadic left out) | `[]` | `[]` | 3 |
+| `$a.length` with `a: any` holding `[1, 2]` | `2` (JavaScript's own field) | `null`: a list has no fields | 1 |
+| `Map(["1e999"], (n~: number) => n)` | `[Infinity]` | `[null]`: `Convert.toNumber` gives `null` for a number that is not finite | 2 |
+| `null ?? 5` (its type) | `null` | `any` | 1 |
+| `[1, null]` (its type) | `any[]` | `number[]` | 3 |
+| `Average([1, null]) + 1` | `1.5`, warns `implicit_any_cast` | `2`, no warning | 3 |
+| `[null]`, `[null, null]` | `any[]` | `any[]` | 3 |
+| `[x => x, null]` | `function_in_mixed_list` | the same | 3 |
+| `null as number`, `"5" as number` | `null`, `null` | the same | 1 |
+| `Upper($a)` with `a: any` holding `5` | `"5"`, warns | `null`, warns (12A) | 1 |
+| `$a + 1` with `a` holding `"abc"` | `"0abc1"`, warns | `null`, warns (12A) | 1 |
+| `If($b, 1, 2)` with `b` holding `null` | `2` | `null` | 1 |
+| `$a.name` with `a: any` holding `5`, or `{ x: 1 }` | throws `invalid_field_access` | `null`, and the checker warns `field_access_on_any` | 1, 3 |
+| `$a.name` with `a` holding `null`, or `{ name: "x" }` | `null`, `"x"` | the same, and the warning | 1, 3 |
+| `$a.x` with `a` holding `{ x: undefined }` | `undefined` | `null` | 1 |
+| `$n.z` with `n: number` | warns `field_access_on_primitive`, throws | warns, `null` | 1 |
+| `$p.z` with `p: Pair` lacking `z` | compile error `unknown_field` | the same | — |
+| `$p.n` with `p` holding `null`, or `{ n: null, m: 1 }` | `null`, `null` | the same | 1 |
+| A host op returning `[1, NaN, -0, Infinity]` | arrives untouched | `[1, null, 0, null]` | 2 |
+| A host op returning `{ n: NaN, m: 1 }` | arrives untouched | `{ n: null, m: 1 }` | 2 |
+| A host op returning `NaN` | `null` | `null` | 2 |
+| `setInput("a", NaN)` on `a: any`, and `[1, NaN]`, and `{ x: NaN }` | arrive untouched; `$a == $a` is `false` | `null`, `[1, null]`, `{ x: null }`; `$a == $a` is `true` | 2 |
+| `setInput("n", NaN)` on `n: number` | `value_does_not_fit`, nothing moves | `null` (4B) | 2 |
+| `runtime.updateInputs({ g: NaN })` on `g: number` | throws | `null` | 2 |
+| `setInput("n", null)` on `n: number` | `null` | `null` | — |
+| `setInput("n", undefined)`, on `n: number` or `a: any` | admitted, then `input_not_set` stops every output, stale | `null` | 2 |
+| A host op with `convert` on `number`, on `boolean`, handed `null` | `null`, `false` | `null`, `false` (`Convert`'s own answers) | 1 |
+
+**Costs**, measured on 0.7.1 (the runner, every input changed):
+
+| Measured | ns |
+| --- | --- |
+| One op call (4-op and 39-op programs agree) | about 1570 |
+| One `=== null` comparison | 3.5 |
+| A second loop over two declared inputs (refused: the check sits in the loop that runs already) | 82 |
+| Precomputed keys per op (refused: not needed) | 17 |
+| The kind of a declared type, a primitive name (no lookup) | 4.0 |
+| The kind of a host type: a struct, an opaque handle, one `extends` level, two levels | 32, 30, 45, 62 |
+| The `NaN` walk, per clean number item in a list of 1000 | 4.0 |
+| The walk, per struct of four fields | 46 |
+| The walk, one scalar | 3.5 |
+| The walk, 1000 numbers with one `NaN` (a copy) | 12 300 |
+
+**Two findings outside the scope**, from the same probes: a binding is recomputed once per
+reference when its input changed (0.8.1, below), and `Reduce([1, 2], null, …)` fails to
+compile with `unknown_type` (fixed in 0.8.0, row 8). The samples probe ran on 0.7.1 source on
+2026-10-15: 35 samples, none throws, none fails; its file waits in the chat's scratchpad for
+the run after the code lands.
+
+**The commits**, as the plan has them: 0 the notes and the samples' "before"; 1 the rule in
+the evaluator (one function, `receive`), the stdlib under it, the convention rewritten; 2 the
+`NaN` doors (`clean`, `finiteCheck: false`, the push door, `Convert.toNumber` finite); 3 the analyser
+(`[1, null]`, `field_access_on_any`, `Reduce`'s accumulator, `castsAny` without `null`, the
+missing-input placeholder `null` for every type); 4 `assertSavedPorts` out; 5 the docs with
+the "No value" box on both Host developers pages, the changelogs, the versions, the lockfile.
+Then the release.
+
+---
+
+---
+
 **Closed by 0.8.0 on 2026-10-15** (the release itself gets its record when it is on npm): the
 three entries below are the backlog entries as they stood, kept for their reasoning. A `null`
 goes through every op the same way, a `NaN` a host returns or pushes is read at any depth,

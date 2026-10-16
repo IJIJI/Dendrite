@@ -1,4 +1,3 @@
-import { type FnValue } from "../infra/registry";
 import { den } from "../infra/serialise";
 import { type Language } from "../language";
 import { Type, elementOf, isAnyOrNull } from "../infra/types";
@@ -13,7 +12,7 @@ import { Type, elementOf, isAnyOrNull } from "../infra/types";
 // kind, before the op is called), and a predicate's result is read as a boolean: a predicate
 // that gives no value does not hold, so `Filter([1, null], x => x > 0)` is `[1]`.
 export function installList(lang: Language): void {
-  lang.registerOp({
+  const Filter = lang.registerOp({
     name: "Filter",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -25,10 +24,9 @@ export function installList(lang: Language): void {
     examples: [den`output big = Filter([4, 8, 15, 16], item => item > 10)`],
   });
   lang.registerEvaluator({
-    op: "Filter",
+    op: Filter,
     finiteCheck: false,
-    evaluate: ({ list, predicate }) =>
-      (list as unknown[]).filter((item) => Boolean((predicate as FnValue)(item))),
+    evaluate: ({ list, predicate }) => list.filter((item) => Boolean(predicate(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
@@ -38,7 +36,7 @@ export function installList(lang: Language): void {
     },
   });
 
-  lang.registerOp({
+  const MapOp = lang.registerOp({
     name: "Map",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -50,10 +48,9 @@ export function installList(lang: Language): void {
     examples: [den`output doubled = Map([1, 2, 3], item => item * 2)`],
   });
   lang.registerEvaluator({
-    op: "Map",
+    op: MapOp,
     finiteCheck: false,
-    evaluate: ({ list, transform }) =>
-      (list as unknown[]).map((item) => (transform as FnValue)(item)),
+    evaluate: ({ list, transform }) => list.map((item) => transform(item)),
     inferInputTypes: (inputTypes) => ({
       transform: Type.fn([elementOf(inputTypes["list"])], Type.any),
     }),
@@ -63,7 +60,7 @@ export function installList(lang: Language): void {
     },
   });
 
-  lang.registerOp({
+  const Find = lang.registerOp({
     name: "Find",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -75,17 +72,16 @@ export function installList(lang: Language): void {
     examples: [den`output first = Find([4, 8, 15, 16], item => item > 10)`],
   });
   lang.registerEvaluator({
-    op: "Find",
+    op: Find,
     finiteCheck: false,
-    evaluate: ({ list, predicate }) =>
-      (list as unknown[]).find((item) => Boolean((predicate as FnValue)(item))) ?? null,
+    evaluate: ({ list, predicate }) => list.find((item) => Boolean(predicate(item))) ?? null,
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
     inferOutput: (inputTypes) => elementOf(inputTypes["list"]),
   });
 
-  lang.registerOp({
+  const Every = lang.registerOp({
     name: "Every",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -97,15 +93,14 @@ export function installList(lang: Language): void {
     examples: [den`output allBig = Every([15, 16, 23], item => item > 10)`],
   });
   lang.registerEvaluator({
-    op: "Every",
-    evaluate: ({ list, predicate }) =>
-      (list as unknown[]).every((item) => Boolean((predicate as FnValue)(item))),
+    op: Every,
+    evaluate: ({ list, predicate }) => list.every((item) => Boolean(predicate(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
   });
 
-  lang.registerOp({
+  const Some = lang.registerOp({
     name: "Some",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -117,15 +112,14 @@ export function installList(lang: Language): void {
     examples: [den`output anyBig = Some([4, 8, 15], item => item > 10)`],
   });
   lang.registerEvaluator({
-    op: "Some",
-    evaluate: ({ list, predicate }) =>
-      (list as unknown[]).some((item) => Boolean((predicate as FnValue)(item))),
+    op: Some,
+    evaluate: ({ list, predicate }) => list.some((item) => Boolean(predicate(item))),
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
   });
 
-  lang.registerOp({
+  const Reduce = lang.registerOp({
     name: "Reduce",
     inputs: [
       { name: "list", type: Type.array(Type.any) },
@@ -144,10 +138,10 @@ export function installList(lang: Language): void {
     ],
   });
   lang.registerEvaluator({
-    op: "Reduce",
+    op: Reduce,
     finiteCheck: false,
     evaluate: ({ list, initial, reducer }) =>
-      (list as unknown[]).reduce((acc, item) => (reducer as FnValue)(acc, item), initial),
+      list.reduce((acc, item) => reducer(acc, item), initial),
     inferInputTypes: (inputTypes) => {
       // A null (or any) initial types the accumulator `any`: typed `null`, it would demand a
       // reducer that returns null (0.8.0; `Reduce(list, null, (acc, item) => acc ?? item)`).

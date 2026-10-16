@@ -16,6 +16,7 @@ import { createStdlib } from "../stdlib";
 import { withPorts } from "../../testing";
 import { EMPTY_PORTS } from "../infra/ports";
 import { createEvalState, evaluate, updateInput } from "./evaluator";
+import { createProgramRunner, run as runProgram } from "../runtime/runner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1209,6 +1210,74 @@ describe("the rule of no value: the evaluator decides, before any op", () => {
     expect(host("TwiceB(null)")).toBe("got false");
     expect(host("TwiceN(null)")).toBeNull();
     expect(host('TwiceN("4")')).toBe("got 4");
+  });
+});
+
+// A binding is computed at most once per evaluation, however many names read it (the docs'
+// promise, and `let`'s meaning). Until 0.8.1 a binding that read a changed input was computed
+// once per reference, and once per item when read in a lambda body: `isCached` answers for
+// the traversal before, and a node that reads a changed input is never a hit there.
+describe("a binding is computed once per evaluation", () => {
+  const ticking = () => {
+    const lang = createStdlib();
+    let ticks = 0;
+    const Tick = lang.registerOp({
+      name: "Tick",
+      inputs: [{ name: "n", type: Type.number }],
+      output: Type.number,
+    });
+    lang.registerEvaluator({ op: Tick, evaluate: ({ n }) => (ticks++, n) });
+    const descriptor = withPorts(lang, {
+      inputs: [{ name: "n", type: Type.number }],
+      outputs: [],
+    });
+    const compile = (source: string) => {
+      const parsed = parseSource(source, lang);
+      if (!parsed.ok) throw new Error(`parse failed: ${JSON.stringify(parsed.errors)}`);
+      const analysed = analyse(parsed.program, descriptor);
+      expect(analysed.errors).toEqual([]);
+      return analysed.program;
+    };
+    return { descriptor, compile, ticks: () => ticks };
+  };
+  const THRICE = "let t = Tick($n)\noutput out = t + t + t";
+
+  it("read three times, once: on a one-shot run", () => {
+    const { descriptor, compile, ticks } = ticking();
+    expect(runProgram(compile(THRICE), descriptor, { n: 2 }).get("out")).toBe(6);
+    expect(ticks()).toBe(1);
+  });
+
+  it("read three times, once per run with the input changed, and none without", () => {
+    const { descriptor, compile, ticks } = ticking();
+    const runner = createProgramRunner(compile(THRICE), descriptor);
+    expect(runner.run({ n: 2 }).get("out")).toBe(6);
+    expect(ticks()).toBe(1);
+    expect(runner.run({}).get("out")).toBe(6);
+    expect(ticks()).toBe(1);
+    expect(runner.run({ n: 3 }).get("out")).toBe(9);
+    expect(ticks()).toBe(2);
+  });
+
+  it("read in a lambda body over five items, once", () => {
+    const { descriptor, compile, ticks } = ticking();
+    const runner = createProgramRunner(
+      compile("let m = Tick($n)\noutput out = Map([1, 2, 3, 4, 5], x => x + m)"),
+      descriptor,
+    );
+    expect(runner.run({ n: 10 }).get("out")).toEqual([11, 12, 13, 14, 15]);
+    expect(ticks()).toBe(1);
+  });
+
+  it("two outputs reading one binding share one computation", () => {
+    const { descriptor, compile, ticks } = ticking();
+    const runner = createProgramRunner(
+      compile("let t = Tick($n)\noutput a = t + 1\noutput b = t * 2"),
+      descriptor,
+    );
+    const outputs = runner.run({ n: 4 });
+    expect([outputs.get("a"), outputs.get("b")]).toEqual([5, 8]);
+    expect(ticks()).toBe(1);
   });
 });
 
