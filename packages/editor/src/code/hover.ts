@@ -1,27 +1,36 @@
 import { hoverTooltip, type Tooltip } from "@codemirror/view";
 import { type Language, type OpDefinition, typeToString } from "@dendrite-lang/core";
 
+import { type SourcePart, sourceParts } from "./source";
 import { styledRanges } from "./tokens";
 
-//? Hover on an op's name: its signature and its one-sentence description, from the language's
-// own descriptor, so a host's op shows the same as the library's. The position logic is pure
-// (`hoverAt`, tested without a DOM); `opHover` only wires it into CodeMirror and builds the
-// element.
+//? Hover on an op's name: its signature, coloured as code, and its one-sentence description,
+// from the language's own descriptor, so a host's op shows the same as the library's. The
+// position logic is pure (`hoverAt`, tested without a DOM); `opHover` only wires it into
+// CodeMirror and builds the element.
 
 /**
- * An op's signature as the reference prints it, in plain text: `Join(parts~: string[],
- * separator?: string) -> string`, `If(condition: boolean, then: lazy any, else: lazy any) ->
- * any`. The name marks are the reference's (`...` variadic, `?` optional, `~` converts, one at
- * most) and `lazy` sits on the type. The docs assemble the same signature as coloured HTML
- * (`apps/docs/src/components/ops.ts`), the one deliberate duplicate: this one stays beside its
- * one consumer, so the editor needs nothing from core that core 0.8.0 lacks.
+ * An op's signature as highlighted parts, the way Dendrite writes a function type:
+ * `Join(parts~: string[], separator?: string) -> string`, `If(condition: boolean, then: lazy
+ * any, else: lazy any) -> any`. The name marks are the reference's (`...` variadic, `?`
+ * optional, `~` converts, one at most) and `lazy` sits on the type. Assembled per input, not
+ * highlighted as one line: `lazy` is no word of the language, and in `then: lazy any` the
+ * highlighter would see `any` after an identifier, not after the colon, and lose its type
+ * colour. A type highlighted on its own is always a type. The docs' reference renders the
+ * same parts as HTML (`partsHtml`), so the signature has one definition.
  */
-export function signatureOf(op: OpDefinition): string {
-  const inputs = op.inputs.map((input) => {
+export function signatureParts(op: OpDefinition, language: Language): SourcePart[] {
+  const den = (code: string): SourcePart[] => sourceParts(code, language);
+  const parts = den(`${op.name}(`);
+  op.inputs.forEach((input, i) => {
+    if (i > 0) parts.push(...den(", "));
     const mark = input.variadic ? "..." : input.required === false ? "?" : input.convert ? "~" : "";
-    return `${input.name}${mark}: ${input.lazy ? "lazy " : ""}${typeToString(input.type)}`;
+    parts.push(...den(`${input.name}${mark}: `));
+    if (input.lazy) parts.push({ text: "lazy", cls: "keyword" }, { text: " " });
+    parts.push(...den(typeToString(input.type)));
   });
-  return `${op.name}(${inputs.join(", ")}) -> ${typeToString(op.output)}`;
+  parts.push(...den(") -> "), ...den(typeToString(op.output)));
+  return parts;
 }
 
 /** The op whose name covers the hovered character, with the name's range. */
@@ -61,12 +70,21 @@ export function opHover(language: Language) {
       end: hover.to,
       above: true,
       create: () => {
-        // Text nodes only: a description is a host's string, never markup.
+        // Text nodes only: a description is a host's string, never markup. The `tok-*`
+        // classes take the same colours as the code (style.css).
         const dom = document.createElement("div");
         dom.className = "dendrite-hover";
         const signature = dom.appendChild(document.createElement("code"));
         signature.className = "dendrite-hover-signature";
-        signature.textContent = signatureOf(hover.op);
+        for (const part of signatureParts(hover.op, language)) {
+          if (!part.cls) {
+            signature.append(part.text);
+            continue;
+          }
+          const span = signature.appendChild(document.createElement("span"));
+          span.className = `tok-${part.cls}`;
+          span.textContent = part.text;
+        }
         if (hover.op.description) {
           const description = dom.appendChild(document.createElement("p"));
           description.className = "dendrite-hover-description";

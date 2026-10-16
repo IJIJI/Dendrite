@@ -32,11 +32,16 @@ export function sourceParts(code: string, language = defaultLanguage()): SourceP
 const escape = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** The parts as HTML: `tok-*` spans for tokens, escaped text between. */
-export function sourceHtml(code: string, language?: Language): string {
-  return sourceParts(code, language)
+/** Parts as HTML: `tok-*` spans for tokens, escaped text between. */
+export function partsHtml(parts: readonly SourcePart[]): string {
+  return parts
     .map((part) =>
       part.cls ? `<span class="tok-${part.cls}">${escape(part.text)}</span>` : escape(part.text),
     )
     .join("");
+}
+
+/** The source as HTML: `tok-*` spans for tokens, escaped text between. */
+export function sourceHtml(code: string, language?: Language): string {
+  return partsHtml(sourceParts(code, language));
 }
