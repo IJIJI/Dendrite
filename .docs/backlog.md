@@ -1330,6 +1330,64 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
+## Core — whether an evaluator may still be registered by the op's name
+
+**What:** asked by the maintainer on 2026-10-16, while 0.8.1 was built. Since 0.8.1
+`registerEvaluator` takes the op's definition as `op` and types every input from it
+(`InputsOf`). It still takes the op's NAME, `op: "Fahrenheit"`, and then every input is
+`unknown`, as before 0.7.0. The question is whether the name form should go, so there is one
+way to register an evaluator, and it is the typed one.
+
+**Who uses the name form today** (counted 2026-10-16): the library, none (0.8.1 moved all 46
+ops to definitions); the editor, the link, the examples, the docs and the playground, none;
+core's own tests, about 19, for small host ops (`Boom`, `Count`, `Reading`, `Give`). Inside
+core, `extendLanguage` re-registers a base's evaluators from the map, where `op` is stored as a
+name (`registerEvaluator` normalises it), and `validateDescriptor` reports an
+`orphan_evaluator` by name. *Extending the language* names the form once, as the untyped one.
+
+**For removing it:**
+
+- One way to register, and the typed one. The name form loses the typing silently: a host who
+  copies an older sample gets `unknown` keys and casts them, where the definition would have
+  caught a cast that disagrees with the declaration.
+- A typo in the name is caught only when the language composes (`orphan_evaluator`, which
+  throws); with the definition it is a compile error.
+
+**For keeping it:**
+
+- An op whose definition the host does not hold as a literal: inputs built in a loop or read
+  from configuration (`OpInput[]`, which types as `unknown` either way), or a definition read
+  back from `language.descriptor.ops`, which is the widened `OpDefinition`.
+- Replacing the library's evaluator for one of its ops (`op: "Upper"`) without importing a
+  definition the library does not export. The library's definitions are not exported today.
+- A split between a package that defines ops and one that implements them (a shared language
+  package, an evaluator on the server): the name is the one thing both sides share without a
+  shared object.
+
+**The options:**
+
+| Option | What it does | Cost |
+| --- | --- | --- |
+| **A. Keep both** | As today; the docs say the definition is the way, the name the escape hatch | Two ways to say one thing; the silent loss of typing stays |
+| **B. Deprecate the name, remove it in the minor before 1.0** | `op: string` marked `@deprecated` in a patch; the removal on the pre-1.0 list beside `updateInputs` | The three cases above lose their route: each needs `registerEvaluator({ op: lang.descriptor.ops.get("X")! })`, which types as `unknown` anyway, or the library exports its definitions |
+| **C. Keep the name as its own, explicit call** | `registerEvaluatorByName("Upper", …)`, so the untyped intent is written, and `registerEvaluator` takes a definition only | One more name on the API; the type of `registerEvaluator` gets simpler (no `\| string`) |
+| **D. Accept the widened definition and drop the string** | `op: lang.descriptor.ops.get("Upper")!` is the route for the three cases | To probe first: what `InputsOf<OpDefinition>` gives for a widened definition (every key `unknown`, by reading the type, but not tested) |
+
+**Why deferred:** no host has met a problem with either form, and the cases for keeping it have
+no named consumer yet either. Beacon is the first host that may define ops in one place and
+run them in another.
+
+**What it requires:** a decision before the pre-1.0 minor, since B and D remove a form and C
+changes the call a host writes. With B or D: the deprecation in a patch first, core's tests
+moved to definitions (about 19 registrations), `extendLanguage` reading the stored definition
+from `ops` rather than the name, and a line on *Extending the language*. A probe of the
+widened `OpDefinition` under `tsc` before D is chosen.
+
+**When:** not placed. Before the pre-1.0 minor (the order after 0.8.0, `todo.md`), where every
+removal is listed.
+
+---
+
 ## Core — less recomputation, and whether the two cache checks become one
 
 **What:** asked by the maintainer on 2026-10-16, while 0.8.1's binding fix was built. Two
