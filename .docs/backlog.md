@@ -1369,6 +1369,76 @@ the answer may just be "use Compact for these", once Compact is actually compact
 
 ---
 
+## Core — less recomputation, and whether the two cache checks become one
+
+**What:** asked by the maintainer on 2026-10-16, while 0.8.1's binding fix was built. Two
+questions in one entry, because one mechanism answers both:
+
+1. Whether `isCached` and `computed` (the per-traversal set of 0.8.1, `evaluator.ts`) should
+   become one mechanism: revision stamps, as Salsa (rust-analyzer) and Adapton have them.
+   Today they answer two questions with two lifetimes: `isCached` whether a value from an
+   EARLIER traversal is still valid, `computed` whether a value was made in THIS one.
+2. Whether the evaluator can recompute less: a node recomputes when an input it reads was
+   pushed, whether or not any value it depends on changed.
+
+**What it does today** (probed 2026-10-16 on `dev`, a host op `Tock` counting its calls,
+through `runtime.updateInputs`):
+
+| Case | `Tock` calls on the second push |
+| --- | --- |
+| `Tock($n)`, the same number pushed again | 1 |
+| `Tock($xs)`, an equal list pushed again (a new array) | 1 |
+| `let pos = $n > 0` then `Tock(pos)`, `n` from 5 to 6 (`pos` stays `true`) | 1 |
+| `Tock(Length($xs))`, a new list of the same length | 1 |
+| `Map($xs, x => Tock(x))`, one item of five changed | 5 |
+
+Each is a call that could be saved. By reading the code, the runner (`createProgramRunner`)
+does the same, while an instance's `setInput` already skips a value that `Object.is` the
+stored one.
+
+**Why it recomputes:** `dependsOn` is a static set of input NAMES per node, and `isCached`
+asks one thing: did any of those names change? It does not ask whether a VALUE changed, at the
+door or at any node on the way. So an input pushed again with the same value counts as
+changed, and a binding that recomputes to the same value still marks every node above it.
+
+**The options, from cheap to deep:**
+
+| Option | What it does | Cost | Saves |
+| --- | --- | --- | --- |
+| **A. The door skips an unchanged value** | `applyChanges` and the runner leave out a value that `Object.is` the stored one, as an instance does | A few lines and no type change. But a host sees it: `onOutput` fires less, and a host that reads it as a tick changes. A trigger must still fire with any value, so triggers are exempt. A change a running host can see is a minor by the rules | Row 1 |
+| **B. The same, compared structurally** | A list or a struct compared item by item to the stored one, inside the walk `clean` does already | One stored value per input to compare against (it is stored already), and a compare per item per push: a list of 10 000 numbers is compared on every push | Row 2 |
+| **C. Early cutoff** (Salsa's "backdating") | A node that recomputes to an equal value keeps its old "changed at" mark, so the nodes above it stay hits. Each cache entry records the traversal at which it was last checked and the one at which its value last changed, and a node checks its direct dependencies, not its input names | These are the revision stamps of question 1. The cache's values change shape, and `EvalState.nodeCache` is in the public type. An equality check per recomputed node (`Object.is`, or structural for a list, at a cost per item). Every cache read changes (`memoise`, the `ref` case) | Rows 3 and 4, and every node above them |
+| **D. Per-item reuse in a higher-order op** | `Map`, `Filter` and the others keep the result per item and call the lambda only for an item that changed | A cache per op node keyed by item (by position or by value), and a lambda that reads anything else that changed must invalidate all of it. The most code of the four | Row 5 |
+
+**How the two questions meet:** option C is the revision stamps. If C is worth it, `isCached`
+and `computed` become one mechanism as a side effect, and the 0.8.1 set goes. If C is not
+worth it, the two checks stay as they are: two facts, one `||` at the one call site that needs
+both (the reasoning of 2026-10-16, in 0.8.1's record once released).
+
+**Why deferred:** no host has measured a cost. An op call costs about 1570 ns (0.8.0's
+probes), and no program of Beacon's size and update rate exists yet to say whether the saved
+calls matter. Each option except A has a memory or a type cost, and A is a behaviour change.
+All four wait for a number.
+
+**What it requires:**
+
+- **A measurement first**, on `examples/4-large_dataset` and on a program shaped like
+  Beacon's tally: the time per update, and how many op calls each option would save on it.
+- **A** only with B decided, since a host that pushes lists gains nothing from A alone; both
+  in a core minor, with the trigger exemption and the `onOutput` change in the changelog.
+- **C** weighed with 0.9.1's plan: "why is this `null`?" (the small step of run-time tracking)
+  wants the same record per node, which traversal computed it, so the two may share it.
+- **D** only for a measured consumer: it is the most code, and the first three cover the
+  common cases.
+
+**A neighbour, not this entry:** an instance publishes a new outputs object on every
+evaluation, so a pane re-renders when no output changed (by reading the code; `createSubject`
+skips only an `Object.is`-equal value). With C or A in place, that is the next saving.
+
+**When:** not placed. To weigh with 0.9.1's plan, for the reason under C.
+
+---
+
 ## Core — run-time tracking: what happened while a program ran
 
 **What:** asked by the maintainer on 2026-10-12. A run gives values, or it throws ONE

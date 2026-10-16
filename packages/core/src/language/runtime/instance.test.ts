@@ -257,6 +257,31 @@ describe("createInstance - boot", () => {
 });
 
 describe("ProgramInstance - values", () => {
+  // The binding fix of 0.8.1 on the path a host uses: a binding read three times is computed
+  // once when the instance is created, and once per setInput that changes what it reads.
+  it("computes a binding read three times once per evaluation", () => {
+    const lang = makeLang();
+    let ticks = 0;
+    const Tick = lang.registerOp({
+      name: "Tick",
+      inputs: [{ name: "n", type: Type.number }],
+      output: Type.number,
+    });
+    lang.registerEvaluator({ op: Tick, evaluate: ({ n }) => (ticks++, n) });
+    const env = createEnvironment(lang);
+    const runtime = env.createRuntime({
+      layers: [{ id: "host", ports: HOST, policy: Policy.host }],
+    });
+    const instance = env.createInstance(runtime, {
+      program: serialiseSource("let t = Tick($p)\noutput out = t + t + t", DOC),
+      id: "doc",
+    });
+    expect(ticks).toBe(1);
+    instance.setInput("p", 5);
+    expect(outputsOf(instance)).toBe(15);
+    expect(ticks).toBe(2);
+  });
+
   it("setInput updates values, outputs and the snapshot", () => {
     const { instance } = setup();
     const snapshots = record(instance);
