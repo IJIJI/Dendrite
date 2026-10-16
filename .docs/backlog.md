@@ -68,6 +68,9 @@ its own feature (see "struct literals" below for the neighbouring gap).
 
 ## Language — strings as lists (possibly 0.8)
 
+**When: 0.10.0**, with no name removed: `Contains` stays the text op and `Includes` the list op, so
+the break is `Length("abc")` alone (the release plan of 2026-10-16, `todo.md`).
+
 **Where it stands (2026-10-08):** moved out of 0.6.0 by the maintainer, possibly to **0.8**,
 after union types (possibly 0.7) and with `Split`, `Slice` and `Replace` ("the rest of the
 string ops", below). It was in `todo.md` from 2026-09-22. Two answers of that day change the
@@ -160,7 +163,8 @@ above.
 
 ## Stdlib — the rest of the string ops
 
-**When:** with strings as lists, above: possibly 0.8 (the maintainer, 2026-10-08).
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`): `Split`, `Slice` and `Replace` only
+add; strings as lists comes after, in 0.10.0.
 
 **What:** `Replace` (first match or every match: decide), `Split` (by code point when the
 separator is empty, per the Unicode note above), and a `Slice` that arrays want too.
@@ -175,6 +179,8 @@ the empty string, and an entry on the generated `string` reference page, which c
 ---
 
 ## Stdlib — `Clamp` with one bound
+
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`).
 
 **What:** `Clamp(value, low, high)` wants both bounds. One-sided is `Max([x, 0])` ("at least 0")
 and `Min([x, 10])` ("at most 10") today, and `Max` for "at least" is a spelling people get the
@@ -202,6 +208,8 @@ changelog line.
 
 ## Stdlib — what the math batch left out: symbols, and `digits` on `Floor` and `Ceil`
 
+**When: 0.8.3** (the release plan of 2026-10-16, `todo.md`).
+
 **What:** two things offered with the seven math ops (2026-10-08) and not taken.
 
 - **No symbol** for `Mod` or `Pow`. `%` and `^` (or `**`) are the usual ones. A symbol can be
@@ -219,6 +227,8 @@ a new tier above it for a power, which binds tighter and to the right.
 ---
 
 ## Language — struct literals (constructing a struct in a program)
+
+**When: 0.10.0**, the lists minor (the release plan of 2026-10-16, `todo.md`).
 
 Reading host structs is
 done; *producing* one (`{ a: …, b: … }` in a program) is separate and larger — it wants a structural
@@ -286,6 +296,9 @@ the input.
 ---
 
 ## Language — array index access, `list[i]`
+
+**When: `At`, `First` and `Last` in 0.8.3; the syntax `xs[i]` in 0.10.0** (the release plan of
+2026-10-16, `todo.md`).
 
 **What:** asked by the maintainer on 2026-10-15, while 0.8.0 was built. A program cannot read
 one item of a list by its position: there is no `xs[0]`, no `At(xs, 0)`, no `First` or `Last`.
@@ -360,6 +373,8 @@ own text form" below is the other direction (`toText`); design the two together.
 ---
 
 ## Language — a `null` item in a list literal: reassess before 1.0.0
+
+**When: 0.9.0**, with union types (the release plan of 2026-10-16, `todo.md`).
 
 **What:** decided on 2026-10-12 for the plan of option B: a `null` item leaves a list
 literal's type alone, so `[1, null]` is `number[]`, where it is `any[]` today (a list with a
@@ -451,6 +466,9 @@ scope). If level 3 comes, the lambda is its value and the `Thunk` its internal f
 ---
 
 ## Language — union types, `A | B` (possibly 0.7)
+
+**When: 0.9.0, before the Rete half** (the release plan of 2026-10-16, `todo.md`): `Type` has to be
+final when the editor switches over it.
 
 **What:** a fourth kind of type. Named by the maintainer on 2026-10-08 as the release after
 0.6.1, "possibly", with strings as lists after it. It is the general answer behind several
@@ -753,6 +771,9 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
 ---
 
 ## Editor — the visual (Rete) half, and what it pulls in
+
+**When: right after 0.9.0** (the release plan of 2026-10-16, `todo.md`): union types first, so
+`Type` is final; its own plan.
 
 **→ Planned in [editor-plan.md](editor-plan.md)** (settled 2026-09-04: monorepo, node-modules
 linker, ONE package with a `/react` subpath, headless core + React UI, config presets instead of
@@ -1336,7 +1357,8 @@ is missing, and the record only has to say WHERE. It also has costs that nothing
 **When:** probably not before 1.0 (the maintainer, 2026-10-14). Under option B the language
 gets more opaque in one way, a `null` output says that a value was missing but not where, and
 the maintainer wants, at some point, a way to trace the values a program ran with and to log
-run-time problems; this entry is that way.
+run-time problems; this entry is that way. **The small first step** ("why is this `null`?",
+one output, on demand) is placed earlier: 0.9.1 (the release plan of 2026-10-16, `todo.md`).
 
 **What it requires:**
 
