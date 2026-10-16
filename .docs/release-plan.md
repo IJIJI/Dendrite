@@ -330,6 +330,15 @@ check reused the probe table's rows unchanged, 11 lines, both ways.
   run, never committed. 35 samples, none moved this time, which the docs pass still needed to
   know.
 
+## What the eleventh release taught
+
+**Core 0.8.1, 2026-10-16: the runbook held for one package alone.** One thing to keep: **a
+release whose claim is a type gets a type half of the check**, a small `.ts` file compiled with
+the repo's `tsc` against the INSTALLED package (`--moduleResolution bundler --skipLibCheck`,
+run from the check folder so the imports resolve there). A run-time check cannot see a type;
+reading the `.d.ts` for a name proves the name, not that it types anything. On the previous
+version the file must fail, and on the line the release changes.
+
 ## If something fails
 
 - **Staging from CI fails** (tarball not accepted, OIDC misconfigured): fix and re-run the

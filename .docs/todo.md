@@ -14,8 +14,8 @@ Each row names its entry.
 
 | Version | Holds | Kind | Entry |
 | --- | --- | --- | --- |
-| **0.8.1, next** | The strict keys: the evaluator typed from the op's declaration, the stdlib's 52 casts gone (counted 2026-10-16; the earlier 35 was stale). And the binding computed once per evaluation. **Planned 2026-10-16**, with 0.8.2 and 0.8.3, in `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after ten review passes, two of them independent reviews from other chats | core patch | `backlog.md`, "Core — a typed evaluator derived from the op's declaration"; below, "Core — a binding is recomputed once per reference" |
-| **0.8.2** | Hover on an op in the editor (the descriptor's descriptions); the set-input split, A: `setInput` and `setInputs` on both sides, each keeping its channel, `setInputs` on the wire in `setInput`'s place with protocol 2 (decision C, 2026-10-16: no support for a mixed pair, none is deployed), `updateInputs` deprecated; *How a program runs* simplified. The Outputs pane stays as it is (`backlog.md`, "Editor — what a `null` output does"). Core 0.8.2, editor 0.8.1, and **the link 0.9.0**: a wire change is a minor of the link by its own changelog rule | patch of core and the editor, a minor of the link | Below, "0.8.1 and 0.8.2", "Core — two styles for setting an input", "Docs — *How a program runs* gets simpler" |
+| **0.8.1** | **On npm since 2026-10-16** (`done.md`, "0.8.1 on npm"). The strict keys: the evaluator typed from the op's declaration, the stdlib's 52 casts gone (counted 2026-10-16; the earlier 35 was stale). And the binding computed once per evaluation. **Planned 2026-10-16**, with 0.8.2 and 0.8.3, in `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after ten review passes, two of them independent reviews from other chats | core patch | `backlog.md`, "Core — a typed evaluator derived from the op's declaration"; below, "Core — a binding is recomputed once per reference" |
+| **0.8.2, next** | Hover on an op in the editor (the descriptor's descriptions); the set-input split, A: `setInput` and `setInputs` on both sides, each keeping its channel, `setInputs` on the wire in `setInput`'s place with protocol 2 (decision C, 2026-10-16: no support for a mixed pair, none is deployed), `updateInputs` deprecated; *How a program runs* simplified. The Outputs pane stays as it is (`backlog.md`, "Editor — what a `null` output does"). Core 0.8.2, editor 0.8.1, and **the link 0.9.0**: a wire change is a minor of the link by its own changelog rule | patch of core and the editor, a minor of the link | Below, "0.8.1 and 0.8.2", "Core — two styles for setting an input", "Docs — *How a program runs* gets simpler" |
 | **0.8.3** | The ops that only add (and *Extending the language* renames its own sample op `Last`, which the library then has): `At`, `First`, `Last`; `Split`, `Slice`, `Replace`; `Sum`, and `Sort`, `Reverse`, `Unique`, `Range` where the backlog lacks them; `Clamp` with one bound; the math leftovers | core patch | `backlog.md`: "array index access", "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
 | **0.9.0** | Union types, `A \| B`: the kind, `isCompatible`, the parser, honest types for `If`, `??`, `[1, null]`, a function in a branch; the null-item rule reassessed; the `implicit_any_cast` promise written. Core's minor, which takes the link to 0.10.0 (it is at 0.9.0 since the release named 0.8.2) | core minor | `backlog.md`, "Language — union types", "a `null` item in a list literal" |
 | **0.9.1** | "Why is this `null`?": one output, on demand, the small first step of run-time tracking | core patch | `backlog.md`, "Core — run-time tracking" |
@@ -84,10 +84,23 @@ and cannot throw for a value because a pane, or a client across a network, calls
 the instance reports); the link gains one batch command; `updateInputs` is deprecated and goes
 in the pre-1.0 minor, as `assertSavedPorts` went.
 
-**What it requires:** first the question itself, which is not decided: whether the difference
-is wanted, or whether an instance wants a batch (`setInputs`), or the two want one verb. Then a
-plan: a change here is core's public API, the link's protocol carries `setInput` as a command,
-and the docs name both calls on several pages.
+**Decided 2026-10-16, the shape built in 0.8.2** (the plan, revision 3, after two independent
+reviews):
+
+- **One verb, one rule, on every side.** `setInput(name, value)` is `setInputs({ [name]: value })`
+  on the runtime, a handle, an entry, an instance and a replica. A batch is all or nothing: every
+  name resolved and every value checked before anything moves, the rule of `decisions.md`
+  ("nothing moves on a refusal") and the runtime's `applyChanges`. The runtime throws on a value
+  that does not fit, an instance reports `value_does_not_fit` on each refused name; an unchanged
+  value drops out, and an empty batch stores, emits and evaluates nothing.
+- **`updateInput` and `updateInputs` are deprecated aliases** of the runtime's two verbs, and go
+  in the pre-1.0 minor. A runtime verb ignores a name that is not a global input, as
+  `updateInputs` does; a handle's throws on a global one, as its `setInput` does.
+- **The wire carries the batch only** (decision C): `setInputs` replaces `setInput` as a
+  command, `PROTOCOL` is 2, a mismatched pair is refused at `hello` with both numbers, and no
+  mixed pair is supported (none is deployed). The link takes a minor, 0.9.0, as its rule says a
+  wire change is, and its peer becomes `^0.8.2`, since its server calls `instance.setInputs`.
+- **A replica echoes once per batch**: one `values` object and one snapshot, set once each.
 
 ---
 
@@ -109,11 +122,12 @@ of Learn meets the chain twice.
 
 **When: 0.8.2** (the maintainer, 2026-10-16), the docs half of that patch.
 
-**What it requires:** a plan first, with the maintainer, because it is a page's content and
-not a fix. The questions for it: what a Learn reader needs from the page (a first reading, not
-decided: one picture and a few sentences a step, each step linking to its section of *The
-chain*); whether "What each step may not do" moves to *The chain*; and which other pages link
-to this page's anchors (`content.test.ts` checks every internal link).
+**Decided 2026-10-16, the outline built in 0.8.2** (the plan, revision 3): the `<Chain>`
+picture, then one short paragraph per step, what it does in a sentence and what you can rely
+on, each ending with a link to its section of *The chain*. "What each step may not do" moves to
+*The chain*, before "Why it is separate artefacts". The two promises of Evaluate stay (a binding
+computed at most once, the last good program keeps running). About half the length. No other
+page links to this page's anchors (checked 2026-10-16), so its sections may move.
 
 ---
 

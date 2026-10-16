@@ -5,6 +5,50 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.8.1 on npm — DONE 2026-10-16
+
+`@dendrite-lang/core` at **0.8.1**, the same day as 0.8.0; the editor and the link stay at
+0.8.0, admitted by their peer `^0.8.0`. A patch: an evaluator handed its op's definition as
+`op` receives every input typed from the declaration (`InputsOf`, `ValueOf`), so the library's
+52 casts went; the `Type` constants keep their literal types for it; `LazyInputsOf` is
+deprecated. Fixed: a binding is computed once per evaluation (a per-traversal set read in the
+`ref` case before `isCached`), which closed the one "Known" line of 0.8.0. The plan of the rest
+of 0.8 is `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder),
+revision 3 after ten review passes, two of them independent reviews from other chats; the two
+entries it closed are kept below.
+
+**The commits, in order:** the notes (the plan's decisions, the `null` output's questions
+parked); the typed keys, probed under `tsc` first; the binding fix, with five tests that each
+failed without it; the docs, the changelog and the version. Two notes commits rode along,
+both backlog entries the maintainer asked for during the work: "less recomputation, and whether
+the two cache checks become one" (a probe of five cases, four options, to weigh with 0.9.1),
+and "whether an evaluator may still be registered by the op's name". The PR showed 7 of 7.
+
+**Decided during the work, beyond the plan:** the rule that a patch may change TypeScript types
+where no run-time behaviour changes, each case named under "Changed (types)" (the maintainer,
+2026-10-16, written into `CLAUDE.md`). `Type.fn` returns the function member of the union, not
+the union: the probe found that `ValueOf` over the whole union is `unknown`, so a function input
+would have lost its `FnValue`. `Map`'s definition is `MapOp`, so it does not shadow the global.
+The docs pass found two leftovers of 0.8.0 on *Extending the language* and fixed them: a missing
+input gives no value, not its type's default, and the `Guard` sample's `reading` is optional,
+since a `null` on a required struct input stops the op before its fallback can be read.
+
+**The runbook** held. One tag, one GitHub release on it named for the one package
+(`Dendrite core 0.8.1 - …`, as `Dendrite editor 0.6.1` was), one `Stage release` run of 55
+seconds with the editor and the link skipped as on npm, one approval.
+
+**Checked after approval, from outside the repo:** `latest` is 0.8.1 on core with an
+attestation, 0.8.0 on the editor and the link. The check had two halves this time, both written
+before approval: nine run-time lines (the versions and peers, the published types carrying
+`InputsOf`, `ValueOf` and the deprecated `LazyInputsOf`, a binding read three times computed
+once on a runner, in a `Map` body, and through an instance, the lazy lines of 0.7.0, the rows of
+0.8.0 unmoved, the 46 evaluators stored by name), and a type file compiled against the
+installed package, since the release's main claim exists only for the compiler. On the tarball
+9 of 9 and the type file compiled; on 0.8.0 from npm 4 of 9 passed, the four that should, and
+the type file failed on `celsius` and `parts` as `unknown`; on `latest` 9 of 9 and compiled.
+The live site followed: the typed samples and the fixed sentence on *Extending the language*,
+the binding paragraph on *Evaluation*, *Installation* at 0.8.1.
+
 **Closed by 0.8.1 on 2026-10-16** (the release itself gets its record when it is on npm): the
 two entries below as they stood, kept for their reasoning.
 
