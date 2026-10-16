@@ -55,9 +55,12 @@ own bindings so a parameter shadows a global name of the same name.
 
 ## A binding is computed once per evaluation
 
-Two outputs reading the same binding share one computation, because they share the node and the
-node caches. This is the difference between a binding and a macro, and it is why naming
-intermediate values costs nothing.
+Two outputs reading the same binding share one computation, and so do three reads in one
+expression and a read inside a lambda body, once per evaluation and not once per item. The
+evaluator records which bindings it computed in the evaluation under way, and every later
+reference reads that value. Between evaluations the node cache decides: a binding whose
+inputs did not change is not computed at all. This is the difference between a binding and a
+macro, and it is why naming intermediate values costs nothing.
 
 ## A lazy input is a node read on demand
 

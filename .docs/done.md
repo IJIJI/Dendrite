@@ -5,6 +5,94 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+**Closed by 0.8.1 on 2026-10-16** (the release itself gets its record when it is on npm): the
+two entries below as they stood, kept for their reasoning.
+
+---
+
+## Core — a typed evaluator derived from the op's declaration (the strict keys) — DONE 2026-10-16 (0.8.1)
+
+**Closed by 0.8.1:** `InputsOf` and `ValueOf` (`registry.ts`) type every key from the
+definition handed as `op`, the `Type` constants keep their literal types (`fn` returns the
+function member of the union, since a function is an `FnValue` whatever its signature),
+and the library's 52 casts are gone. Probed under `tsc` first; `evaluator.test-d.ts` holds
+each case, `LazyInputsOf` stays deprecated.
+
+**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
+`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
+because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
+declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
+`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
+keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
+`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
+cast goes, and the four lazy ops do not change again.
+
+**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
+is in `todo.md`, "The order after 0.6.1".
+
+**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
+`number` is true only once the evaluator guarantees an input's declared type at the door, which
+is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
+can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
+widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
+comes after option B.
+
+**What it requires** (the plan of 2026-10-16, 0.8.1 commit 1): (a) `Type.number` and the
+other constants typed as their literals, and `Type.array` keeping the element's type;
+`Type.fn` needs no generic, since a function input is an `FnValue` whatever its signature:
+additive. One limit, stated: the items of a declared `T[]` are the declaration's, as a host's
+declared output type is (the door checks a list's kind, not its items), which is why the
+three aggregates keep `numbersOf`. (b) A mapping from a `Type`
+literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
+`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
+array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
+`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
+(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
+`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
+anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
+API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
+lazy slice verified by a probe.
+
+---
+
+## Core — a binding is recomputed once per reference — DONE 2026-10-16 (0.8.1)
+
+**Closed by 0.8.1:** a per-traversal set, `computed`, on `EvalContext`, read in the `ref`
+case before `isCached`: four lines, five tests, each failing without the fix. Whether the
+two checks become one (revision stamps) is a backlog question now: "Core — less
+recomputation, and whether the two cache checks become one".
+
+**What:** found 2026-10-14 by the probes of the 0.8.0 plan. A binding that depends on an input
+that changed is recomputed once per reference within one evaluation, on every path (`run`,
+the runner, the instance): `let t = Tick($n)` read three times calls the host op `Tick` three
+times; read inside a `Map` body over five items, five times. When nothing changed, zero. The
+docs promise the opposite in four places (*Evaluation* "A binding is computed once per
+evaluation", *Glossary*, *How a program runs*, *Bindings and outputs*), and `CLAUDE.md` says
+"evaluated at most once".
+
+**Why:** `isCached(node, cache, dependsOn, changedInputs)` answers "not cached" whenever the
+node depends on a changed input, with no notion of "computed in this traversal". So the first
+reference computes and caches, and the second reference finds the entry, sees the dependency
+on a changed input, and computes again. Results are right; the work repeats. A host op with a
+side effect or a cost (a tally lookup, for Beacon) runs once per reference, and
+`let limit = Max($data)` inside `Filter($data, x => x > limit)` computes `Max` once per item.
+
+**When: 0.8.1** (the maintainer, 2026-10-14: 7B, "in todo as it has a timeframe"). 0.8.0's
+changelog carries a "Known" line so the docs' promise is not silently false for a release.
+
+**What it requires:** about four lines and three tests (the plan of 2026-10-16, 0.8.1 commit
+2). A `computed: WeakSet<object>` on `EvalContext`, made per traversal in `evaluate` and
+`evaluateProgram`; in the `ref` case alone, a binding in `computed` is a hit before `isCached`
+is asked, and is added after it is computed (a closure is not cached, as today). `memoise` is
+left alone: every inline node has one parent and the analyser copies a node per visit, so
+once a binding is computed once, a top-level inline node is visited once per traversal and a
+body node once per application in its fresh `bodyScope`. Tests: the three-reference program
+calls `Tick` once per run on `run`, a runner and an instance, and the `Map` body case once,
+with the counting host op of the lazy tests. Then the "Known" line closes and the four docs
+sentences are true.
+
+---
+
 ## 0.8.0 on npm — DONE 2026-10-16
 
 `@dendrite-lang/core`, `@dendrite-lang/editor` and `@dendrite-lang/link` at **0.8.0**, two days

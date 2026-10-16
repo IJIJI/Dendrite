@@ -16,7 +16,7 @@ Each row names its entry.
 | --- | --- | --- | --- |
 | **0.8.1, next** | The strict keys: the evaluator typed from the op's declaration, the stdlib's 52 casts gone (counted 2026-10-16; the earlier 35 was stale). And the binding computed once per evaluation. **Planned 2026-10-16**, with 0.8.2 and 0.8.3, in `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after ten review passes, two of them independent reviews from other chats | core patch | `backlog.md`, "Core — a typed evaluator derived from the op's declaration"; below, "Core — a binding is recomputed once per reference" |
 | **0.8.2** | Hover on an op in the editor (the descriptor's descriptions); the set-input split, A: `setInput` and `setInputs` on both sides, each keeping its channel, `setInputs` on the wire in `setInput`'s place with protocol 2 (decision C, 2026-10-16: no support for a mixed pair, none is deployed), `updateInputs` deprecated; *How a program runs* simplified. The Outputs pane stays as it is (`backlog.md`, "Editor — what a `null` output does"). Core 0.8.2, editor 0.8.1, and **the link 0.9.0**: a wire change is a minor of the link by its own changelog rule | patch of core and the editor, a minor of the link | Below, "0.8.1 and 0.8.2", "Core — two styles for setting an input", "Docs — *How a program runs* gets simpler" |
-| **0.8.3** | The ops that only add: `At`, `First`, `Last`; `Split`, `Slice`, `Replace`; `Sum`, and `Sort`, `Reverse`, `Unique`, `Range` where the backlog lacks them; `Clamp` with one bound; the math leftovers | core patch | `backlog.md`: "array index access", "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
+| **0.8.3** | The ops that only add (and *Extending the language* renames its own sample op `Last`, which the library then has): `At`, `First`, `Last`; `Split`, `Slice`, `Replace`; `Sum`, and `Sort`, `Reverse`, `Unique`, `Range` where the backlog lacks them; `Clamp` with one bound; the math leftovers | core patch | `backlog.md`: "array index access", "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
 | **0.9.0** | Union types, `A \| B`: the kind, `isCompatible`, the parser, honest types for `If`, `??`, `[1, null]`, a function in a branch; the null-item rule reassessed; the `implicit_any_cast` promise written. Core's minor, which takes the link to 0.10.0 (it is at 0.9.0 since the release named 0.8.2) | core minor | `backlog.md`, "Language — union types", "a `null` item in a list literal" |
 | **0.9.1** | "Why is this `null`?": one output, on demand, the small first step of run-time tracking | core patch | `backlog.md`, "Core — run-time tracking" |
 | **0.10.0** | Lists: `xs[i]` as syntax over `At`; a string is a list for the list ops, no name removed; struct literals `{ a: 1 }` | core minor | `backlog.md`: "array index access", "strings as lists", "struct literals" |
@@ -51,39 +51,6 @@ for the patch.
 | **Measure the rule's cost** | `evaluator.ts`, the probe | **Settled 2026-10-14**: 3.5 ns per input, inside the loop that already runs, against about 1570 ns per op call; a host type's kind 30 to 62 ns. Nothing is left | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
 | **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`, renamed `finiteCheck: false` on 2026-10-15** (the check is on by default, `false` turns it off; 3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
 | **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | **0.8.0**: the rule skips the op before any thunk is read, one test pins it | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
-
----
-
-## Core — a binding is recomputed once per reference
-
-**What:** found 2026-10-14 by the probes of the 0.8.0 plan. A binding that depends on an input
-that changed is recomputed once per reference within one evaluation, on every path (`run`,
-the runner, the instance): `let t = Tick($n)` read three times calls the host op `Tick` three
-times; read inside a `Map` body over five items, five times. When nothing changed, zero. The
-docs promise the opposite in four places (*Evaluation* "A binding is computed once per
-evaluation", *Glossary*, *How a program runs*, *Bindings and outputs*), and `CLAUDE.md` says
-"evaluated at most once".
-
-**Why:** `isCached(node, cache, dependsOn, changedInputs)` answers "not cached" whenever the
-node depends on a changed input, with no notion of "computed in this traversal". So the first
-reference computes and caches, and the second reference finds the entry, sees the dependency
-on a changed input, and computes again. Results are right; the work repeats. A host op with a
-side effect or a cost (a tally lookup, for Beacon) runs once per reference, and
-`let limit = Max($data)` inside `Filter($data, x => x > limit)` computes `Max` once per item.
-
-**When: 0.8.1** (the maintainer, 2026-10-14: 7B, "in todo as it has a timeframe"). 0.8.0's
-changelog carries a "Known" line so the docs' promise is not silently false for a release.
-
-**What it requires:** about four lines and three tests (the plan of 2026-10-16, 0.8.1 commit
-2). A `computed: WeakSet<object>` on `EvalContext`, made per traversal in `evaluate` and
-`evaluateProgram`; in the `ref` case alone, a binding in `computed` is a hit before `isCached`
-is asked, and is added after it is computed (a closure is not cached, as today). `memoise` is
-left alone: every inline node has one parent and the analyser copies a node per visit, so
-once a binding is computed once, a top-level inline node is visited once per traversal and a
-body node once per application in its fresh `bodyScope`. Tests: the three-reference program
-calls `Tick` once per run on `run`, a runner and an instance, and the `Map` body case once,
-with the counting host op of the lazy tests. Then the "Known" line closes and the four docs
-sentences are true.
 
 ---
 

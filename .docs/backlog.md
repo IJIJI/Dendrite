@@ -392,45 +392,6 @@ and has to come before 1.0.0 or be covered by a warning first.
 
 ---
 
-## Core — a typed evaluator derived from the op's declaration (the strict keys)
-
-**What:** the stdlib holds 35 TypeScript casts in its evaluators (`a as number` 16 times,
-`predicate as FnValue` 6, `nodes as boolean[]` 2, `toList(list) as number[]` 3, and the rest),
-because `evaluate` receives `Record<string, unknown>`. 0.7.0 types the LAZY keys from the op's
-declaration (`todo.md`, "0.7.0", X-derived: `registerEvaluator({ op: If, … })` reads `lazy`,
-`variadic` and `name` off the definition). This entry is the rest of the same path: the strict
-keys typed from `type`, so `condition` is `boolean`, `nodes` is `number[]`, `predicate` is
-`FnValue`, and a `Thunk` gets its parameter (`Thunk<string>`, `Thunk<TallyState>`). Then every
-cast goes, and the four lazy ops do not change again.
-
-**When: 0.8.1** (the maintainer, 2026-10-13), the patch straight after option B's door; the order
-is in `todo.md`, "The order after 0.6.1".
-
-**Why deferred (2026-10-13):** two of its needs are not met yet. (1) Honesty: a strict key typed
-`number` is true only once the evaluator guarantees an input's declared type at the door, which
-is the rule of option B (`todo.md`, "Before 1.0.0"), the minor after 0.7. Until then an `any`
-can carry a string into a `number` input, as the casts allow today. (2) The `Type` constants are
-widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
-comes after option B.
-
-**What it requires** (the plan of 2026-10-16, 0.8.1 commit 1): (a) `Type.number` and the
-other constants typed as their literals, and `Type.array` keeping the element's type;
-`Type.fn` needs no generic, since a function input is an `FnValue` whatever its signature:
-additive. One limit, stated: the items of a declared `T[]` are the declaration's, as a host's
-declared output type is (the door checks a list's kind, not its items), which is why the
-three aggregates keep `numbersOf`. (b) A mapping from a `Type`
-literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
-`unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
-array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
-`Thunk<…>`, and a named host type to `unknown`. (c) A type-level test file that holds each line.
-(d) A host type with its own TypeScript type, only when a host asks (Beacon): a phantom on the
-`Type` value, `Type.of("Bus", busSchema)`, fed by `z.infer` of the zod schema the host registers
-anyway. Refused: a language generic over its registered types (a Builder over a mutate-in-place
-API). Measured on 2026-10-13: TypeScript 6 in the repo, `const` type parameters available, the
-lazy slice verified by a probe.
-
----
-
 ## Language — thunks as values, and a lazy lambda parameter
 
 **What:** 0.7.0 builds a `Thunk` (a class with a `.value` getter) that an op's evaluator

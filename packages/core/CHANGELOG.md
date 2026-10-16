@@ -9,6 +9,28 @@ The version follows [semantic versioning](https://semver.org/). Before 1.0 a **m
 break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
 (at `^0.8.0`), so a minor release here is always accompanied by a release of both.
 
+## 0.8.1
+
+- **New: an evaluator's inputs are typed from its definition, every key.** Hand the definition
+  `registerOp` returns to `registerEvaluator` as `op`, and each input arrives typed from its
+  declaration (`InputsOf`): a `number` input is a `number`, a variadic one a `number[]`, an
+  optional one `T | undefined`, a lazy one a `Thunk<T>`, a function an `FnValue`; `any` and a
+  host's own type are `unknown`. The items of a declared list are the declaration's: the
+  language checks a list's kind, not its items. An op registered by its name keeps every key
+  `unknown`, as before. The library is written this way, and its 52 casts are gone.
+- **New: the `Type` constants keep their literal types** (`Type.number` is
+  `{ kind: "name"; name: "number" }` to the compiler, and `Type.array` keeps its element), which
+  is what the typing above reads. `ValueOf` and `InputsOf` are exported.
+- **Deprecated: `LazyInputsOf`**, the lazy slice of `InputsOf`, kept until the minor before 1.0.
+- **Changed (types), no run-time change:** a host evaluator handed its definition as `op` with a
+  cast that disagrees with the declaration (`n as string` where `n` is a `number`) stops
+  compiling; a variable that held one `Type` constant and is assigned another needs a `Type`
+  annotation.
+- **Fixed: a binding is computed once per evaluation.** A binding read more than once, in one
+  expression or in a lambda body, was computed once per read whenever an input it reads had
+  changed (the "Known" line of 0.8.0); it is computed once, and every later read in that
+  evaluation reads its value.
+
 ## 0.8.0
 
 - **Breaking: "no value" everywhere.** An op handed a `null`, or a value of another kind, on an
