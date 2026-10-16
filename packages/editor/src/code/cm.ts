@@ -21,6 +21,7 @@ import { type Language, type ProgramDiagnostic } from "@dendrite-lang/core";
 import { minimalSetup } from "codemirror";
 
 import { positionOf } from "./diagnostic";
+import { opHover } from "./hover";
 import { lineStartOffsets, styledRanges, toOffset } from "./tokens";
 
 //? CodeMirror glue: the extension list a code view is built from, tokens.ts ranges as
@@ -69,7 +70,8 @@ const readOnly: Extension = [EditorState.readOnly.of(true), EditorView.editable.
 
 /**
  * The extensions a code view is built from: the setup, editing or read-only, the chosen
- * gutter, comment tokens, the theme and the highlighting. The session adds its own listeners.
+ * gutter, comment tokens, the theme, the highlighting and the hover on an op's name. The
+ * session adds its own listeners.
  */
 export function codeExtensions(
   language: Language,
@@ -87,6 +89,8 @@ export function codeExtensions(
     languageData,
     dendriteTheme,
     dendriteHighlighting(language),
+    // In a read-only view too: a static sample is where a reader most wants to know an op.
+    opHover(language),
   ];
 }
 
@@ -224,6 +228,19 @@ export const dendriteTheme = EditorView.theme({
   ".cm-tooltip .cm-tooltip-arrow:after": {
     borderTopColor: "var(--dendrite-bg)",
     borderBottomColor: "var(--dendrite-bg)",
+  },
+  // Hover on an op's name (hover.ts): the signature in the code face, the description below.
+  ".dendrite-hover": { padding: "6px 10px", maxWidth: "420px" },
+  ".dendrite-hover-signature": {
+    display: "block",
+    fontFamily: "var(--dendrite-mono)",
+    fontSize: "12px",
+    color: "var(--dendrite-text)",
+  },
+  ".dendrite-hover-description": {
+    margin: "4px 0 0",
+    color: "var(--dendrite-muted)",
+    lineHeight: "1.4",
   },
   ".cm-tooltip-autocomplete ul li[aria-selected]": {
     backgroundColor: "var(--dendrite-accent-soft)",
