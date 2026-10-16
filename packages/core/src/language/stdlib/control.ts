@@ -33,7 +33,7 @@ export function installControl(lang: Language): void {
     inferOutput: (inputTypes) => agreed(inputTypes["then"], inputTypes["else"]),
   });
 
-  lang.registerOp({
+  const IsSet = lang.registerOp({
     name: "IsSet",
     inputs: [{ name: "value", type: Type.any }],
     output: Type.boolean,
@@ -42,7 +42,7 @@ export function installControl(lang: Language): void {
     examples: [den`output found = IsSet(Find([1, 2, 3], item => item > 5))`],
   });
   lang.registerEvaluator({
-    op: "IsSet",
+    op: IsSet,
     evaluate: ({ value }) => value !== null && value !== undefined,
     // Always boolean - no inferOutput needed
   });

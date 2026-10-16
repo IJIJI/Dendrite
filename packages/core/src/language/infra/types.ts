@@ -12,18 +12,30 @@ export type Type =
 
 // A value const grouping the constructors so call sites
 // read as type builders: Type.array(Type.number), Type.fn([Type.number], Type.boolean).
+//
+// Each keeps its literal type (0.8.1): `Type.number` is `{ kind: "name"; name: "number" }` to
+// the compiler, and `Type.array(Type.string)` keeps its element, so an op declaration written
+// with them carries enough for `InputsOf` (registry.ts) to type an evaluator's inputs. `fn`
+// returns the function member of the union, not the union: a function input is an FnValue
+// whatever its signature, and `ValueOf` over the whole union would be `unknown`. A readonly
+// literal is assignable to `Type`, so every reader is unchanged; a variable that held one
+// constant and is assigned another needs a `Type` annotation now.
 export const Type = {
-  name: (name: string): Type => ({ kind: "name", name }),
-  array: (element: Type): Type => ({ kind: "array", element }),
-  fn: (params: Type[], returns: Type, paramNames?: string[]): Type =>
+  name: <N extends string>(name: N) => ({ kind: "name", name }) as const,
+  array: <E extends Type>(element: E) => ({ kind: "array", element }) as const,
+  fn: (
+    params: Type[],
+    returns: Type,
+    paramNames?: string[],
+  ): Extract<Type, { kind: "function" }> =>
     paramNames
       ? { kind: "function", params, returns, paramNames }
       : { kind: "function", params, returns },
-  any: { kind: "name", name: "any" } as Type,
-  null: { kind: "name", name: "null" } as Type,
-  number: { kind: "name", name: "number" } as Type,
-  boolean: { kind: "name", name: "boolean" } as Type,
-  string: { kind: "name", name: "string" } as Type,
+  any: { kind: "name", name: "any" } as const satisfies Type,
+  null: { kind: "name", name: "null" } as const satisfies Type,
+  number: { kind: "name", name: "number" } as const satisfies Type,
+  boolean: { kind: "name", name: "boolean" } as const satisfies Type,
+  string: { kind: "name", name: "string" } as const satisfies Type,
 };
 
 // Canonical string form used for diagnostics, serialisation, and (for named types)

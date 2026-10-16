@@ -12,7 +12,7 @@ import { Type } from "../infra/types";
 const none = (value: unknown): boolean => value === null || value === undefined;
 
 export function installConversion(lang: Language): void {
-  lang.registerOp({
+  const ToString = lang.registerOp({
     name: "ToString",
     inputs: [{ name: "value", type: Type.any }],
     output: Type.string,
@@ -21,11 +21,11 @@ export function installConversion(lang: Language): void {
     examples: [den`output label = ToString(42)`],
   });
   lang.registerEvaluator({
-    op: "ToString",
+    op: ToString,
     evaluate: ({ value }) => (none(value) ? null : Convert.toString(value)),
   });
 
-  lang.registerOp({
+  const ToNumber = lang.registerOp({
     name: "ToNumber",
     inputs: [{ name: "value", type: Type.any }],
     output: Type.number,
@@ -35,11 +35,11 @@ export function installConversion(lang: Language): void {
     examples: [den`output count = ToNumber("42")`, den`output count = Default(ToNumber("n/a"), 0)`],
   });
   lang.registerEvaluator({
-    op: "ToNumber",
+    op: ToNumber,
     evaluate: ({ value }) => (none(value) ? null : Convert.toNumber(value)),
   });
 
-  lang.registerOp({
+  const ToBool = lang.registerOp({
     name: "ToBool",
     inputs: [{ name: "value", type: Type.any }],
     output: Type.boolean,
@@ -49,7 +49,7 @@ export function installConversion(lang: Language): void {
     examples: [den`output hasItems = ToBool([4, 8])`],
   });
   lang.registerEvaluator({
-    op: "ToBool",
+    op: ToBool,
     evaluate: ({ value }) => (none(value) ? null : Convert.toBool(value)),
   });
 }

@@ -11,7 +11,7 @@ import { Type } from "../infra/types";
 export function installString(lang: Language): void {
   // `separator` is the first optional op input in the library: `required: false` means the
   // analyser raises no missing_op_input for it, and the evaluator is handed `undefined`.
-  lang.registerOp({
+  const Join = lang.registerOp({
     name: "Join",
     inputs: [
       // `convert`: a number or a boolean in the list becomes text before Join sees it, so
@@ -30,13 +30,12 @@ export function installString(lang: Language): void {
     ],
   });
   lang.registerEvaluator({
-    op: "Join",
+    op: Join,
     // `parts` arrives converted (the flag); a separator left out, or handed a null, is absent.
-    evaluate: ({ parts, separator }) =>
-      (parts as string[]).join((separator as string | undefined) ?? ""),
+    evaluate: ({ parts, separator }) => parts.join(separator ?? ""),
   });
 
-  lang.registerOp({
+  const Upper = lang.registerOp({
     name: "Upper",
     inputs: [{ name: "text", type: Type.string }],
     output: Type.string,
@@ -45,11 +44,11 @@ export function installString(lang: Language): void {
     examples: [den`output shout = Upper("live")`],
   });
   lang.registerEvaluator({
-    op: "Upper",
-    evaluate: ({ text }) => (text as string).toUpperCase(),
+    op: Upper,
+    evaluate: ({ text }) => text.toUpperCase(),
   });
 
-  lang.registerOp({
+  const Lower = lang.registerOp({
     name: "Lower",
     inputs: [{ name: "text", type: Type.string }],
     output: Type.string,
@@ -58,11 +57,11 @@ export function installString(lang: Language): void {
     examples: [den`output quiet = Lower("LIVE")`],
   });
   lang.registerEvaluator({
-    op: "Lower",
-    evaluate: ({ text }) => (text as string).toLowerCase(),
+    op: Lower,
+    evaluate: ({ text }) => text.toLowerCase(),
   });
 
-  lang.registerOp({
+  const Trim = lang.registerOp({
     name: "Trim",
     inputs: [{ name: "text", type: Type.string }],
     output: Type.string,
@@ -71,13 +70,13 @@ export function installString(lang: Language): void {
     examples: [den`output name = Trim("  cam 1  ")`],
   });
   lang.registerEvaluator({
-    op: "Trim",
-    evaluate: ({ text }) => (text as string).trim(),
+    op: Trim,
+    evaluate: ({ text }) => text.trim(),
   });
 
   // `Contains`, not `Includes`: Includes asks whether a LIST holds an item, and the two stay
   // apart so that text can one day be read as a list of letters without changing this one.
-  lang.registerOp({
+  const Contains = lang.registerOp({
     name: "Contains",
     inputs: [
       { name: "text", type: Type.string },
@@ -89,11 +88,11 @@ export function installString(lang: Language): void {
     examples: [den`output isCamera = Contains("CAM 1", "CAM")`],
   });
   lang.registerEvaluator({
-    op: "Contains",
-    evaluate: ({ text, part }) => (text as string).includes(part as string),
+    op: Contains,
+    evaluate: ({ text, part }) => text.includes(part),
   });
 
-  lang.registerOp({
+  const StartsWith = lang.registerOp({
     name: "StartsWith",
     inputs: [
       { name: "text", type: Type.string },
@@ -105,11 +104,11 @@ export function installString(lang: Language): void {
     examples: [den`output isCamera = StartsWith("CAM 1", "CAM")`],
   });
   lang.registerEvaluator({
-    op: "StartsWith",
-    evaluate: ({ text, part }) => (text as string).startsWith(part as string),
+    op: StartsWith,
+    evaluate: ({ text, part }) => text.startsWith(part),
   });
 
-  lang.registerOp({
+  const EndsWith = lang.registerOp({
     name: "EndsWith",
     inputs: [
       { name: "text", type: Type.string },
@@ -121,8 +120,8 @@ export function installString(lang: Language): void {
     examples: [den`output isFirst = EndsWith("CAM 1", "1")`],
   });
   lang.registerEvaluator({
-    op: "EndsWith",
-    evaluate: ({ text, part }) => (text as string).endsWith(part as string),
+    op: EndsWith,
+    evaluate: ({ text, part }) => text.endsWith(part),
   });
 
   // -------------------------------------------------------------------------

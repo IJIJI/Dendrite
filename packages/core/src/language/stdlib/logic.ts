@@ -52,7 +52,7 @@ export function installLogic(lang: Language): void {
   });
   lang.registerEvaluator({ op: Or, evaluate: ({ nodes }) => decide(nodes, true) });
 
-  lang.registerOp({
+  const Not = lang.registerOp({
     name: "Not",
     inputs: [{ name: "a", type: Type.boolean }],
     output: Type.boolean,
@@ -60,9 +60,9 @@ export function installLogic(lang: Language): void {
     description: "The opposite of a.",
     examples: [den`output off = Not(true)`],
   });
-  lang.registerEvaluator({ op: "Not", evaluate: ({ a }) => !a });
+  lang.registerEvaluator({ op: Not, evaluate: ({ a }) => !a });
 
-  lang.registerOp({
+  const Xor = lang.registerOp({
     name: "Xor",
     inputs: [{ name: "nodes", type: Type.boolean, variadic: true }],
     output: Type.boolean,
@@ -71,15 +71,15 @@ export function installLogic(lang: Language): void {
     examples: [den`output one = Xor(true, false)`],
   });
   lang.registerEvaluator({
-    op: "Xor",
-    evaluate: ({ nodes }) => (nodes as boolean[]).filter(Boolean).length % 2 === 1,
+    op: Xor,
+    evaluate: ({ nodes }) => nodes.filter(Boolean).length % 2 === 1,
   });
 
   // -------------------------------------------------------------------------
   // Comparing
   // -------------------------------------------------------------------------
 
-  lang.registerOp({
+  const Equals = lang.registerOp({
     name: "Equals",
     inputs: [
       { name: "a", type: Type.any },
@@ -90,9 +90,9 @@ export function installLogic(lang: Language): void {
     description: "True when a and b are the same value.",
     examples: [den`output same = Equals("a", "a")`],
   });
-  lang.registerEvaluator({ op: "Equals", evaluate: ({ a, b }) => a === b });
+  lang.registerEvaluator({ op: Equals, evaluate: ({ a, b }) => a === b });
 
-  lang.registerOp({
+  const NotEquals = lang.registerOp({
     name: "NotEquals",
     inputs: [
       { name: "a", type: Type.any },
@@ -103,9 +103,9 @@ export function installLogic(lang: Language): void {
     description: "True when a and b differ.",
     examples: [den`output differ = NotEquals(1, 2)`],
   });
-  lang.registerEvaluator({ op: "NotEquals", evaluate: ({ a, b }) => a !== b });
+  lang.registerEvaluator({ op: NotEquals, evaluate: ({ a, b }) => a !== b });
 
-  lang.registerOp({
+  const GreaterThan = lang.registerOp({
     name: "GreaterThan",
     inputs: [
       { name: "a", type: Type.number },
@@ -117,11 +117,11 @@ export function installLogic(lang: Language): void {
     examples: [den`output bigger = GreaterThan(3, 2)`],
   });
   lang.registerEvaluator({
-    op: "GreaterThan",
-    evaluate: ({ a, b }) => (a as number) > (b as number),
+    op: GreaterThan,
+    evaluate: ({ a, b }) => a > b,
   });
 
-  lang.registerOp({
+  const LessThan = lang.registerOp({
     name: "LessThan",
     inputs: [
       { name: "a", type: Type.number },
@@ -132,7 +132,7 @@ export function installLogic(lang: Language): void {
     description: "True when a is less than b.",
     examples: [den`output smaller = LessThan(2, 3)`],
   });
-  lang.registerEvaluator({ op: "LessThan", evaluate: ({ a, b }) => (a as number) < (b as number) });
+  lang.registerEvaluator({ op: LessThan, evaluate: ({ a, b }) => a < b });
 
   // -------------------------------------------------------------------------
   // Symbols - surface sugar over the ops above.
