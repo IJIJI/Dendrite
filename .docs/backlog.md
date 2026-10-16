@@ -413,8 +413,12 @@ can carry a string into a `number` input, as the casts allow today. (2) The `Typ
 widened (`as Type` in `infra/types.ts`), so their literal names are lost to the compiler. So it
 comes after option B.
 
-**What it requires:** (a) `Type.number` and the other constants typed as their literals, and
-`Type.array` / `Type.fn` keeping the element's type: additive. (b) A mapping from a `Type`
+**What it requires** (the plan of 2026-10-16, 0.8.1 commit 1): (a) `Type.number` and the
+other constants typed as their literals, and `Type.array` keeping the element's type;
+`Type.fn` needs no generic, since a function input is an `FnValue` whatever its signature:
+additive. One limit, stated: the items of a declared `T[]` are the declaration's, as a host's
+declared output type is (the door checks a list's kind, not its items), which is why the
+three aggregates keep `numbersOf`. (b) A mapping from a `Type`
 literal to a TypeScript type, about forty lines: a primitive name to its primitive, `any` to
 `unknown`, `null` to `null`, an array to an array, a function to `FnValue`, `variadic` to an
 array, `required: false` to `| undefined`, `convert` to the declared type, `lazy` to
@@ -767,6 +771,33 @@ Small tracked items promoted from inline `// TODO`s. Each names its source locat
   string union today, `"global" | "program"`. It is fine as a union; the TODO asks whether an
   exported constant would read better at call sites. Low value - close it unless a third level
   appears.
+
+---
+
+## Editor — what a `null` output does, and what a host may configure
+
+**What:** since 0.8.0 a `null` output is ordinary: it is the program saying a value was
+missing on its way. The Outputs pane prints every value through `formatValue`
+(`packages/editor/src/ports/format.ts`), so a `null` is the text `null`, in the same style as
+a number beside it. Decided by the maintainer on 2026-10-16: it stays so for now, since
+`null` is what the language writes, and the questions below are asked here instead.
+
+**The questions:**
+
+- A muted style on the value, so `null` beside `42` reads as "no value here, on purpose"
+  rather than as a fault. One class on the `<code>`, one rule in `style.css`.
+- A host option on the pane: print "no value" instead of `null`, or hide such a row, or a
+  callback that formats one. `OutputsProps` has `stale` for the stale rows already; a sibling
+  for a missing value would sit beside it.
+- The lines variant (`.dendrite-outputs-lines`, `→ name: type = value`): what it prints for a
+  missing value, and whether it drops the `=`.
+- Whether the type tag should say it: an output declared `number` that holds `null`.
+
+**Why deferred:** no host has asked. The one pane in the field is the playground's.
+
+**What it requires:** a look at a real page first, light and dark, in the Minimal strip and in
+a pane's row, as the surfaces had; then one of the options above, in an editor patch, with a
+line on *Packages: editor*.
 
 ---
 
