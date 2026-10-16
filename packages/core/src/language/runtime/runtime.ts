@@ -13,7 +13,7 @@ import { defaultValueFor } from "./seed";
 //
 // Two levels of ports meet here:
 //   global  - the runtime's own layers (a host contract, a capability). One value per
-//             name for every program; the host pushes them with updateInputs.
+//             name for every program; the host pushes them with setInputs.
 //   program - what one registered program declares on top (its document layer). Values
 //             live with that program alone; the host pushes them through its handle.
 // Both levels compose per entry, so a program-layer type resolves when its inputs seed.
@@ -43,8 +43,15 @@ export interface ProgramHandle {
   /** Subscribe to evaluation errors for this program. Returns an unsubscribe function. */
   onError(handler: (error: EvalError) => void): () => void;
 
-  /** Set one PROGRAM-level input and re-evaluate this program. Throws on a global name. */
+  /** Set one PROGRAM-level input and re-evaluate this program: `setInputs` of one name. */
   setInput(name: string, value: unknown): Map<string, unknown>;
+
+  /**
+   * Set several PROGRAM-level inputs and re-evaluate this program once. All or none: a
+   * global or unknown name, or a value that does not fit, throws and nothing moves. An empty
+   * batch evaluates nothing and returns an empty map, as the runtime's `setInputs` does.
+   */
+  setInputs(changes: Readonly<Record<string, unknown>>): Map<string, unknown>;
 
   /**
    * Fire a program-level trigger: set, evaluate, then reset to the input's default and
@@ -112,14 +119,25 @@ export interface Runtime {
    */
   unregister(id: string): void;
 
-  /** Update a single global input and re-evaluate all affected programs. */
-  updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>;
+  /**
+   * Set one GLOBAL input and re-evaluate the programs that read it: `setInputs` of one name.
+   * A name that is not a global input is ignored (a handle's `setInput` throws on one: there
+   * the name is a program's own, and a wrong one is a bug).
+   */
+  setInput(name: string, value: unknown): Map<string, Map<string, unknown>>;
 
   /**
-   * Update multiple global inputs atomically - one evaluation pass per program.
-   * Preferred over multiple updateInput calls for the same ATEM event.
-   * Names that are not declared globally are ignored.
+   * Set several GLOBAL inputs at once, all or none, with one evaluation pass per program
+   * that reads any of them: prefer it for values that arrive together. A value that does not
+   * fit throws and nothing moves; names that are not global inputs are ignored, and a batch
+   * with none left evaluates nothing and returns an empty map.
    */
+  setInputs(changes: Readonly<Record<string, unknown>>): Map<string, Map<string, unknown>>;
+
+  /** @deprecated `setInput`, the same call; removed in the minor before 1.0. */
+  updateInput(name: string, value: unknown): Map<string, Map<string, unknown>>;
+
+  /** @deprecated `setInputs`, the same call; removed in the minor before 1.0. */
   updateInputs(changes: Record<string, unknown>): Map<string, Map<string, unknown>>;
 
   /**
@@ -279,10 +297,23 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
     return kept;
   }
 
+  const setGlobalInputs = (
+    changes: Readonly<Record<string, unknown>>,
+  ): Map<string, Map<string, unknown>> => applyChanges(new Map(Object.entries(changes)));
+  const setGlobalInput = (name: string, value: unknown): Map<string, Map<string, unknown>> =>
+    setGlobalInputs({ [name]: value });
+
   function handleFor(
     entry: ProgramEntry,
     first: { outputs: Map<string, unknown>; error: EvalError | null },
   ): ProgramHandle {
+    // One path for one name or many: the entry checks all before it stores any.
+    const setInputs = (changes: Readonly<Record<string, unknown>>): Map<string, unknown> => {
+      const names = Object.keys(changes);
+      if (names.length === 0) return new Map();
+      entry.setInputs(changes);
+      return evaluateAndRoute(entry, new Set(names)).outputs;
+    };
     return {
       id: entry.id,
       initialOutputs: first.outputs,
@@ -295,10 +326,8 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
         entry.errorHandlers.add(handler);
         return () => entry.errorHandlers.delete(handler);
       },
-      setInput(name, value) {
-        entry.setInput(name, value);
-        return evaluateAndRoute(entry, new Set([name])).outputs;
-      },
+      setInput: (name, value) => setInputs({ [name]: value }),
+      setInputs,
       fireTrigger(name, value) {
         entry.setInput(name, value);
         const fired = evaluateAndRoute(entry, new Set([name])).outputs;
@@ -348,7 +377,7 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
       const entry = new ProgramEntry(id, bound, globalValues);
       entries.set(id, entry);
       addToIndex(entry);
-      for (const [name, value] of values) entry.setInput(name, value);
+      entry.setInputs(Object.fromEntries(values));
       return handleFor(entry, evaluateAndRoute(entry));
     },
 
@@ -360,7 +389,7 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
       removeFromIndex(entry);
       entry.replace(bound, globalValues);
       addToIndex(entry);
-      for (const [name, value] of values) entry.setInput(name, value);
+      entry.setInputs(Object.fromEntries(values));
       return handleFor(entry, evaluateAndRoute(entry));
     },
 
@@ -368,13 +397,11 @@ export function createRuntime(base: Vocabulary, options: RuntimeOptions = {}): R
       doUnregister(id);
     },
 
-    updateInput(name, value) {
-      return applyChanges(new Map([[name, value]]));
-    },
-
-    updateInputs(changes) {
-      return applyChanges(new Map(Object.entries(changes)));
-    },
+    setInput: setGlobalInput,
+    setInputs: setGlobalInputs,
+    // The names before 0.8.2, the same functions (deprecated on the interface).
+    updateInput: setGlobalInput,
+    updateInputs: setGlobalInputs,
 
     fireTrigger(name, value) {
       const results = applyChanges(new Map([[name, value]]));

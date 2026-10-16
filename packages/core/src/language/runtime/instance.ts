@@ -110,8 +110,16 @@ export interface ProgramInstance {
    * shape a command needs to cross a wire, and a synchronous answer would not.
    */
   setLayer(id: string, ports: Ports): void;
-  /** Set one program-level input. Throws on a global name. */
+  /** Set one program-level input: `setInputs` of one name. Throws on a global name. */
   setInput(name: string, value: unknown): void;
+  /**
+   * Set several program-level inputs at once: one evaluation, one `values` and at most one
+   * `snapshot`. All or none: a global or unknown name throws, and a value that does not fit
+   * refuses the whole batch, reported as `value_does_not_fit` on each name that did not fit,
+   * and nothing moves. A value equal to the one held drops out, and a batch with nothing left
+   * stores, publishes and evaluates nothing.
+   */
+  setInputs(changes: Readonly<Record<string, unknown>>): void;
   /** Fire a program-level trigger: set, evaluate, reset to its default, evaluate again. */
   fireTrigger(name: string, value: unknown): void;
   /**
@@ -250,21 +258,33 @@ class Instance implements ProgramInstance {
   }
 
   setInput(name: string, raw: unknown): void {
-    // What the evaluator will see: a NaN, an infinity or an undefined a host pushes is no
-    // value (0.8.0), and `values` and the snapshot show what runs, not the raw push.
-    const value = clean(raw);
-    if (!this.admit(this.programInput(name), value)) return;
-    if (Object.is(this.programValues[name], value) && name in this.programValues) return;
-    this.storeValue(name, value);
-    // While the registered program is behind the source, the value is kept for the compile
+    this.setInputs({ [name]: raw });
+  }
+
+  setInputs(changes: Readonly<Record<string, unknown>>): void {
+    // Every name resolved first, so a global or unknown one throws before anything moves.
+    // Each value as the evaluator will see it: a NaN, an infinity or an undefined a host
+    // pushes is no value (0.8.0), and `values` and the snapshot show what runs.
+    const batch = Object.keys(changes).map(
+      (name) => [this.programInput(name), clean(changes[name])] as const,
+    );
+    if (!this.admit(batch)) return;
+    // Only after the batch is admitted: a fitting value clears its name's refusal even when
+    // it equals the one held, as a single setInput always has.
+    const moved = batch
+      .filter(([def, value]) => !this.holds(def.name, value))
+      .map(([def, value]) => [def.name, value] as const);
+    if (moved.length === 0) return;
+    this.storeValues(moved);
+    // While the registered program is behind the source, the values are kept for the compile
     // that recovers rather than fed to a program the user has already replaced.
-    if (this.live) this.handle?.setInput(name, value);
+    if (this.live) this.handle?.setInputs(Object.fromEntries(moved));
   }
 
   fireTrigger(name: string, raw: unknown): void {
     const def = this.programInput(name);
     const value = clean(raw);
-    if (!this.admit(def, value)) return;
+    if (!this.admit([[def, value]])) return;
     if (!this.live) return;
     this.handle?.fireTrigger(name, value);
     // The runtime has already reset it; mirror where the value landed, quietly when it did
@@ -402,11 +422,21 @@ class Instance implements ProgramInstance {
     if (changed) this.values$.set(next);
   }
 
+  private holds(name: string, value: unknown): boolean {
+    return Object.is(this.programValues[name], value) && name in this.programValues;
+  }
+
   private storeValue(name: string, value: unknown): void {
-    if (Object.is(this.programValues[name], value) && name in this.programValues) return;
-    this.programValues = { ...this.programValues, [name]: value };
+    if (!this.holds(name, value)) this.storeValues([[name, value]]);
+  }
+
+  // One new values object, so `values` emits once for a batch, and the snapshot once when
+  // the persisted layer owns any of the names.
+  private storeValues(values: readonly (readonly [string, unknown])[]): void {
+    this.programValues = { ...this.programValues, ...Object.fromEntries(values) };
     this.values$.set(this.programValues);
-    if (this.persistedLayer()?.ports.inputs.some((input) => input.name === name)) {
+    const persisted = this.persistedLayer()?.ports.inputs;
+    if (persisted?.some((input) => values.some(([name]) => name === input.name))) {
       this.publishSnapshot();
     }
   }
@@ -441,19 +471,30 @@ class Instance implements ProgramInstance {
     return def;
   }
 
-  // Does the value fit the type its input declares? The runtime throws on one that does not
-  // (a host bug); here the caller may be a pane or a replica, so it is refused through the
-  // diagnostics instead, and nothing moves. Published once per input, not once per push: a
-  // sensor feeding a bad value every frame says so once. While the layers do not compose
-  // there is nothing to check against, and the compile that recovers re-seeds what misfits.
-  private admit(def: InputDefinition, value: unknown): boolean {
+  // Does every value fit the type its input declares? The runtime throws on one that does
+  // not (a host bug); here the caller may be a pane or a replica, so it is refused through the
+  // diagnostics instead, and nothing moves. All or none: every value is checked first, as a
+  // pure pass, and one that does not fit refuses the batch, reported on its own name; only a
+  // batch that lands clears its names' earlier refusals, since a fitting value in a refused
+  // batch did not land. Published once per input, not once per push: a sensor feeding a bad
+  // value every frame says so once. While the layers do not compose there is nothing to check
+  // against, and the compile that recovers re-seeds what misfits.
+  private admit(batch: readonly (readonly [InputDefinition, unknown])[]): boolean {
     const descriptor = this.descriptor();
-    const problem = descriptor ? misfit(def, value, descriptor) : null;
-    if (problem === null) {
-      if (this.rejected.delete(def.name)) this.publishDiagnostics();
+    const problems = descriptor
+      ? batch.flatMap(([def, value]) => {
+          const problem = misfit(def, value, descriptor);
+          return problem === null ? [] : [{ def, problem }];
+        })
+      : [];
+    if (problems.length === 0) {
+      const cleared = batch.map(([def]) => this.rejected.delete(def.name)).some(Boolean);
+      if (cleared) this.publishDiagnostics();
       return true;
     }
-    if (!this.rejected.has(def.name)) {
+    let added = false;
+    for (const { def, problem } of problems) {
+      if (this.rejected.has(def.name)) continue;
       this.rejected.set(def.name, {
         severity: "error",
         stage: "input",
@@ -462,8 +503,9 @@ class Instance implements ProgramInstance {
         where: `input ${def.name}`,
         refused: true,
       });
-      this.publishDiagnostics();
+      added = true;
     }
+    if (added) this.publishDiagnostics();
     return false;
   }
 

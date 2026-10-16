@@ -140,21 +140,30 @@ class Replica implements RemoteInstance {
   }
 
   setInput(name: string, value: unknown): void {
-    this.assertProgramInput(name);
+    this.setInputs({ [name]: value });
+  }
+
+  setInputs(changes: Readonly<Record<string, unknown>>): void {
+    // Every name checked first, so a throw on the second one sends and echoes nothing.
+    const names = Object.keys(changes);
+    for (const name of names) this.assertProgramInput(name);
     // Echo only what a user feeds: the server refuses a host-fed input, and a replica that
-    // showed the write anyway would be lying until the next push.
-    const owner = this.ownerOf(name);
-    if (owner?.policy.feeds === "user") {
-      this.values$.set({ ...this.values$.get(), [name]: value });
-      if (owner.policy.persisted) {
-        const snapshot = this.snapshot$.get();
-        this.snapshot$.set({
-          ...snapshot,
-          inputValues: { ...snapshot.inputValues, [name]: value },
-        });
-      }
+    // showed the write anyway would be lying until the next push. Written once over the
+    // batch, as the instance publishes once.
+    const echoed: Record<string, unknown> = {};
+    const persisted: Record<string, unknown> = {};
+    for (const name of names) {
+      const owner = this.ownerOf(name);
+      if (owner?.policy.feeds !== "user") continue;
+      echoed[name] = changes[name];
+      if (owner.policy.persisted) persisted[name] = changes[name];
     }
-    this.send({ kind: "setInput", name, value });
+    if (Object.keys(echoed).length > 0) this.values$.set({ ...this.values$.get(), ...echoed });
+    if (Object.keys(persisted).length > 0) {
+      const snapshot = this.snapshot$.get();
+      this.snapshot$.set({ ...snapshot, inputValues: { ...snapshot.inputValues, ...persisted } });
+    }
+    this.send({ kind: "setInputs", changes: { ...changes } });
   }
 
   fireTrigger(name: string, value: unknown): void {

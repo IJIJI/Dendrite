@@ -64,10 +64,24 @@ export class ProgramEntry {
     this.live = this.activate(bound, globalValues);
   }
 
+  /**
+   * Set program-level inputs, all or none: every name is resolved and every value checked
+   * before any is stored, so a global or unknown name, or a value that does not fit, throws
+   * with nothing moved. The entry owns its values, so the one check sits beside the store.
+   */
+  setInputs(changes: Readonly<Record<string, unknown>>): void {
+    const entries = Object.entries(changes);
+    for (const [name, value] of entries) {
+      assertFits(this.programInput(name), value, this.live.bound.composed);
+    }
+    for (const [name, value] of entries) {
+      this.values.set(name, value);
+      updateInput(name, value, this.live.state);
+    }
+  }
+
   setInput(name: string, value: unknown): void {
-    assertFits(this.programInput(name), value, this.live.bound.composed);
-    this.values.set(name, value);
-    updateInput(name, value, this.live.state);
+    this.setInputs({ [name]: value });
   }
 
   /**
