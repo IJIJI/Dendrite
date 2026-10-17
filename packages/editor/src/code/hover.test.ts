@@ -53,14 +53,16 @@ describe("signatureParts: the signature as the reference prints it", () => {
   });
 });
 
-describe("hoverAt: the op under the pointer", () => {
+describe("hoverAt: what is under the pointer", () => {
   const source = "output out = Upper(name) ++ x";
   // `Upper` spans 13 to 18; the `(` is at 18.
   const at = (pos: number, side: -1 | 1) => hoverAt(source, pos, side, language);
+  // The target at the first character of `needle`, in a source of its own.
+  const on = (code: string, needle: string) => hoverAt(code, code.indexOf(needle), 1, language);
 
   it("finds the op from its first character to its last", () => {
-    expect(at(13, 1)).toMatchObject({ op: { name: "Upper" }, from: 13, to: 18 });
-    expect(at(18, -1)?.op.name).toBe("Upper"); // the pointer on the `r`, before position 18
+    expect(at(13, 1)).toMatchObject({ kind: "op", op: { name: "Upper" }, from: 13, to: 18 });
+    expect(at(18, -1)).toMatchObject({ kind: "op", op: { name: "Upper" } }); // on the `r`
   });
 
   it("is nothing just outside the name", () => {
@@ -68,10 +70,35 @@ describe("hoverAt: the op under the pointer", () => {
     expect(at(18, 1)).toBeUndefined(); // the pointer on the `(`
   });
 
-  it("is nothing on a keyword, a plain name, a symbol or an input", () => {
+  it("is nothing on a keyword, a plain name or a symbol", () => {
     expect(at(0, 1)).toBeUndefined(); // output
     expect(at(19, 1)).toBeUndefined(); // name, an identifier
     expect(at(25, 1)).toBeUndefined(); // ++
-    expect(hoverAt("output out = $Upper", 15, 1, language)).toBeUndefined(); // an input
+  });
+
+  it("finds an input from its `$` and from its name, with one span over both", () => {
+    const code = "output out = $score + 1";
+    const span = { kind: "input", name: "score", from: 13, to: 19 };
+    expect(on(code, "$")).toEqual(span);
+    expect(on(code, "score")).toEqual(span);
+    expect(hoverAt("output out = $Upper", 15, 1, language)).toMatchObject({ kind: "input" });
+    expect(hoverAt("output out = $", 13, 1, language)).toBeUndefined(); // a `$` being typed
+  });
+
+  it("finds an output on the name right after `output`, and nowhere else", () => {
+    expect(on("output total = 1", "total")).toEqual({
+      kind: "output",
+      name: "total",
+      from: 7,
+      to: 12,
+    });
+    expect(on("let output2 = 1\noutput out = output2", "output2")).toBeUndefined();
+  });
+
+  it("finds a type where a type is written", () => {
+    expect(on("output f = (n: number) => n", "number")).toMatchObject({
+      kind: "type",
+      name: "number",
+    });
   });
 });

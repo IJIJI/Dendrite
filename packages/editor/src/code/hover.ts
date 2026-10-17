@@ -1,13 +1,11 @@
-import { hoverTooltip, type Tooltip } from "@codemirror/view";
 import { type Language, type OpDefinition, typeToString } from "@dendrite-lang/core";
 
 import { type SourcePart, sourceParts } from "./source";
-import { styledRanges } from "./tokens";
+import { type StyledRange, styledRanges } from "./tokens";
 
-//? Hover on an op's name: its signature, coloured as code, and its one-sentence description,
-// from the language's own descriptor, so a host's op shows the same as the library's. The
-// position logic is pure (`hoverAt`, tested without a DOM); `opHover` only wires it into
-// CodeMirror and builds the element.
+//? The language half of the hover, pure and DOM-free: what is under the pointer (`hoverAt`),
+// and an op's signature as coloured parts. What the hover then says about an input, an
+// output or a type needs the running instance: that half is session/hover.ts.
 
 /**
  * An op's signature as highlighted parts, the way Dendrite writes a function type:
@@ -33,65 +31,56 @@ export function signatureParts(op: OpDefinition, language: Language): SourcePart
   return parts;
 }
 
-/** The op whose name covers the hovered character, with the name's range. */
-export interface OpHover {
-  op: OpDefinition;
-  from: number;
-  to: number;
-}
+/** What a hover explains, with the range of source it covers. */
+export type HoverTarget = { from: number; to: number } & (
+  | { kind: "op"; op: OpDefinition }
+  | { kind: "input"; name: string }
+  | { kind: "output"; name: string }
+  | { kind: "type"; name: string }
+);
 
 /**
- * The op under the pointer, or undefined. `pos` and `side` are CodeMirror's: the position the
+ * What is under the pointer, or undefined. `pos` and `side` are CodeMirror's: the position the
  * pointer is nearest, and whether it is before it (-1) or after it (1), so the character under
  * it is `pos - 1` or `pos`. A name's first and last characters are on it; the gap after it is
- * not. A token is an op where the highlighter colours it as one.
+ * not. Each kind is read off the highlighter's classes, so a hover is where a colour is: an
+ * op's name; an input's `$` or its name, either one covering both; the name right after the
+ * `output` keyword; a type where a type is written.
  */
 export function hoverAt(
   source: string,
   pos: number,
   side: -1 | 1,
   language: Language,
-): OpHover | undefined {
+): HoverTarget | undefined {
   const char = side < 0 ? pos - 1 : pos;
-  const range = styledRanges(source, language).find(
-    (r) => r.cls === "op" && r.from <= char && char < r.to,
-  );
-  const op = range && language.descriptor.ops.get(source.slice(range.from, range.to));
-  return range && op ? { op, from: range.from, to: range.to } : undefined;
-}
-
-/** The hover extension: `hoverAt` as a CodeMirror tooltip. */
-export function opHover(language: Language) {
-  return hoverTooltip((view, pos, side): Tooltip | null => {
-    const hover = hoverAt(view.state.doc.toString(), pos, side, language);
-    if (!hover) return null;
-    return {
-      pos: hover.from,
-      end: hover.to,
-      above: true,
-      create: () => {
-        // Text nodes only: a description is a host's string, never markup. The `tok-*`
-        // classes take the same colours as the code (style.css).
-        const dom = document.createElement("div");
-        dom.className = "dendrite-hover";
-        const signature = dom.appendChild(document.createElement("code"));
-        signature.className = "dendrite-hover-signature";
-        for (const part of signatureParts(hover.op, language)) {
-          if (!part.cls) {
-            signature.append(part.text);
-            continue;
-          }
-          const span = signature.appendChild(document.createElement("span"));
-          span.className = `tok-${part.cls}`;
-          span.textContent = part.text;
-        }
-        if (hover.op.description) {
-          const description = dom.appendChild(document.createElement("p"));
-          description.className = "dendrite-hover-description";
-          description.textContent = hover.op.description;
-        }
-        return { dom };
-      },
-    };
-  });
+  const ranges = styledRanges(source, language);
+  const at = ranges.findIndex((r) => r.from <= char && char < r.to);
+  const range = ranges[at];
+  if (!range) return undefined;
+  const text = (r: StyledRange): string => source.slice(r.from, r.to);
+  const span = { from: range.from, to: range.to };
+  switch (range.cls) {
+    case "op": {
+      const op = language.descriptor.ops.get(text(range));
+      return op && { kind: "op", op, ...span };
+    }
+    case "input": {
+      // The `$` and the name are two ranges of one class, the `$` always first.
+      const [sigil, name] = text(range) === "$" ? [range, ranges[at + 1]] : [ranges[at - 1], range];
+      return sigil && name?.cls === "input" && text(name) !== "$"
+        ? { kind: "input", name: text(name), from: sigil.from, to: name.to }
+        : undefined;
+    }
+    case "type":
+      return { kind: "type", name: text(range), ...span };
+    case "ident": {
+      const before = ranges[at - 1];
+      return before?.cls === "keyword" && text(before) === "output"
+        ? { kind: "output", name: text(range), ...span }
+        : undefined;
+    }
+    default:
+      return undefined;
+  }
 }

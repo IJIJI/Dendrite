@@ -21,12 +21,12 @@ import { type Language, type ProgramDiagnostic } from "@dendrite-lang/core";
 import { minimalSetup } from "codemirror";
 
 import { positionOf } from "./diagnostic";
-import { opHover } from "./hover";
 import { lineStartOffsets, styledRanges, toOffset } from "./tokens";
 
 //? CodeMirror glue: the extension list a code view is built from, tokens.ts ranges as
 // decorations, program diagnostics as @codemirror/lint squiggles, and the brand on the
-// editor's chrome. With session/editor.ts, the only module that knows about CodeMirror.
+// editor's chrome. With session/editor.ts and session/hover.ts, the only modules that know
+// about CodeMirror.
 
 /** How the code is presented. Every layout takes these; each picks its own defaults. */
 export interface CodeOptions {
@@ -70,8 +70,8 @@ const readOnly: Extension = [EditorState.readOnly.of(true), EditorView.editable.
 
 /**
  * The extensions a code view is built from: the setup, editing or read-only, the chosen
- * gutter, comment tokens, the theme, the highlighting and the hover on an op's name. The
- * session adds its own listeners.
+ * gutter, comment tokens, the theme and the highlighting. The session adds its own listeners
+ * and the hover, which reads the instance.
  */
 export function codeExtensions(
   language: Language,
@@ -89,8 +89,6 @@ export function codeExtensions(
     languageData,
     dendriteTheme,
     dendriteHighlighting(language),
-    // In a read-only view too: a static sample is where a reader most wants to know an op.
-    opHover(language),
   ];
 }
 
@@ -229,15 +227,17 @@ export const dendriteTheme = EditorView.theme({
     borderTopColor: "var(--dendrite-bg)",
     borderBottomColor: "var(--dendrite-bg)",
   },
-  // Hover on an op's name (hover.ts): the signature in the code face, the description below.
+  // The hover (session/hover.ts): a head in the code face, muted notes, then code blocks that
+  // keep their lines (an example, a struct's fields).
   ".dendrite-hover": { padding: "6px 10px", maxWidth: "420px" },
-  ".dendrite-hover-signature": {
+  ".dendrite-hover-head, .dendrite-hover-code": {
     display: "block",
     fontFamily: "var(--dendrite-mono)",
     fontSize: "12px",
     color: "var(--dendrite-text)",
   },
-  ".dendrite-hover-description": {
+  ".dendrite-hover-code": { marginTop: "6px", whiteSpace: "pre-wrap" },
+  ".dendrite-hover-note": {
     margin: "4px 0 0",
     color: "var(--dendrite-muted)",
     lineHeight: "1.4",

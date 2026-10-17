@@ -766,8 +766,8 @@ line on *Packages: editor*.
 
 **What:** the hover of 0.8.2 shows what the language and the instance hold: an op's signature,
 description and first example; an input's type, start value, layer and program-level value; an
-output's mode, layer and value; a type's fields, `extends`, schema and origin (decided
-2026-10-16, A). Three things wait, each with its own condition (B):
+output's mode, layer and value; a type's fields and `extends` (decided
+2026-10-16, A). Four things wait, each with its own condition (B):
 
 - **A link to the op's reference page.** An option on the editor, since only a host knows where
   its reference lives, and a host's own op has none. When a host asks; the playground first.
@@ -777,11 +777,17 @@ output's mode, layer and value; a type's fields, `extends`, schema and origin (d
 - **A binding's current value.** The evaluator keeps no value per binding that a host can read.
   It needs run-time tracking ("Core — run-time tracking"), whose first step is 0.9.1.
 
+- **A type a port layer declares** (found 2026-10-17, building the hover). The highlighter
+  (`styledRanges`) knows the language's types only, so a struct type from a layer, written in
+  an annotation (`(pt: Point) => pt.x`), is coloured as a plain name and has no hover. Both
+  would read the composed descriptor (`instance.ports`), which the highlighter does not take:
+  the session would pass the composed type names in, and re-highlight when the ports change.
+
 The types at a call site, and a binding's or a lambda parameter's inferred type, belong to the
 language service ("Language service (editor intelligence)").
 
-**Why deferred:** no host asks for the first; the other two need core to expose something it
-does not.
+**Why deferred:** no host asks for the first; the second and third need core to expose
+something it does not; the fourth is a highlighter change with no reader asking yet.
 
 **What it requires:** per item, above.
 

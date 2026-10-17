@@ -7,6 +7,7 @@ import { type CodeOptions, codeExtensions, toLintDiagnostics } from "../code/cm"
 import { lineStartOffsets, toOffset } from "../code/tokens";
 import { createSubject, type Observable } from "../observable";
 import { type Connection } from "./connection";
+import { dendriteHover } from "./hover";
 import { DOCUMENT_VERSION, type EditorDocument } from "./document";
 
 //? createEditor: the host entry point (Facade). Mounts a code editor over a Connection - the
@@ -101,6 +102,7 @@ export function createEditor(parent: HTMLElement, config: EditorConfig): EditorH
       keymap.of([indentWithTab, { key: "Mod-Shift-z", run: redo }]),
       compileOnEdit,
       trackHistory,
+      dendriteHover(instance, language),
     ],
   });
 
