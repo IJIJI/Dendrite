@@ -191,10 +191,19 @@ The runbook. Only the packages whose version changed are part of a release.
 4. **One GitHub release per batch**, on core's tag if core is in it, otherwise on the tag of one
    changed package. The title and body name every package and version in the batch. Publishing the
    release starts `Stage release`.
+   - **The two tags on the release form, said with the text** (the maintainer, 2026-10-17): the
+     release's tag (core's if core is in the batch, as above) and the "previous tag", which is
+     the tag the previous GitHub release is on, so the compare covers everything since that
+     release. For 0.8.2: `@dendrite-lang/core@0.8.2`, previous `@dendrite-lang/core@0.8.1`.
+   - **The title names each package's number when the numbers differ** (the maintainer,
+     2026-10-17), since the packages share a minor but not a patch: one package alone,
+     `Dendrite core 0.8.1 - …`; several on one number (every minor), `Dendrite 0.9.0 - …`;
+     several on different numbers, each by name, `Dendrite core 0.8.2, editor 0.8.1, link
+     0.8.1 - …`. A bare `Dendrite 0.8.2` there would read as if every package were 0.8.2.
    - **The text follows the shape of the previous releases, every time.** Read the last one
      first, `gh release view "<tag>" --json name,body`, and keep its parts in its order: the
-     title `Dendrite <version> - <what it brings>` (`Dendrite editor <version> - …` for one
-     package alone); one lead sentence; a `> [!IMPORTANT]` callout naming each breaking change
+     title `Dendrite <version> - <what it brings>`, its versions by the rule above; one lead
+     sentence; a `> [!IMPORTANT]` callout naming each breaking change
      with what a host does about it, or what changes for every host; "Packages in this
      release", a table of package, version, tag and what changed, with a line for a package
      released only because its peer range demands it; the `npm install` block; "What is new",
@@ -340,6 +349,25 @@ the repo's `tsc` against the INSTALLED package (`--moduleResolution bundler --sk
 run from the check folder so the imports resolve there). A run-time check cannot see a type;
 reading the `.d.ts` for a name proves the name, not that it types anything. On the previous
 version the file must fail, and on the line the release changes.
+
+## What the twelfth release taught
+
+**Core 0.8.2, editor 0.8.1, link 0.8.1, 2026-10-17: the first patch of all three on different
+numbers.** The runbook held. Four things to keep.
+
+- **The title names each number when the numbers differ, and the hand-over says the two tags**
+  (step 4, written with this release). `Dendrite 0.8.2` alone read as if the editor and the
+  link were 0.8.2.
+- **A rename is counted over everything a host copies**, not only the site: `git grep` the old
+  name over `packages/*/examples`, the READMEs and the docs. The plan counted two example files,
+  and there were five.
+- **A notes script keeps each file's own line ending.** The working copies differ file by file
+  (`todo.md` CRLF, `backlog.md` LF, the site's markdown LF), so a script reads the ending first
+  and writes it back; `git ls-files --eol` says which is which. The 0.8.0 lesson's "the
+  markdown is CRLF" holds for some files only.
+- **A link check needs no socket.** Two in-memory channel ends that deliver on a timer drive
+  `serveInstance` and `connectInstance` in the check folder, and a raw `hello` with an old
+  protocol number on one end shows the refusal.
 
 ## If something fails
 

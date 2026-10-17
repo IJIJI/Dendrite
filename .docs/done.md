@@ -5,6 +5,39 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## 0.8.2 on npm — DONE 2026-10-17
+
+`@dendrite-lang/core` at **0.8.2**, `@dendrite-lang/editor` at **0.8.1** and
+`@dendrite-lang/link` at **0.8.1**: a patch of all three, the first under the rule of
+2026-10-17 (one minor across the packages before 1.0, patches each their own; `CLAUDE.md`, "The
+packages' numbers"). `setInput` and `setInputs` on every side, all or none, and `updateInput`
+and `updateInputs` deprecated. The link's protocol 2, `setInputs` on the wire, a wire change in
+a patch under the rule's one exception, and its peer `^0.8.2`. The editor's one hover, on an
+op, an input, an output and a type. *How a program runs* at about half its length. The plan is
+`perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 6 after 21
+review passes; the three entries it closed are kept below.
+
+**The commits, in order** (PR #31, 9 of 9, the first being 0.8.1's notes): the set-input split
+on every side and the batch on the wire (`cce7a64`); the op hover (`86cb18e`); its signature
+coloured, one signature for the hover and the reference (`fe5e73a`); the rules and the notes
+(`88787bc`); one hover for four kinds (`10fdc65`); every type gets a hover (`3eb7bb7`: the
+maintainer found that a primitive showed nothing); the tooltip's section line in the brand's
+colour (`47f39cb`, found by the maintainer); the docs, changelogs and versions (`1398b28`).
+
+**Found while building, beyond the plan:** layer ids are unique across both levels (composing
+throws on a repeated one), so the hover finds a layer by its id alone; a type a port layer
+declares is not coloured as a type and has no hover (`backlog.md`, "Editor — what the hover
+does not show yet"); five example files called the deprecated names, where the plan counted
+two.
+
+**The check:** 15 lines and a type half, written before approval. 15 of 15 on the tarballs and
+on `latest`, 1 of 15 on core 0.8.1, editor 0.8.0 and link 0.8.0, where the one that passes is
+the deprecated names, which should. The type half compiles on 0.8.2 and fails on all six of its
+lines on 0.8.1. `npm audit signatures`: 20 verified, 4 attestations. The live playground's
+hover was checked after the deploy (`If`, `number`), with no console error.
+
+---
+
 ## Core — two styles for setting an input: the runtime's and an instance's — DONE 2026-10-17 (0.8.2)
 
 **What:** asked by the maintainer on 2026-10-09, while the *Embedding core* sample was planned:
