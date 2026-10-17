@@ -172,8 +172,10 @@ j. **Me, a commit:** the Installation page loses its "not on npm yet" callout, t
 
 The runbook. Only the packages whose version changed are part of a release.
 
-1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
-   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three. A new peer range
+1. On `dev`: bump each changed package's `version`, and add its changelog section. Before 1.0 the
+   three packages share a minor, so a minor of one is a release of all three; a peer names the
+   core it needs (`^X.Y.Z` for a core member new in X.Y.Z). Both rules: `CLAUDE.md`, "The
+   packages' numbers". A new peer range
    is in `yarn.lock` too: run `yarn install` after the bump and commit the lockfile, or the
    `--immutable` install in CI fails (0.7.0). The version note on *Installation*
    (`apps/docs/src/content/docs/host/installation.md`: `:::note[<version>]` and the peer range

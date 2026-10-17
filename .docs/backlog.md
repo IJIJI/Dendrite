@@ -762,6 +762,31 @@ line on *Packages: editor*.
 
 ---
 
+## Editor — what the hover does not show yet
+
+**What:** the hover of 0.8.2 shows what the language and the instance hold: an op's signature,
+description and first example; an input's type, start value, layer and program-level value; an
+output's mode, layer and value; a type's fields, `extends`, schema and origin (decided
+2026-10-16, A). Three things wait, each with its own condition (B):
+
+- **A link to the op's reference page.** An option on the editor, since only a host knows where
+  its reference lives, and a host's own op has none. When a host asks; the playground first.
+- **A global input's value.** It lives in the runtime, and the instance does not expose it, so
+  the hover says whose it is and shows none. It needs a read of the global values on the
+  instance or the connection, which only adds.
+- **A binding's current value.** The evaluator keeps no value per binding that a host can read.
+  It needs run-time tracking ("Core — run-time tracking"), whose first step is 0.9.1.
+
+The types at a call site, and a binding's or a lambda parameter's inferred type, belong to the
+language service ("Language service (editor intelligence)").
+
+**Why deferred:** no host asks for the first; the other two need core to expose something it
+does not.
+
+**What it requires:** per item, above.
+
+---
+
 ## Editor — the visual (Rete) half, and what it pulls in
 
 **When: right after 0.9.0** (the release plan of 2026-10-16, `todo.md`): union types first, so
@@ -1698,6 +1723,11 @@ Both are shared with the web editor, so neither is duplicated cost.
   analyser): one producer, and a host that prints diagnostics shows it as is. When the editor can
   render a code action, that hint becomes `AnalysisWarning.fix`, structured, and the annotation is
   its first producer. Not before: a public field with no consumer is Speculative Generality.
+
+**Its first consumers** (named 2026-10-16, with the hover of 0.8.2): the types at a call site
+(which argument has which type), and a binding's or a lambda parameter's inferred type. The
+hover of 0.8.2 shows what the descriptor and the instance hold; these need the analysed program
+at a position.
 
 **Driving need:** developer-grade editing in `@dendrite-lang/editor`; a VS Code extension for `.den`
 files (including this repo's own `examples/*.den`).

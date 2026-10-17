@@ -72,6 +72,19 @@ without a named consumer.
 host's own facade must now carry. Each such case is named in the changelog under "Changed
 (types)". A change a program or a running host can see stays a minor.
 
+**The packages' numbers** (the maintainer, 2026-10-17): before 1.0 the three packages share a
+minor; after 1.0 they share a major, and their minors may differ. When one package needs a
+minor, all three take it, and a package with nothing of its own releases with its peer range
+moved (the editor and the link in 0.8.0). Patches stay each package's own. Two rules beside it:
+
+- **A peer names the core it needs.** An editor or link release that calls a core member new
+  in core X.Y.Z peers on `^X.Y.Z`, and `yarn.lock` moves with it (`yarn install` after the
+  bump).
+- **Before 1.0 a change of the link's wire may ride a patch**, guarded by the protocol number:
+  a mismatched pair is refused at `hello` with both numbers, and the release's callout tells a
+  host to update both ends. This is the one exception to "a change a running host can see
+  stays a minor". After 1.0 such a change is a major.
+
 **Gates**, all at the root, each judged by its **exit code**: `yarn typecheck`, `yarn lint`,
 `yarn format:check`, `yarn test`, and `yarn workspace dendrite-docs build` when the docs changed.
 Do not judge a gate by searching its output: `astro check` colours it, so a search for `error ts`
