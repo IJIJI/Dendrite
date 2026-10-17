@@ -5,6 +5,7 @@ import {
   type Language,
   type OpDefinition,
   type ProgramInstance,
+  Type,
   typeToString,
 } from "@dendrite-lang/core";
 
@@ -36,7 +37,7 @@ const shown = (value: unknown): string => {
 /**
  * What to say about a target, read from the instance when it is called, so a value is the
  * current one. Nothing for an input or an output while the ports do not compose (the
- * Diagnostics pane says why), and nothing for a type with no fields and no parent.
+ * Diagnostics pane says why).
  */
 export function hoverContent(
   target: HoverTarget,
@@ -124,12 +125,18 @@ function outputContent(
 
 function typeContent(name: string, language: Language): HoverContent | undefined {
   const def = language.descriptor.types.get(name);
-  const fields = Object.entries(def?.fields ?? {});
-  if (!def || (fields.length === 0 && !def.extends)) return undefined;
-  const lines = fields.map(([field, type]) => `${field}: ${typeToString(type)}`);
+  if (!def) return undefined;
+  // The one rule every input is seeded by, for an input that declares no default of its own.
+  const start = defaultValueFor({ name, type: Type.name(name) }, language.descriptor);
+  const lines = Object.entries(def.fields ?? {}).map(
+    ([field, type]) => `${field}: ${typeToString(type)}`,
+  );
   return {
     head: sourceParts(name, language),
-    notes: def.extends ? [`Extends ${def.extends}.`] : [],
+    notes: [
+      ...(def.extends ? [`Extends ${def.extends}.`] : []),
+      `An input of this type starts at ${shown(start)}.`,
+    ],
     code: lines.length > 0 ? [sourceParts(lines.join("\n"), language)] : [],
   };
 }

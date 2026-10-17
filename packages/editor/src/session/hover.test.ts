@@ -171,21 +171,25 @@ describe("hoverContent: a type", () => {
   it("shows a struct's fields, one per line", () => {
     expect(hover("output f = (pt: Point) => pt.x", "Point")).toEqual({
       head: "Point",
-      notes: [],
+      notes: ["An input of this type starts at null."],
       code: ["x: number\ny: number"],
     });
   });
 
-  it("shows what a type extends", () => {
+  it("shows what a type extends, and the start it takes from its parent", () => {
     expect(hover("output f = (g: Grade) => g", "Grade")).toEqual({
       head: "Grade",
-      notes: ["Extends string."],
+      notes: ["Extends string.", 'An input of this type starts at "".'],
       code: [],
     });
   });
 
-  it("says nothing about a type with no fields and no parent", () => {
-    expect(hover("output f = (n: number) => n", "number")).toBeUndefined();
+  it("explains a built-in type by what an input of it starts at", () => {
+    expect(hover("output f = (n: number) => n", "number")).toEqual({
+      head: "number",
+      notes: ["An input of this type starts at 0."],
+      code: [],
+    });
   });
 });
 
