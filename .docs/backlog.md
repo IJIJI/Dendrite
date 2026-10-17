@@ -176,6 +176,24 @@ left out by the Speculative Generality guard.
 **What it requires:** ordinary ops with fixed signatures, an explicit rule each for `null` and
 the empty string, and an entry on the generated `string` reference page, which costs nothing.
 
+**Decided 2026-10-16, built in 0.8.3** (the plan
+`perfect-agreed-make-sure-purrfect-karp.md`, revision 6):
+
+- **`Replace(text, part, replacement)` replaces every match**, as a spreadsheet's `SUBSTITUTE`
+  and Python's `replace` do (JavaScript's string `replace` takes the first only, Java's
+  `replace` every one; C++'s `std::string::replace` works by position, not by match). An empty
+  `part` returns the text. The third input is `replacement`: `with` is a reserved word and
+  cannot be destructured.
+- **`Split(text, separator)` takes its separator, required.** JavaScript's bare `split()` gives
+  the whole text and Python's splits on whitespace, so a default would surprise one of them. The
+  empty separator splits by code point, so an emoji is one item.
+- **`Slice(list, from, to?)`** counts from 0, `to` exclusive and left out meaning the end; out
+  of range is clamped to the list, and a negative `from` to 0, written out rather than
+  JavaScript's `slice`, whose negative index counts back. It sits in `stdlib/array.ts` until
+  0.10.0 gives the list and the string ops a place both share.
+- **Left as the next questions**, each without a consumer: `Replace` of the first match only, a
+  limit on `Split`, a `step` on `Range` and `Slice`, a comparator on `Sort`, a key on `Unique`.
+
 ---
 
 ## Stdlib — `Clamp` with one bound
@@ -204,6 +222,12 @@ no break, so waiting loses nothing, and each route has a cost that wants a consu
 **What it requires:** either is a registration in `stdlib/arithmetic.ts`, its tests and a
 changelog line.
 
+**Decided 2026-10-16, built in 0.8.3** (the plan
+`perfect-agreed-make-sure-purrfect-karp.md`, revision 6): optional bounds,
+`Clamp(value, low?, high?)`. The trap of the first route is gone since 0.8.0: an optional input
+handed a `null` reads as absent, so an unset host-fed bound is no bound, with no exception to
+any rule. With both bounds their order does not matter, as before.
+
 ---
 
 ## Stdlib — what the math batch left out: symbols, and `digits` on `Floor` and `Ceil`
@@ -223,6 +247,20 @@ changelog line.
 
 **What it requires:** a registration each. A symbol wants its tier: `BP.MULTIPLY` for `%`, and
 a new tier above it for a power, which binds tighter and to the right.
+
+**Decided 2026-10-16, built in 0.8.3** (the plan
+`perfect-agreed-make-sure-purrfect-karp.md`, revision 6):
+
+- **`%` for `Mod`** at `BP.MULTIPLY`, as C++, Java and JavaScript have it.
+- **`**` for `Pow`** on a new tier, `POWER: 210`, between `PREFIX` and `CAST` and binding to
+  the right (`registerInfix`'s fourth argument, whose comment already names `**`). So
+  `-2 ** 2` is `-4` and `2 ** 3 ** 2` is `512`, as Python reads them; JavaScript refuses the
+  first spelling, and C++ and Java have no power symbol at all.
+- **The Host docs' example symbol becomes `^` over `Pow`**, the spreadsheet spelling a host
+  might want beside the library's `**`. Not `//`, which opens a comment.
+- **`Floor(value, digits?)` and `Ceil(value, digits?)`** through `roundTo`'s decimal shift,
+  extracted: `roundTo` rounds the magnitude and puts the sign back, which a floor must not, so
+  each is the shift, `Math.floor` or `Math.ceil` on the signed value, and the shift back.
 
 ---
 
@@ -322,6 +360,14 @@ for by a program.
   a type), desugaring to the op; the analyser then types it through the op's `inferOutput`,
   and the editor colours nothing new. A slice, `xs[1:3]`, is a separate question and belongs
   with "strings as lists".
+
+**Decided 2026-10-16, built in 0.8.3** (the plan
+`perfect-agreed-make-sure-purrfect-karp.md`, revision 6): the programmer's convention. `At`
+counts from 0, as every language the comparison names but a spreadsheet and SQL; a fraction,
+a negative index or one past the end is no value, never "from the end" (Python's `xs[-1]`), so
+a mistake shows as a `null` and not as another item. `First` and `Last` give no value for an
+empty list. Each has `inferOutput` to the element type, as `Find`. The syntax half, `xs[i]`,
+stays for 0.10.0, with the same rule.
 
 ---
 
