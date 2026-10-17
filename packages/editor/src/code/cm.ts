@@ -219,6 +219,9 @@ export const dendriteTheme = EditorView.theme({
     fontFamily: "var(--dendrite-font)",
     fontSize: "13px",
   },
+  // Hovers that meet (an op's hover and a squiggle's message) share one tooltip, one section
+  // each; the base theme's line between them is a fixed light grey.
+  ".cm-tooltip-section:not(:first-child)": { borderTop: "1px solid var(--dendrite-border)" },
   ".cm-tooltip .cm-tooltip-arrow:before": {
     borderTopColor: "var(--dendrite-border)",
     borderBottomColor: "var(--dendrite-border)",
