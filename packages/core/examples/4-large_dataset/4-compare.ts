@@ -39,7 +39,7 @@ const honors = runtime.register("honors", honorsProgram, { ports: HONORS.ports }
 // Warmup - let V8 JIT compile hot paths before timed runs
 run(program, descriptor, { values: [1, 2, 3], threshold: 2 });
 runner.run({ values: [1, 2, 3], threshold: 2 });
-runtime.updateInputs({ values: [1, 2, 3], threshold: 2 });
+runtime.setInputs({ values: [1, 2, 3], threshold: 2 });
 
 // ---------------------------------------------------------------------------
 // Collect timings
@@ -64,7 +64,7 @@ for (const s of scenarios) {
     run(program, descriptor, { values: s.values, threshold: s.threshold }),
   );
   const { ms: runnerMs } = time(() => runner.run(changes));
-  const { ms: runtimeMs } = time(() => runtime.updateInputs(changes));
+  const { ms: runtimeMs } = time(() => runtime.setInputs(changes));
 
   rows.push({
     label: s.label,

@@ -109,9 +109,9 @@ const _topTierHandle = runtime.register("topTier", topTierProgram);
 
 const scores = [45, 85, 95];
 for (const score of scores) {
-  console.log(`\n--- updateInput score=${score} ---`);
+  console.log(`\n--- setInput score=${score} ---`);
   const t0 = performance.now();
-  runtime.updateInput("score", score);
+  runtime.setInput("score", score);
   console.log(`  (${(performance.now() - t0).toFixed(3)}ms)`);
 }
 
@@ -120,9 +120,9 @@ for (const score of scores) {
 console.log('\n--- unregister "grader" ---');
 graderHandle.unregister();
 
-console.log("\n--- updateInput score=100 (only topTier active) ---");
+console.log("\n--- setInput score=100 (only topTier active) ---");
 const t0 = performance.now();
-runtime.updateInput("score", 100);
+runtime.setInput("score", 100);
 console.log(`  (${(performance.now() - t0).toFixed(3)}ms)`);
 
 // topTierHandle.unregister() would clean up if continuing

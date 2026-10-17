@@ -91,6 +91,12 @@ A layout is only a composition of blocks, and the blocks are public:
 `Source{:ts}` renders a program as highlighted static code with no editor behind it, for showing a
 program you do not want to run.
 
+Hovering in the `Canvas{:ts}` explains what the pointer is on. An op shows its signature, coloured as
+code, its description and its first example, so a host's own op explains itself from what it
+registered. An input (`$score{:den}`), an output's name and a type show their declaration: the type,
+what an input starts at, the layer that declares it and who feeds it, and the current value where
+the instance holds one. A global input's value is the runtime's, and its hover says so.
+
 `readOnly{:ts}` on `Inputs{:ts}` is host policy, deliberately not part of the document: the same program can be
 host-fed in one application and user-edited in another.
 
@@ -109,7 +115,7 @@ editor.instance.setInput("score", 42);
 editor.dispose();
 ```
 
-`editor.instance{:ts}` is the same five observables and four commands as any core instance, whatever the
+`editor.instance{:ts}` is the same five observables and five commands as any core instance, whatever the
 connection. Render your own panes from them.
 
 ## Saving, and sharing

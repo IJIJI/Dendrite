@@ -53,18 +53,25 @@ exactly the shape a network wants. So the protocol is two directions of JSON:
 | Direction | Message | Notes |
 | --- | --- | --- |
 | client → server | `hello { protocol, vocabulary }{:ts}` | on every connect and reconnect. Answered with `state{:ts}`, or `rejected{:ts}` |
-| | `setInput{:ts}` · `fireTrigger{:ts}` · `setProgram{:ts}` · `setLayer{:ts}` | fire and forget, each stamped with a sequence number |
+| | `setInputs{:ts}` · `fireTrigger{:ts}` · `setProgram{:ts}` · `setLayer{:ts}` | fire and forget, each stamped with a sequence number. `setInputs{:ts}` carries one name or many |
 | server → client | `state{:ts}` | all five observables at once, so a replica never renders empty |
 | | `diagnostics{:ts}` · `layers{:ts}` · `outputs{:ts}` · `values{:ts}` · `snapshot{:ts}` | one per observable, stamped with the last command the server had seen |
+
+A replica's `setInput{:ts}` and `setInputs{:ts}` both travel as `setInputs{:ts}`, a batch of one or
+of many, so the wire has one command where an instance has two. `hello{:ts}` carries the protocol
+number, and a client and a server on different numbers are refused with both named: update both
+ends together. Protocol 2 (link 0.8.1) is the one with `setInputs{:ts}`; protocol 1 had
+`setInput{:ts}`.
 
 ## What makes remote feel local
 
 All of it lives in the replica, so a host does nothing to get it.
 
-- **An input change echoes at once.** `setInput{:ts}` updates the replica's own `values{:ts}` immediately,
-  rather than waiting for the round trip, or a dragged slider would fight the network. If the
-  server refuses the value because it does not fit the input's type, it sends back what the input
-  really holds, and the replica drops its echo and shows the diagnostic.
+- **An input change echoes at once.** `setInput{:ts}` and `setInputs{:ts}` update the replica's own
+  `values{:ts}` immediately, once for a whole batch, rather than waiting for the round trip, or a
+  dragged slider would fight the network. If the server refuses the batch because a value does
+  not fit its input's type, it sends back what the inputs really hold, and the replica drops its
+  echo and shows the diagnostic.
 - **Late news is dropped.** A `values{:ts}` push stamped before your latest command is ignored, so the
   slider does not snap back to where it was a moment ago.
 - **A dropped connection goes stale.** Outputs flip to `stale: true{:ts}` the moment the channel closes,
@@ -83,7 +90,8 @@ Core trusts its caller, on purpose: a host is the host. A client is not. So `ser
 what each layer's policy declares, where core itself would not:
 
 - no `setLayer{:ts}` on a layer that is not `editable{:ts}`
-- no `setInput{:ts}` on an input owned by a `feeds: "host"{:ts}` layer
+- no `setInputs{:ts}` naming an input owned by a `feeds: "host"{:ts}` layer: one such name refuses
+  the whole batch
 
 A malformed command, a refused one, or one core throws on is dropped, and reported through
 `onError{:ts}` so you can see it. Type schemas are stripped before anything is sent, because a schema is a

@@ -51,8 +51,8 @@ const last: Record<string, Map<string, unknown>> = {
 for (const s of scenarios) {
   logHeader(s, changesFrom(prev, s));
   const t0 = performance.now();
-  const results = runtime.updateInputs(delta(prev, s));
-  console.log(`  updateInputs(): ${(performance.now() - t0).toFixed(3)}ms`);
+  const results = runtime.setInputs(delta(prev, s));
+  console.log(`  setInputs(): ${(performance.now() - t0).toFixed(3)}ms`);
 
   for (const [id, outputs] of results) last[id] = outputs;
 

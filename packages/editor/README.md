@@ -142,7 +142,7 @@ const editor = createEditor(el, {
   onChange: (doc) => void store.save(doc), // debounced; anything a save would capture
 });
 
-// Five observables and four commands, whatever the connection.
+// Five observables and five commands, whatever the connection.
 watch(editor.instance.outputs, (result) => renderOutputs(result)); // { outputs, error, stale }
 watch(editor.instance.diagnostics, (list) => renderDiagnostics(list, editor.jumpTo));
 editor.instance.setInput("score", 42); // from whatever inputs UI the host renders

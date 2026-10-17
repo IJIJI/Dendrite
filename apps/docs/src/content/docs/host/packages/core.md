@@ -50,7 +50,7 @@ createStdlib()             a Language: types, ops, evaluators, symbols
       │                    parse, analyse, run, load
       └ createRuntime()    many programs, global layers, shared input values
           └ createInstance()   one program, its own layers,
-                               five observables, four commands
+                               five observables, five commands
 ```
 
 Two rules keep that stack honest:
