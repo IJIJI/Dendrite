@@ -51,6 +51,6 @@ server.on("connection", (socket, request) => {
 });
 
 let tick = 0;
-setInterval(() => runtime.updateInputs({ tick: (tick += 1) % 100 }), 1000);
+setInterval(() => runtime.setInputs({ tick: (tick += 1) % 100 }), 1000);
 
 console.log(`serving '${instance.id}' on ws://localhost:${PORT}`);

@@ -9,111 +9,29 @@ some later point in time is in `backlog.md`; finished work, kept for its reasoni
 ## The order after 0.8.0
 
 0.8.0 is on npm since 2026-10-16 (`done.md`, "0.8.0 on npm"). The release plan below was
-agreed with the maintainer on 2026-10-16, right after. Patches only add; minors may break.
-Each row names its entry.
+agreed with the maintainer on 2026-10-16, right after, and given each package's number on
+2026-10-17: before 1.0 the three packages share a minor (`CLAUDE.md`, "The packages'
+numbers"). Patches only add; minors may break. Each row names its entry.
 
-| Version | Holds | Kind | Entry |
+| Version | Packages | Holds | Entry |
 | --- | --- | --- | --- |
-| **0.8.1, next** | The strict keys: the evaluator typed from the op's declaration, the stdlib's 52 casts gone (counted 2026-10-16; the earlier 35 was stale). And the binding computed once per evaluation. **Planned 2026-10-16**, with 0.8.2 and 0.8.3, in `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after ten review passes, two of them independent reviews from other chats | core patch | `backlog.md`, "Core — a typed evaluator derived from the op's declaration"; below, "Core — a binding is recomputed once per reference" |
-| **0.8.2** | Hover on an op in the editor (the descriptor's descriptions); the set-input split, A: `setInput` and `setInputs` on both sides, each keeping its channel, `setInputs` on the wire in `setInput`'s place with protocol 2 (decision C, 2026-10-16: no support for a mixed pair, none is deployed), `updateInputs` deprecated; *How a program runs* simplified. The Outputs pane stays as it is (`backlog.md`, "Editor — what a `null` output does"). Core 0.8.2, editor 0.8.1, and **the link 0.9.0**: a wire change is a minor of the link by its own changelog rule | patch of core and the editor, a minor of the link | Below, "0.8.1 and 0.8.2", "Core — two styles for setting an input", "Docs — *How a program runs* gets simpler" |
-| **0.8.3** | The ops that only add (and *Extending the language* renames its own sample op `Last`, which the library then has): `At`, `First`, `Last`; `Split`, `Slice`, `Replace`; `Sum`, and `Sort`, `Reverse`, `Unique`, `Range` where the backlog lacks them; `Clamp` with one bound; the math leftovers | core patch | `backlog.md`: "array index access", "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
-| **0.9.0** | Union types, `A \| B`: the kind, `isCompatible`, the parser, honest types for `If`, `??`, `[1, null]`, a function in a branch; the null-item rule reassessed; the `implicit_any_cast` promise written. Core's minor, which takes the link to 0.10.0 (it is at 0.9.0 since the release named 0.8.2) | core minor | `backlog.md`, "Language — union types", "a `null` item in a list literal" |
-| **0.9.1** | "Why is this `null`?": one output, on demand, the small first step of run-time tracking | core patch | `backlog.md`, "Core — run-time tracking" |
-| **0.10.0** | Lists: `xs[i]` as syntax over `At`; a string is a list for the list ops, no name removed; struct literals `{ a: 1 }` | core minor | `backlog.md`: "array index access", "strings as lists", "struct literals" |
-| **The Rete half** | The visual editor, with its own plan; right after 0.9.0 can be built on, since it needs `Type` final | editor minor, core unchanged | `backlog.md`, "Editor — the visual (Rete) half" |
-| **The pre-1.0 minor** | Every removal and review left: `updateInputs` gone; the stdlib names review and `Flatten`'s type; what is public in the editor and core's extension API; the struct type that names itself refused | minor of all three | Below, "Before 1.0.0" |
-| **1.0.0** | Core and the link; the editor when Rete has settled; Beacon has used the API first | | Below, "Before 1.0.0" |
+| **0.8.1** | Core 0.8.1, a patch; the editor and the link stay at 0.8.0 | **On npm since 2026-10-16** (`done.md`, "0.8.1 on npm"). The strict keys: the evaluator typed from the op's declaration, the stdlib's 52 casts gone (counted 2026-10-16; the earlier 35 was stale). And the binding computed once per evaluation. **Planned 2026-10-16**, with 0.8.2 and 0.8.3, in `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder), revision 3 after ten review passes, two of them independent reviews from other chats; revision 6 (2026-10-17, 21 passes) holds the rows below | `done.md`, "Core — a typed evaluator derived from the op's declaration", "Core — a binding is recomputed once per reference" |
+| **0.8.2, next** | A patch of all three: core 0.8.2, editor 0.8.1, link 0.8.1 (its peer `^0.8.2`; protocol 2, the wire change riding the patch under the exception in `CLAUDE.md`) | The set-input split, A: `setInput` and `setInputs` on every side, all or none, each keeping its channel; `setInputs` on the wire in `setInput`'s place with protocol 2 (decision C, 2026-10-16: no support for a mixed pair, none is deployed); `updateInputs` deprecated. Built (`cce7a64`). Hover on an op: its signature coloured and its description (built, `86cb18e`, `fe5e73a`), and its first example. Hovers on `$input`, an output's name and a type name, from the instance's ports, values and outputs (decided 2026-10-16, A). *How a program runs* simplified. The Outputs pane stays as it is (`backlog.md`, "Editor — what a `null` output does") | `done.md`: "0.8.1 and 0.8.2", "Core — two styles for setting an input", "Docs — *How a program runs* gets simpler"; `backlog.md`, "Editor — what the hover does not show yet" |
+| **0.8.3** | Core 0.8.3, a patch; the editor and the link stay at 0.8.1 | The ops that only add (and *Extending the language* renames its own sample op `Last`, which the library then has): `At`, `First`, `Last`; `Split`, `Slice`, `Replace`; `Sum`, and `Sort`, `Reverse`, `Unique`, `Range` where the backlog lacks them; `Clamp` with one bound; the math leftovers | `backlog.md`: "array index access", "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
+| **0.9.0** | A minor of all three, the peers `^0.9.0` | Union types, `A \| B`: the kind, `isCompatible`, the parser, honest types for `If`, `??`, `[1, null]`, a function in a branch; the null-item rule reassessed; the `implicit_any_cast` promise written; a new `Type` kind refused where it is not known (the saved format's version, and `PROTOCOL`) | `backlog.md`, "Language — union types", "a `null` item in a list literal" |
+| **0.9.1** | Core 0.9.1, a patch; the editor 0.9.1 (peer `^0.9.1`) if a pane shows the answer; the link stays at 0.9.0 | "Why is this `null`?": one output, on demand, the small first step of run-time tracking; with it, whether the two cache checks become one | `backlog.md`, "Core — run-time tracking", "Core — less recomputation" |
+| **0.10.0** | A minor of all three | Lists: `xs[i]` as syntax over `At`; a string is a list for the list ops, no name removed; struct literals `{ a: 1 }`, and before them the struct type that names itself refused (a breaking line, beside `Length("abc")`) | `backlog.md`: "array index access", "strings as lists", "struct literals", "a struct type that names itself" |
+| **The Rete half** | The next shared minor of all three: the editor carries the work, core and the link release with their peers moved. Or it rides 0.10.0, if the two are ready together | The visual editor, with its own plan; after 0.9.0, since it needs `Type` final | `backlog.md`, "Editor — the visual (Rete) half" |
+| **The pre-1.0 minor** | A minor of all three | Every removal and review left: `updateInput` and `updateInputs` gone; `LazyInputsOf` gone; the evaluator registered by name kept or removed; the stdlib names review and `Flatten`'s type; what is public in the editor and core's extension API | Below, "Before 1.0.0"; `backlog.md`, "Core — whether an evaluator may still be registered by the op's name" |
+| **1.0.0** | All three together (the maintainer, 2026-10-17, replacing "11B") | When the pre-1.0 minor is out, the Rete half has settled, and Beacon has used the API | Below, "Before 1.0.0" |
 
 The order's three reasons: adds before breaks (0.8.1 to 0.8.3 ship every small thing without a
 plan file each, 0.9.0 is the first plan); types before the editor (union types change `Type`,
 and Rete reads it everywhere); one pre-1.0 minor for every removal, so 1.0 is a list.
 
-Beside that order: the three entries after the next two, which the rows above place (two
-styles for setting an input and *How a program runs* in 0.8.2, the site review as the
-maintainer reads). The last section of this file is what must be done before a 1.0.0.
-
----
-
-## 0.8.1 and 0.8.2 — further items, each to discuss for its need and its options
-
-Seven suggestions from the handoff of 2026-10-14, parked here by the maintainer ("add them all
-to a 0.8.2/1, depending on what it touches, as a further discuss the need and options"). None
-is decided. Each row says what it touches, which patch it would ride, and the one thing that
-cannot wait: three are bound to 0.8.0's plan by their nature, and the row says what is left
-for the patch.
-
-| Suggestion | Touches | Release | The need and the options to discuss |
-| --- | --- | --- | --- |
-| **Remove `assertSavedPorts`** | Core's public surface (`serialise.ts`, `index.ts`) | **0.8.0** (decided 2026-10-14, 6a A) | 0.7.1 deprecated it "until a minor removes it". Need: one fewer export with two ways to say one thing. Options: 0.8.0 (one breaking line more on a release that has many), or 0.9.0 (a release of its own for one line) |
-| **Rewrite the "`null`, both ways" convention** | `CLAUDE.md` "Conventions", *The type system* page | **0.8.0, the commit that changes the code** (decided 2026-10-14, 6b A: in place, so the rules file is true at every commit); the page in 0.8.0's docs pass | It states the rule option B replaces. Need: a rules file that is true. Options: rewrite in place, or a dated line that says what changed and when |
-| **Run every sample on the site before and after** | `apps/docs` (the samples, `content.test.ts`), the ops' examples | **0.8.0, once** (decided 2026-10-14, 6c): a one-off probe, run on 0.7.1 source on 2026-10-15 (35 samples, the file in the chat's scratchpad) and again before the docs pass; no pinning test | `content.test.ts` checks that a sample loads, not what it gives. Need: prose beside a moved result must not lie. Options: a one-off probe for the release, or a test that pins each sample's outputs so a later change shows |
-| **How the editor shows a `null` output** | The editor's outputs pane | 0.8.2 (an editor patch) | Under option B a null output is ordinary, and the pane prints JSON, so `null` beside a number reads as a fault. Options: print "no value" in a muted style, print `null` as the language writes it, or leave it, with the docs saying what it means |
-| **Measure the rule's cost** | `evaluator.ts`, the probe | **Settled 2026-10-14**: 3.5 ns per input, inside the loop that already runs, against about 1570 ns per op call; a host type's kind 30 to 62 ns. Nothing is left | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
-| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`, renamed `finiteCheck: false` on 2026-10-15** (the check is on by default, `false` turns it off; 3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
-| **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | **0.8.0**: the rule skips the op before any thunk is read, one test pins it | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
-
----
-
-## Core — two styles for setting an input: the runtime's and an instance's
-
-**What:** asked by the maintainer on 2026-10-09, while the *Embedding core* sample was planned:
-look at the difference in style between setting a global input and setting a program input.
-The page shows the two side by side:
-
-```ts
-runtime.updateInputs({ temperature: 30 }); // your state, every program
-instance.setInput("limit", 35);            // this program's own input
-```
-
-**How they differ today** (`runtime/runtime.ts`, `runtime/instance.ts`):
-
-| | A global input | A program-level input |
-| --- | --- | --- |
-| Call | `runtime.updateInputs(changes)` | `instance.setInput(name, value)` |
-| Shape | One record of several names | One name and one value a call |
-| Returns | The outputs, per program | Nothing: it reports through the observables |
-| A value that does not fit | Throws, and the batch changes nothing | Is refused: `value_does_not_fit` on `diagnostics` |
-| The other kind's name | Not probed | Throws |
-
-A runtime's program handle has a third: `setInput(name, value)`, which returns the outputs.
-*Embedding core* gives the reason for two of the rows: a command of an instance returns nothing
-and cannot throw for a value because a pane, or a client across a network, calls it.
-
-**When: 0.8.2** (the maintainer, 2026-10-16: A). Both sides get `setInput(name, value)` and
-`setInputs(record)`, one evaluation per call, each side keeping its channel (the runtime throws,
-the instance reports); the link gains one batch command; `updateInputs` is deprecated and goes
-in the pre-1.0 minor, as `assertSavedPorts` went.
-
-**What it requires:** first the question itself, which is not decided: whether the difference
-is wanted, or whether an instance wants a batch (`setInputs`), or the two want one verb. Then a
-plan: a change here is core's public API, the link's protocol carries `setInput` as a command,
-and the docs name both calls on several pages.
-
----
-
-## Docs — *How a program runs* gets simpler, and the complexity stays on *The chain*
-
-**What:** asked by the maintainer on 2026-10-09: simplify the Learn page *How a program runs*,
-and keep the complexity on *The chain* (How it works).
-
-**The two pages today.** Both draw `<Chain>` and both walk the same steps:
-
-| | *How a program runs* (Learn) | *The chain* (How it works) |
-| --- | --- | --- |
-| File | `learn/how-a-program-runs.mdx` | `how-it-works/the-chain.mdx` |
-| Size | 100 lines, 850 words | 210 lines, 1409 words |
-| Sections | Lex, Parse, Compose, Analyse, Evaluate, "What each step may not do", "That is Learn" | Lex, Parse, Desugar, Compose, Analyse, Prune, Evaluate, "Why it is separate artefacts and not one pass" |
-
-So the Learn page is 60 % of the reference page's length and has the same outline: a reader
-of Learn meets the chain twice.
-
-**When: 0.8.2** (the maintainer, 2026-10-16), the docs half of that patch.
-
-**What it requires:** a plan first, with the maintainer, because it is a page's content and
-not a fix. The questions for it: what a Learn reader needs from the page (a first reading, not
-decided: one picture and a few sentences a step, each step linking to its section of *The
-chain*); whether "What each step may not do" moves to *The chain*; and which other pages link
-to this page's anchors (`content.test.ts` checks every internal link).
+Beside that order: the two entries below it (the site review after Learn, as the maintainer
+reads; the boolean input's checkbox, with the Rete half). The last section of this file is what
+must be done before a 1.0.0.
 
 ---
 
@@ -165,9 +83,9 @@ on 2026-10-14" above, and the three backlog entries they closed are in `done.md`
 | **A review of the stdlib's names** | A rename or a move is a break, as the comparison ops' move to `logic` was in 0.6.0 | Here. With it: `Flatten`, which cannot type its output (`backlog.md`) |
 | **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | `backlog.md`: "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
 | **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists" |
-| **A struct type may not reach itself through a function field** | Refusing it later refuses a type a host declared. `Tree { children: Tree[] }` stays legal | `backlog.md`, "Core — a struct type that names itself" |
+| **A struct type may not reach itself through a function field** | Refusing it later refuses a type a host declared. `Tree { children: Tree[] }` stays legal | `backlog.md`, "Core — a struct type that names itself". Placed in 0.10.0, before struct literals (the order at the top) |
 | **A saved program that is not well formed is reported, never thrown: in 0.7.1** (the maintainer, 2026-10-12) | 1.0 promises that a command reports and does not throw. Probed: seven kinds of bad program give a raw `TypeError` from `setProgram`, `setLayer`, `createInstance` or `load`, and three of them leave the instance broken for good. The whole check exists, in the link (`isSavedProgram`); a program from storage goes past it | `backlog.md`, "Core — a saved program that is not well formed" |
-| **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | Above, "Core — two styles for setting an input" |
+| **One style for setting an input** | The shape of `updateInputs` and `setInput`, and the link's protocol | **Decided 2026-10-16 (A), built for 0.8.2**: both styles kept, a batch on each side. `done.md`, "Core — two styles for setting an input" |
 | **What is public, in the editor and in core's extension API** | Hosts use the editor's CSS variables and classes already. In core: say that `language.grammar`'s maps are internal, and that the keys of `registerNud` and the three booleans of `OpInput` are the API as they are. Then the `Grammar` refactors of the backlog can come after 1.0.0, and the one that renames the keys is dropped. To be explained in detail when it is taken | `backlog.md`: "documenting the configs", "drill down on `LayoutConfig`", "Parser — `Grammar` is a data bag" |
 | **"No value": a single op hands it on, a list op skips it, EVERYWHERE** (option B; the maintainer, 2026-10-12: "Ok B it is", then "Agreed, everywhere": every op that names a type for an input, so `Upper(null)`, `Length(null)`, `Not(null)` and a comparison give `null` too; `IsSet`, `??`, `==` and an input that converts are the places that take no value) | It changes results: `1 / 0 + 1` is `1` today and becomes `null`, `Average([1, null])` goes from `0.5` to `1`, `Max([-4, null])` from `0` to `-4`. Decided with it: no implicit casting and no switch for a host, `+` never joins text, and **an error is no option** ("especially since we have no way of logging or displaying them"; a run error also stops every output). What is still open of it is in the table below | Below, and `backlog.md`: "a `null` that goes through arithmetic", "What boundary validation left" |
 | **The promise leaves out a program that compiles with `implicit_any_cast`** (the maintainer, 2026-10-12: "that is fine, we are pre 1.0, and we warned") | It lets an inferred union, or any stricter check, refuse such a program after 1.0.0 with no 2.0.0. **The docs update is part of the plan** (the maintainer): the sentence where the docs state what 1.x keeps, and in the warning's own text | Here. The plan of option B carries the docs: the pages on `null` and on types, the reference, *Every diagnostic*, the changelog's breaking lines |
@@ -175,7 +93,7 @@ on 2026-10-14" above, and the three backlog entries they closed are in `done.md`
 | **A field read that finds nothing gives `null`, and the checker warns** (the maintainer: "6A, but do warn") | Today `$v.name` on a `5`, or on a struct without that field, throws and stops every output; on a `null` it is `null`. Nothing warns: a field read from an `any` compiles clean. The warning is the checker's, at the read; a note at run time is the tracking entry's | The plan of option B; `backlog.md`, "Core — run-time tracking" |
 | **A `null` item leaves a list literal's type alone** (the maintainer: "7A", to reassess before 1.0.0) | `[1, null]` is `number[]`, where it is `any[]` today and `Average([1, null])` warns | The plan of option B; `backlog.md`, "Language — a `null` item in a list literal" |
 | **A struct prints as its JSON, and the docs say so** (the maintainer: "8A") | No code. A type's own text form can still come later: it is opt-in | The docs update of option B |
-| **Each package reaches 1.0.0 when it is ready** (the maintainer: "11B") | Core and link first, the editor after the Rete half. The gates above apply to the package they concern | Here |
+| **All three packages reach 1.0.0 together** (the maintainer, 2026-10-17, replacing "11B" of 2026-10-12: each package when it was ready) | One minor across the packages before 1.0 and one major after (`CLAUDE.md`, "The packages' numbers"), so 1.0.0 is one release: when the pre-1.0 minor is out, the Rete half has settled and Beacon has used the API | Here; the order at the top |
 | **`And` and `Or` are three-valued** (the maintainer, 2026-10-12: "2C") | A `false` on EITHER side decides an `&&`, a `true` on either side an `\|\|`; else a missing side gives `null`. So `false && null` and `null && false` are both `false`, and the order does not matter, as SQL, R, pandas and C# have it. It may still skip a side, which is only a saving. It changes results (`And(null, true)` is `false` today), so it is built with option B; the means for it, an op that looks at its inputs itself, comes with the lazy `If` of 0.7.0. `If(null, a, b)` is `null` | The plans of 0.7.0 and of option B |
 | **A conversion of no value is no value** (the maintainer: "5C") | `ToString(null)`, `ToNumber(null)` and `ToBool(null)` are all `null`, where the first is `""` and the third `false` today. No value becomes text in one place only: an input that declares it converts (`Join`, so `++` and a template), and `` `total {x}` `` stays `"total "` | The plan of option B |
 | **Every `NaN` becomes `null`** (the maintainer, 2026-10-12: "Agreed on the NaN handling") | A `NaN` is no value of the language: it is JavaScript's "not a number", a number by its type, not equal to itself, and not JSON. A program cannot make one and a typed input refuses one; it gets in by two doors, both a host's: an op of the host that returns it inside a list or a struct, and a value pushed into an `any` input. Both doors get a pass that reads lists and structs, turns a number that is not finite into `null` and a negative zero into `0`, and copies only when it finds one. Then `$a == $a` cannot be `false`, the two ends of a link agree, and a host needs no warning in the docs | The plan of option B |
@@ -193,11 +111,8 @@ named types stay nominal, a type's own text form (`toText`, opt-in), and the fie
 for struct inputs. Two small things are decisions and not work: a struct prints as its JSON
 (say that this is the form), and a field read on a value that is no struct (below).
 
-**Still to decide** (after the talk of 2026-10-12):
-
-| Decision | The options, and where the talk stands | Wanted by |
-| --- | --- | --- |
-| **Two styles for setting an input** | Keep both, add a batch call to an instance (only adds), or one verb for both (a break). The maintainer: "We'll decide later, but before 1.0" | Before 1.0.0 |
+**Still to decide:** nothing. The last row, two styles for setting an input, was decided on
+2026-10-16 (A) and built in 0.8.2 (`done.md`).
 
 **What was probed for option B** (2026-10-12, all on core 0.6.0):
 

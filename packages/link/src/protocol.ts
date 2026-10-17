@@ -13,9 +13,11 @@ import {
   type Snapshot,
 } from "@dendrite-lang/core";
 
-//? The wire, as data. A ProgramInstance is five observables and four commands, every
+//? The wire, as data. A ProgramInstance is five observables and its commands, every
 // command returning nothing and reporting through the observables - which is exactly the
-// shape a wire wants. So the link is two message types: Commands go client → server,
+// shape a wire wants. The wire carries four of them (`setInputs`, `fireTrigger`,
+// `setProgram`, `setLayer`); an instance's `setInput` is `setInputs` of one name, so it
+// travels as that. So the link is two message types: Commands go client → server,
 // sequence-numbered and fire-and-forget; Pushes go server → client, one per observable,
 // each stamped with the last command the server had applied when it sent it.
 //
@@ -25,8 +27,12 @@ import {
 // is JSON-safe on purpose; the codecs at the bottom are the two places core's runtime
 // shapes are not.
 
-/** The wire format this build speaks. Both ends must agree, so `hello` carries it. */
-export const PROTOCOL = 1;
+/**
+ * The wire format this build speaks. Both ends must agree, so `hello` carries it, and a
+ * mismatched pair is refused with both numbers. 2 since link 0.9.0: `setInputs` replaced
+ * `setInput` as a command.
+ */
+export const PROTOCOL = 2;
 
 export type ChannelStatus = "connected" | "disconnected";
 
@@ -76,7 +82,8 @@ export function fingerprintDiff(client: Fingerprint, server: Fingerprint): strin
 export type CommandBody =
   /** Sent on every (re)connect; answered with `state`, or `rejected`. */
   | { kind: "hello"; protocol: number; vocabulary: Fingerprint }
-  | { kind: "setInput"; name: string; value: unknown }
+  /** One name or many, applied all or none by the instance. */
+  | { kind: "setInputs"; changes: Record<string, unknown> }
   | { kind: "fireTrigger"; name: string; value: unknown }
   | { kind: "setProgram"; program: SavedProgram }
   | { kind: "setLayer"; id: string; ports: Ports };
@@ -165,7 +172,8 @@ export function isCommand(value: unknown): value is Command {
   switch (value["kind"]) {
     case "hello":
       return typeof value["protocol"] === "number" && isFingerprint(value["vocabulary"]);
-    case "setInput":
+    case "setInputs":
+      return isRecord(value["changes"]);
     case "fireTrigger":
       return typeof value["name"] === "string";
     case "setProgram":

@@ -6,8 +6,26 @@ Changes to `@dendrite-lang/link`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API or the wire protocol. This package declares `@dendrite-lang/core` as a peer at
-`^0.8.0`: a minor release of core needs a release here too, even if nothing in this package changed.
+break the API, and the three packages share a minor, so a minor release of any of them is a
+release here too, even if nothing in this package changed. Before 1.0 a change of the wire
+protocol may come in a patch: the protocol number moves with it, and a client and a server on
+different numbers are refused at `hello` with both named, so update both ends together. After
+1.0 such a change is a major. This package declares `@dendrite-lang/core` as a peer at `^0.8.2`.
+
+## 0.8.1
+
+- **Protocol 2: `setInputs` on the wire, in place of `setInput`.** One command carries one name
+  or many: a replica's `setInput` and `setInputs` both send it, and the server applies it with
+  `instance.setInputs`, all or none. A link 0.8.0 end and a 0.8.1 end are refused at `hello`
+  with both protocol numbers named: update both ends together. A wire change in a patch, under
+  the rule above.
+- **New: `setInputs` on a replica.** One command and one echo into `values` (and `snapshot`) for
+  the whole batch, as an instance publishes once. A batch the server refuses takes the whole
+  echo back.
+- **The server checks every name of a batch.** One name a `feeds: "host"` layer owns refuses
+  the whole batch, as it refused one name before.
+- **The peer range moves to core `^0.8.2`**: the server calls `instance.setInputs`, which core
+  0.8.0 and 0.8.1 lack.
 
 ## 0.8.0
 

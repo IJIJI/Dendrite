@@ -7,10 +7,10 @@ sidebar:
 
 _Host developers is for embedding the language in an application of your own. If you are writing programs in it, start with [Learn](../../learn/getting-started/)._
 
-:::note[0.8.1]
-Before 1.0 a minor version may break the API, and the editor and the link depend on core
-(`^0.8.0`), so a minor release of core comes with a release of both. Each package's
-changes are in its changelog:
+:::note[0.8.2]
+Before 1.0 a minor version may break the API, and the three packages share a minor: a minor
+release of one is a release of all three. The editor depends on core `^0.8.0` and the link on
+`^0.8.2`. Each package's changes are in its changelog:
 [core](https://github.com/IJIJI/Dendrite/blob/main/packages/core/CHANGELOG.md) - [editor](https://github.com/IJIJI/Dendrite/blob/main/packages/editor/CHANGELOG.md) - [link](https://github.com/IJIJI/Dendrite/blob/main/packages/link/CHANGELOG.md)
 :::
 
@@ -75,7 +75,7 @@ const instance = env.createInstance(runtime, {
 That program is now live. Push a value and read the result:
 
 ```ts runs
-runtime.updateInputs({ temperature: 30 });
+runtime.setInputs({ temperature: 30 });
 instance.outputs.get().outputs?.get("alert"); // true
 ```
 
@@ -95,7 +95,7 @@ them, and their values are shared. Mark an output `required{:ts}` and a program 
 load; `desired{:ts}` warns; the default is optional.
 
 **The instance** is one program on that runtime, and it is the object a host actually holds. It
-has its own program-level inputs and outputs, five observables to watch and four commands to
+has its own program-level inputs and outputs, five observables to watch and five commands to
 drive it. [Embedding core](../embedding-core/) is about living with one.
 
 ## Options, in one place

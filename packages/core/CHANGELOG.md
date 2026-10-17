@@ -6,8 +6,25 @@ Changes to `@dendrite-lang/core`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. `@dendrite-lang/editor` and `@dendrite-lang/link` declare this package as a peer
-(at `^0.8.0`), so a minor release here is always accompanied by a release of both.
+break the API, and the three packages share a minor, so a minor release here is a release of
+all three. `@dendrite-lang/editor` declares this package as a peer at `^0.8.0`,
+`@dendrite-lang/link` at `^0.8.2`.
+
+## 0.8.2
+
+- **New: `setInput` and `setInputs` on the runtime**, the names an instance's two verbs have,
+  so one verb has one name on every side. `runtime.setInputs({ ... })` checks every value,
+  stores them all and evaluates each program it reaches once, as `updateInputs` did; a name that
+  is not a global input is ignored.
+- **New: `setInputs` on a program handle and on an instance.** Several program-level inputs with
+  one evaluation, and on an instance one `values` and at most one `snapshot`. All or none: a
+  global or unknown name throws, and a value that does not fit refuses the whole batch (a handle
+  throws, an instance reports `value_does_not_fit` on each name that did not fit), and nothing
+  moves. `setInput` is `setInputs` of one name.
+- **Deprecated: `updateInput` and `updateInputs`**, the runtime's old names for the same two
+  functions, kept until the minor before 1.0.
+- **Changed (types), no run-time change:** `ProgramInstance` gains `setInputs` as a required
+  member, so a host's own object typed as one must carry it.
 
 ## 0.8.1
 

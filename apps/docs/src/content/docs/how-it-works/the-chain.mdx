@@ -197,6 +197,18 @@ it is a runtime failure (a host evaluator throwing, a value that was not the sha
 claimed), and those arrive on the outputs, not as diagnostics. They are listed under
 [Evaluate](../diagnostics/#evaluate).
 
+## What each step may not do
+
+Each step has one job, and these limits are what keep it to that job. They are what make the
+chain predictable:
+
+- **Lexing** may not decide what a word means. `let{:den}` and `If{:den}` are both just words.
+- **Parsing** may not resolve a name or infer a type. It does not know what exists.
+- **Composing** may not read your code. It sees what was declared, never what was written.
+- **Analysis** may not compute a value. It works with types, not numbers.
+- **Evaluation** may not report a type error. Everything checkable was checked already; what
+  reaches it is a runtime failure, and it arrives on the outputs rather than as a diagnostic.
+
 ## Why it is separate artefacts and not one pass
 
 Each one is a thing you can hold, store, or inspect, which is what makes the language

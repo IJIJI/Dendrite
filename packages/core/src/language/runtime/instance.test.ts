@@ -442,6 +442,75 @@ describe("ProgramInstance - a NaN or an undefined pushed is no value", () => {
   });
 });
 
+// The batch (0.8.2): one evaluation, one `values`, at most one `snapshot`, and all or none.
+// `setInput` is the batch of one, so every test above holds it too.
+describe("ProgramInstance - setInputs", () => {
+  const PQ: Ports = {
+    inputs: [
+      { name: "p", type: Type.number },
+      { name: "q", type: Type.number },
+    ],
+    outputs: [],
+  };
+  const setupPQ = () => setup({ program: serialiseSource("output out = Add($g, $p, $q)", PQ) });
+
+  it("emits values once and the snapshot once, and evaluates once", () => {
+    const { instance } = setupPQ();
+    const values = vi.fn();
+    const snapshots = record(instance);
+    const outputs = vi.fn();
+    instance.values.subscribe(values);
+    instance.outputs.subscribe(outputs);
+    instance.setInputs({ p: 2, q: 3 });
+    expect(values).toHaveBeenCalledTimes(1);
+    expect(snapshots.map((s) => s.inputValues)).toEqual([{ p: 2, q: 3 }]);
+    expect(outputs).toHaveBeenCalledTimes(1);
+    expect(outputsOf(instance)).toBe(5);
+  });
+
+  it("refuses the whole batch for one value that does not fit, and reports that name", () => {
+    const { instance } = setupPQ();
+    instance.setInputs({ p: 1, q: 1 });
+    const values = vi.fn();
+    instance.values.subscribe(values);
+    instance.setInputs({ p: 9, q: "oops" });
+    expect(values).not.toHaveBeenCalled();
+    expect(instance.values.get()).toEqual({ p: 1, q: 1 });
+    expect(outputsOf(instance)).toBe(2);
+    expect(instance.diagnostics.get().map((d) => d.where)).toEqual(["input q"]);
+    instance.setInputs({ q: 2 });
+    expect(kinds(instance)).toEqual([]); // cleared by the batch that lands
+  });
+
+  it("a fitting value in a refused batch clears no earlier refusal of its name", () => {
+    const { instance } = setupPQ();
+    instance.setInput("p", "bad");
+    expect(instance.diagnostics.get().map((d) => d.where)).toEqual(["input p"]);
+    instance.setInputs({ p: 3, q: "oops" }); // p fits, but the batch does not land
+    expect(instance.diagnostics.get().map((d) => d.where)).toEqual(["input p", "input q"]);
+  });
+
+  it("drops an unchanged value, and a batch with nothing left does nothing", () => {
+    const { instance } = setupPQ();
+    instance.setInputs({ p: 1, q: 1 });
+    const values = vi.fn();
+    const outputs = vi.fn();
+    instance.values.subscribe(values);
+    instance.outputs.subscribe(outputs);
+    instance.setInputs({ p: 1, q: 1 });
+    instance.setInputs({});
+    expect(values).not.toHaveBeenCalled();
+    expect(outputs).not.toHaveBeenCalled();
+  });
+
+  it("throws on a global or unknown name, and moves nothing", () => {
+    const { instance } = setupPQ();
+    expect(() => instance.setInputs({ p: 1, g: 2 })).toThrow(/not a program-level input/);
+    expect(() => instance.setInputs({ p: 1, nope: 2 })).toThrow(/not a program-level input/);
+    expect(instance.values.get()).toEqual({ p: 0, q: 0 });
+  });
+});
+
 describe("ProgramInstance - staleness", () => {
   it("keeps the last outputs when a new program fails, and recovers with the values kept", () => {
     const { instance, runtime } = setup();

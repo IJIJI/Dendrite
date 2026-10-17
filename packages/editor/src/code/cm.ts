@@ -25,7 +25,8 @@ import { lineStartOffsets, styledRanges, toOffset } from "./tokens";
 
 //? CodeMirror glue: the extension list a code view is built from, tokens.ts ranges as
 // decorations, program diagnostics as @codemirror/lint squiggles, and the brand on the
-// editor's chrome. With session/editor.ts, the only module that knows about CodeMirror.
+// editor's chrome. With session/editor.ts and session/hover.ts, the only modules that know
+// about CodeMirror.
 
 /** How the code is presented. Every layout takes these; each picks its own defaults. */
 export interface CodeOptions {
@@ -69,7 +70,8 @@ const readOnly: Extension = [EditorState.readOnly.of(true), EditorView.editable.
 
 /**
  * The extensions a code view is built from: the setup, editing or read-only, the chosen
- * gutter, comment tokens, the theme and the highlighting. The session adds its own listeners.
+ * gutter, comment tokens, the theme and the highlighting. The session adds its own listeners
+ * and the hover, which reads the instance.
  */
 export function codeExtensions(
   language: Language,
@@ -217,6 +219,9 @@ export const dendriteTheme = EditorView.theme({
     fontFamily: "var(--dendrite-font)",
     fontSize: "13px",
   },
+  // Hovers that meet (an op's hover and a squiggle's message) share one tooltip, one section
+  // each; the base theme's line between them is a fixed light grey.
+  ".cm-tooltip-section:not(:first-child)": { borderTop: "1px solid var(--dendrite-border)" },
   ".cm-tooltip .cm-tooltip-arrow:before": {
     borderTopColor: "var(--dendrite-border)",
     borderBottomColor: "var(--dendrite-border)",
@@ -224,6 +229,21 @@ export const dendriteTheme = EditorView.theme({
   ".cm-tooltip .cm-tooltip-arrow:after": {
     borderTopColor: "var(--dendrite-bg)",
     borderBottomColor: "var(--dendrite-bg)",
+  },
+  // The hover (session/hover.ts): a head in the code face, muted notes, then code blocks that
+  // keep their lines (an example, a struct's fields).
+  ".dendrite-hover": { padding: "6px 10px", maxWidth: "420px" },
+  ".dendrite-hover-head, .dendrite-hover-code": {
+    display: "block",
+    fontFamily: "var(--dendrite-mono)",
+    fontSize: "12px",
+    color: "var(--dendrite-text)",
+  },
+  ".dendrite-hover-code": { marginTop: "6px", whiteSpace: "pre-wrap" },
+  ".dendrite-hover-note": {
+    margin: "4px 0 0",
+    color: "var(--dendrite-muted)",
+    lineHeight: "1.4",
   },
   ".cm-tooltip-autocomplete ul li[aria-selected]": {
     backgroundColor: "var(--dendrite-accent-soft)",

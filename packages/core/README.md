@@ -57,7 +57,7 @@ const instance = env.createInstance(runtime, {
 });
 
 instance.outputs.subscribe(({ outputs, stale }) => console.log(outputs?.get("alert"), { stale }));
-runtime.updateInputs({ temperature: 30 }); // true
+runtime.setInputs({ temperature: 30 }); // true
 ```
 
 ## What is in the box
@@ -69,7 +69,7 @@ runtime.updateInputs({ temperature: 30 }); // true
   part of it.
 - **Port layers**: a language declares no inputs or outputs; your application does, in layers
   whose order is authority.
-- **An instance to hold**: five observables and four commands. A program that stops compiling
+- **An instance to hold**: five observables and five commands. A program that stops compiling
   keeps its last good outputs, marked stale rather than hidden.
 - **Extension**: register your own types, ops, evaluators and operators.
 - **Every diagnostic documented**: `diagnostics` is the registry of all of them, each with a

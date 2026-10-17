@@ -6,8 +6,21 @@ Changes to `@dendrite-lang/editor`, newest first. Every version is tagged
 package released at the same time.
 
 The version follows [semantic versioning](https://semver.org/). Before 1.0 a **minor** bump may
-break the API. This package declares `@dendrite-lang/core` as a peer at `^0.8.0`: a minor release
-of core needs a release here too, even if nothing in this package changed.
+break the API, and the three packages share a minor, so a minor release of any of them is a
+release here too, even if nothing in this package changed. This package declares
+`@dendrite-lang/core` as a peer at `^0.8.0`.
+
+## 0.8.1
+
+- **New: the code explains what is under the pointer.** Hovering an op shows its signature,
+  coloured as code, its description and its first example, all from the language, so a host's
+  own op explains itself. Hovering an input (`$score`), an output's name or a type shows its
+  declaration: the type, what an input starts at, the layer that declares it and who feeds it,
+  a struct's fields and what a type extends, and the current value where the instance holds
+  one. A global input's value is the runtime's, and its hover says so.
+- **New: `signatureParts` and `partsHtml`.** An op's signature as highlighted parts, and
+  highlighted parts as HTML. The documentation's reference prints its signatures with them, so
+  the reference and the hover cannot disagree.
 
 ## 0.8.0
 

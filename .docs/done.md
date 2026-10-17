@@ -5,6 +5,161 @@ recorded anywhere else. The changelogs say what shipped; this says why it was bu
 
 ---
 
+## Core — two styles for setting an input: the runtime's and an instance's — DONE 2026-10-17 (0.8.2)
+
+**What:** asked by the maintainer on 2026-10-09, while the *Embedding core* sample was planned:
+look at the difference in style between setting a global input and setting a program input.
+The page shows the two side by side:
+
+```ts
+runtime.updateInputs({ temperature: 30 }); // your state, every program
+instance.setInput("limit", 35);            // this program's own input
+```
+
+**How they differ today** (`runtime/runtime.ts`, `runtime/instance.ts`):
+
+| | A global input | A program-level input |
+| --- | --- | --- |
+| Call | `runtime.updateInputs(changes)` | `instance.setInput(name, value)` |
+| Shape | One record of several names | One name and one value a call |
+| Returns | The outputs, per program | Nothing: it reports through the observables |
+| A value that does not fit | Throws, and the batch changes nothing | Is refused: `value_does_not_fit` on `diagnostics` |
+| The other kind's name | Not probed | Throws |
+
+A runtime's program handle has a third: `setInput(name, value)`, which returns the outputs.
+*Embedding core* gives the reason for two of the rows: a command of an instance returns nothing
+and cannot throw for a value because a pane, or a client across a network, calls it.
+
+**When: 0.8.2** (the maintainer, 2026-10-16: A). Both sides get `setInput(name, value)` and
+`setInputs(record)`, one evaluation per call, each side keeping its channel (the runtime throws,
+the instance reports); the link gains one batch command; `updateInputs` is deprecated and goes
+in the pre-1.0 minor, as `assertSavedPorts` went.
+
+**Decided 2026-10-16, the shape built in 0.8.2** (the plan, revision 3, after two independent
+reviews):
+
+- **One verb, one rule, on every side.** `setInput(name, value)` is `setInputs({ [name]: value })`
+  on the runtime, a handle, an entry, an instance and a replica. A batch is all or nothing: every
+  name resolved and every value checked before anything moves, the rule of `decisions.md`
+  ("nothing moves on a refusal") and the runtime's `applyChanges`. The runtime throws on a value
+  that does not fit, an instance reports `value_does_not_fit` on each refused name; an unchanged
+  value drops out, and an empty batch stores, emits and evaluates nothing.
+- **`updateInput` and `updateInputs` are deprecated aliases** of the runtime's two verbs, and go
+  in the pre-1.0 minor. A runtime verb ignores a name that is not a global input, as
+  `updateInputs` does; a handle's throws on a global one, as its `setInput` does.
+- **The wire carries the batch only** (decision C): `setInputs` replaces `setInput` as a
+  command, `PROTOCOL` is 2, a mismatched pair is refused at `hello` with both numbers, and no
+  mixed pair is supported (none is deployed). The link takes a minor, 0.9.0, as its rule says a
+  wire change is, and its peer becomes `^0.8.2`, since its server calls `instance.setInputs`.
+- **A replica echoes once per batch**: one `values` object and one snapshot, set once each.
+
+**Built** (`cce7a64`, 2026-10-16), as decided, with one change after: under the rule of
+2026-10-17 (one minor across the packages before 1.0, `CLAUDE.md`, "The packages' numbers") the
+link stays on 0.8 and ships the wire change as **link 0.8.1**, not 0.9.0, the change riding the
+patch under the stated exception. Every sample a host copies teaches `setInputs`, and
+*Embedding core* counts five commands.
+
+---
+
+## Docs — *How a program runs* gets simpler, and the complexity stays on *The chain* — DONE 2026-10-17 (0.8.2)
+
+**What:** asked by the maintainer on 2026-10-09: simplify the Learn page *How a program runs*,
+and keep the complexity on *The chain* (How it works).
+
+**The two pages today.** Both draw `<Chain>` and both walk the same steps:
+
+| | *How a program runs* (Learn) | *The chain* (How it works) |
+| --- | --- | --- |
+| File | `learn/how-a-program-runs.mdx` | `how-it-works/the-chain.mdx` |
+| Size | 100 lines, 850 words | 210 lines, 1409 words |
+| Sections | Lex, Parse, Compose, Analyse, Evaluate, "What each step may not do", "That is Learn" | Lex, Parse, Desugar, Compose, Analyse, Prune, Evaluate, "Why it is separate artefacts and not one pass" |
+
+So the Learn page is 60 % of the reference page's length and has the same outline: a reader
+of Learn meets the chain twice.
+
+**When: 0.8.2** (the maintainer, 2026-10-16), the docs half of that patch.
+
+**Decided 2026-10-16, the outline built in 0.8.2** (the plan, revision 3): the `<Chain>`
+picture, then one short paragraph per step, what it does in a sentence and what you can rely
+on, each ending with a link to its section of *The chain*. "What each step may not do" moves to
+*The chain*, before "Why it is separate artefacts". The two promises of Evaluate stay (a binding
+computed at most once, the last good program keeps running). About half the length. No other
+page links to this page's anchors (checked 2026-10-16), so its sections may move.
+
+**Built** (2026-10-17): the page went from 850 words to about 490, one short paragraph per step,
+each ending with a link to its section of *The chain*. "What each step may not do" is on *The
+chain* now, before "Why it is separate artefacts". The two promises of Evaluate stayed.
+
+---
+
+## 0.8.1 and 0.8.2 — further items, each to discuss for its need and its options — DONE 2026-10-17 (0.8.2)
+
+Seven suggestions from the handoff of 2026-10-14, parked here by the maintainer ("add them all
+to a 0.8.2/1, depending on what it touches, as a further discuss the need and options"). None
+is decided. Each row says what it touches, which patch it would ride, and the one thing that
+cannot wait: three are bound to 0.8.0's plan by their nature, and the row says what is left
+for the patch.
+
+| Suggestion | Touches | Release | The need and the options to discuss |
+| --- | --- | --- | --- |
+| **Remove `assertSavedPorts`** | Core's public surface (`serialise.ts`, `index.ts`) | **0.8.0** (decided 2026-10-14, 6a A) | 0.7.1 deprecated it "until a minor removes it". Need: one fewer export with two ways to say one thing. Options: 0.8.0 (one breaking line more on a release that has many), or 0.9.0 (a release of its own for one line) |
+| **Rewrite the "`null`, both ways" convention** | `CLAUDE.md` "Conventions", *The type system* page | **0.8.0, the commit that changes the code** (decided 2026-10-14, 6b A: in place, so the rules file is true at every commit); the page in 0.8.0's docs pass | It states the rule option B replaces. Need: a rules file that is true. Options: rewrite in place, or a dated line that says what changed and when |
+| **Run every sample on the site before and after** | `apps/docs` (the samples, `content.test.ts`), the ops' examples | **0.8.0, once** (decided 2026-10-14, 6c): a one-off probe, run on 0.7.1 source on 2026-10-15 (35 samples, the file in the chat's scratchpad) and again before the docs pass; no pinning test | `content.test.ts` checks that a sample loads, not what it gives. Need: prose beside a moved result must not lie. Options: a one-off probe for the release, or a test that pins each sample's outputs so a later change shows |
+| **How the editor shows a `null` output** | The editor's outputs pane | 0.8.2 (an editor patch) | Under option B a null output is ordinary, and the pane prints JSON, so `null` beside a number reads as a fault. Options: print "no value" in a muted style, print `null` as the language writes it, or leave it, with the docs saying what it means |
+| **Measure the rule's cost** | `evaluator.ts`, the probe | **Settled 2026-10-14**: 3.5 ns per input, inside the loop that already runs, against about 1570 ns per op call; a host type's kind 30 to 62 ns. Nothing is left | One check per declared input per op call, on the hot path. Need: a number before the design. Options, if it is bad: check only inputs that name a type, or precompute per op which inputs to check |
+| **Name the host's "no `NaN`" mark for what it promises** | `registry.ts`, *Extending the language* | **Decided 2026-10-14: `finite: true`, renamed `finiteCheck: false` on 2026-10-15** (the check is on by default, `false` turns it off; 3A) | Options: `finite` (says the promise), `pure`, `trusted` (do not). Its default is off. What is left for a patch: nothing; a rename after is a break |
+| **`If(null, a, b)` reads no branch** | `stdlib/control.ts`, the lazy tests | **0.8.0**: the rule skips the op before any thunk is read, one test pins it | The lazy input makes it free. Need: the one case where a null condition must evaluate no side, pinned so it stays |
+
+**All settled by 0.8.2** (2026-10-17). The rows say where each went. The one placed in 0.8.2,
+how the editor shows a `null` output, stayed as it is by decision, with its questions in
+`backlog.md` ("Editor — what a `null` output does").
+
+---
+
+## 0.8.1 on npm — DONE 2026-10-16
+
+`@dendrite-lang/core` at **0.8.1**, the same day as 0.8.0; the editor and the link stay at
+0.8.0, admitted by their peer `^0.8.0`. A patch: an evaluator handed its op's definition as
+`op` receives every input typed from the declaration (`InputsOf`, `ValueOf`), so the library's
+52 casts went; the `Type` constants keep their literal types for it; `LazyInputsOf` is
+deprecated. Fixed: a binding is computed once per evaluation (a per-traversal set read in the
+`ref` case before `isCached`), which closed the one "Known" line of 0.8.0. The plan of the rest
+of 0.8 is `perfect-agreed-make-sure-purrfect-karp.md` (the maintainer's plan folder),
+revision 3 after ten review passes, two of them independent reviews from other chats; the two
+entries it closed are kept below.
+
+**The commits, in order:** the notes (the plan's decisions, the `null` output's questions
+parked); the typed keys, probed under `tsc` first; the binding fix, with five tests that each
+failed without it; the docs, the changelog and the version. Two notes commits rode along,
+both backlog entries the maintainer asked for during the work: "less recomputation, and whether
+the two cache checks become one" (a probe of five cases, four options, to weigh with 0.9.1),
+and "whether an evaluator may still be registered by the op's name". The PR showed 7 of 7.
+
+**Decided during the work, beyond the plan:** the rule that a patch may change TypeScript types
+where no run-time behaviour changes, each case named under "Changed (types)" (the maintainer,
+2026-10-16, written into `CLAUDE.md`). `Type.fn` returns the function member of the union, not
+the union: the probe found that `ValueOf` over the whole union is `unknown`, so a function input
+would have lost its `FnValue`. `Map`'s definition is `MapOp`, so it does not shadow the global.
+The docs pass found two leftovers of 0.8.0 on *Extending the language* and fixed them: a missing
+input gives no value, not its type's default, and the `Guard` sample's `reading` is optional,
+since a `null` on a required struct input stops the op before its fallback can be read.
+
+**The runbook** held. One tag, one GitHub release on it named for the one package
+(`Dendrite core 0.8.1 - …`, as `Dendrite editor 0.6.1` was), one `Stage release` run of 55
+seconds with the editor and the link skipped as on npm, one approval.
+
+**Checked after approval, from outside the repo:** `latest` is 0.8.1 on core with an
+attestation, 0.8.0 on the editor and the link. The check had two halves this time, both written
+before approval: nine run-time lines (the versions and peers, the published types carrying
+`InputsOf`, `ValueOf` and the deprecated `LazyInputsOf`, a binding read three times computed
+once on a runner, in a `Map` body, and through an instance, the lazy lines of 0.7.0, the rows of
+0.8.0 unmoved, the 46 evaluators stored by name), and a type file compiled against the
+installed package, since the release's main claim exists only for the compiler. On the tarball
+9 of 9 and the type file compiled; on 0.8.0 from npm 4 of 9 passed, the four that should, and
+the type file failed on `celsius` and `parts` as `unknown`; on `latest` 9 of 9 and compiled.
+The live site followed: the typed samples and the fixed sentence on *Extending the language*,
+the binding paragraph on *Evaluation*, *Installation* at 0.8.1.
+
 **Closed by 0.8.1 on 2026-10-16** (the release itself gets its record when it is on npm): the
 two entries below as they stood, kept for their reasoning.
 

@@ -173,8 +173,12 @@ describe("connect", () => {
       vocabulary: fingerprint(host.language),
     });
     link.flush();
+    // Built from PROTOCOL, so the test does not move with each bump of the wire.
     expect(received).toEqual([
-      expect.objectContaining({ kind: "rejected", reason: expect.stringMatching(/protocol 2/) }),
+      expect.objectContaining({
+        kind: "rejected",
+        reason: `protocol ${PROTOCOL + 1} - this side speaks ${PROTOCOL}`,
+      }),
     ]);
   });
 });
@@ -256,6 +260,61 @@ describe("setInput", () => {
     (sent.toClient as Push[]).push({ kind: "values", seq: 0, values: { p: 43 } });
     flush();
     expect(replica.values.get()).toEqual({ p: 43 });
+  });
+});
+
+// The batch (link 0.9.0, protocol 2): one command on the wire for one name or many, applied all
+// or none by the instance, and echoed once on the replica. `setInput` above is the batch of one.
+describe("setInputs", () => {
+  // A second user-fed layer that is not saved, so a batch spans a persisted name and another.
+  const panel: PortLayer = {
+    id: "panel",
+    ports: { inputs: [{ name: "q", type: Type.number }], outputs: [] },
+    policy: Policy.custom(Policy.user, { persisted: false }),
+  };
+
+  it("echoes the batch once, sends one command, and the outputs come back", async () => {
+    const { instance, replica, flush, sent } = await linked({ extraLayers: [panel] });
+    const valuesSeen = vi.fn();
+    const snapshotsSeen = vi.fn();
+    replica.values.subscribe(valuesSeen);
+    replica.snapshot.subscribe(snapshotsSeen);
+
+    replica.setInputs({ p: 4, q: 2 });
+    expect(valuesSeen).toHaveBeenCalledTimes(1);
+    expect(replica.values.get()).toEqual({ p: 4, q: 2 });
+    expect(snapshotsSeen).toHaveBeenCalledTimes(1); // p only: q's layer is not saved
+    expect(replica.snapshot.get().inputValues).toEqual({ p: 4 });
+    expect(sent.toServer).toEqual([
+      expect.objectContaining({ kind: "setInputs", changes: { p: 4, q: 2 } }),
+    ]);
+    flush();
+    expect(instance.values.get()).toEqual({ p: 4, q: 2 });
+    expect(outputOf(replica)).toBe(4);
+  });
+
+  it("takes the whole echo back when the server refuses one value of the batch", async () => {
+    const { instance, replica, flush, onError } = await linked({ extraLayers: [panel] });
+    replica.setInputs({ p: 4, q: 1 });
+    flush();
+
+    replica.setInputs({ p: 5, q: "oops" });
+    expect(replica.values.get()).toEqual({ p: 5, q: "oops" }); // echoed before any push
+    flush();
+    expect(instance.values.get()).toEqual({ p: 4, q: 1 }); // nothing moved over there
+    expect(replica.values.get()).toEqual({ p: 4, q: 1 });
+    expect(replica.diagnostics.get().map((d) => [d.kind, d.where])).toEqual([
+      ["value_does_not_fit", "input q"],
+    ]);
+    expect(outputOf(replica)).toBe(4);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("throws on a name that is not a program-level input, and sends nothing", async () => {
+    const { replica, sent } = await linked();
+    expect(() => replica.setInputs({ p: 1, nope: 2 })).toThrow(/not a program-level input/);
+    expect(replica.values.get()).toEqual({ p: 0 });
+    expect(sent.toServer).toEqual([]);
   });
 });
 
@@ -346,10 +405,12 @@ describe("enforcePolicy", () => {
     [{ kind: "setLayer", id: "document", ports: DOC }, null],
     [{ kind: "setLayer", id: "cap", ports: DOC }, "layer 'cap' is not editable"],
     [{ kind: "setLayer", id: "nope", ports: DOC }, null], // core's to throw
-    [{ kind: "setInput", name: "p", value: 1 }, null],
-    [{ kind: "setInput", name: "sensor", value: 1 }, "input 'sensor' is fed by the host"],
+    [{ kind: "setInputs", changes: { p: 1 } }, null],
+    [{ kind: "setInputs", changes: { sensor: 1 } }, "input 'sensor' is fed by the host"],
+    // One host-fed name refuses the batch whole, as one name is refused.
+    [{ kind: "setInputs", changes: { p: 1, sensor: 2 } }, "input 'sensor' is fed by the host"],
     [{ kind: "fireTrigger", name: "sensor", value: 1 }, "input 'sensor' is fed by the host"],
-    [{ kind: "setInput", name: "g", value: 1 }, null], // global: core's to throw
+    [{ kind: "setInputs", changes: { g: 1 } }, null], // global: core's to throw
     [{ kind: "hello", protocol: PROTOCOL, vocabulary: { ops: [], types: [] } }, null],
   ])("%o → %s", (command, verdict) => {
     expect(enforcePolicy(layers, cmd(command))).toBe(verdict);

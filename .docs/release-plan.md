@@ -172,8 +172,10 @@ j. **Me, a commit:** the Installation page loses its "not on npm yet" callout, t
 
 The runbook. Only the packages whose version changed are part of a release.
 
-1. On `dev`: bump each changed package's `version`, and add its changelog section. Editor and link
-   peer on core `^0.1.0`, so a **minor** bump of core means a release of all three. A new peer range
+1. On `dev`: bump each changed package's `version`, and add its changelog section. Before 1.0 the
+   three packages share a minor, so a minor of one is a release of all three; a peer names the
+   core it needs (`^X.Y.Z` for a core member new in X.Y.Z). Both rules: `CLAUDE.md`, "The
+   packages' numbers". A new peer range
    is in `yarn.lock` too: run `yarn install` after the bump and commit the lockfile, or the
    `--immutable` install in CI fails (0.7.0). The version note on *Installation*
    (`apps/docs/src/content/docs/host/installation.md`: `:::note[<version>]` and the peer range
@@ -329,6 +331,15 @@ check reused the probe table's rows unchanged, 11 lines, both ways.
   in commit 0's window; the probe lives in the scratchpad and is copied into the tree for each
   run, never committed. 35 samples, none moved this time, which the docs pass still needed to
   know.
+
+## What the eleventh release taught
+
+**Core 0.8.1, 2026-10-16: the runbook held for one package alone.** One thing to keep: **a
+release whose claim is a type gets a type half of the check**, a small `.ts` file compiled with
+the repo's `tsc` against the INSTALLED package (`--moduleResolution bundler --skipLibCheck`,
+run from the check folder so the imports resolve there). A run-time check cannot see a type;
+reading the `.d.ts` for a name proves the name, not that it types anything. On the previous
+version the file must fail, and on the line the release changes.
 
 ## If something fails
 

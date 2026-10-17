@@ -9,7 +9,7 @@
 # @dendrite-lang/link
 
 Drive a core `ProgramInstance` across a channel. A host **serves** one; an editor **connects**
-a replica that _is_ a `ProgramInstance` - five observables, four commands - and cannot be told
+a replica that _is_ a `ProgramInstance` - five observables, five commands - and cannot be told
 from the local thing. Dendrite owns the message shapes and both ends; the host owns the pipe.
 
 ```sh
@@ -39,12 +39,17 @@ const replica = await connectInstance(language, webSocketChannel(new WebSocket(u
 Every instance command already returns nothing and reports through the observables, which is
 exactly the shape a wire wants. So the link is two message types, JSON all the way:
 
-| Direction       | Message                                                      | Notes                                                                                                |
-| --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| client → server | `hello { protocol, vocabulary }`                             | On every (re)connect. Answered with `state`, or `rejected` when the protocol or the language differs |
-|                 | `setInput` · `fireTrigger` · `setProgram` · `setLayer`       | Fire-and-forget, each stamped with a client sequence number `seq`                                    |
-| server → client | `state` (all five observables at once)                       | So a replica never renders empty                                                                     |
-|                 | `diagnostics` · `layers` · `outputs` · `values` · `snapshot` | One per observable, stamped with the last command the server had seen on this channel                |
+| Direction       | Message                                                      | Notes                                                                                                   |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| client → server | `hello { protocol, vocabulary }`                             | On every (re)connect. Answered with `state`, or `rejected` when the protocol or the language differs    |
+|                 | `setInputs` · `fireTrigger` · `setProgram` · `setLayer`      | Fire-and-forget, each stamped with a client sequence number `seq`; `setInputs` carries one name or many |
+| server → client | `state` (all five observables at once)                       | So a replica never renders empty                                                                        |
+|                 | `diagnostics` · `layers` · `outputs` · `values` · `snapshot` | One per observable, stamped with the last command the server had seen on this channel                   |
+
+A replica's `setInput` and `setInputs` both travel as `setInputs`, a batch of one or of many.
+`hello` carries the protocol number, and a client and a server on different numbers are refused
+with both named: update both ends together. Protocol 2 (link 0.8.1) is the one with `setInputs`;
+protocol 1 had `setInput`.
 
 **The replica recomposes `ports` itself.** A composed descriptor holds functions (evaluators,
 `inferOutput`), so the server sends the layers and the client composes them with _its_ language.
@@ -54,11 +59,11 @@ rather than being silently wrong.
 
 **What makes remote feel local**, all in the replica:
 
-- `setInput` echoes into `values` at once (and into `snapshot` for the persisted layer's inputs,
-  so a debounced save cannot beat the round trip), or a dragged slider fights the wire. A value
-  the server's instance refuses (it does not fit the input's type) is answered with the real
-  `values` and `snapshot`, so the echo is taken back and the `value_does_not_fit` diagnostic
-  says why. The replica does not run that check itself: schemas do not cross the wire, so its
+- `setInput` and `setInputs` echo into `values` at once, once per batch (and into `snapshot` for
+  the persisted layer's inputs, so a debounced save cannot beat the round trip), or a dragged
+  slider fights the wire. A batch the server's instance refuses (a value does not fit its input's
+  type) is answered with the real `values` and `snapshot`, so the whole echo is taken back and
+  the `value_does_not_fit` diagnostic says why. The replica does not run that check itself: schemas do not cross the wire, so its
   answer could differ from the server's.
 - A `values` push stamped before the client's latest command is dropped, or the slider snaps
   back. A `state` push is authoritative and resets that clock, which is what makes a reconnect
@@ -72,7 +77,8 @@ rather than being silently wrong.
 
 **The server is the trust boundary.** Core trusts its caller on purpose; a client is not the
 host. So `serveInstance` enforces what each layer's policy declares - no `setLayer` on a layer
-that is not `editable`, no `setInput` on an input a `feeds: "host"` layer owns - and drops a
+that is not `editable`, no `setInputs` naming an input a `feeds: "host"` layer owns (one such
+name refuses the batch) - and drops a
 malformed command, a refused one, or one core throws on, reporting each through `onError`. It
 also strips zod `schema`s from layer types before sending: a schema is a graph of functions and
 survives neither JSON nor structured clone. Authorisation proper - _who_ is this client - is the

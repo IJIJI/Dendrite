@@ -1,6 +1,6 @@
 ---
 title: "Embedding core"
-description: "The instance as the front door: five observables, four commands, and the levels beneath it."
+description: "The instance as the front door: five observables, five commands, and the levels beneath it."
 sidebar:
   order: 2
 ---
@@ -35,7 +35,7 @@ Subscribe to `outputs{:ts}` to act, to `diagnostics{:ts}` to show problems, to `
 pushing its own values leaves `snapshot{:ts}` silent, so a save listener only fires when something a
 save would care about changed.
 
-## Four commands
+## Five commands
 
 Every command returns nothing and reports through the observables. That is deliberate: it is the
 shape a command needs to cross a network, and it means a local instance and a remote one behave
@@ -44,6 +44,7 @@ identically.
 | Command | Does |
 | --- | --- |
 | `setInput(name, value){:ts}` | set a program-level input. Throws on a global name - those are the runtime's. Refuses a value that does not fit the input's type |
+| `setInputs(changes){:ts}` | set several program-level inputs at once, with one evaluation. All or none: one value that does not fit refuses the whole batch |
 | `fireTrigger(name, value){:ts}` | set, evaluate, reset to the default, evaluate again. Refuses a value the same way |
 | `setProgram(saved){:ts}` | swap the program |
 | `setLayer(id, ports){:ts}` | replace one program-level layer's declarations |
@@ -70,12 +71,13 @@ section.
 
 This is the thing hosts most often get wrong, so it is worth stating flatly.
 
-- A **global** input belongs to the runtime. Set it with `runtime.updateInputs({ ... }){:ts}`, and
+- A **global** input belongs to the runtime. Set it with `runtime.setInputs({ ... }){:ts}`, and
   every program on the runtime sees the new value.
-- A **program-level** input belongs to one instance. Set it with `instance.setInput(name, value){:ts}`.
+- A **program-level** input belongs to one instance. Set it with `instance.setInput(name, value){:ts}`,
+  or several with `instance.setInputs({ ... }){:ts}`.
 
 ```ts runs
-runtime.updateInputs({ temperature: 30 }); // your state, every program
+runtime.setInputs({ temperature: 30 }); // your state, every program
 instance.outputs.get().outputs?.get("alert"); // true: 30 is over 25
 
 instance.setInput("limit", 35); // this program's own input
@@ -83,8 +85,10 @@ instance.outputs.get().outputs?.get("alert"); // false
 ```
 
 Calling `instance.setInput{:ts}` with a global name throws, because a value with two owners would have
-no right answer. `updateInputs{:ts}` takes several at once and evaluates each program a single time, so
-prefer it for anything that arrives together.
+no right answer. On both sides, `setInputs{:ts}` takes several at once and evaluates each program a
+single time, so prefer it for anything that arrives together, and `setInput{:ts}` is the same for one
+name. The runtime's older names for the two, `updateInputs{:ts}` and `updateInput{:ts}`, still work
+and are deprecated: they go in the last minor before 1.0.
 
 ## A value has to fit its type
 
@@ -105,10 +109,12 @@ Nothing throws.
 
 What differs is how each one says no.
 
-- **The runtime throws.** `runtime.updateInputs{:ts}` and a handle's `setInput{:ts}` are called by your
-  code, so a value of the wrong type is a bug in it. A batch with one bad value changes nothing.
-- **An instance refuses.** `instance.setInput{:ts}` and `fireTrigger{:ts}` may be called by a pane, or by
-  a client across a network, and neither can catch an exception. The input keeps its value, and
+- **The runtime throws.** `runtime.setInputs{:ts}` and a handle's `setInputs{:ts}`, and their
+  `setInput{:ts}`, are called by your code, so a value of the wrong type is a bug in it. A batch with
+  one bad value changes nothing.
+- **An instance refuses.** `instance.setInput{:ts}`, `setInputs{:ts}` and `fireTrigger{:ts}` may be
+  called by a pane, or by a client across a network, and neither can catch an exception. The input
+  keeps its value (a batch with one bad value changes nothing), and
   `diagnostics{:ts}` gains a [`value_does_not_fit{:den}`](../../how-it-works/diagnostics/#value_does_not_fit)
   error marked `refused{:ts}` that names the input. It goes with the next value that fits, or with
   the next compile.

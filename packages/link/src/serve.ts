@@ -47,14 +47,17 @@ export function enforcePolicy(layers: readonly AttachedLayer[], command: Command
         ? `layer '${command.id}' is not editable`
         : null;
     }
-    case "setInput":
+    case "setInputs":
     case "fireTrigger": {
-      const owner = program.find(({ layer }) =>
-        layer.ports.inputs.some((input) => input.name === command.name),
-      );
-      return owner && owner.layer.policy.feeds === "host"
-        ? `input '${command.name}' is fed by the host`
-        : null;
+      // A batch is refused whole when any of its names is fed by the host, as one name is.
+      const names = command.kind === "setInputs" ? Object.keys(command.changes) : [command.name];
+      const hostFed = names.find((name) => {
+        const owner = program.find(({ layer }) =>
+          layer.ports.inputs.some((input) => input.name === name),
+        );
+        return owner?.layer.policy.feeds === "host";
+      });
+      return hostFed === undefined ? null : `input '${hostFed}' is fed by the host`;
     }
     default:
       return null;
@@ -120,15 +123,21 @@ export function serveInstance(
         push({ kind: "state", state: state() });
         return;
       }
-      case "setInput":
-        instance.setInput(command.name, command.value);
-        // Core refused it (the diagnostics say why) and so published no values. The client
-        // echoed the write before sending it, so hand back what the input really holds.
-        if (!Object.is(instance.values.get()[command.name], command.value)) {
-          push({ kind: "values", values: instance.values.get() });
+      case "setInputs": {
+        instance.setInputs(command.changes);
+        // Core refused the batch (the diagnostics say why) and so published no values, or
+        // read a value as another (a NaN as null). The client echoed the write before sending
+        // it, so hand back what the inputs really hold.
+        const held = instance.values.get();
+        const landed = Object.entries(command.changes).every(([name, value]) =>
+          Object.is(held[name], value),
+        );
+        if (!landed) {
+          push({ kind: "values", values: held });
           push({ kind: "snapshot", snapshot: instance.snapshot.get() });
         }
         return;
+      }
       case "fireTrigger":
         instance.fireTrigger(command.name, command.value);
         return;

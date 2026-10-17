@@ -291,6 +291,74 @@ describe("runtime - program-level ports", () => {
   });
 });
 
+// One verb, one rule (0.8.2): `setInput` is `setInputs` of one name on the runtime and on a
+// handle, and a batch is all or none. A counting op shows how many evaluations a batch costs.
+describe("runtime - setInput and setInputs", () => {
+  const counting = () => {
+    const lang = createStdlib();
+    let ticks = 0;
+    const Tick = lang.registerOp({
+      name: "Tick",
+      inputs: [{ name: "n", type: Type.number }],
+      output: Type.number,
+    });
+    lang.registerEvaluator({ op: Tick, evaluate: ({ n }) => (ticks++, n) });
+    return { lang, ticks: () => ticks };
+  };
+  const PQ: Ports = {
+    inputs: [
+      { name: "p", type: Type.number },
+      { name: "q", type: Type.number },
+    ],
+    outputs: [],
+  };
+
+  it("a handle's setInputs evaluates once for two names", () => {
+    const { lang, ticks } = counting();
+    const rt = runtimeFor(lang);
+    const handle = rt.register("a", build(lang, "output out = Tick($p + $q)", { ports: PQ }), {
+      ports: PQ,
+    });
+    const before = ticks();
+    expect(handle.setInputs({ p: 2, q: 3 }).get("out")).toBe(5);
+    expect(ticks() - before).toBe(1);
+  });
+
+  it("a handle's setInputs moves nothing when one value does not fit, or one name is global", () => {
+    const { lang } = counting();
+    const rt = runtimeFor(lang);
+    const handle = rt.register("a", build(lang, "output out = $p + $q", { ports: PQ }), {
+      ports: PQ,
+    });
+    expect(() => handle.setInputs({ p: 1, q: "oops" })).toThrow(/'q' does not fit/);
+    expect(() => handle.setInputs({ p: 1, x: 2 })).toThrow(/not a program-level input/);
+    expect(handle.setInputs({ q: 1 }).get("out")).toBe(1); // p never landed
+  });
+
+  it("an empty batch evaluates nothing and returns an empty map, on a handle and the runtime", () => {
+    const { lang, ticks } = counting();
+    const rt = runtimeFor(lang);
+    const handle = rt.register("a", build(lang, "output out = Tick($x + $p)", { ports: P }), {
+      ports: P,
+    });
+    const before = ticks();
+    expect(handle.setInputs({}).size).toBe(0);
+    expect(rt.setInputs({}).size).toBe(0);
+    expect(ticks()).toBe(before);
+  });
+
+  it("the runtime's verbs are the deprecated ones: one pass, an undeclared name ignored", () => {
+    const { lang, ticks } = counting();
+    const rt = runtimeFor(lang);
+    rt.register("a", build(lang, "output out = Tick($x + $y)"));
+    expect(rt.setInput).toBe(rt.updateInput);
+    expect(rt.setInputs).toBe(rt.updateInputs);
+    const before = ticks();
+    expect(rt.setInputs({ x: 1, y: 2, nope: 3 }).get("a")?.get("out")).toBe(3);
+    expect(ticks() - before).toBe(1);
+  });
+});
+
 describe("runtime - replace", () => {
   it("keeps subscriptions and surviving values, drops the rest", () => {
     const lang = makeLang();

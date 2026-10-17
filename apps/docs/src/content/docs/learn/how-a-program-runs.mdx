@@ -1,6 +1,6 @@
 ---
 title: "How a program runs"
-description: "What a program becomes, step by step, and what each step is allowed to decide."
+description: "What a program becomes, step by step, and what you can rely on at each step."
 sidebar:
   order: 9
 ---
@@ -17,74 +17,41 @@ can reach backwards.
 
 ## Lex: text becomes tokens
 
-The lexer cuts your text into tokens: names, numbers, strings and symbols. It knows which symbols
-the language has, so `>={:den}` comes out as one token rather than two characters, and that is
-all it knows. A word is a word to it, whether it is `let{:den}`, `If{:den}` or a name of yours.
-
-What you can rely on: a string with no closing quote, or a character the language has no use
-for, is reported here, with a position.
+The lexer cuts your text into names, numbers, strings and symbols. A string with no closing
+quote, or a character the language has no use for, is reported here, with a position.
+[More on lexing](../../how-it-works/the-chain/#lex-characters-become-tokens).
 
 ## Parse: tokens become a program
 
-The parser turns the tokens into bindings and outputs. This step knows the shape of the language
-and nothing else: it does not know which ops exist, which types exist, or what your application
-declared. It does rewrite every symbol into the op it stands for as it reads, so
-`$price * $quantity{:den}` is already `Multiply($price, $quantity){:den}` when it leaves.
-
-That is why `$n{:den}` is an input here purely because of the `${:den}` (no table is consulted), and
-why a misspelled op name gets through this step without complaint. What you can rely on: a
-syntax error is reported here, with a position, and nothing further happens.
+The parser turns the tokens into bindings and outputs, and rewrites every symbol into the op it
+stands for as it reads: `$price * $quantity{:den}` leaves as `Multiply($price, $quantity){:den}`.
+It knows the shape of the language and nothing else, so a syntax error is reported here and a
+misspelled op name gets through. [More on parsing](../../how-it-works/the-chain/#parse-tokens-become-a-raw-program).
 
 ## Compose: what the program may use
 
-Checking a program needs a list of everything it may use: the ops and types of the language,
-and the inputs and outputs your application declared. That list is not fixed by the language.
-It arrives in layers, one from the language and more from your application, and composing them
-into one is this step.
-
-It reads what was declared, never what you wrote, so a clash between declarations (two layers
-claiming the same name) is reported here, before your code is looked at.
-[Ports and layers](../../how-it-works/ports-and-layers/) is where the layers are explained.
+Checking a program needs a list of everything it may use: the language's ops and types, and the
+inputs and outputs your application declared, which arrive in layers. Composing joins the layers
+into one list. It reads what was declared, never what you wrote, so two layers claiming the same
+name are reported here, before your code is looked at.
+[More on composing](../../how-it-works/the-chain/#compose-the-descriptor-is-assembled).
 
 ## Analyse: the program is checked
 
-This is where almost everything happens. The analyser walks the bindings in dependency order
-and works out the type of each one, and it checks every op call against what that op actually
-takes.
-
-It also decides what is worth keeping. A binding no output can reach is dropped. An output
-whose working failed is dropped, and if your application had marked that output *required*, the
-whole program fails to load; if not, the rest carries on without it.
-
-Two things to rely on. **Errors are collected, not thrown at the first one**, so you get the
-full list rather than peeling them off one at a time. And **soundness is per output**: one
-broken result does not stop the others, which is why a half-finished program keeps producing the
-parts that work.
+The analyser works out the type of every binding and checks every op call. Two things to rely
+on. **Errors are collected, not thrown at the first one**, so you get the full list at once.
+And **soundness is per output**: a broken output is dropped and the others still run, unless
+your application marked it *required*.
+[More on analysis](../../how-it-works/the-chain/#analyse-the-raw-program-becomes-a-core-program).
 
 ## Evaluate: values, on demand
 
-The evaluator does not run your program top to bottom. Outputs pull: asking for an output walks
-only the nodes that output depends on, and each node remembers its last value.
-
-So when an input changes, the recompute covers exactly the nodes that read it, directly or
-through other bindings. Everything else keeps what it had. You saw this on
-[Inputs](../writing/inputs/): move `$price{:den}` and the shipping calculation is not touched.
-
-Two things to rely on. **A binding is computed at most once per evaluation** however many names
-read it. And **the last good program keeps running**: while your text does not compile, the
-values on screen are the ones from the program that did, marked stale rather than hidden, so
-whatever is acting on them has something to act on.
-
-## What each step may not do
-
-Worth stating as plainly as the rest, because it is what makes the chain predictable:
-
-- **Lexing** may not decide what a word means. `let{:den}` and `If{:den}` are both just words.
-- **Parsing** may not resolve a name or infer a type. It does not know what exists.
-- **Composing** may not read your code. It sees what was declared, never what was written.
-- **Analysis** may not compute a value. It works with types, not numbers.
-- **Evaluation** may not report a type error. Everything checkable was checked already; what
-  reaches it is a runtime failure, and it arrives on the outputs rather than as a diagnostic.
+Outputs pull: asking for one walks only the nodes it depends on, so when an input changes, only
+the nodes that read it recompute (you saw this on [Inputs](../writing/inputs/)). Two things to
+rely on. **A binding is computed at most once per evaluation**, however many names read it. And
+**the last good program keeps running**: while your text does not compile, the values on screen
+are the ones from the program that did, marked stale rather than hidden.
+[More on evaluation](../../how-it-works/the-chain/#evaluate-the-core-program-becomes-values).
 
 ## That is Learn
 

@@ -44,7 +44,7 @@ for (const s of scenarios) {
   const note = what === "threshold only" ? `${what} — honors skipped` : what;
 
   logHeader(s, note);
-  const results = timed("updateInputs()", () => runtime.updateInputs(changes));
+  const results = timed("setInputs()", () => runtime.setInputs(changes));
   if (results.has("honors")) lastHonors = results.get("honors")!;
   displayRuntime(results, lastHonors);
   prev = s;
