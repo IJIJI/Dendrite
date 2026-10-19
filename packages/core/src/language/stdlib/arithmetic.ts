@@ -11,22 +11,27 @@ import { bin, variadic } from "./shared";
 // An op that has no answer (a division by zero) computes NaN or an infinity and leaves it:
 // the evaluator gives null for either, for every op.
 
-// Round's rule, apart because it is the one op here that is more than a line. Two things are
-// decided rather than inherited from Math.round. A half goes away from zero, the way a person
-// rounds (Math.round sends -2.5 to -2), so the magnitude is rounded and the sign put back. And
-// the decimal point moves through the exponent, never by multiplying: 1.005 * 100 is
-// 100.49999999999999, which would round 1.005 to 1 at two decimals instead of 1.01.
-function roundTo(value: number, digits: number): number {
-  // `1.5e2` for (1.5, 2). A number that already prints with an exponent (1e-7) keeps its own.
-  const shift = (n: number, by: number): number => {
-    const [mantissa, exponent = "0"] = String(n).split("e");
-    return Number(`${mantissa}e${Number(exponent) + by}`);
-  };
-  const shifted = shift(Math.abs(value), digits);
-  // More decimals asked for than a number holds: there is nothing to round away.
-  if (!Number.isFinite(shifted)) return value;
-  return Math.sign(value) * shift(Math.round(shifted), -digits);
+// The decimal point moves through the exponent, never by multiplying: 1.005 * 100 is
+// 100.49999999999999, which would round 1.005 to 1 at two decimals instead of 1.01. `1.5e2` for
+// (1.5, 2); a number that already prints with an exponent (1e-7) keeps its own.
+const shift = (n: number, by: number): number => {
+  const [mantissa, exponent = "0"] = String(n).split("e");
+  return Number(`${mantissa}e${Number(exponent) + by}`);
+};
+
+// `whole` (Math.round, Math.floor, Math.ceil) at `digits` decimals: the point moved, the whole
+// part taken, the point moved back. More decimals asked for than a number holds leaves it as it
+// is: there is nothing to take away.
+function atDigits(value: number, digits: number, whole: (n: number) => number): number {
+  const shifted = shift(value, digits);
+  return Number.isFinite(shifted) ? shift(whole(shifted), -digits) : value;
 }
+
+// Round's rule differs from Math.round in one thing: a half goes away from zero, the way a
+// person rounds (Math.round sends -2.5 to -2), so the magnitude is rounded and the sign put
+// back. Floor and Ceil work on the signed value: at one decimal the floor of -7.25 is -7.3.
+const roundTo = (value: number, digits: number): number =>
+  Math.sign(value) * atDigits(Math.abs(value), digits, Math.round);
 
 export function installArithmetic(lang: Language): void {
   const Add = lang.registerOp({
@@ -175,50 +180,69 @@ export function installArithmetic(lang: Language): void {
     evaluate: ({ value, digits }) => roundTo(value, Math.trunc(digits ?? 0)),
   });
 
+  // `digits` as on Round: left out, or handed a null, it is absent, and the result is whole.
   const Floor = lang.registerOp({
     name: "Floor",
-    inputs: [{ name: "value", type: Type.number }],
+    inputs: [
+      { name: "value", type: Type.number },
+      { name: "digits", type: Type.number, required: false },
+    ],
     output: Type.number,
     category: "arithmetic",
-    description: "The largest whole number that is not above value.",
-    examples: [den`output down = Floor(7.8)`, den`output further = Floor(-7.2)`],
+    description:
+      "The largest whole number that is not above value. With digits, the largest number with that many decimals; a negative digits works in tens, hundreds and so on.",
+    examples: [
+      den`output down = Floor(7.8)`,
+      den`output further = Floor(-7.2)`,
+      den`output tenths = Floor(7.89, 1)`,
+    ],
   });
   lang.registerEvaluator({
     op: Floor,
-    evaluate: ({ value }) => Math.floor(value),
+    evaluate: ({ value, digits }) => atDigits(value, Math.trunc(digits ?? 0), Math.floor),
   });
 
   const Ceil = lang.registerOp({
     name: "Ceil",
-    inputs: [{ name: "value", type: Type.number }],
+    inputs: [
+      { name: "value", type: Type.number },
+      { name: "digits", type: Type.number, required: false },
+    ],
     output: Type.number,
     category: "arithmetic",
-    description: "The smallest whole number that is not below value.",
-    examples: [den`output up = Ceil(7.2)`],
+    description:
+      "The smallest whole number that is not below value. With digits, the smallest number with that many decimals; a negative digits works in tens, hundreds and so on.",
+    examples: [den`output up = Ceil(7.2)`, den`output tenths = Ceil(7.21, 1)`],
   });
   lang.registerEvaluator({
     op: Ceil,
-    evaluate: ({ value }) => Math.ceil(value),
+    evaluate: ({ value, digits }) => atDigits(value, Math.trunc(digits ?? 0), Math.ceil),
   });
 
-  // The bounds work in either order, so there is no wrong way round to answer for: the value
-  // is held between the smaller and the larger of the two.
+  // A bound left out, or handed a null, is no bound (an optional input reads a null as absent,
+  // 0.8.0), so an unset host-fed bound clamps nothing. With both, their order does not matter:
+  // the value is held between the smaller and the larger.
   const Clamp = lang.registerOp({
     name: "Clamp",
     inputs: [
       { name: "value", type: Type.number },
-      { name: "low", type: Type.number },
-      { name: "high", type: Type.number },
+      { name: "low", type: Type.number, required: false },
+      { name: "high", type: Type.number, required: false },
     ],
     output: Type.number,
     category: "arithmetic",
-    description: "value held between low and high. The two bounds work in either order.",
-    examples: [den`output level = Clamp(15, 0, 10)`, den`output floor = Clamp(-3, 0, 10)`],
+    description:
+      "value held between low and high. The two bounds work in either order, and a bound left out is no bound: Clamp(x, 0) is at least 0.",
+    examples: [
+      den`output level = Clamp(15, 0, 10)`,
+      den`output floor = Clamp(-3, 0, 10)`,
+      den`output atMost = Clamp(15, high: 10)`,
+    ],
   });
   lang.registerEvaluator({
     op: Clamp,
     evaluate: ({ value, low, high }) => {
-      const [a, b] = [low, high];
+      const [a, b] = [low ?? -Infinity, high ?? Infinity];
       return Math.min(Math.max(value, Math.min(a, b)), Math.max(a, b));
     },
   });

@@ -124,6 +124,49 @@ export function installString(lang: Language): void {
     evaluate: ({ text, part }) => text.endsWith(part),
   });
 
+  // The separator is required: JavaScript's bare split() gives the whole text and Python's
+  // splits on whitespace, so either default would surprise half the readers.
+  const Split = lang.registerOp({
+    name: "Split",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "separator", type: Type.string },
+    ],
+    output: Type.array(Type.string),
+    category: "string",
+    description:
+      "The pieces of text between one separator and the next, in order. The empty separator splits text into its characters, by code point, so an emoji of one code point stays whole.",
+    examples: [den`output words = Split("live and loud", " ")`],
+  });
+  lang.registerEvaluator({
+    op: Split,
+    // A list of text holds no number, so it is not walked for a NaN.
+    finiteCheck: false,
+    // Array.from walks code points, where split("") would cut a surrogate pair in two.
+    evaluate: ({ text, separator }) =>
+      separator === "" ? Array.from(text) : text.split(separator),
+  });
+
+  // Every match, as a spreadsheet's SUBSTITUTE and Python's replace. Through split and join, not
+  // String.replace, whose replacement text reads `$&` and `$1` as patterns.
+  const Replace = lang.registerOp({
+    name: "Replace",
+    inputs: [
+      { name: "text", type: Type.string },
+      { name: "part", type: Type.string },
+      { name: "replacement", type: Type.string },
+    ],
+    output: Type.string,
+    category: "string",
+    description: "text with every part replaced by replacement. An empty part changes nothing.",
+    examples: [den`output dashed = Replace("CAM 1 / CAM 2", " / ", " - ")`],
+  });
+  lang.registerEvaluator({
+    op: Replace,
+    evaluate: ({ text, part, replacement }) =>
+      part === "" ? text : text.split(part).join(replacement),
+  });
+
   // -------------------------------------------------------------------------
   // Symbols - surface sugar over Join.
   // -------------------------------------------------------------------------

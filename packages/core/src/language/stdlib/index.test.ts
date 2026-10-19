@@ -107,7 +107,8 @@ describe("createStdlib({ segments })", () => {
   // The finite check on an evaluator's result is off (`finiteCheck: false`) on the promise that
   // no number it returns, at any depth, is a NaN or an infinity. The library says so where its
   // result cannot hold one: the ops that hand values on, because what they hand on was read by
-  // the evaluator already, and `Range`, whose items are whole numbers between two finite bounds.
+  // the evaluator already; `Range`, whose items are whole numbers between two finite bounds; and
+  // `Split`, whose items are text.
   // Every other op's result is a bare number, read anyway. A new op that returns a list, a
   // struct or `any` has to decide, and lands here.
   it("the evaluators whose result cannot hold a NaN turn the finite check off, and no other", () => {
@@ -131,6 +132,7 @@ describe("createStdlib({ segments })", () => {
       "Reverse",
       "Slice",
       "Sort",
+      "Split",
       "Unique",
     ]);
   });

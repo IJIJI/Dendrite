@@ -568,6 +568,30 @@ describe("math ops", () => {
     expect(of("Clamp(-3, 10, 0)")).toBe(0);
   });
 
+  // An optional input reads a null as absent (0.8.0), so an unset bound is no bound. Until
+  // 0.8.3 both bounds were required, and `Clamp(3, null, 5)` was null: the one result 0.8.3
+  // moves, named under "Changed" in the changelog.
+  it("Clamp: a bound left out, or null, is no bound", () => {
+    expect(of("Clamp(-3, 0)")).toBe(0);
+    expect(of("Clamp(15, 0)")).toBe(15);
+    expect(of("Clamp(15, high: 10)")).toBe(10);
+    expect(of("Clamp(3, null, 5)")).toBe(3);
+    expect(of("Clamp(8, null, 5)")).toBe(5);
+    expect(of("Clamp(8)")).toBe(8);
+  });
+
+  // Through the exponent, as Round: 1.1 * 10 is 11.000000000000002, whose ceiling is 12.
+  it("Floor and Ceil take digits, as Round does, on the signed value", () => {
+    expect(of("Floor(7.89, 1)")).toBe(7.8);
+    expect(of("Ceil(7.21, 1)")).toBe(7.3);
+    expect(of("Floor(-7.25, 1)")).toBe(-7.3);
+    expect(of("Ceil(-7.25, 1)")).toBe(-7.2);
+    expect(of("Ceil(1.1, 1)")).toBe(1.1);
+    expect(of("Floor(1234, -2)")).toBe(1200);
+    expect(of("Ceil(1234, -2)")).toBe(1300);
+    expect(of("Floor(7.8, null)")).toBe(7);
+  });
+
   it("Mod takes the sign of its first number", () => {
     expect(of("Mod(7, 3)")).toBe(1);
     expect(of("Mod(-7, 3)")).toBe(-1);
@@ -596,7 +620,6 @@ describe("math ops", () => {
       "Ceil(null)",
       "Abs(null)",
       "Clamp(null, 1, 5)",
-      "Clamp(3, null, 5)",
       "Mod(null, 5)",
       "Mod(5, null)",
       "Pow(null, 2)",
@@ -622,6 +645,7 @@ describe("math ops", () => {
       "Round(x)",
       "Round(x, 2)",
       "Floor(x)",
+      "Floor(x, 1)",
       "Ceil(x)",
       "Abs(x)",
       "Clamp(x, 0, 10)",
@@ -904,6 +928,27 @@ describe("string ops", () => {
     expect(value('Contains("abc", "")')).toBe(true);
     expect(value('StartsWith("abc", "")')).toBe(true);
     expect(value('EndsWith("abc", "")')).toBe(true);
+  });
+
+  it("Split: by its separator, and by code point for the empty one", () => {
+    expect(value('Split("live and loud", " ")')).toEqual(["live", "and", "loud"]);
+    expect(value('Split("a,,b", ",")')).toEqual(["a", "", "b"]);
+    expect(value('Split("", ",")')).toEqual([""]);
+    expect(value('Split("ab", "")')).toEqual(["a", "b"]);
+    expect(value('Split("a😀b", "")')).toEqual(["a", "😀", "b"]);
+  });
+
+  it("Replace: every match, taken as written, and an empty part changes nothing", () => {
+    expect(value('Replace("a-b-c", "-", "+")')).toBe("a+b+c");
+    expect(value('Replace("aaa", "aa", "b")')).toBe("ba");
+    expect(value('Replace("cost", "cost", "$&$&")')).toBe("$&$&");
+    expect(value('Replace("abc", "", "x")')).toBe("abc");
+  });
+
+  it("Split and Replace: a null text is no value", () => {
+    expect(value('Split(null, ",")')).toBeNull();
+    expect(value('Replace(null, "a", "b")')).toBeNull();
+    expect(value('Replace("a", "a", null)')).toBeNull();
   });
 });
 
