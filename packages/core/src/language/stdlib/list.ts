@@ -1,6 +1,7 @@
 import { den } from "../infra/serialise";
 import { type Language } from "../language";
 import { Type, elementOf, isAnyOrNull } from "../infra/types";
+import { sameListType } from "./shared";
 
 //? The list segment: the higher-order ops, which are how iteration is written. Each is an
 // ordinary op with a function-typed input (declared last, so its generic element type is
@@ -30,10 +31,7 @@ export function installList(lang: Language): void {
     inferInputTypes: (inputTypes) => ({
       predicate: Type.fn([elementOf(inputTypes["list"])], Type.boolean),
     }),
-    inferOutput: (inputTypes) => {
-      const listType = inputTypes["list"];
-      return listType?.kind === "array" ? listType : Type.array(Type.any);
-    },
+    inferOutput: sameListType,
   });
 
   const MapOp = lang.registerOp({

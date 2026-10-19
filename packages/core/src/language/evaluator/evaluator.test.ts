@@ -10,7 +10,7 @@ import {
 } from "../infra/nodes";
 import { type RawProgram } from "../infra/program";
 import { Type } from "../infra/types";
-import { analyse } from "../analyser/analyser";
+import { analyse, getOutputType } from "../analyser/analyser";
 import { parseSource } from "../language";
 import { createStdlib } from "../stdlib";
 import { withPorts } from "../../testing";
@@ -323,6 +323,82 @@ describe("array ops", () => {
   });
 });
 
+// The list ops of 0.8.3. A position counts from 0, and a position with no item is no value,
+// never an item counted from the end (the programmer's convention, decided 2026-10-16).
+describe("reading an item, and making a list from another", () => {
+  const value = (src: string) => runSource(`output out = ${src}`).value;
+  const typeOf = (src: string) =>
+    getOutputType(runSource(`output out = ${src}`).analysed.program.outputs.get("out")!);
+
+  it("At counts from 0, and a position with no item gives null", () => {
+    expect(value("At([4, 8, 15], 0)")).toBe(4);
+    expect(value("At([4, 8, 15], 2)")).toBe(15);
+    expect(value("At([4, 8, 15], 3)")).toBeNull(); // one past the end
+    expect(value("At([4, 8, 15], -1)")).toBeNull(); // never from the end
+    expect(value("At([4, 8, 15], 1.5)")).toBeNull();
+    expect(value("At([], 0)")).toBeNull();
+  });
+
+  it("First and Last, and null for an empty list", () => {
+    expect(value("First([4, 8, 15])")).toBe(4);
+    expect(value("Last([4, 8, 15])")).toBe(15);
+    expect(value("First([])")).toBeNull();
+    expect(value("Last([])")).toBeNull();
+  });
+
+  it("At, First and Last are typed as the list's items", () => {
+    expect(typeOf("At([4, 8], 0)")).toEqual(Type.number);
+    expect(typeOf('First(["a"])')).toEqual(Type.string);
+    expect(typeOf("Last([true])")).toEqual(Type.boolean);
+  });
+
+  it("Slice counts from 0, stops before to, and moves a position outside to the nearest end", () => {
+    expect(value("Slice([4, 8, 15, 16, 23], 1, 3)")).toEqual([8, 15]);
+    expect(value("Slice([4, 8, 15], 1)")).toEqual([8, 15]);
+    expect(value("Slice([4, 8, 15], -2, 2)")).toEqual([4, 8]); // never from the end
+    expect(value("Slice([4, 8, 15], 1, 99)")).toEqual([8, 15]);
+    expect(value("Slice([4, 8, 15], 2, 1)")).toEqual([]);
+    expect(value("Slice([4, 8, 15], 0, -1)")).toEqual([]);
+  });
+
+  it("Reverse, and Sort: numbers by value, text by code unit, either way", () => {
+    expect(value("Reverse([4, 8, 15])")).toEqual([15, 8, 4]);
+    expect(value("Sort([15, 4, 8])")).toEqual([4, 8, 15]);
+    expect(value('Sort(["b", "B", "a"])')).toEqual(["B", "a", "b"]);
+    expect(value("Sort([15, 4, 8], true)")).toEqual([15, 8, 4]);
+  });
+
+  it("Sort puts numbers, then text, then the rest in the order it came, both ways", () => {
+    expect(value('Sort([true, "b", 2, null, "a", 1])')).toEqual([1, 2, "a", "b", true, null]);
+    expect(value('Sort([true, "b", 2, null, "a", 1], true)')).toEqual([2, 1, "b", "a", true, null]);
+  });
+
+  it("Unique keeps the first of each, and two alike lists are two items", () => {
+    expect(value("Unique([4, 8, 4, 15, 8])")).toEqual([4, 8, 15]);
+    expect(value("Unique([[1], [1]])")).toEqual([[1], [1]]);
+  });
+
+  it("Reverse, Sort, Unique and Slice keep the list's type", () => {
+    for (const call of ["Reverse([1])", "Sort([1])", "Unique([1])", "Slice([1], 0)"]) {
+      expect(typeOf(call)).toEqual(Type.array(Type.number));
+    }
+  });
+
+  it("Range counts from from up to, not including, to", () => {
+    expect(value("Range(1, 4)")).toEqual([1, 2, 3]);
+    expect(value("Range(-2, 1)")).toEqual([-2, -1, 0]);
+    expect(value("Range(1.7, 4.2)")).toEqual([1, 2, 3]); // a fraction cut to its whole part
+    expect(value("Range(3, 3)")).toEqual([]);
+    expect(value("Range(4, 1)")).toEqual([]);
+  });
+
+  it("Sum skips a null item, and an empty list is 0", () => {
+    expect(value("Sum([4, 8, 15])")).toBe(27);
+    expect(value("Sum([4, null])")).toBe(4);
+    expect(value("Sum([])")).toBe(0);
+  });
+});
+
 // An op that computes NaN or an infinity has no answer, and the evaluator gives null for it:
 // neither is a value a program can hold (they are not JSON, and NaN is not equal to itself).
 // The rule is the evaluator's, for every op, so it is shown on the stdlib's own cases and on
@@ -574,8 +650,16 @@ describe("a list op handed what is not a list gives no value", () => {
     runSource(`let f = x => ${body}\noutput out = f(${arg})`).value;
   const ops: [string, unknown][] = [
     ["Length(x)", 0],
+    ["At(x, 0)", null],
+    ["First(x)", null],
+    ["Last(x)", null],
+    ["Slice(x, 0)", []],
     ["Concat(x, [1])", [1]],
     ["Flatten(x, 1)", []],
+    ["Reverse(x)", []],
+    ["Sort(x)", []],
+    ["Unique(x)", []],
+    ["Sum(x)", 0],
     ["Average(x)", null],
     ["Max(x)", null],
     ["Min(x)", null],

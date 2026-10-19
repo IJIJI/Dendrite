@@ -279,8 +279,8 @@ See `architecture.md` for the layering DAG and full design.
   the evaluator decides it (`receive` in `evaluator.ts`), before any op, so the stdlib holds no
   guard for either. Four inputs take what comes: an `any` input (the value, `null` included),
   an optional one (a `null` reads as absent), a converting one (its leaves go through `Convert`
-  first, then the rule), a lazy one (the op's to read). `Average`, `Max` and `Min` skip a `null`
+  first, then the rule), a lazy one (the op's to read). `Sum`, `Average`, `Max` and `Min` skip a `null`
   item (`numbersOf`); `And` and `Or` are three-valued. One limit: the items of a declared
   `T[]` are the declaration's, as a host's declared output type is, since the door checks a
-  list's kind and not its items; the three aggregates filter by kind for that reason. So a missing value reaches the output,
+  list's kind and not its items; the four aggregates filter by kind for that reason. So a missing value reaches the output,
   and a program that cares tests it where it arises (`??`, `IsSet`).
