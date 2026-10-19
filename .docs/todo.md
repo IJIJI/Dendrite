@@ -29,9 +29,70 @@ The order's three reasons: adds before breaks (0.8.1 to 0.8.3 ship every small t
 plan file each, 0.9.0 is the first plan); types before the editor (union types change `Type`,
 and Rete reads it everywhere); one pre-1.0 minor for every removal, so 1.0 is a list.
 
-Beside that order: the two entries below it (the site review after Learn, as the maintainer
-reads; the boolean input's checkbox, with the Rete half). The last section of this file is what
-must be done before a 1.0.0.
+Beside that order: the four entries below it (the survey of the ops the library lacks, right
+after 0.8.3; `Sort` with a function, in 0.8.3 or the survey's patch; the site review after
+Learn, as the maintainer reads; the boolean input's checkbox, with the Rete half). The last
+section of this file is what must be done before a 1.0.0.
+
+---
+
+## Stdlib — the ops a program reaches for and lacks: a survey, then the ones needed
+
+**What:** asked by the maintainer on 2026-10-19: explore which operations the library misses,
+and build the ones judged needed.
+
+**When: right after 0.8.3 is on npm, before the union-types plan starts.** Three reasons. 0.8.3
+closes every gap the backlog names, so the survey starts from the real library. The survey is a
+document and costs no release. And its answers sort themselves by what they wait for, so each
+lands where it can.
+
+**How:**
+
+1. **The inventory.** Every op of the library beside what C++ (`<algorithm>`, `<string>`,
+   `<cmath>`), Java (streams, `String`, `Math`), JavaScript (`Array`, `String`, `Math`),
+   Python's builtins, SQL's functions and a spreadsheet offer, one table per segment. A row is
+   an op the others have and Dendrite lacks, with one line on what a program writes instead
+   today.
+2. **The sort, per row:** needed (a program in the examples, the docs or Beacon would use it),
+   nice to have, or not wanted (it needs a loop or a side effect, or it is two ops in a row).
+3. **What each needed op waits for:** nothing; union types (an honest output type, 0.9.0);
+   strings as lists or struct literals (0.10.0); a map or tuple type (no release yet).
+4. **Where each lands:** what waits for nothing, in a core patch before 0.9.0 (0.8.4); the rest,
+   in the plan of the minor it waits for; a name that overlaps another op's, in the stdlib names
+   review of the pre-1.0 minor.
+
+**Not in the survey:** the next questions the backlog already lists as having no consumer
+(`Replace` of the first match only, a limit on `Split`, a `step` on `Range` and `Slice`, a key
+on `Unique`); the survey may find their consumer. `Sort` with a function is the entry below.
+
+---
+
+## Stdlib — `Sort` with a function, as PHP's `usort`
+
+**What:** asked by the maintainer on 2026-10-19: `Sort` takes a function that decides the
+order, as PHP's `usort($list, fn($a, $b) => …)` does. `Sort` of 0.8.3 has a fixed order
+(numbers, then text, then the rest) and a `descending` flag, so a list of structs has no way to
+be sorted by a field.
+
+**When:** 0.8.3, if decided before its docs commit: `Sort` is not released yet, so its shape
+costs nothing to settle now. Else the core patch the survey above leads to. Either way it only
+adds.
+
+**The question, two shapes** (most languages have one or both):
+
+| Shape | A program writes | Who has it |
+| --- | --- | --- |
+| **A comparator**, `(a, b) -> number`, below zero when `a` goes first | `SortWith(people, (a, b) => a.age - b.age)` | PHP `usort`, JavaScript `sort(compareFn)`, Java `Comparator`, C++ `std::sort` (a `bool` "less than" in place of a number), Rust `sort_by` |
+| **A key**, `item -> value`, sorted by the fixed order | `SortBy(people, p => p.age)` | Python `sorted(key=…)`, Rust `sort_by_key`, Java `Comparator.comparing`, SQL `ORDER BY` an expression, a spreadsheet's `SORTBY` |
+
+A key cannot be inconsistent (a comparator that says `a` before `b` and `b` before `a` gives an
+order nobody chose) and reads shorter. A comparator says what a key cannot: two fields, one of
+them descending, without a key that joins them. Either is an ordinary op with a function input,
+typed from the list as `Filter`'s predicate is.
+
+**To decide:** which shape, or both; a new op, or an input on `Sort` (`Sort(xs, compare: …)`,
+a named argument beside `descending`); what a comparator's `null` means (most likely "equal",
+so the two keep their order).
 
 ---
 
@@ -81,7 +142,7 @@ on 2026-10-14" above, and the three backlog entries they closed are in `done.md`
 | What | Why before 1.0.0 | Where it is written |
 | --- | --- | --- |
 | **A review of the stdlib's names** | A rename or a move is a break, as the comparison ops' move to `logic` was in 0.6.0 | Here. With it: `Flatten`, which cannot type its output (`backlog.md`) |
-| **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | `backlog.md`: "the rest of the string ops", "`Clamp` with one bound", "what the math batch left out" |
+| **The functions the stdlib still lacks** | Asked for with the review. Each one only adds, so it is here for completeness of a 1.0, not for the rule | The three backlog entries it named are built in 0.8.3. The rest: above, "Stdlib — the ops a program reaches for and lacks" (2026-10-19) |
 | **Strings as lists** ("probably should") | `Contains` and `Includes` would become one op, which removes a name | `backlog.md`, "Language — strings as lists" |
 | **A struct type may not reach itself through a function field** | Refusing it later refuses a type a host declared. `Tree { children: Tree[] }` stays legal | `backlog.md`, "Core — a struct type that names itself". Placed in 0.10.0, before struct literals (the order at the top) |
 | **A saved program that is not well formed is reported, never thrown: in 0.7.1** (the maintainer, 2026-10-12) | 1.0 promises that a command reports and does not throw. Probed: seven kinds of bad program give a raw `TypeError` from `setProgram`, `setLayer`, `createInstance` or `load`, and three of them leave the instance broken for good. The whole check exists, in the link (`isSavedProgram`); a program from storage goes past it | `backlog.md`, "Core — a saved program that is not well formed" |

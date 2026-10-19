@@ -371,6 +371,73 @@ stays for 0.10.0, with the same rule.
 
 ---
 
+## Language — method-call syntax on values: `grades.At(0)`, `grades.length`
+
+**What:** asked by the maintainer on 2026-10-19, with examples rather than fixed requirements:
+an op called on a value with a dot, as a method is in JavaScript or Java. Given `grades` of type
+`number[]`: `grades.length` for `Length(grades)`, `grades.at(0)` for `At(grades, 0)`, and
+`grades[0]` as a shorter `grades.at(0)`.
+
+**The names for it.** Dendrite has no objects and needs none: its types are data and its ops
+are functions, so this is syntax, not object types. A function called with its first argument
+before a dot is **method-call syntax**; where every function may be called that way it is
+**uniform function call syntax** (UFCS: D, Nim). Functions added to an existing type that read
+as its methods are **extension methods** (C#, Kotlin). A dot with no parentheses that runs a
+function is a **computed property** (C#, Kotlin, Swift, JavaScript's getters). `grades[0]` is
+**index access**, the entry above (0.10.0), which desugars to `At` directly.
+
+**What a program gets today** (probed 2026-10-19): `grades.length` compiles with no warning and
+gives `null`, because `field_access_on_primitive` covers a number, a string and a boolean, and
+a list falls through in silence; `grades.at(0)` is an error (`app_callee_not_function`);
+`"abc".length` warns and gives `null`.
+
+**Other languages:**
+
+| Language | A list's length | A function called on a value |
+| --- | --- | --- |
+| C++ | `v.size()`, a member function | Members only; UFCS was proposed (N4165, N4174, 2014) and not adopted |
+| Java | `arr.length`, a field of every array; `list.size()` | Methods only, chained through streams: `list.stream().filter(…).map(…)` |
+| JavaScript | `arr.length`, a property | Methods: `arr.filter(…).map(…)`, `arr.at(-1)` |
+| Python | `len(xs)`, a function | Both: functions (`sorted(xs)`) and methods (`xs.sort()`) |
+| Rust | `v.len()`, a method | Methods, and traits that add them to a type |
+| C#, Kotlin | `list.Count`, `list.size`, properties | Extension methods and properties on any type |
+| PHP | `count($a)`, a function | Functions; a pipe, `$a \|> count(...)`, since 8.5 |
+| SQL, a spreadsheet | `CARDINALITY(a)`, `COUNTA(range)` | Functions only |
+
+**Is it possible:** yes, in three pieces of different weight.
+
+1. **A call after a dot**, `grades.At(0)` → `At(grades, 0)`: the value is the op's first input.
+   A desugar in the parser, as a symbol's is. It needs no name lookup: the parser keeps the
+   name, and the analyser reports an unknown op as it does today. It only adds, since every
+   such program is an error today.
+2. **A property**, `grades.length` → `Length(grades)`: the analyser must decide it, from the
+   value's type, because the parser does not know that `grades` is a list. It changes a result
+   (`null` today, `3` then), so it is a minor, and it needs a rule for a struct whose field has
+   an op's name.
+3. **Lower-case names**, `at` for `At`: a second name for every op, or a case rule (the first
+   letter raised). The library's names are PascalCase, as a spreadsheet's are upper-case.
+
+**Is it smart.** For it: a chain reads left to right (`scores.Filter(s => s > 10).Map(s => s * 2)`
+against `Map(Filter(scores, s => s > 10), s => s * 2)`), and after a dot the editor can offer the
+ops whose first input takes the value's type, the language service's best first consumer.
+Against it: two spellings for every op, which the reference and every sample must choose
+between; a property namespace beside the struct fields; and the visual editor has no dot
+(it shows the op, which is fine for sugar). **A pipe**, `scores |> Filter(s => s > 10)` (F#,
+Elixir, R, PHP 8.5), gives the same left-to-right reading with no clash and no second name, for
+a symbol fewer readers know.
+
+**Recommendation (2026-10-19):** piece 1 or a pipe, compared in one plan; pieces 2 and 3 not,
+unless the stdlib names review finds a reason. Index access stays its own entry.
+
+**A first step, independent of all of it:** a field read on a list warns, as one on a number
+does, so `grades.length` stops giving `null` in silence. A warning only, so any core patch.
+
+**When:** after 0.10.0, where index access and struct literals settle what `[` and `.` mean,
+and after the language service, which gives the dot its completion. Piece 1 or a pipe only
+adds, so it may come after 1.0; piece 2 changes a result, so it is before 1.0 or never.
+
+---
+
 ## Core — the nearest-name hint on a port type and on an op node
 
 **What:** 0.7.0 appends "Did you mean 'x'?" to eight diagnostics (`analyser/nearest.ts`): a
