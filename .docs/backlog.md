@@ -371,71 +371,101 @@ stays for 0.10.0, with the same rule.
 
 ---
 
-## Language — method-call syntax on values: `grades.At(0)`, `grades.length`
+## Language — what the dot means: a field, or a member of a struct type declared in code
 
-**What:** asked by the maintainer on 2026-10-19, with examples rather than fixed requirements:
-an op called on a value with a dot, as a method is in JavaScript or Java. Given `grades` of type
-`number[]`: `grades.length` for `Length(grades)`, `grades.at(0)` for `At(grades, 0)`, and
-`grades[0]` as a shorter `grades.at(0)`.
+**What:** asked by the maintainer on 2026-10-19. First an op called on a value with a dot, as a
+method is in JavaScript or Java (`grades.length`, `grades.at(0)`, `grades[0]`); then, in the same
+talk, objects: struct types declared in code, written close to an object, which may later have
+functions of their own. The examples were examples, not requirements. Settled the same day.
 
-**The names for it.** Dendrite has no objects and needs none: its types are data and its ops
-are functions, so this is syntax, not object types. A function called with its first argument
-before a dot is **method-call syntax**; where every function may be called that way it is
-**uniform function call syntax** (UFCS: D, Nim). Functions added to an existing type that read
-as its methods are **extension methods** (C#, Kotlin). A dot with no parentheses that runs a
-function is a **computed property** (C#, Kotlin, Swift, JavaScript's getters). `grades[0]` is
-**index access**, the entry above (0.10.0), which desugars to `At` directly.
+**Decided 2026-10-19:**
+
+- **The dot means what a value has: its fields, and later the members of its type.** It is not a
+  second way to call a library op. `At(grades, 0)` stays the way, the list being the op's first
+  argument, as every list op takes it. So: no call after a dot for an op (UFCS), no pipe (`|>`:
+  reading left to right is not needed), no property on a list (`grades.length`), no lower-case
+  second names. Index access, `grades[0]`, stays its own entry (0.10.0) and desugars to `At`.
+- **An object in Dendrite is an immutable struct with members derived from its fields**, as
+  Java's `record`, Kotlin's `data class`, Swift's `struct` and Rust's `struct` with an `impl`
+  are; not a Java or JavaScript class. No mutable state and no setters: a change is a new
+  value. No member chosen at run time: a host pushes plain JSON with no type tag, so the
+  checked type chooses, as it does for C++'s non-virtual members and Go's methods. No function
+  stored in a value: values stay JSON for the link, persistence and a host's push, and the
+  self-application route of "Core — a struct type that names itself" stays closed.
+- **A member is a binding, written as one** (the maintainer's correction of a sketch). A
+  computed member is `length = Sqrt(x * x + y * y)`, and a member with a parameter is a lambda,
+  `scaled = (k: number) => Point { x: x * k, y: y * k }`, as `let f = (k: number) => …` is. No
+  second spelling for a function. So `p.scaled(2)` is a field read applied to an argument,
+  which is how the parser reads it today.
+
+The shape, not the final syntax:
+
+```den
+type Point {
+  x: number
+  y: number
+  length = Sqrt(x * x + y * y)
+  scaled = (k: number) => Point { x: x * k, y: y * k }
+}
+output big = $p.scaled(2).length
+```
+
+**How it fits what exists:**
+
+| Step | What it has | What members add |
+| --- | --- | --- |
+| Parse | `.` at the `MEMBER` tier, and application: `p.scaled(2)` parses today (and is `app_callee_not_function` in the analyser) | A `type` statement (`registerStatement` holds `let` and `output`), and the struct literal of 0.10.0 |
+| Compose | Types from the language and the port layers | Nothing, if a type declared in code lives in the program's own scope |
+| Analyse | The `field` case resolves a name on a struct type through `resolveField`, along `extends` | Members join that lookup. A body is analysed with the fields in scope, as a lambda's parameters are (`localBindings`) |
+| Evaluate | A closure application binds its parameters (`bodyScope`) | A member read evaluates its body with the value's fields bound the same way |
 
 **What a program gets today** (probed 2026-10-19): `grades.length` compiles with no warning and
 gives `null`, because `field_access_on_primitive` covers a number, a string and a boolean, and
-a list falls through in silence; `grades.at(0)` is an error (`app_callee_not_function`);
-`"abc".length` warns and gives `null`.
+a list falls through in silence; `grades.at(0)` and `p.scaled(2)` are errors
+(`app_callee_not_function`); `"abc".length` warns and gives `null`; `let type = 2` is a legal
+binding.
+
+**A first step, independent of members:** a field read on a list warns, as one on a number
+does, so `grades.length` stops giving `null` in silence. A warning only, so any core patch.
 
 **Other languages:**
 
-| Language | A list's length | A function called on a value |
-| --- | --- | --- |
-| C++ | `v.size()`, a member function | Members only; UFCS was proposed (N4165, N4174, 2014) and not adopted |
-| Java | `arr.length`, a field of every array; `list.size()` | Methods only, chained through streams: `list.stream().filter(…).map(…)` |
-| JavaScript | `arr.length`, a property | Methods: `arr.filter(…).map(…)`, `arr.at(-1)` |
-| Python | `len(xs)`, a function | Both: functions (`sorted(xs)`) and methods (`xs.sort()`) |
-| Rust | `v.len()`, a method | Methods, and traits that add them to a type |
-| C#, Kotlin | `list.Count`, `list.size`, properties | Extension methods and properties on any type |
-| PHP | `count($a)`, a function | Functions; a pipe, `$a \|> count(...)`, since 8.5 |
-| SQL, a spreadsheet | `CARDINALITY(a)`, `COUNTA(range)` | Functions only |
+| Language | The object model nearest Dendrite's |
+| --- | --- |
+| C++ | A `struct` with `const` member functions, non-virtual |
+| Java | `record` (16): immutable, may have methods, cannot be extended |
+| Kotlin | `data class` with `val`s and computed properties, `copy` for a changed copy |
+| Rust, Go | A `struct` with an `impl` block, or methods on a type, chosen at compile time |
+| Swift | A `struct` with computed properties |
+| C# | A `record` with `with` for a changed copy |
+| JavaScript | A class or an object literal: mutable, chosen at run time, which is what this model is not |
+| Elm | The nearest pure language: records and no methods, only functions |
 
-**Is it possible:** yes, in three pieces of different weight.
+**To decide in its own plan** (each only adds, so after struct literals, and possibly after
+1.0):
 
-1. **A call after a dot**, `grades.At(0)` → `At(grades, 0)`: the value is the op's first input.
-   A desugar in the parser, as a symbol's is. It needs no name lookup: the parser keeps the
-   name, and the analyser reports an unknown op as it does today. It only adds, since every
-   such program is an error today.
-2. **A property**, `grades.length` → `Length(grades)`: the analyser must decide it, from the
-   value's type, because the parser does not know that `grades` is a list. It changes a result
-   (`null` today, `3` then), so it is a minor, and it needs a rule for a struct whose field has
-   an op's name.
-3. **Lower-case names**, `at` for `At`: a second name for every op, or a case rule (the first
-   letter raised). The library's names are PascalCase, as a spreadsheet's are upper-case.
+- Where members are written: inside a `type` declared in code, and also as an extension of a
+  type a layer or a host declares (C#, Kotlin and Swift have extensions), which would give a
+  host's types members without code in a layer.
+- How one is written inside the type: `name = …`, or `let name = …` as at the top level.
+- The namespace: a type's fields and members share one, with a clash refused where the type
+  is declared; members inherited along `extends`, with no override, as fields are.
+- The cycle rule: a member that reaches itself is refused, as `binding_cycle` is. That also
+  refuses folding a tree (`size` over `children`), although recursion over finite data ends;
+  whether v1 keeps that wall.
+- Where a type declared in code lives: in the program's own scope, which compose never reads,
+  so no port can name it; or in the document layer, so a port can.
+- Caching: per read, as a lambda application is today, or per value.
+- A changed copy (`with`, `copy`); `==` on two structs; how the visual editor shows a member
+  (most likely a node with the value as its first input, as an op).
 
-**Is it smart.** For it: a chain reads left to right (`scores.Filter(s => s > 10).Map(s => s * 2)`
-against `Map(Filter(scores, s => s > 10), s => s * 2)`), and after a dot the editor can offer the
-ops whose first input takes the value's type, the language service's best first consumer.
-Against it: two spellings for every op, which the reference and every sample must choose
-between; a property namespace beside the struct fields; and the visual editor has no dot
-(it shows the op, which is fine for sugar). **A pipe**, `scores |> Filter(s => s > 10)` (F#,
-Elixir, R, PHP 8.5), gives the same left-to-right reading with no clash and no second name, for
-a symbol fewer readers know.
+**To decide before 1.0** (a later choice would break a program): the word `type`. Reserved, a
+program with a binding called `type` stops compiling, so the pre-1.0 minor. Or contextual, a
+statement only where `type Name {` stands, which breaks nothing and can come any time. Written
+in `todo.md`, "Before 1.0.0".
 
-**Recommendation (2026-10-19):** piece 1 or a pipe, compared in one plan; pieces 2 and 3 not,
-unless the stdlib names review finds a reason. Index access stays its own entry.
-
-**A first step, independent of all of it:** a field read on a list warns, as one on a number
-does, so `grades.length` stops giving `null` in silence. A warning only, so any core patch.
-
-**When:** after 0.10.0, where index access and struct literals settle what `[` and `.` mean,
-and after the language service, which gives the dot its completion. Piece 1 or a pipe only
-adds, so it may come after 1.0; piece 2 changes a result, so it is before 1.0 or never.
-
+**When:** struct types declared in code after struct literals (0.10.0), members after those.
+No release is named yet.
 ---
 
 ## Core — the nearest-name hint on a port type and on an op node

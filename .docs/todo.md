@@ -165,15 +165,22 @@ on 2026-10-14" above, and the three backlog entries they closed are in `done.md`
 **These have a release, so they are not rows here:** 0.7.0 holds `??`, `c ? a : b`, a lazy
 `If` decided with them, and `AnalysisContext` leaving the public surface.
 
-**Structs: what waits until after 1.0.0** (each only adds): struct literals (`{ a: 1 }`; the
-brace counting they bring to a template hole touches only programs that are errors today),
-struct types declared in a program and `extends` there, how a literal fits a named type while
-named types stay nominal, a type's own text form (`toText`, opt-in), and the field-wise widget
-for struct inputs. Two small things are decisions and not work: a struct prints as its JSON
+**Structs, and where each part went** (corrected 2026-10-19): struct literals are in 0.10.0
+(the order at the top, 2026-10-16; the brace counting they bring to a template hole touches only
+programs that are errors today), with how a literal fits a named type while named types stay
+nominal. Struct types declared in a program, `extends` there, then members on them: after
+struct literals, no release yet (`backlog.md`, "Language — what the dot means", 2026-10-19).
+Each only adds, so they may come after 1.0.0, but the word `type` is decided before (below).
+Still after 1.0.0, each only adding: a type's own text form (`toText`, opt-in) and the
+field-wise widget for struct inputs. Two small things are decisions and not work: a struct prints as its JSON
 (say that this is the form), and a field read on a value that is no struct (below).
 
-**Still to decide:** nothing. The last row, two styles for setting an input, was decided on
-2026-10-16 (A) and built in 0.8.2 (`done.md`).
+**Still to decide** (2026-10-19; the row before it, two styles for setting an input, was decided
+on 2026-10-16 and built in 0.8.2, `done.md`):
+
+| Decision | The options | Wanted by |
+| --- | --- | --- |
+| **The word `type`, for struct types declared in code** | Reserved: `let type = 2`, legal today, stops compiling, so the pre-1.0 minor. Or contextual: a statement only where `type Name {` stands, which breaks nothing and can come any time. `backlog.md`, "Language — what the dot means" | Before 1.0.0 |
 
 **What was probed for option B** (2026-10-12, all on core 0.6.0):
 
