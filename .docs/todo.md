@@ -74,9 +74,12 @@ order, as PHP's `usort($list, fn($a, $b) => …)` does. `Sort` of 0.8.3 has a fi
 (numbers, then text, then the rest) and a `descending` flag, so a list of structs has no way to
 be sorted by a field.
 
-**When:** 0.8.3, if decided before its docs commit: `Sort` is not released yet, so its shape
-costs nothing to settle now. Else the core patch the survey above leads to. Either way it only
-adds.
+**Decided 2026-10-19 (the maintainer), built in 0.8.3:** a comparator, as asked:
+`SortWith(list, compare)`, a new op in the list segment beside `Filter`, since it takes a
+function. `compare(a, b)` below zero puts `a` first, above zero puts `b` first, and zero or a
+`null` keeps the two in the order they came (the sort is stable). The comparator is typed from
+the list, as `Filter`'s predicate is. `Sort` keeps its fixed order and its `descending` flag.
+A key form (`SortBy`) stays open, with no consumer. The entry moves to `done.md` with 0.8.3.
 
 **The question, two shapes** (most languages have one or both):
 
@@ -90,9 +93,9 @@ order nobody chose) and reads shorter. A comparator says what a key cannot: two 
 them descending, without a key that joins them. Either is an ordinary op with a function input,
 typed from the list as `Filter`'s predicate is.
 
-**To decide:** which shape, or both; a new op, or an input on `Sort` (`Sort(xs, compare: …)`,
-a named argument beside `descending`); what a comparator's `null` means (most likely "equal",
-so the two keep their order).
+**The questions, as they were asked:** which shape, or both; a new op, or an input on `Sort`
+(`Sort(xs, compare: …)`, a named argument beside `descending`); what a comparator's `null`
+means. Answered above.
 
 ---
 

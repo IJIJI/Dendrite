@@ -384,6 +384,32 @@ describe("reading an item, and making a list from another", () => {
     }
   });
 
+  it("SortWith orders by its comparator: below zero puts a first", () => {
+    expect(value("SortWith([4, 15, 9, 30], (a, b) => Abs(a - 10) - Abs(b - 10))")).toEqual([
+      9, 15, 4, 30,
+    ]);
+    // What Sort cannot see: Sort keeps lists last, in the order they came.
+    expect(value("SortWith([[1, 2, 3], [1], [1, 2]], (a, b) => Length(a) - Length(b))")).toEqual([
+      [1],
+      [1, 2],
+      [1, 2, 3],
+    ]);
+  });
+
+  it("SortWith keeps two items in their order when the comparator calls them equal, or gives null", () => {
+    expect(value("SortWith([3, 1, 2], (a, b) => 0)")).toEqual([3, 1, 2]);
+    expect(value("SortWith([3, 1, 2], (a, b) => null)")).toEqual([3, 1, 2]);
+  });
+
+  it("SortWith types its comparator from the list, and keeps the list's type", () => {
+    const { analysed } = runSource("output out = SortWith([1, 2], (a, b) => a - b)");
+    expect(analysed.errors).toEqual([]);
+    // No implicit_any_cast on `a - b`: the parameters are numbers. The one warning is the
+    // program's output, which no port declares here.
+    expect(analysed.warnings.map((w) => w.kind)).toEqual(["unknown_program_output"]);
+    expect(typeOf("SortWith([1, 2], (a, b) => a - b)")).toEqual(Type.array(Type.number));
+  });
+
   it("Range counts from from up to, not including, to", () => {
     expect(value("Range(1, 4)")).toEqual([1, 2, 3]);
     expect(value("Range(-2, 1)")).toEqual([-2, -1, 0]);
@@ -682,6 +708,7 @@ describe("a list op handed what is not a list gives no value", () => {
     ["Flatten(x, 1)", []],
     ["Reverse(x)", []],
     ["Sort(x)", []],
+    ["SortWith(x, (a, b) => 0)", []],
     ["Unique(x)", []],
     ["Sum(x)", 0],
     ["Average(x)", null],

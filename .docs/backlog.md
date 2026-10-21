@@ -936,6 +936,40 @@ something it does not; the fourth is a highlighter change with no reader asking 
 
 ---
 
+## Editor — the hover shows what an op's example gives
+
+**What:** asked by the maintainer on 2026-10-19: show the output of an op's code example. The
+docs' reference does already: `OpsReference.astro` runs each example at build time (`produced`)
+and prints `→ name = value` lines under it. The editor's hover (0.8.2) shows the first example
+and not what it gives, so a reader works out `Filter([4, 8, 15, 16], item => item > 10)` in
+their head.
+
+**What it would take:**
+
+- **One function in the editor**, beside `signatureParts`, that runs an example and gives its
+  lines: `createEnvironment(language).forProgram([], [])`, `load`, `run`, as `produced` does.
+  An example is literal-only and needs no inputs (`stdlib/examples.test.ts` loads every one).
+  The reference uses it too, so the two cannot disagree, as the signature has one definition
+  since 0.8.2.
+- **Cached per op**, a `WeakMap` on the definition, so a hover runs an example once.
+- **Rendered as the Outputs pane's lines** (`→ name = value`), through `formatValue`.
+
+**To decide:**
+
+- The first example only, as the hover shows now, or every one.
+- A host's op: running its example on a hover calls the host's evaluator, which may be slow or
+  reach outside (an evaluator is meant to be pure, and nothing checks it). The library's ops
+  only, or a host's too, or a host's opt-out.
+- An example that does not load: the hover shows nothing under it, or the diagnostic.
+
+**Why deferred:** asked as something to look at, with no reader waiting on it. Small: one
+function, a cache and a few lines of DOM.
+
+**When:** an editor patch, no release named yet. "Docs — show what every fence produces" is
+the same idea for the rest of the site's code fences.
+
+---
+
 ## Editor — the visual (Rete) half, and what it pulls in
 
 **When: right after 0.9.0** (the release plan of 2026-10-16, `todo.md`): union types first, so

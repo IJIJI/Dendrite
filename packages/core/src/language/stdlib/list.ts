@@ -152,4 +152,37 @@ export function installList(lang: Language): void {
       return r?.kind === "function" ? r.returns : (inputTypes["initial"] ?? Type.any);
     },
   });
+
+  // A comparator, as PHP's usort and JavaScript's sort take one. Sort (the array segment) has
+  // the fixed order; this is the order a program gives, for what the fixed one cannot see: a
+  // distance, a length, later a struct's field. The sort is stable, so a comparator that calls
+  // two items equal, or gives no value for them, keeps them in the order they came.
+  const SortWith = lang.registerOp({
+    name: "SortWith",
+    inputs: [
+      { name: "list", type: Type.array(Type.any) },
+      { name: "compare", type: Type.fn([Type.any, Type.any], Type.number) },
+    ],
+    output: Type.array(Type.any),
+    category: "list",
+    description:
+      "The items of list in the order compare gives. compare(a, b) below zero puts a first, above zero puts b first, and zero or null keeps the two in the order they came.",
+    examples: [
+      den`output nearestTen = SortWith([4, 15, 9, 30], (a, b) => Abs(a + 10) - Abs(b - 10))`,
+    ],
+  });
+  lang.registerEvaluator({
+    op: SortWith,
+    finiteCheck: false,
+    evaluate: ({ list, compare }) =>
+      [...list].sort((a, b) => {
+        const order = compare(a, b);
+        return typeof order === "number" ? order : 0;
+      }),
+    inferInputTypes: (inputTypes) => {
+      const item = elementOf(inputTypes["list"]);
+      return { compare: Type.fn([item, item], Type.number) };
+    },
+    inferOutput: sameListType,
+  });
 }

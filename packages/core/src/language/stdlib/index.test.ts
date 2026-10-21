@@ -132,6 +132,7 @@ describe("createStdlib({ segments })", () => {
       "Reverse",
       "Slice",
       "Sort",
+      "SortWith",
       "Split",
       "Unique",
     ]);
